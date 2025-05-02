@@ -14,7 +14,7 @@ export async function uploadFileAction(leadId: string, file: File, category?: st
 
     // Create file record in database
     await createFile({
-      lead_id: leadId,
+      leadId: leadId,
       url: uploadedFile.url,
       filename: uploadedFile.filename,
       filesize: uploadedFile.filesize,
@@ -40,7 +40,7 @@ export async function deleteFileAction(fileId: string) {
   try {
     console.log(`Deleting file with ID: ${fileId}`)
 
-    // Get the file details before deletion to get the URL and lead ID
+    // Get the file details and delete it
     const file = await deleteFile(fileId)
 
     if (!file) {
@@ -60,7 +60,7 @@ export async function deleteFileAction(fileId: string) {
     }
 
     // Revalidate the lead page to refresh the UI
-    revalidatePath(`/leads/${file.lead_id}`)
+    revalidatePath(`/leads/${file.leadId}`)
 
     return {
       success: true,

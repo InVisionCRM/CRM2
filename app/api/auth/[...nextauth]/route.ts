@@ -1,8 +1,10 @@
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
-import { sql } from "@/lib/db"
+import { PrismaClient } from "@prisma/client"
 import type { NextAuthOptions } from "next-auth"
+
+const prisma = new PrismaClient()
 
 export const authOptions: NextAuthOptions = {
   debug: true, // Enable debug mode to see detailed logs
@@ -26,19 +28,16 @@ export const authOptions: NextAuthOptions = {
         try {
           console.log("Querying user with email:", credentials.email)
 
-          // Query the existing users table
-          const users = await sql`
-            SELECT * FROM users WHERE email = ${credentials.email} LIMIT 1
-          `
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+          })
 
-          console.log("Query result:", users)
+          console.log("Query result:", user)
 
-          if (!users || users.length === 0) {
+          if (!user) {
             console.log("No user found with email:", credentials.email)
             return null
           }
-
-          const user = users[0]
 
           // For testing purposes, let's accept any password for the test user
           // IMPORTANT: Remove this in production!
@@ -48,12 +47,12 @@ export const authOptions: NextAuthOptions = {
               id: user.id,
               name: user.name,
               email: user.email,
-              image: user.image,
+              image: user.image || null,
             }
           }
 
           // In production, use proper password verification
-          // const passwordMatch = await bcrypt.compare(credentials.password, user.password_hash)
+          // const passwordMatch = await bcrypt.compare(credentials.password, user.password)
           // if (!passwordMatch) {
           //   console.log("Password doesn't match")
           //   return null
@@ -64,7 +63,7 @@ export const authOptions: NextAuthOptions = {
             id: user.id,
             name: user.name,
             email: user.email,
-            image: user.image,
+            image: user.image || null,
           }
         } catch (error) {
           console.error("Auth error:", error)
@@ -82,43 +81,31 @@ export const authOptions: NextAuthOptions = {
       if (account?.provider === "google" && profile?.email) {
         try {
           // Check if user exists
-          const existingUsers = await sql`
-            SELECT * FROM users WHERE email = ${profile.email} LIMIT 1
-          `
+          let dbUser = await prisma.user.findUnique({
+            where: { email: profile.email },
+          })
 
-          if (existingUsers.length === 0) {
+          if (!dbUser) {
             // Create new user
             console.log("Creating new user from Google login:", profile.email)
 
-            // Generate a random password hash for Google users
-            const randomPasswordHash = Math.random().toString(36).slice(-10)
+            // Generate a random password for Google users
+            const randomPassword = Math.random().toString(36).slice(-10)
 
-            await sql`
-              INSERT INTO users (name, email, password_hash, password, image)
-              VALUES (
-                ${profile.name || "Google User"}, 
-                ${profile.email}, 
-                ${randomPasswordHash},
-                ${randomPasswordHash},
-                ${profile.image || null}
-              )
-            `
+            dbUser = await prisma.user.create({
+              data: {
+                name: profile.name || "Google User",
+                email: profile.email,
+                password: randomPassword, // Store the random password
+                image: profile.image || null,
+              },
+            })
 
             console.log("User created successfully")
-
-            // Get the newly created user
-            const newUsers = await sql`
-              SELECT * FROM users WHERE email = ${profile.email} LIMIT 1
-            `
-
-            if (newUsers.length > 0) {
-              // Update the user object with the database ID
-              user.id = newUsers[0].id
-            }
-          } else {
-            // Update the user object with the database ID
-            user.id = existingUsers[0].id
           }
+
+          // Update the user object with the database ID
+          user.id = dbUser.id
         } catch (error) {
           console.error("Error creating/updating user:", error)
           return false
@@ -136,13 +123,14 @@ export const authOptions: NextAuthOptions = {
       // If we don't have an ID in the token yet, try to find it
       if (!token.id && token.email) {
         try {
-          const users = await sql`
-            SELECT id FROM users WHERE email = ${token.email} LIMIT 1
-          `
+          const dbUser = await prisma.user.findUnique({
+            where: { email: token.email },
+            select: { id: true },
+          })
 
-          if (users.length > 0) {
-            token.id = users[0].id
-            console.log("JWT token updated with user ID from email:", users[0].id)
+          if (dbUser) {
+            token.id = dbUser.id
+            console.log("JWT token updated with user ID from email:", dbUser.id)
           }
         } catch (error) {
           console.error("Error fetching user ID for token:", error)

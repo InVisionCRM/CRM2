@@ -1,8 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { sql } from "@/lib/db"
-import { getLeadById } from "@/lib/db"
+import { prisma } from "@/lib/db/prisma"
 import { uploadToBlob } from "@/lib/blob"
 
 // Type for contract data
@@ -12,7 +11,8 @@ export type ContractData = {
   signatures: Record<string, string>
   dates: Record<string, string>
   names: Record<string, string>
-  fields: Record<string, string>
+  addresses: Record<string, string>
+  contact_info: Record<string, string>
   pdf_url?: string
 }
 
@@ -25,7 +25,10 @@ export async function saveContractAction(
     console.log("Saving contract for lead:", data.lead_id)
 
     // Check if the lead exists
-    const lead = await getLeadById(data.lead_id)
+    const lead = await prisma.lead.findUnique({
+      where: { id: data.lead_id },
+    })
+
     if (!lead) {
       return {
         success: false,
@@ -42,69 +45,48 @@ export async function saveContractAction(
       console.log("Contract PDF uploaded:", pdfUrl)
     }
 
-    // Convert JSON objects to strings for database storage
-    const signaturesJson = JSON.stringify(data.signatures)
-    const datesJson = JSON.stringify(data.dates)
-    const namesJson = JSON.stringify(data.names)
-    const fieldsJson = JSON.stringify(data.fields)
-
     // Check if contract already exists for this lead
-    const existingContract = await sql<{ id: string }[]>`
-      SELECT id FROM contracts 
-      WHERE lead_id = ${data.lead_id} 
-      AND contract_type = ${data.contract_type}
-    `
+    const existingContract = await prisma.contract.findFirst({
+      where: {
+        leadId: data.lead_id,
+        contractType: data.contract_type,
+      },
+      select: { id: true },
+    })
 
     let result
     const now = new Date()
 
-    if (existingContract && existingContract.length > 0) {
+    if (existingContract) {
       // Update existing contract
-      const contractId = existingContract[0].id
-      result = await sql`
-        UPDATE contracts 
-        SET 
-          signatures = ${signaturesJson},
-          dates = ${datesJson},
-          names = ${namesJson},
-          fields = ${fieldsJson},
-          pdf_url = ${pdfUrl},
-          updated_at = ${now}
-        WHERE id = ${contractId}
-        RETURNING id
-      `
-      console.log(`Contract ${contractId} updated successfully`)
+      result = await prisma.contract.update({
+        where: { id: existingContract.id },
+        data: {
+          signatures: data.signatures,
+          dates: data.dates,
+          names: data.names,
+          addresses: data.addresses,
+          contactInfo: data.contact_info,
+          pdfUrl: pdfUrl,
+          updatedAt: now,
+        },
+      })
+      console.log(`Contract ${existingContract.id} updated successfully`)
     } else {
       // Create new contract
-      const contractId = crypto.randomUUID()
-      result = await sql`
-        INSERT INTO contracts (
-          id, 
-          lead_id, 
-          contract_type,
-          signatures, 
-          dates, 
-          names,
-          fields,
-          pdf_url,
-          created_at, 
-          updated_at
-        )
-        VALUES (
-          ${contractId},
-          ${data.lead_id},
-          ${data.contract_type},
-          ${signaturesJson},
-          ${datesJson},
-          ${namesJson},
-          ${fieldsJson},
-          ${pdfUrl},
-          ${now},
-          ${now}
-        )
-        RETURNING id
-      `
-      console.log(`Contract ${contractId} created successfully`)
+      result = await prisma.contract.create({
+        data: {
+          leadId: data.lead_id,
+          contractType: data.contract_type,
+          signatures: data.signatures,
+          dates: data.dates,
+          names: data.names,
+          addresses: data.addresses,
+          contactInfo: data.contact_info,
+          pdfUrl: pdfUrl,
+        },
+      })
+      console.log(`Contract ${result.id} created successfully`)
     }
 
     // Revalidate relevant paths
@@ -114,7 +96,7 @@ export async function saveContractAction(
     return {
       success: true,
       message: "Contract saved successfully",
-      contract_id: result[0]?.id,
+      contract_id: result.id,
     }
   } catch (error) {
     console.error("Error saving contract:", error)
@@ -128,12 +110,18 @@ export async function saveContractAction(
 // Function to get a client's contracts
 export async function getClientContracts(leadId: string) {
   try {
-    const contracts = await sql`
-      SELECT id, lead_id, contract_type, pdf_url, created_at, updated_at
-      FROM contracts
-      WHERE lead_id = ${leadId}
-      ORDER BY updated_at DESC
-    `
+    const contracts = await prisma.contract.findMany({
+      where: { leadId },
+      select: {
+        id: true,
+        leadId: true,
+        contractType: true,
+        pdfUrl: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { updatedAt: "desc" },
+    })
 
     return {
       success: true,
@@ -153,55 +141,57 @@ export async function getClientContracts(leadId: string) {
 export async function saveContractDataAction(contractData: {
   lead_id: string
   contract_type: string
-  contract_data: Record<string, any>
+  contract_data: {
+    signatures: Record<string, string>
+    dates: Record<string, string>
+    names: Record<string, string>
+    addresses: Record<string, string>
+    contact_info: Record<string, string>
+  }
 }) {
   try {
     // Check if a contract already exists for this lead and type
-    const existingContracts = await sql`
-      SELECT id FROM contracts 
-      WHERE lead_id = ${contractData.lead_id} AND contract_type = ${contractData.contract_type}
-    `
+    const existingContract = await prisma.contract.findFirst({
+      where: {
+        leadId: contractData.lead_id,
+        contractType: contractData.contract_type,
+      },
+    })
 
-    let contractId
+    let result
 
-    if (existingContracts.length > 0) {
+    if (existingContract) {
       // Update existing contract
-      const result = await sql`
-        UPDATE contracts 
-        SET 
-          contract_data = ${contractData.contract_data},
-          updated_at = NOW()
-        WHERE lead_id = ${contractData.lead_id} AND contract_type = ${contractData.contract_type}
-        RETURNING id
-      `
-      contractId = result[0].id
+      result = await prisma.contract.update({
+        where: { id: existingContract.id },
+        data: {
+          signatures: contractData.contract_data.signatures,
+          dates: contractData.contract_data.dates,
+          names: contractData.contract_data.names,
+          addresses: contractData.contract_data.addresses,
+          contactInfo: contractData.contract_data.contact_info,
+          updatedAt: new Date(),
+        },
+      })
     } else {
       // Insert new contract
-      const now = new Date()
-      const result = await sql`
-        INSERT INTO contracts (
-          lead_id, 
-          contract_type, 
-          contract_data, 
-          created_at, 
-          updated_at
-        )
-        VALUES (
-          ${contractData.lead_id},
-          ${contractData.contract_type},
-          ${contractData.contract_data},
-          ${now},
-          ${now}
-        )
-        RETURNING id
-      `
-      contractId = result[0].id
+      result = await prisma.contract.create({
+        data: {
+          leadId: contractData.lead_id,
+          contractType: contractData.contract_type,
+          signatures: contractData.contract_data.signatures,
+          dates: contractData.contract_data.dates,
+          names: contractData.contract_data.names,
+          addresses: contractData.contract_data.addresses,
+          contactInfo: contractData.contract_data.contact_info,
+        },
+      })
     }
 
     // Revalidate the lead page to show updated contract status
     revalidatePath(`/leads/${contractData.lead_id}`)
 
-    return { success: true, contractId }
+    return { success: true, contractId: result.id }
   } catch (error) {
     console.error("Error saving contract data:", error)
     return {

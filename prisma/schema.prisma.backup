@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model appointments {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title      String
+  date       DateTime  @db.Date
+  start_time String
+  end_time   String
+  purpose    String
+  status     String
+  client_id  String    @db.VarChar
+  address    String?
+  notes      String?
+  user_id    String    @db.Uuid
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
+  leads      leads     @relation(fields: [client_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([client_id], map: "idx_appointments_client_id")
+  @@index([date], map: "idx_appointments_date")
+  @@index([user_id], map: "idx_appointments_user_id")
+}
+
+model client_id_sequence {
+  id      Int @id @default(autoincrement())
+  last_id Int @default(50000)
+}
+
+model leads {
+  id                         String         @id(map: "leads_new_pkey") @db.VarChar(255)
+  name                       String         @db.VarChar(255)
+  email                      String?        @db.VarChar(255)
+  phone                      String?        @db.VarChar(50)
+  address                    String?
+  status                     String         @db.VarChar(20)
+  assigned_to                String?        @db.VarChar(255)
+  notes                      String?
+  created_at                 DateTime       @db.Timestamptz(6)
+  updated_at                 DateTime       @db.Timestamptz(6)
+  first_name                 String?        @db.VarChar(255)
+  last_name                  String?        @db.VarChar(255)
+  street_address             String?        @db.VarChar(255)
+  city                       String?        @db.VarChar(100)
+  state                      String?        @db.VarChar(100)
+  zipcode                    String?        @db.VarChar(20)
+  insurance_company          String?
+  insurance_policy_number    String?
+  insurance_phone            String?
+  insurance_adjuster_name    String?
+  insurance_adjuster_phone   String?
+  insurance_adjuster_email   String?
+  insurance_deductible       String?
+  insurance_secondary_phone  String?
+  adjuster_appointment_date  DateTime?      @db.Timestamp(6)
+  adjuster_appointment_time  String?
+  adjuster_appointment_notes String?
+  google_event_id            String?
+  latitude                   Decimal?       @db.Decimal(10, 7)
+  longitude                  Decimal?       @db.Decimal(10, 7)
+  appointments               appointments[]
+  visits                     visits[]
+
+  @@index([assigned_to], map: "idx_leads_assigned_to")
+  @@index([latitude, longitude], map: "idx_leads_coordinates")
+  @@index([status], map: "idx_leads_status")
+}
+
+model properties {
+  id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  address         String
+  latitude        Float
+  longitude       Float
+  knock_status    knock_status_type? @default(Not_Visited)
+  homeowner_name  String?
+  notes           String?
+  last_visited_at DateTime?          @default(now()) @db.Timestamptz(6)
+  created_at      DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime?          @default(now()) @db.Timestamptz(6)
+
+  @@index([latitude, longitude], map: "properties_location_idx")
+}
+
+model sessions {
+  id      String   @id
+  user_id String?  @db.Uuid
+  expires DateTime @db.Timestamptz(6)
+  users   users?   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model users {
+  id             String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email          String           @unique @db.VarChar(255)
+  name           String           @db.VarChar(255)
+  password_hash  String           @db.VarChar(255)
+  created_at     DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?        @default(now()) @db.Timestamptz(6)
+  password       String?
+  image          String?
+  appointments   appointments[]
+  sessions       sessions[]
+  vision_markers vision_markers[]
+  visits         visits[]
+}
+
+model verification_tokens {
+  identifier String
+  token      String
+  expires    DateTime @db.Timestamptz(6)
+
+  @@id([identifier, token])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model vision_markers {
+  id              String   @id
+  lat             Float
+  lng             Float
+  address         String
+  notes           String?
+  status          String   @default("Not Home")
+  contact_info    Json?
+  visits          Json?
+  timestamp       DateTime @default(now()) @db.Timestamptz(6)
+  sales_person_id String?
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime @default(now()) @db.Timestamptz(6)
+  follow_up       Json?
+  user_id         String?  @db.Uuid
+  users           users?   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([lat], map: "idx_vision_markers_lat")
+  @@index([lng], map: "idx_vision_markers_lng")
+  @@index([status], map: "idx_vision_markers_status")
+  @@index([sales_person_id])
+  @@index([user_id])
+}
+
+model visits {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lead_id         String?   @db.VarChar(255)
+  address         String
+  lat             Float
+  lng             Float
+  status          String
+  notes           String?
+  follow_up_date  DateTime? @db.Timestamptz(6)
+  follow_up_time  String?
+  follow_up_notes String?
+  salesperson_id  String?
+  created_at      DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime? @default(now()) @db.Timestamptz(6)
+  user_id         String?   @db.Uuid
+  users           users?    @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "fk_visits_user_id")
+  leads           leads?    @relation(fields: [lead_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+enum ActivityType {
+  NEW_LEAD
+  DOCUMENT_UPLOAD
+  STATUS_CHANGE
+  COMMENT_ADDED
+  ASSIGNED_TO_REP
+}
+
+enum knock_status_type {
+  Not_Visited     @map("Not Visited")
+  Knocked
+  No_Answer       @map("No Answer")
+  Interested
+  Appointment_Set @map("Appointment Set")
+}

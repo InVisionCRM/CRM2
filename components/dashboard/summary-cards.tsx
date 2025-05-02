@@ -2,122 +2,108 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import type React from "react"
-
-import { Users, Calendar, DollarSign, TrendingUp } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
+import { useLeads } from "@/hooks/use-leads"
+import { Card } from "@/components/ui/card"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { LeadsList } from "@/components/leads-list"
 import { cn } from "@/lib/utils"
-import { AppointmentsDrawer } from "@/components/appointments/appointments-drawer"
 
-interface SummaryCardProps {
-  title: string
-  value: string | number
-  description?: string
-  icon: React.ReactNode
-  trend?: {
-    value: number
-    isPositive: boolean
-  }
-  colorClass?: string
-  onClick?: () => void
-}
+const STATUS_STYLES = {
+  signed_contract: "hover:bg-blue-900/30 hover:border-blue-500 hover:text-blue-500 shadow-[inset_0_0_50px_20px_rgba(59,130,246,0.55)]",
+  scheduled: "hover:bg-blue-900/30 hover:border-blue-500 hover:text-blue-500 shadow-[inset_0_0_50px_20px_rgba(59,130,246,0.55)]",
+  colors: "hover:bg-indigo-900/30 hover:border-indigo-500 hover:text-indigo-500 shadow-[inset_0_0_50px_20px_rgba(99,102,241,0.55)]",
+  acv: "hover:bg-purple-900/30 hover:border-purple-500 hover:text-purple-500 shadow-[inset_0_0_50px_20px_rgba(147,51,234,0.55)]",
+  job: "hover:bg-orange-900/30 hover:border-orange-500 hover:text-orange-500 shadow-[inset_0_0_50px_20px_rgba(249,115,22,0.55)]",
+  completed_jobs: "hover:bg-green-900/30 hover:border-green-500 hover:text-green-500 shadow-[inset_0_0_50px_20px_rgba(34,197,94,0.55)]",
+  zero_balance: "hover:bg-green-900/30 hover:border-green-500 hover:text-green-500 shadow-[inset_0_0_50px_20px_rgba(34,197,94,0.55)]",
+  denied: "hover:bg-red-900/30 hover:border-red-500 hover:text-red-500 shadow-[inset_0_0_50px_20px_rgba(239,68,68,0.55)]",
+} as const
 
-function SummaryCard({ title, value, description, icon, trend, colorClass, onClick }: SummaryCardProps) {
-  return (
-    <Card
-      className={cn(
-        "overflow-hidden border-none shadow-md",
-        onClick && "cursor-pointer transition-shadow hover:shadow-lg",
-      )}
-      onClick={onClick}
-    >
-      <CardContent className="p-0">
-        <div className="flex h-full">
-          <div
-            className={cn(
-              "flex items-center justify-center w-[50px] md:w-[70px]",
-              colorClass || "bg-primary text-primary-foreground",
-            )}
-          >
-            {icon}
-          </div>
-          <div className="p-3 flex-1 overflow-hidden">
-            <p className="text-xs text-muted-foreground truncate">{title}</p>
-            <div className="flex items-end justify-between">
-              <p className="text-xl font-bold truncate">{value}</p>
-              {trend && (
-                <div className={`flex items-center text-xs ${trend.isPositive ? "text-green-500" : "text-red-500"}`}>
-                  {trend.isPositive ? (
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                  ) : (
-                    <TrendingUp className="h-3 w-3 mr-1 transform rotate-180" />
-                  )}
-                  <span>{Math.abs(trend.value)}%</span>
-                </div>
-              )}
-            </div>
-            {description && <p className="text-xs text-muted-foreground mt-1 truncate">{description}</p>}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
+const LEAD_STATUSES = [
+  "signed_contract",
+  "scheduled",
+  "colors",
+  "acv",
+  "job",
+  "completed_jobs",
+  "zero_balance",
+  "denied",
+] as const
 
 export function SummaryCards() {
-  const router = useRouter()
-  const [isAppointmentsDrawerOpen, setIsAppointmentsDrawerOpen] = useState(false)
+  const { leads, isLoading } = useLeads()
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
 
-  const handleOpenAppointmentsDrawer = () => {
-    setIsAppointmentsDrawerOpen(true)
+  const handleStatusClick = (status: string) => {
+    setSelectedStatus(status)
+    setIsSheetOpen(true)
   }
 
-  const handleOpenFinancialHealth = () => {
-    router.push("/financial-health")
+  const formatStatusLabel = (status: string): string => {
+    return status
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ")
   }
 
-  const handleOpenActiveLeads = () => {
-    router.push("/leads")
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {LEAD_STATUSES.map((status) => (
+          <Card
+            key={status}
+            className="h-24 bg-black animate-pulse rounded-xl overflow-hidden cursor-pointer transition-all border border-white/20"
+          >
+            <div className="h-full flex items-center justify-center">
+              <div className="h-4 w-24 bg-gray-800 rounded"></div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    )
   }
 
-  // Mock data
-  const summaryData = [
-    {
-      title: "Active Leads",
-      value: 24,
-      description: "6 need follow-up",
-      icon: <Users className="h-5 w-5" />,
-      trend: { value: 12, isPositive: true },
-      colorClass: "bg-blue-500 text-white",
-      onClick: handleOpenActiveLeads,
-    },
-    {
-      title: "Appointments",
-      value: 8,
-      description: "This week",
-      icon: <Calendar className="h-5 w-5" />,
-      colorClass: "bg-purple-500 text-white",
-      onClick: handleOpenAppointmentsDrawer,
-    },
-    {
-      title: "Money to Collect",
-      value: "$28,500",
-      description: "Outstanding invoices",
-      icon: <DollarSign className="h-5 w-5" />,
-      trend: { value: 15, isPositive: true },
-      colorClass: "bg-emerald-500 text-white",
-      onClick: handleOpenFinancialHealth,
-    },
-  ]
+  const getLeadsByStatus = (status: string) => {
+    return leads.filter((lead) => lead.status === status)
+  }
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {summaryData.map((card, index) => (
-          <SummaryCard key={index} {...card} />
-        ))}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {LEAD_STATUSES.map((status) => {
+          const statusLeads = getLeadsByStatus(status)
+          return (
+            <Card
+              key={status}
+              className={cn(
+                "h-24 bg-black rounded-xl overflow-hidden cursor-pointer group relative",
+                "border border-white/20",
+                STATUS_STYLES[status],
+                "transform hover:scale-[1.02] transition-all duration-200"
+              )}
+              onClick={() => handleStatusClick(status)}
+            >
+              <div className="h-full flex flex-col items-center justify-center gap-2">
+                <span className="text-white font-extralight text-lg tracking-wide transition-colors duration-200 group-hover:text-inherit">{formatStatusLabel(status)}</span>
+                <span className="text-white font-thin text-sm transition-colors duration-200 group-hover:text-inherit">{statusLeads.length} leads</span>
+                <span className="absolute bottom-2 text-xs opacity-0 group-hover:opacity-100 text-white transition-opacity duration-200 font-thin">Show Leads</span>
+              </div>
+            </Card>
+          )
+        })}
       </div>
-      <AppointmentsDrawer isOpen={isAppointmentsDrawerOpen} onClose={() => setIsAppointmentsDrawerOpen(false)} />
+
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <SheetContent side="right" className="w-full sm:w-[540px]">
+          <SheetHeader>
+            <SheetTitle>{selectedStatus ? formatStatusLabel(selectedStatus) : ""} Leads</SheetTitle>
+          </SheetHeader>
+          <div className="mt-8">
+            {selectedStatus && <LeadsList leads={getLeadsByStatus(selectedStatus)} />}
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   )
 }

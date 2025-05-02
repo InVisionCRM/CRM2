@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache"
 import { createLead, updateLead, deleteLead, getLeadById } from "@/lib/db/leads"
 import { uploadToBlob } from "@/lib/blob"
-import { sql } from "@/lib/db/client"
+import { createFile, deleteFile } from "@/lib/db/files"
+import { prisma } from "@/lib/db/prisma"
 
 export async function createLeadAction(
   data: {
@@ -17,7 +18,7 @@ export async function createLeadAction(
     state?: string
     zipcode?: string
     status: string
-    assignedTo?: string
+    assignedToId?: string
     notes?: string
   },
   files?: File[],
@@ -37,8 +38,9 @@ export async function createLeadAction(
       state: data.state || null,
       zipcode: data.zipcode || null,
       status: data.status || "SIGNED_CONTRACT",
-      assignedTo: data.assignedTo || null,
+      assignedToId: data.assignedToId || null,
       notes: data.notes || null,
+      userId: "system" // Required for activity creation
     })
 
     console.log("Lead created successfully:", lead)
@@ -52,13 +54,13 @@ export async function createLeadAction(
           const uploadedFile = await uploadToBlob(file, lead.id)
           console.log("File uploaded to blob:", uploadedFile)
 
-          // Create file record in database if you have a createFile function
-          // await createFile({
-          //   lead_id: lead.id,
-          //   url: uploadedFile.url,
-          //   filename: uploadedFile.filename,
-          //   filesize: uploadedFile.filesize,
-          // });
+          // Create file record in database
+          await createFile({
+            leadId: lead.id,
+            url: uploadedFile.url,
+            filename: uploadedFile.filename,
+            filesize: uploadedFile.filesize,
+          })
         } catch (error) {
           console.error("Error uploading file:", error)
         }
@@ -98,7 +100,7 @@ export async function updateLeadAction(
     state?: string | null
     zipcode?: string | null
     status?: string
-    assignedTo?: string | null
+    assignedToId?: string | null
     notes?: string | null
   },
   files?: File[],
@@ -108,7 +110,10 @@ export async function updateLeadAction(
     console.log("Update data:", data)
 
     // Update the lead
-    const updatedLead = await updateLead(id, data)
+    const updatedLead = await updateLead(id, {
+      ...data,
+      userId: "system" // Required for activity creation
+    })
 
     if (!updatedLead) {
       console.error(`Lead with ID ${id} not found for update`)
@@ -129,13 +134,13 @@ export async function updateLeadAction(
           const uploadedFile = await uploadToBlob(file, id)
           console.log("File uploaded to blob:", uploadedFile)
 
-          // Create file record in database if you have a createFile function
-          // await createFile({
-          //   lead_id: id,
-          //   url: uploadedFile.url,
-          //   filename: uploadedFile.filename,
-          //   filesize: uploadedFile.filesize,
-          // });
+          // Create file record in database
+          await createFile({
+            leadId: id,
+            url: uploadedFile.url,
+            filename: uploadedFile.filename,
+            filesize: uploadedFile.filesize,
+          })
         } catch (error) {
           console.error("Error uploading file:", error)
         }
@@ -198,7 +203,10 @@ export async function updateLeadStatus(id: string, status: string) {
     console.log(`Updating status for lead ${id} to ${status}`)
 
     // Update the lead with just the status
-    const updatedLead = await updateLead(id, { status })
+    const updatedLead = await updateLead(id, { 
+      status,
+      userId: "system" // Required for activity creation
+    })
 
     if (!updatedLead) {
       console.error(`Lead with ID ${id} not found for status update`)
@@ -248,7 +256,10 @@ export async function updateInsuranceInfoAction(
     console.log("Updating insurance info for lead:", id)
 
     // First, check if the lead exists
-    const existingLead = await getLeadById(id)
+    const existingLead = await prisma.lead.findUnique({
+      where: { id },
+    })
+
     if (!existingLead) {
       console.error(`Lead with ID ${id} not found for update`)
       return {
@@ -257,23 +268,21 @@ export async function updateInsuranceInfoAction(
       }
     }
 
-    const now = new Date()
-
-    // Update the lead with insurance information
-    await sql`
-      UPDATE leads 
-      SET 
-        insurance_company = ${data.company || null},
-        insurance_policy_number = ${data.policyNumber || null},
-        insurance_phone = ${data.phone || null},
-        insurance_secondary_phone = ${data.secondaryPhone || null},
-        insurance_adjuster_name = ${data.adjusterName || null},
-        insurance_adjuster_phone = ${data.adjusterPhone || null},
-        insurance_adjuster_email = ${data.adjusterEmail || null},
-        insurance_deductible = ${data.deductible || null},
-        updated_at = ${now}
-      WHERE id = ${id}
-    `
+    // Update the lead with insurance information using Prisma
+    await prisma.lead.update({
+      where: { id },
+      data: {
+        insuranceCompany: data.company || null,
+        insurancePolicyNumber: data.policyNumber || null,
+        insurancePhone: data.phone || null,
+        insuranceSecondaryPhone: data.secondaryPhone || null,
+        insuranceAdjusterName: data.adjusterName || null,
+        insuranceAdjusterPhone: data.adjusterPhone || null,
+        insuranceAdjusterEmail: data.adjusterEmail || null,
+        insuranceDeductible: data.deductible || null,
+        updatedAt: new Date(),
+      },
+    })
 
     console.log("Insurance information updated successfully")
 
@@ -306,7 +315,10 @@ export async function scheduleAdjusterAppointmentAction(
     console.log("Scheduling adjuster appointment:", data)
 
     // First, check if the lead exists
-    const existingLead = await getLeadById(data.leadId)
+    const existingLead = await prisma.lead.findUnique({
+      where: { id: data.leadId },
+    })
+
     if (!existingLead) {
       console.error(`Lead with ID ${data.leadId} not found`)
       return {
@@ -315,18 +327,16 @@ export async function scheduleAdjusterAppointmentAction(
       }
     }
 
-    const now = new Date()
-
-    // Update the lead with appointment information
-    await sql`
-      UPDATE leads 
-      SET 
-        adjuster_appointment_date = ${data.appointmentDate === null ? null : data.appointmentDate},
-        adjuster_appointment_time = ${data.appointmentTime === null ? null : data.appointmentTime},
-        adjuster_appointment_notes = ${data.appointmentNotes === null ? null : data.appointmentNotes},
-        updated_at = ${now}
-      WHERE id = ${data.leadId}
-    `
+    // Update the lead with appointment information using Prisma
+    await prisma.lead.update({
+      where: { id: data.leadId },
+      data: {
+        adjusterAppointmentDate: data.appointmentDate,
+        adjusterAppointmentTime: data.appointmentTime,
+        adjusterAppointmentNotes: data.appointmentNotes,
+        updatedAt: new Date(),
+      },
+    })
 
     console.log("Appointment scheduled successfully")
 
@@ -352,23 +362,16 @@ export async function deletePhotoAction(fileId: string): Promise<{ success: bool
   try {
     console.log(`Deleting photo with ID: ${fileId}`)
 
-    // First, get the file details to check if it exists
-    const fileResult = await sql<{ lead_id: string; url: string }[]>`
-      SELECT lead_id, url FROM files WHERE id = ${fileId}
-    `
+    // Get the file details and delete it
+    const file = await deleteFile(fileId)
 
-    if (!fileResult || fileResult.length === 0) {
+    if (!file) {
       console.error(`File with ID ${fileId} not found`)
       return {
         success: false,
         message: "File not found",
       }
     }
-
-    const file = fileResult[0]
-
-    // Delete the file from the database
-    await sql`DELETE FROM files WHERE id = ${fileId}`
 
     console.log(`File ${fileId} deleted successfully from database`)
 
@@ -377,7 +380,7 @@ export async function deletePhotoAction(fileId: string): Promise<{ success: bool
     // The file will remain in storage but won't be referenced in the database
 
     // Revalidate the lead page to show updated files
-    revalidatePath(`/leads/${file.lead_id}`)
+    revalidatePath(`/leads/${file.leadId}`)
 
     return {
       success: true,

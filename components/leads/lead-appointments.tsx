@@ -7,8 +7,9 @@ import { Calendar, Clock, Plus, Edit2, Trash2 } from "lucide-react"
 import { useLeadAppointments } from "@/hooks/use-lead-appointments"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import type { AppointmentPurpose, AppointmentStatus } from "@/types/appointments"
+import { AppointmentStatus } from '@prisma/client'
 import { format } from "date-fns"
+import { AppointmentPurpose, AppointmentPurposeEnum } from '@/types/appointments'
 
 interface LeadAppointmentsProps {
   leadId: string
@@ -36,20 +37,18 @@ export function LeadAppointments({ leadId }: LeadAppointmentsProps) {
 
   const getPurposeLabel = (purpose: AppointmentPurpose) => {
     switch (purpose) {
-      case "INITIAL_CONSULTATION":
+      case AppointmentPurposeEnum.INITIAL_CONSULTATION:
         return "Initial Consultation"
-      case "INSPECTION":
+      case AppointmentPurposeEnum.ESTIMATE:
+        return "Estimate"
+      case AppointmentPurposeEnum.FOLLOW_UP:
+        return "Follow Up"
+      case AppointmentPurposeEnum.INSPECTION:
         return "Inspection"
-      case "ESTIMATE_REVIEW":
-        return "Estimate Review"
-      case "CONTRACT_SIGNING":
+      case AppointmentPurposeEnum.CONTRACT_SIGNING:
         return "Contract Signing"
-      case "INSTALLATION":
-        return "Installation"
-      case "FINAL_INSPECTION":
-        return "Final Inspection"
-      case "FOLLOW_UP":
-        return "Follow-up"
+      case AppointmentPurposeEnum.OTHER:
+        return "Other"
       default:
         return purpose
     }
@@ -57,15 +56,15 @@ export function LeadAppointments({ leadId }: LeadAppointmentsProps) {
 
   const getStatusLabel = (status: AppointmentStatus) => {
     switch (status) {
-      case "SCHEDULED":
+      case AppointmentStatus.SCHEDULED:
         return "Scheduled"
-      case "COMPLETED":
+      case AppointmentStatus.COMPLETED:
         return "Completed"
-      case "CANCELLED":
+      case AppointmentStatus.CANCELLED:
         return "Cancelled"
-      case "RESCHEDULED":
+      case AppointmentStatus.RESCHEDULED:
         return "Rescheduled"
-      case "NO_SHOW":
+      case AppointmentStatus.NO_SHOW:
         return "No Show"
       default:
         return status
@@ -74,15 +73,15 @@ export function LeadAppointments({ leadId }: LeadAppointmentsProps) {
 
   const getStatusColor = (status: AppointmentStatus) => {
     switch (status) {
-      case "SCHEDULED":
+      case AppointmentStatus.SCHEDULED:
         return "bg-blue-100 text-blue-800"
-      case "COMPLETED":
+      case AppointmentStatus.COMPLETED:
         return "bg-green-100 text-green-800"
-      case "CANCELLED":
+      case AppointmentStatus.CANCELLED:
         return "bg-red-100 text-red-800"
-      case "RESCHEDULED":
+      case AppointmentStatus.RESCHEDULED:
         return "bg-yellow-100 text-yellow-800"
-      case "NO_SHOW":
+      case AppointmentStatus.NO_SHOW:
         return "bg-gray-100 text-gray-800"
       default:
         return "bg-gray-100 text-gray-800"

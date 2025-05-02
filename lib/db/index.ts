@@ -1,8 +1,11 @@
-// Re-export all functions from the leads module
-export * from "./leads"
+// Re-export the Prisma client
+export { prisma } from "./prisma"
 
-// Export all functions from the files module
+// Re-export database operations
+export * from "./appointments"
+export * from "./activities"
+export * from "./contracts"
 export * from "./files"
-
-// Re-export the sql client
-export { sql } from "./client"
+export * from "./leads"
+export * from "./vision-markers"
+export * from "./visits"

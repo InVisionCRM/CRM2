@@ -43,6 +43,8 @@ import { useUpdateAppointment } from "@/hooks/use-update-appointment"
 import { useDeleteAppointment } from "@/hooks/use-delete-appointment"
 import type { AppointmentFormData } from "@/types/appointments"
 import { Badge } from "@/components/ui/badge"
+import { AppointmentPurpose, AppointmentPurposeEnum } from '@/types/appointments'
+import { AppointmentStatus } from '@prisma/client'
 
 // Generate time slots from 8:00 AM to 7:30 PM in 30-minute increments
 const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => {
@@ -107,11 +109,12 @@ export function AdjusterAppointmentScheduler({
   }, [initialDate, initialTime, isEditing])
 
   const formatAppointmentData = (): AppointmentFormData => {
-    // Extract just the time portion for startTime
-    const startTime = time
-    
+    if (!date || !time) {
+      throw new Error("Date and time are required")
+    }
+
     // Calculate endTime - default to 1 hour after startTime
-    const [timeStr, period] = startTime.split(" ")
+    const [timeStr, period] = time.split(" ")
     const [hour, minute] = timeStr.split(":").map(Number)
     
     let endHour = hour + 1
@@ -125,17 +128,13 @@ export function AdjusterAppointmentScheduler({
     
     const endTime = `${endHour}:${minute === 0 ? "00" : minute} ${endPeriod}`
     
-    // Convert the date to ISO format for API submission
-    const appointmentDate = new Date(date as Date)
-    
     return {
-      title: `Adjuster Appointment with ${leadName || 'Client'}`,
-      date: appointmentDate,
-      startTime,
+      title: `Inspection with ${leadName || 'Client'}`,
+      startTime: time,
       endTime,
-      purpose: "adjuster_appointment",
-      status: "scheduled",
-      clientId: clientId || leadId,
+      purpose: AppointmentPurposeEnum.INSPECTION,
+      status: AppointmentStatus.SCHEDULED,
+      leadId: clientId || leadId,
       address: address || '',
       notes: notes || ''
     }

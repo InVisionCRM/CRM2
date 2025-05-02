@@ -1,33 +1,20 @@
-import { sql } from "./client"
+import { prisma } from './prisma'
+import { File } from '@prisma/client'
 import { nanoid } from "nanoid"
 
-interface FileData {
-  lead_id: string
+interface CreateFileInput {
+  leadId: string
   url: string
   filename: string
   filesize: number
   category?: string
 }
 
-interface FileRecord {
-  id: string
-  lead_id: string
-  url: string
-  name: string
-  size: number
-  type: string
-  category?: string
-  created_at: Date
-}
-
 /**
  * Creates a file record in the database
  */
-export async function createFile(data: FileData): Promise<FileRecord> {
+export async function createFile(data: CreateFileInput): Promise<File> {
   try {
-    const id = nanoid()
-    const now = new Date()
-    
     // Determine file type from filename
     const fileExtension = data.filename.split('.').pop()?.toLowerCase() || ''
     let fileType = 'application/octet-stream'
@@ -42,54 +29,19 @@ export async function createFile(data: FileData): Promise<FileRecord> {
       fileType = 'application/vnd.ms-excel'
     }
 
-    const result = await sql`
-      INSERT INTO files (
-        id,
-        lead_id,
-        url,
-        name,
-        size,
-        type,
-        category,
-        created_at
-      ) VALUES (
-        ${id},
-        ${data.lead_id},
-        ${data.url},
-        ${data.filename},
-        ${data.filesize},
-        ${fileType},
-        ${data.category || null},
-        ${now}
-      )
-      RETURNING 
-        id, 
-        lead_id, 
-        url, 
-        name, 
-        size, 
-        type, 
-        category,
-        created_at
-    `
+    const file = await prisma.file.create({
+      data: {
+        url: data.url,
+        name: data.filename,
+        size: data.filesize,
+        type: fileType,
+        category: data.category,
+        leadId: data.leadId
+      }
+    })
 
-    if (!result || result.length === 0) {
-      throw new Error("Failed to create file record: No rows returned")
-    }
-
-    const fileRecord: FileRecord = {
-      id: result[0].id,
-      lead_id: result[0].lead_id,
-      url: result[0].url,
-      name: result[0].name,
-      size: result[0].size,
-      type: result[0].type,
-      category: result[0].category,
-      created_at: new Date(result[0].created_at)
-    };
-
-    console.log("File record created successfully:", fileRecord)
-    return fileRecord
+    console.log("File record created successfully:", file)
+    return file
   } catch (error) {
     console.error("Error creating file record:", error)
     throw new Error(`Failed to create file record: ${error instanceof Error ? error.message : "Unknown error"}`)
@@ -97,40 +49,49 @@ export async function createFile(data: FileData): Promise<FileRecord> {
 }
 
 /**
+ * Gets all files for a lead
+ */
+export async function getFilesByLeadId(leadId: string): Promise<File[]> {
+  try {
+    const files = await prisma.file.findMany({
+      where: { leadId },
+      orderBy: { createdAt: 'desc' }
+    })
+    return files
+  } catch (error) {
+    console.error(`Error fetching files for lead ${leadId}:`, error)
+    throw new Error(`Failed to fetch files: ${error instanceof Error ? error.message : "Unknown error"}`)
+  }
+}
+
+/**
+ * Gets a single file by ID
+ */
+export async function getFileById(id: string): Promise<File | null> {
+  try {
+    const file = await prisma.file.findUnique({
+      where: { id }
+    })
+    return file
+  } catch (error) {
+    console.error(`Error fetching file ${id}:`, error)
+    throw new Error(`Failed to fetch file: ${error instanceof Error ? error.message : "Unknown error"}`)
+  }
+}
+
+/**
  * Deletes a file record from the database and returns the deleted record
  */
-export async function deleteFile(id: string): Promise<FileRecord | null> {
+export async function deleteFile(id: string): Promise<File | null> {
   try {
     console.log(`Deleting file with ID ${id}`)
     
-    // First, get the file details before deletion
-    const fileResult = await sql`
-      SELECT id, lead_id, url, name, size, type, category, created_at
-      FROM files 
-      WHERE id = ${id}
-    `
-    
-    if (!fileResult || fileResult.length === 0) {
-      console.warn(`File with ID ${id} not found for deletion`)
-      return null
-    }
-
-    const fileRecord: FileRecord = {
-      id: fileResult[0].id,
-      lead_id: fileResult[0].lead_id,
-      url: fileResult[0].url,
-      name: fileResult[0].name,
-      size: fileResult[0].size,
-      type: fileResult[0].type,
-      category: fileResult[0].category,
-      created_at: new Date(fileResult[0].created_at)
-    };
-    
-    // Delete the file record
-    await sql`DELETE FROM files WHERE id = ${id}`
+    const file = await prisma.file.delete({
+      where: { id }
+    })
     
     console.log(`File ${id} deleted successfully from database`)
-    return fileRecord
+    return file
   } catch (error) {
     console.error(`Error deleting file with ID ${id}:`, error)
     throw new Error(`Failed to delete file: ${error instanceof Error ? error.message : "Unknown error"}`)

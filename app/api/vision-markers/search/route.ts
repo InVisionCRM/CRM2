@@ -1,5 +1,5 @@
-import { sql } from "@/lib/db/client"
 import { NextResponse } from "next/server"
+import { getMarkersByAddress } from "@/lib/db/vision-markers"
 
 export async function GET(request: Request) {
   try {
@@ -10,12 +10,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Address parameter is required" }, { status: 400 })
     }
 
-    const markers = await sql`
-      SELECT * FROM vision_markers
-      WHERE address ILIKE ${`%${address}%`}
-      ORDER BY created_at DESC
-    `
-
+    const markers = await getMarkersByAddress(address)
     return NextResponse.json(markers)
   } catch (error) {
     console.error("Error searching vision markers:", error)

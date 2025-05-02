@@ -26,7 +26,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarPicker } from "@/components/ui/calendar"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
-import type { CalendarAppointment, AppointmentPurpose } from "@/types/appointments"
+import { AppointmentPurpose, AppointmentPurposeEnum } from '@/types/appointments'
+import type { CalendarAppointment } from "@/types/appointments"
 
 type CalendarView = "month" | "week" | "day"
 
@@ -137,14 +138,16 @@ export function Calendar({ appointments, onDateClick, onAppointmentClick, onSwit
     if (!purpose) return "bg-gray-500"
 
     // Vibrant neon colors for each purpose
-    const vibrantColors: Record<AppointmentPurpose, string> = {
-      adjuster_appointment: "bg-green-500 dark:bg-green-400",
-      pick_up_check: "bg-orange-500 dark:bg-orange-400",
-      build_day: "bg-amber-500 dark:bg-amber-400",
-      meeting_with_client: "bg-blue-500 dark:bg-blue-400",
+    const purposeColors: Record<AppointmentPurpose, string> = {
+      [AppointmentPurposeEnum.INITIAL_CONSULTATION]: "bg-green-500 dark:bg-green-400",
+      [AppointmentPurposeEnum.ESTIMATE]: "bg-orange-500 dark:bg-orange-400",
+      [AppointmentPurposeEnum.FOLLOW_UP]: "bg-amber-500 dark:bg-amber-400",
+      [AppointmentPurposeEnum.INSPECTION]: "bg-blue-500 dark:bg-blue-400",
+      [AppointmentPurposeEnum.CONTRACT_SIGNING]: "bg-purple-500 dark:bg-purple-400",
+      [AppointmentPurposeEnum.OTHER]: "bg-gray-500 dark:bg-gray-400"
     }
 
-    return vibrantColors[purpose as AppointmentPurpose] || "bg-purple-500 dark:bg-purple-400"
+    return purposeColors[purpose as AppointmentPurpose] || "bg-purple-500 dark:bg-purple-400"
   }
 
   // Navigation handlers
@@ -178,14 +181,16 @@ export function Calendar({ appointments, onDateClick, onAppointmentClick, onSwit
 
   // Legend items for appointment types
   const legendItems = useMemo(() => {
-    const vibrantColors: Record<AppointmentPurpose, string> = {
-      adjuster_appointment: "bg-green-500 dark:bg-green-400",
-      pick_up_check: "bg-orange-500 dark:bg-orange-400",
-      build_day: "bg-amber-500 dark:bg-amber-400",
-      meeting_with_client: "bg-blue-500 dark:bg-blue-400",
+    const purposeColors: Record<AppointmentPurpose, string> = {
+      [AppointmentPurposeEnum.INITIAL_CONSULTATION]: "bg-green-500 dark:bg-green-400",
+      [AppointmentPurposeEnum.ESTIMATE]: "bg-orange-500 dark:bg-orange-400",
+      [AppointmentPurposeEnum.FOLLOW_UP]: "bg-amber-500 dark:bg-amber-400",
+      [AppointmentPurposeEnum.INSPECTION]: "bg-blue-500 dark:bg-blue-400",
+      [AppointmentPurposeEnum.CONTRACT_SIGNING]: "bg-purple-500 dark:bg-purple-400",
+      [AppointmentPurposeEnum.OTHER]: "bg-gray-500 dark:bg-gray-400"
     }
 
-    return Object.entries(vibrantColors).map(([purpose, color]) => ({
+    return Object.entries(purposeColors).map(([purpose, color]) => ({
       purpose: purpose.replace(/_/g, " "),
       color,
     }))
@@ -494,7 +499,7 @@ export function Calendar({ appointments, onDateClick, onAppointmentClick, onSwit
               <CalendarPicker
                 mode="single"
                 selected={currentDate}
-                onSelect={(date) => {
+                onSelect={(date: Date | undefined) => {
                   if (date) {
                     setCurrentDate(date)
                     setCalendarOpen(false)

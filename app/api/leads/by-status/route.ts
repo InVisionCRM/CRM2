@@ -1,6 +1,8 @@
-import { sql } from "@/lib/db/client"
+import { PrismaClient } from "@prisma/client"
 import { NextResponse } from "next/server"
 import type { Lead } from "@/types/lead"
+
+const prisma = new PrismaClient()
 
 export async function GET(request: Request) {
   try {
@@ -11,36 +13,39 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Status parameter is required" }, { status: 400 })
     }
 
-    const leads = await sql<Lead[]>`
-      SELECT 
-        id, 
-        name, 
-        first_name as "firstName", 
-        last_name as "lastName", 
-        email, 
-        phone, 
-        address, 
-        street_address as "streetAddress",
-        city,
-        state,
-        zipcode,
-        status, 
-        assigned_to as "assignedTo", 
-        notes, 
-        insurance_company,
-        insurance_policy_number,
-        insurance_phone,
-        insurance_secondary_phone,
-        insurance_adjuster_name,
-        insurance_adjuster_phone,
-        insurance_adjuster_email,
-        insurance_deductible,
-        created_at, 
-        updated_at 
-      FROM leads 
-      WHERE status = ${status}
-      ORDER BY created_at DESC
-    `
+    const leads = await prisma.lead.findMany({
+      where: {
+        status: status as any, // We'll validate the status against the LeadStatus enum
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        address: true,
+        streetAddress: true,
+        city: true,
+        state: true,
+        zipcode: true,
+        status: true,
+        assignedToId: true,
+        notes: true,
+        insuranceCompany: true,
+        insurancePolicyNumber: true,
+        insurancePhone: true,
+        insuranceSecondaryPhone: true,
+        insuranceAdjusterName: true,
+        insuranceAdjusterPhone: true,
+        insuranceAdjusterEmail: true,
+        insuranceDeductible: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    })
 
     return NextResponse.json(leads)
   } catch (error) {
