@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getLeads, createLead } from "@/lib/db/leads"
+import { getSession } from "@/lib/auth-utils"
 
 export async function GET(request: Request) {
   try {
@@ -22,6 +23,13 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const session = await getSession() // Use the utility function
+    if (!session?.user?.id) {
+      console.error("Unauthorized: No session found or user ID missing in session.")
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    const userId = session.user.id
+
     const body = await request.json()
 
     // Transform the incoming data to match our function parameters
@@ -36,8 +44,9 @@ export async function POST(request: Request) {
       state: body.state,
       zipcode: body.zipcode,
       status: body.status,
-      assignedTo: body.assigned_to,
+      assignedToId: body.assigned_to,
       notes: body.notes,
+      userId: userId, // Pass the fetched user ID
     }
 
     const newLead = await createLead(leadData)
