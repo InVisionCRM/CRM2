@@ -48,13 +48,13 @@ export default function MapPage() {
       if (data.markers) {
         const formattedMarkers: MarkerData[] = data.markers.map((m: any) => ({
           id: m.id,
-          position: [m.lat, m.lng],
+          position: [m.latitude, m.longitude],
           address: m.address,
           status: m.status || "New",
           visits: m.visits || [],
         }))
 
-        console.log("Formatted markers:", formattedMarkers)
+        console.log("Formatted markers with correct position mapping:", formattedMarkers)
         setMarkers(formattedMarkers)
       } else {
         console.warn("No markers found in API response")
