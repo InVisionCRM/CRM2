@@ -1,6 +1,7 @@
 import { prisma } from './prisma'
 import { Lead, ActivityType, ActivityStatus } from '@prisma/client'
 import { nanoid } from "nanoid"
+import crypto from "crypto"
 
 export async function getLeads(): Promise<Lead[]> {
   try {
@@ -60,7 +61,7 @@ interface CreateLeadInput {
 
 export async function createLead(data: CreateLeadInput): Promise<Lead> {
   try {
-    const id = await getNextClientId()
+    const id = crypto.randomUUID()
 
     const lead = await prisma.lead.create({
       data: {
