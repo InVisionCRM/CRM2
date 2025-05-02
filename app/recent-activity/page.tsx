@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ArrowLeft, Search, Filter, Check, X, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -27,64 +27,59 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-// Import the activity-related functions and types from the RecentActivity component
-// In a real app, these would be in shared utility files
+// Import the activity-related functions from the RecentActivity component
 import {
   getActivityIcon,
   getActivityColor,
-  type ActivityItem,
-  mockActivities as initialMockActivities,
+  getRelativeTime,
 } from "@/components/dashboard/recent-activity"
+import type { ActivityWithUser } from "@/lib/db/activities"
 
-// Generate more mock data for demonstration
-const generateMoreMockActivities = (): ActivityItem[] => {
-  const baseActivities = [...initialMockActivities]
-  const types = ["note", "call", "email", "meeting", "document", "estimate", "contract", "sms"]
-  const users = ["Mike Johnson", "Lisa Brown", "David Smith", "Emma Wilson", "Robert Taylor"]
-  const statuses = ["completed", "pending", "cancelled", undefined]
-
-  // Generate 20 more activities with older timestamps
-  for (let i = 0; i < 20; i++) {
-    const type = types[Math.floor(Math.random() * types.length)] as ActivityItem["type"]
-    const user = users[Math.floor(Math.random() * users.length)]
-    const status = statuses[Math.floor(Math.random() * statuses.length)] as ActivityItem["status"]
-    const daysAgo = Math.floor(Math.random() * 30) + 1 // 1-30 days ago
-
-    baseActivities.push({
-      id: `extended-${i}`,
-      type,
-      title: `${type.charAt(0).toUpperCase() + type.slice(1)} activity`,
-      description: `This is a mock ${type} activity for demonstration`,
-      timestamp: new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000),
-      user,
-      leadId: `lead-${Math.floor(Math.random() * 10) + 1}`,
-      status,
-    })
-  }
-
-  // Sort by timestamp (newest first)
-  return baseActivities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+// Define the activity item type based on what we expect from the API
+type ActivityItem = ActivityWithUser & {
+  timestamp?: Date; // For backward compatibility with existing code
 }
 
-const mockActivities = generateMoreMockActivities()
-
 export default function RecentActivityPage() {
+  const [activities, setActivities] = useState<ActivityItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [userFilter, setUserFilter] = useState<string | null>(null)
 
+  // Fetch activities from the API
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        const response = await fetch("/api/activities/all")
+        if (!response.ok) {
+          throw new Error("Failed to fetch activities")
+        }
+        const data = await response.json()
+        setActivities(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchActivities()
+  }, [])
+
   // Get unique users for filtering
-  const uniqueUsers = Array.from(new Set(mockActivities.map((activity) => activity.user)))
+  const uniqueUsers = Array.from(new Set(activities.map((activity) => activity.userName || "")))
 
   // Filter activities based on search and filters
-  const filteredActivities = mockActivities.filter((activity) => {
+  const filteredActivities = activities.filter((activity) => {
     // Search filter
     const matchesSearch =
       searchQuery === "" ||
       activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (activity.description && activity.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      activity.user.toLowerCase().includes(searchQuery.toLowerCase())
+      (activity.userName && activity.userName.toLowerCase().includes(searchQuery.toLowerCase()))
 
     // Type filter
     const matchesType = typeFilter === null || activity.type === typeFilter
@@ -93,7 +88,7 @@ export default function RecentActivityPage() {
     const matchesStatus = statusFilter === null || activity.status === statusFilter
 
     // User filter
-    const matchesUser = userFilter === null || activity.user === userFilter
+    const matchesUser = userFilter === null || activity.userName === userFilter
 
     return matchesSearch && matchesType && matchesStatus && matchesUser
   })
@@ -105,6 +100,56 @@ export default function RecentActivityPage() {
   }
 
   const hasActiveFilters = typeFilter !== null || statusFilter !== null || userFilter !== null
+
+  if (loading) {
+    return (
+      <div className="container px-4 py-4 mx-auto max-w-7xl">
+        <div className="flex items-center mb-6">
+          <Link href="/">
+            <Button variant="ghost" size="icon" className="mr-2">
+              <ArrowLeft className="h-5 w-5" />
+              <span className="sr-only">Back to Dashboard</span>
+            </Button>
+          </Link>
+          <h1 className="text-2xl font-bold">Recent Activity</h1>
+        </div>
+        <div className="animate-pulse space-y-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Card key={i} className="p-4">
+              <div className="flex gap-3">
+                <div className="flex-none rounded-full bg-muted h-8 w-8" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4" />
+                  <div className="h-3 bg-muted rounded w-1/2" />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container px-4 py-4 mx-auto max-w-7xl">
+        <div className="flex items-center mb-6">
+          <Link href="/">
+            <Button variant="ghost" size="icon" className="mr-2">
+              <ArrowLeft className="h-5 w-5" />
+              <span className="sr-only">Back to Dashboard</span>
+            </Button>
+          </Link>
+          <h1 className="text-2xl font-bold">Recent Activity</h1>
+        </div>
+        <Card className="p-4">
+          <div className="text-center text-red-500">
+            <p>Error loading activities: {error}</p>
+          </div>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="container px-4 py-4 mx-auto max-w-7xl">
@@ -150,23 +195,25 @@ export default function RecentActivityPage() {
 
                 <DropdownMenuGroup>
                   <DropdownMenuLabel className="text-xs">By Type</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => setTypeFilter("note")}>Notes</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTypeFilter("call")}>Calls</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTypeFilter("email")}>Emails</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTypeFilter("meeting")}>Meetings</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTypeFilter("document")}>Documents</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTypeFilter("estimate")}>Estimates</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTypeFilter("contract")}>Contracts</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTypeFilter("sms")}>SMS</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTypeFilter("NOTE_ADDED")}>Notes</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTypeFilter("LEAD_CREATED")}>Lead Created</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTypeFilter("LEAD_UPDATED")}>Lead Updated</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTypeFilter("MEETING_SCHEDULED")}>Meetings</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTypeFilter("DOCUMENT_UPLOADED")}>Documents</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTypeFilter("ESTIMATE_CREATED")}>Estimates</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTypeFilter("CONTRACT_CREATED")}>Contracts</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTypeFilter("STATUS_CHANGED")}>Status Changed</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTypeFilter("APPOINTMENT_CREATED")}>Appointment Created</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTypeFilter("APPOINTMENT_UPDATED")}>Appointment Updated</DropdownMenuItem>
                 </DropdownMenuGroup>
 
                 <DropdownMenuSeparator />
 
                 <DropdownMenuGroup>
                   <DropdownMenuLabel className="text-xs">By Status</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => setStatusFilter("completed")}>Completed</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter("pending")}>Pending</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setStatusFilter("cancelled")}>Cancelled</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("COMPLETED")}>Completed</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("PENDING")}>Pending</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter("CANCELLED")}>Cancelled</DropdownMenuItem>
                 </DropdownMenuGroup>
 
                 <DropdownMenuSeparator />
@@ -199,14 +246,16 @@ export default function RecentActivityPage() {
                 <SelectGroup>
                   <SelectLabel>Activity Type</SelectLabel>
                   <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="note">Notes</SelectItem>
-                  <SelectItem value="call">Calls</SelectItem>
-                  <SelectItem value="email">Emails</SelectItem>
-                  <SelectItem value="meeting">Meetings</SelectItem>
-                  <SelectItem value="document">Documents</SelectItem>
-                  <SelectItem value="estimate">Estimates</SelectItem>
-                  <SelectItem value="contract">Contracts</SelectItem>
-                  <SelectItem value="sms">SMS</SelectItem>
+                  <SelectItem value="NOTE_ADDED">Notes</SelectItem>
+                  <SelectItem value="LEAD_CREATED">Lead Created</SelectItem>
+                  <SelectItem value="LEAD_UPDATED">Lead Updated</SelectItem>
+                  <SelectItem value="MEETING_SCHEDULED">Meetings</SelectItem>
+                  <SelectItem value="DOCUMENT_UPLOADED">Documents</SelectItem>
+                  <SelectItem value="ESTIMATE_CREATED">Estimates</SelectItem>
+                  <SelectItem value="CONTRACT_CREATED">Contracts</SelectItem>
+                  <SelectItem value="STATUS_CHANGED">Status Changed</SelectItem>
+                  <SelectItem value="APPOINTMENT_CREATED">Appointment Created</SelectItem>
+                  <SelectItem value="APPOINTMENT_UPDATED">Appointment Updated</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -218,7 +267,7 @@ export default function RecentActivityPage() {
           <div className="flex flex-wrap gap-2">
             {typeFilter && (
               <div className="bg-muted px-3 py-1 rounded-full text-xs flex items-center gap-1">
-                Type: {typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1)}
+                Type: {typeFilter.replace(/_/g, ' ')}
                 <Button variant="ghost" size="icon" className="h-4 w-4 ml-1 p-0" onClick={() => setTypeFilter(null)}>
                   <X className="h-3 w-3" />
                 </Button>
@@ -227,7 +276,7 @@ export default function RecentActivityPage() {
 
             {statusFilter && (
               <div className="bg-muted px-3 py-1 rounded-full text-xs flex items-center gap-1">
-                Status: {statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+                Status: {statusFilter}
                 <Button variant="ghost" size="icon" className="h-4 w-4 ml-1 p-0" onClick={() => setStatusFilter(null)}>
                   <X className="h-3 w-3" />
                 </Button>
@@ -252,119 +301,99 @@ export default function RecentActivityPage() {
 
       {/* Activity list */}
       <div className="space-y-4">
-        {filteredActivities.length > 0 ? (
-          <>
-            {/* Group activities by date */}
-            {groupActivitiesByDate(filteredActivities).map(([dateLabel, activities]) => (
-              <div key={dateLabel}>
-                <h2 className="text-sm font-medium text-muted-foreground mb-2">{dateLabel}</h2>
-                <Card className="overflow-hidden">
-                  <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {activities.map((activity) => (
-                      <div key={activity.id} className="p-4 hover:bg-muted/30 transition-colors">
-                        <div className="flex gap-3">
-                          {/* Icon */}
-                          <div
-                            className={cn(
-                              "flex-none rounded-full p-2 h-8 w-8 flex items-center justify-center",
-                              getActivityColor(activity.type),
-                            )}
-                          >
-                            {getActivityIcon(activity.type)}
-                          </div>
-
-                          {/* Content */}
-                          <div className="flex-1">
-                            <div className="flex justify-between">
-                              <p className="text-sm font-medium">{activity.title}</p>
-                              <span className="text-xs text-muted-foreground">
-                                {format(activity.timestamp, "h:mm a")}
-                              </span>
-                            </div>
-                            {activity.description && (
-                              <p className="text-xs text-muted-foreground mt-0.5">{activity.description}</p>
-                            )}
-                            <p className="text-xs text-muted-foreground mt-0.5">by {activity.user}</p>
-                          </div>
-
-                          {/* Status if applicable */}
-                          {activity.status && (
-                            <div className="flex-none">
-                              {activity.status === "completed" ? (
-                                <div className="flex items-center text-green-500 text-xs">
-                                  <Check className="h-3.5 w-3.5 mr-1" />
-                                  <span>Complete</span>
-                                </div>
-                              ) : activity.status === "cancelled" ? (
-                                <div className="flex items-center text-red-500 text-xs">
-                                  <X className="h-3.5 w-3.5 mr-1" />
-                                  <span>Cancelled</span>
-                                </div>
-                              ) : (
-                                <div className="flex items-center text-amber-500 text-xs">
-                                  <Clock className="h-3.5 w-3.5 mr-1" />
-                                  <span>Pending</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+        {groupActivitiesByDate(filteredActivities).map(([date, dateActivities]) => (
+          <div key={date} className="space-y-2">
+            <h3 className="text-sm font-medium text-muted-foreground">{date}</h3>
+            {dateActivities.map((activity) => (
+              <Card key={activity.id} className="p-4">
+                <div className="flex gap-3">
+                  <div
+                    className={cn(
+                      "flex-none rounded-full p-2 h-8 w-8 flex items-center justify-center",
+                      getActivityColor(activity.type)
+                    )}
+                  >
+                    {getActivityIcon(activity.type)}
                   </div>
-                </Card>
-              </div>
+
+                  <div className="flex-1">
+                    <div className="flex justify-between">
+                      <p className="text-sm font-medium">{activity.title}</p>
+                      <span className="text-xs text-muted-foreground">
+                        {getRelativeTime(activity.createdAt || activity.timestamp!)}
+                      </span>
+                    </div>
+                    {activity.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5">{activity.description}</p>
+                    )}
+                    {activity.userName && (
+                      <p className="text-xs text-muted-foreground mt-0.5">by {activity.userName}</p>
+                    )}
+                    {activity.leadId && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        <Link href={`/leads/${activity.leadId}`} className="text-primary hover:underline">
+                          View Lead
+                        </Link>
+                      </p>
+                    )}
+                  </div>
+
+                  {activity.status && (
+                    <div className="flex-none">
+                      {activity.status === "CANCELLED" ? (
+                        <div className="flex items-center text-red-500 text-xs">
+                          <X className="h-3.5 w-3.5 mr-1" />
+                          <span>Cancelled</span>
+                        </div>
+                      ) : activity.status === "PENDING" ? (
+                        <div className="flex items-center text-amber-500 text-xs">
+                          <Clock className="h-3.5 w-3.5 mr-1" />
+                          <span>Pending</span>
+                        </div>
+                      ) : activity.status === "COMPLETED" ? (
+                        <div className="flex items-center text-green-500 text-xs">
+                          <Check className="h-3.5 w-3.5 mr-1" />
+                          <span>Completed</span>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+              </Card>
             ))}
-          </>
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No activities found matching your filters.</p>
-            {hasActiveFilters && (
-              <Button variant="outline" className="mt-4" onClick={clearFilters}>
-                Clear Filters
-              </Button>
-            )}
           </div>
+        ))}
+
+        {filteredActivities.length === 0 && (
+          <Card className="p-6">
+            <div className="text-center text-muted-foreground">
+              <p>No activities found</p>
+              <p className="text-sm mt-1">Try adjusting your filters or search criteria</p>
+            </div>
+          </Card>
         )}
       </div>
     </div>
   )
 }
 
-// Helper function to group activities by date
+// Helper to group activities by date
 function groupActivitiesByDate(activities: ActivityItem[]): [string, ActivityItem[]][] {
-  const groups: Record<string, ActivityItem[]> = {}
+  const grouped = new Map<string, ActivityItem[]>()
 
   activities.forEach((activity) => {
-    const date = activity.timestamp
-    const today = new Date()
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
-
-    let dateLabel: string
-
-    if (date.toDateString() === today.toDateString()) {
-      dateLabel = "Today"
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      dateLabel = "Yesterday"
-    } else {
-      dateLabel = format(date, "MMMM d, yyyy")
+    const date = activity.createdAt || activity.timestamp!
+    const dateString = format(date, "MMMM d, yyyy")
+    
+    if (!grouped.has(dateString)) {
+      grouped.set(dateString, [])
     }
-
-    if (!groups[dateLabel]) {
-      groups[dateLabel] = []
-    }
-
-    groups[dateLabel].push(activity)
+    
+    grouped.get(dateString)!.push(activity)
   })
 
-  // Convert to array and sort by date (newest first)
-  return Object.entries(groups).sort((a, b) => {
-    if (a[0] === "Today") return -1
-    if (b[0] === "Today") return 1
-    if (a[0] === "Yesterday") return -1
-    if (b[0] === "Yesterday") return 1
-
+  // Sort dates in descending order (newest first)
+  return Array.from(grouped.entries()).sort((a, b) => {
     const dateA = new Date(a[0])
     const dateB = new Date(b[0])
     return dateB.getTime() - dateA.getTime()

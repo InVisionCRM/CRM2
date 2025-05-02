@@ -64,6 +64,42 @@ export async function getRecentActivities(limit = 5): Promise<ActivityWithUser[]
 }
 
 /**
+ * Gets all activities with pagination and user information
+ */
+export async function getAllActivities(page = 1, limit = 50): Promise<ActivityWithUser[]> {
+  try {
+    const skip = (page - 1) * limit
+    
+    const activities = await prisma.activity.findMany({
+      skip,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            name: true
+          }
+        },
+        lead: {
+          select: {
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
+    })
+
+    return activities.map(activity => ({
+      ...activity,
+      userName: activity.user.name
+    }))
+  } catch (error) {
+    console.error("Error fetching all activities:", error)
+    throw new Error(`Failed to fetch activities: ${error instanceof Error ? error.message : "Unknown error"}`)
+  }
+}
+
+/**
  * Gets all activities for a specific lead with user information
  */
 export async function getActivitiesByLeadId(leadId: string): Promise<ActivityWithUser[]> {
