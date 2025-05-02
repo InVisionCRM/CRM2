@@ -1,0 +1,103 @@
+import {
+  FileText,
+  ClipboardCheck,
+  ListChecks,
+  BadgeCheck,
+  Calculator,
+  DollarSign,
+  FilePlus,
+  Receipt,
+  Clipboard,
+  Eye,
+  Package,
+  FolderPlus,
+} from "lucide-react"
+import type { DocumentCategoryType } from "@/types/documents"
+
+// Define document categories with their icons and colors
+export const documentCategories: DocumentCategoryType[] = [
+  {
+    id: "general-contract",
+    name: "General Contract",
+    icon: FileText,
+    color: "text-blue-600",
+    bgColor: "bg-blue-100 dark:bg-blue-900/30",
+  },
+  {
+    id: "adjuster-summary",
+    name: "Adjuster Summary",
+    icon: ClipboardCheck,
+    color: "text-purple-600",
+    bgColor: "bg-purple-100 dark:bg-purple-900/30",
+  },
+  {
+    id: "scope-of-work",
+    name: "Scope of Work",
+    icon: ListChecks,
+    color: "text-green-600",
+    bgColor: "bg-green-100 dark:bg-green-900/30",
+  },
+  {
+    id: "permits",
+    name: "Permits",
+    icon: BadgeCheck,
+    color: "text-red-600",
+    bgColor: "bg-red-100 dark:bg-red-900/30",
+  },
+  {
+    id: "estimates",
+    name: "Estimates",
+    icon: Calculator,
+    color: "text-amber-600",
+    bgColor: "bg-amber-100 dark:bg-amber-900/30",
+  },
+  {
+    id: "acv",
+    name: "ACV",
+    icon: DollarSign,
+    color: "text-emerald-600",
+    bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
+  },
+  {
+    id: "supplements",
+    name: "Supplements",
+    icon: FilePlus,
+    color: "text-indigo-600",
+    bgColor: "bg-indigo-100 dark:bg-indigo-900/30",
+  },
+  {
+    id: "invoices",
+    name: "Invoices",
+    icon: Receipt,
+    color: "text-teal-600",
+    bgColor: "bg-teal-100 dark:bg-teal-900/30",
+  },
+  {
+    id: "work-orders",
+    name: "Work Orders",
+    icon: Clipboard,
+    color: "text-orange-600",
+    bgColor: "bg-orange-100 dark:bg-orange-900/30",
+  },
+  {
+    id: "eagleview",
+    name: "EagleView",
+    icon: Eye,
+    color: "text-sky-600",
+    bgColor: "bg-sky-100 dark:bg-sky-900/30",
+  },
+  {
+    id: "material-list",
+    name: "Material List",
+    icon: Package,
+    color: "text-rose-600",
+    bgColor: "bg-rose-100 dark:bg-rose-900/30",
+  },
+  {
+    id: "other",
+    name: "Other",
+    icon: FolderPlus,
+    color: "text-gray-600",
+    bgColor: "bg-gray-100 dark:bg-gray-800",
+  },
+]
