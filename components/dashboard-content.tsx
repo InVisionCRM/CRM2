@@ -2,7 +2,6 @@
 
 import { SummaryCards } from "@/components/dashboard/summary-cards"
 import { QuickActions } from "@/components/dashboard/quick-actions"
-import { RecentActivity } from "@/components/dashboard/recent-activity"
 import { DynamicHero } from "@/components/dynamic-components"
 
 export function DashboardContent() {
@@ -22,9 +21,6 @@ export function DashboardContent() {
 
         {/* Quick Actions */}
         <QuickActions />
-
-        {/* Recent Activity */}
-        <RecentActivity />
       </div>
     </div>
   )

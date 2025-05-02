@@ -56,6 +56,5 @@ export const config = {
     "/contracts/:path*",
     "/weather/:path*",
     "/quick-links/:path*",
-    "/recent-activity/:path*",
   ],
 }
