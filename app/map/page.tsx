@@ -4,15 +4,23 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { useToast } from "@/hooks/use-toast"
 import MapboxMap from "@/components/map/mapbox-map"
 import { AddressSearch } from "@/components/map/address-search"
-import CrmLeadCardModal from "@/components/crm-lead-card-modal"
+import { MapInteractionDrawer } from "@/components/map/MapInteractionDrawer"
 import type { MarkerData } from "@/components/map/mapbox-map"
+
+// Define a type for the data needed by the drawer
+interface DrawerData {
+  address: string
+  position: [number, number]
+  markerId?: string
+  currentStatus?: string
+  streetViewUrl?: string
+}
 
 export default function MapPage() {
   const [markers, setMarkers] = useState<MarkerData[]>([])
-  const [modalOpen, setModalOpen] = useState(false)
-  const [selectedPosition, setSelectedPosition] = useState<[number, number] | null>(null)
-  const [selectedAddress, setSelectedAddress] = useState("")
-  const [selectedMarkerId, setSelectedMarkerId] = useState<string | undefined>(undefined)
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [selectedDrawerData, setSelectedDrawerData] = useState<DrawerData | null>(null)
+  const [isDrawerExpanded, setIsDrawerExpanded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const mapRef = useRef<any>(null)
   const { toast } = useToast()
@@ -75,10 +83,17 @@ export default function MapPage() {
   // Use useCallback to ensure these functions don't change on re-renders
   const handleMarkerClick = useCallback((marker: MarkerData) => {
     console.log("Marker clicked:", marker)
-    setSelectedAddress(marker.address)
-    setSelectedPosition(marker.position)
-    setSelectedMarkerId(marker.id)
-    setModalOpen(true)
+    const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${marker.position[0]},${marker.position[1]}&key=YOUR_GOOGLE_MAPS_API_KEY&return_error_codes=true` // Replace YOUR_GOOGLE_MAPS_API_KEY
+
+    setSelectedDrawerData({
+      address: marker.address,
+      position: marker.position,
+      markerId: marker.id,
+      currentStatus: marker.status, // Assuming status is on MarkerData
+      streetViewUrl: streetViewUrl, // Add fetched/constructed URL
+    })
+    setIsDrawerExpanded(false) // Start collapsed
+    setIsDrawerOpen(true)
   }, [])
 
   const handleMarkerAdd = useCallback((position: [number, number], address: string) => {
@@ -92,16 +107,24 @@ export default function MapPage() {
       id: tempId,
       position: position,
       address: address,
-      status: "New",
+      status: "New", // Default status for a new potential marker
     }
 
     setMarkers((prevMarkers) => [...prevMarkers, newMarker])
 
-    // Set up the modal with the new marker details
-    setSelectedAddress(address)
-    setSelectedPosition(position)
-    setSelectedMarkerId(tempId) // Use the temporary ID
-    setModalOpen(true)
+    // Set up the drawer with the new marker details
+    // TODO: Implement logic to get Street View URL
+    const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${position[0]},${position[1]}&key=YOUR_GOOGLE_MAPS_API_KEY&return_error_codes=true` // Replace YOUR_GOOGLE_MAPS_API_KEY
+
+    setSelectedDrawerData({
+      address: address,
+      position: position,
+      markerId: tempId, // Use the temporary ID
+      currentStatus: undefined, // No status selected yet for a new location
+      streetViewUrl: streetViewUrl,
+    })
+    setIsDrawerExpanded(false) // Start collapsed
+    setIsDrawerOpen(true)
   }, [])
 
   // Function to handle address selection from search
@@ -139,12 +162,30 @@ export default function MapPage() {
     }
   }, [])
 
-  const handleModalClose = useCallback(async () => {
-    console.log("Modal closed, refreshing markers...")
-    setModalOpen(false)
-    // Fetch new markers without resetting the map
-    await fetchMarkers()
-  }, [])
+  // TODO: Implement actual status saving logic (e.g., call Server Action)
+  const handleStatusChange = useCallback((newStatus: string) => {
+    if (!selectedDrawerData) return
+
+    console.log(`Status changed for ${selectedDrawerData.address} to: ${newStatus}`)
+
+    // Update local state immediately for UI feedback
+    setSelectedDrawerData(prevData => prevData ? { ...prevData, currentStatus: newStatus } : null)
+
+    // Update the marker in the main markers array
+    setMarkers(prevMarkers => prevMarkers.map(m => 
+      m.id === selectedDrawerData.markerId ? { ...m, status: newStatus } : m
+    ))
+
+    // Optionally: Dispatch custom event for mapbox-map to update color instantly
+    window.dispatchEvent(new CustomEvent('markerStatusUpdate', { 
+      detail: { address: selectedDrawerData.address, status: newStatus }
+    }));
+
+    // Future: Add API call here to persist the status change
+    // Example: updateVisitStatusAction(selectedDrawerData.markerId || selectedDrawerData.address, newStatus)
+    toast({ title: "Status Updated", description: `Status set to ${newStatus}` })
+
+  }, [selectedDrawerData]) // Dependency on selectedDrawerData
 
   return (
     <div className="fullscreen-map-container relative [color-scheme:light]">
@@ -164,13 +205,25 @@ export default function MapPage() {
         accessToken={process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || ""}
       />
 
-      {modalOpen && selectedPosition && (
-        <CrmLeadCardModal
-          isOpen={modalOpen}
-          onClose={handleModalClose}
-          address={selectedAddress}
-          position={selectedPosition}
-          markerId={selectedMarkerId}
+      {isDrawerOpen && selectedDrawerData && (
+        <MapInteractionDrawer
+          isOpen={isDrawerOpen}
+          onClose={() => {
+            setIsDrawerOpen(false)
+            setSelectedDrawerData(null)
+            setIsDrawerExpanded(false) // Ensure it collapses on close
+          }}
+          // Pass individual props from selectedDrawerData
+          address={selectedDrawerData.address}
+          streetViewUrl={selectedDrawerData.streetViewUrl}
+          currentStatus={selectedDrawerData.currentStatus}
+          // Pass available statuses (customize this list as needed)
+          availableStatuses={["No Answer", "Not Home", "Not Interested", "Come Back Later", "Appointment Set", "Signed Contract"]}
+          onStatusChange={handleStatusChange} 
+          // Expansion control props
+          isExpanded={isDrawerExpanded}
+          onExpand={() => setIsDrawerExpanded(true)}
+          onCollapse={() => setIsDrawerExpanded(false)} // Pass the collapse handler
         />
       )}
     </div>

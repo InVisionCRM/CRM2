@@ -15,6 +15,9 @@ interface MapInteractionDrawerProps {
   currentStatus?: string
   onStatusChange: (status: string) => void
   onExpand: () => void // Function to trigger expansion
+  // Add props for expanded state control
+  isExpanded: boolean
+  onCollapse: () => void
 }
 
 export function MapInteractionDrawer({
@@ -26,6 +29,8 @@ export function MapInteractionDrawer({
   currentStatus,
   onStatusChange,
   onExpand,
+  isExpanded,
+  onCollapse,
 }: MapInteractionDrawerProps) {
   if (!isOpen) {
     return null
