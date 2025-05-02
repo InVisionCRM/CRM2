@@ -254,7 +254,7 @@ export default function CrmLeadCardModal({
           const allVisits = markers.flatMap((marker: any) => marker.visits || [])
           const formatted = allVisits
             .map(formatVisit)
-            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+            .sort((a: Visit, b: Visit) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
           setPreviousVisits(formatted)
           // Use the most recent marker's contact info
           const mostRecent = markers.sort(
@@ -306,7 +306,7 @@ export default function CrmLeadCardModal({
         const allVisits = markers.flatMap((m: any) => m.visits || [])
         return allVisits
           .map(formatVisit)
-          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+          .sort((a: Visit, b: Visit) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       }
     }
     return []
@@ -632,6 +632,14 @@ export default function CrmLeadCardModal({
           notes: visitInfo.notes,
           latitude: position[0],
           longitude: position[1],
+          insurance_company: insuranceInfo?.company || null,
+          insurance_policy_number: insuranceInfo?.policyNumber || null,
+          insurance_phone: insuranceInfo?.phone || null,
+          insurance_secondary_phone: insuranceInfo?.secondaryPhone || null,
+          insurance_adjuster_name: insuranceInfo?.adjusterName || null,
+          insurance_adjuster_phone: insuranceInfo?.adjusterPhone || null,
+          insurance_adjuster_email: insuranceInfo?.adjusterEmail || null,
+          insurance_deductible: insuranceInfo?.deductible || null,
         }
         const response = await fetch("/api/leads", {
           method: "POST",
@@ -978,7 +986,7 @@ export default function CrmLeadCardModal({
                         initialInsuranceInfo={insuranceInfo || undefined}
                         onInsuranceInfoUpdate={handleInsuranceInfoUpdate}
                         previewMode={!createdLeadId}
-                        onLeadCreated={(leadId) => {
+                        onLeadCreated={(leadId: string) => {
                           if (!createdLeadId) {
                             setCreatedLeadId(leadId)
                             toast({ title: "Success", description: "Lead created successfully" })

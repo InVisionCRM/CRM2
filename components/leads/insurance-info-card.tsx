@@ -65,6 +65,9 @@ interface InsuranceInfoCardProps {
   appointmentTime?: string | null
   appointmentNotes?: string | null
   onInsuranceInfoUpdate?: (info: InsuranceInfo) => void
+  previewMode?: boolean
+  onLeadCreated?: (leadId: string) => void
+  contactInfo?: any
 }
 
 export function InsuranceInfoCard({
@@ -74,6 +77,9 @@ export function InsuranceInfoCard({
   appointmentTime,
   appointmentNotes,
   onInsuranceInfoUpdate,
+  previewMode,
+  onLeadCreated,
+  contactInfo,
 }: InsuranceInfoCardProps) {
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(!initialInsuranceInfo)
@@ -209,6 +215,7 @@ export function InsuranceInfoCard({
                 <Label htmlFor="company">Insurance Company</Label>
                 <select
                   id="company"
+                  aria-label="Insurance Company"
                   value={insuranceInfo.company || ""}
                   onChange={(e) => handleCompanyChange(e.target.value)}
                   className="w-full h-10 px-3 py-2 text-sm rounded-md border border-input bg-background"
