@@ -3,6 +3,22 @@ import { NextResponse } from "next/server"
 import { getMarkers, createMarker } from "@/lib/db/vision-markers"
 import { KnockStatus } from "@prisma/client"
 
+// Helper function to map string to KnockStatus enum
+const mapStringToKnockStatus = (statusString: string | undefined | null): KnockStatus => {
+  const upperCaseStatus = statusString?.toUpperCase().replace(" ", "_"); // Handle potential spaces like "Not Visited" -> "NOT_VISITED"
+  switch (upperCaseStatus) {
+    case "KNOCKED": return KnockStatus.KNOCKED;
+    case "NO_ANSWER": return KnockStatus.NO_ANSWER;
+    case "INTERESTED": return KnockStatus.INTERESTED;
+    case "APPOINTMENT_SET": return KnockStatus.APPOINTMENT_SET;
+    case "INSPECTED": return KnockStatus.INSPECTED; // Handle the new status
+    case "NOT_VISITED": return KnockStatus.NOT_VISITED;
+    default:
+      console.warn(`Unknown status string received: '${statusString}', defaulting to NOT_VISITED.`);
+      return KnockStatus.NOT_VISITED; // Default fallback
+  }
+};
+
 // GET all vision markers
 export async function GET() {
   try {
@@ -49,13 +65,16 @@ export async function POST(request: Request) {
       )
     }
 
+    // Use the helper function to safely map the status
+    const mappedStatus = mapStringToKnockStatus(status);
+
     // Create the marker
     const marker = await createMarker({
       latitude: lat,
       longitude: lng,
       address,
       notes: notes || null,
-      status: (status || "NOT_VISITED") as KnockStatus,
+      status: mappedStatus, // Use the safely mapped status enum value
       contactInfo: contactInfo || undefined,
       followUp: {
         date: followUpDate || null,

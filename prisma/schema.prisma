@@ -272,6 +272,7 @@ enum KnockStatus {
   NO_ANSWER       @map("No Answer")
   INTERESTED
   APPOINTMENT_SET @map("Appointment Set")
+  INSPECTED
 }
 
 model File {
