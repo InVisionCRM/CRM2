@@ -30,6 +30,8 @@ export async function POST(request: Request) {
     }
     const userId = session.user.id
 
+    console.log("Extracted userId from session:", userId, "Type:", typeof userId);
+
     const body = await request.json()
 
     // Transform the incoming data to match our function parameters
