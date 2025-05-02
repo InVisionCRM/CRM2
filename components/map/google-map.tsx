@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle, memo } from "react"
 import { Loader } from "@googlemaps/js-api-loader"
 import { useMapContext } from "./map-context"
+import { getMarkerColor } from "@/lib/utils"
 
 export interface MarkerData {
   id: string
@@ -18,25 +19,6 @@ interface GoogleMapProps {
   onMarkerAdd: (position: [number, number], address: string) => void
   apiKey: string
   searchResult?: { position: [number, number]; address: string } | null
-}
-
-const getMarkerColor = (status?: string) => {
-  switch (status) {
-    case "Not Home":
-      return "#000000" // black
-    case "Not Interested":
-      return "#ef4444" // red
-    case "Inspected":
-      return "#FFC0CB" // pink
-    case "Follow-up":
-      return "#FFD700" // gold
-    case "In Contract":
-      return "#32CD32" // lime green
-    case "Search":
-      return "#ec4899" // pink
-    default:
-      return "#6b7280" // gray
-  }
 }
 
 const GoogleMap = memo(

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, forwardRef, useImperativeHandle, memo } fr
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import { useMapContext } from "./map-context"
+import { getMarkerColor } from "@/lib/utils"
 
 export interface MarkerData {
   id: string
@@ -132,49 +133,40 @@ const MapboxMap = memo(
     useEffect(() => {
       if (!mapLoaded || !map.current) return
 
-      // Use a debounce to prevent too frequent updates
       const updateMarkersTimeout = setTimeout(() => {
         console.log("Updating markers:", markers.length)
 
-        // Clear existing markers
         Object.values(markersRef.current).forEach((marker) => marker.remove())
         markersRef.current = {}
 
-        // Add new markers
         markers.forEach((markerData) => {
           const { id, position, status, address } = markerData
           const [lat, lng] = position
 
-          // Create marker element
           const el = document.createElement("div")
           el.className = "custom-marker"
           el.setAttribute("data-address", address)
-          el.setAttribute("data-status", status || "") // Add status attribute for debugging
+          el.setAttribute("data-status", status || "")
           el.style.width = "25px"
           el.style.height = "25px"
           el.style.borderRadius = "50%"
           el.style.cursor = "pointer"
 
-          // Set color based on status
           const color = getMarkerColor(status)
           el.style.backgroundColor = color
-          console.log("Setting marker color:", { address, status, color }) // Debug log
+          console.log("Setting marker color:", { address, status, color })
 
-          // Add border and shadow
           if (status !== "Search") {
             el.style.border = "2px solid white"
             el.style.boxShadow = "0 2px 4px rgba(0,0,0,0.3)"
           }
 
-          // Create and add the marker
           const marker = new mapboxgl.Marker(el).setLngLat([lng, lat]).addTo(map.current!)
 
-          // Add click handler
           marker.getElement().addEventListener("click", () => {
             onMarkerClick(markerData)
           })
 
-          // Store reference
           markersRef.current[id] = marker
         })
       }, 100)
@@ -182,46 +174,24 @@ const MapboxMap = memo(
       return () => clearTimeout(updateMarkersTimeout)
     }, [markers, mapLoaded, onMarkerClick])
 
-    // Helper function to get marker color
-    const getMarkerColor = (status?: string) => {
-      console.log("Getting color for status:", status) // Debug log
-      switch (status) {
-        case "No Answer":
-          return "#3b82f6" // blue-500
-        case "Not Interested":
-          return "#ef4444" // red-500
-        case "Inspected":
-          return "#22c55e" // green-500
-        case "Follow-up":
-          return "#f59e0b" // amber-500
-        case "In Contract":
-          return "#6366f1" // indigo-500
-        case "Search":
-          return "#ec4899" // pink-500
-        default:
-          return "#6b7280" // gray-500
-      }
-    }
-
     // Listen for marker status updates
     useEffect(() => {
       const handleStatusUpdate = (event: CustomEvent<{ address: string; status: string }>) => {
         const { address, status } = event.detail
-        console.log("Status update received:", { address, status }) // Debug log
+        console.log("Status update received:", { address, status })
         
-        // Find all markers that match this address
         const matchingMarkers = Object.values(markersRef.current).filter(marker => 
           marker.getElement().getAttribute("data-address") === address
         )
         
-        console.log("Matching markers found:", matchingMarkers.length) // Debug log
+        console.log("Matching markers found:", matchingMarkers.length)
         
         matchingMarkers.forEach(marker => {
           const el = marker.getElement()
           const color = getMarkerColor(status)
-          console.log("Updating marker color:", { address, status, color }) // Debug log
+          console.log("Updating marker color:", { address, status, color })
           el.style.backgroundColor = color
-          el.setAttribute("data-status", status) // Update status attribute
+          el.setAttribute("data-status", status)
         })
       }
 
