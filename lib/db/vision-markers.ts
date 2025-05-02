@@ -61,6 +61,11 @@ export async function getMarkers(): Promise<VisionMarker[]> {
  */
 export async function getMarkerById(id: string): Promise<VisionMarker | null> {
   try {
+    // Return null for temporary markers instead of trying to query the database
+    if (id.startsWith('temp-')) {
+      return null
+    }
+
     const marker = await prisma.visionMarker.findUnique({
       where: { id }
     })

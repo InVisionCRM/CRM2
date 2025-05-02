@@ -9,6 +9,7 @@ import { getSession } from "next-auth/react"
 import { useToast } from "@/hooks/use-toast"
 import type { Visit } from "@/types/note"
 import { StreetViewImage } from "./street-view-image"
+import type { SessionUser } from "@/lib/auth-utils"
 
 interface QuickStatusCardProps {
   address: string
@@ -47,7 +48,8 @@ const QuickStatusCard = ({
   useEffect(() => {
     const fetchExistingVisits = async () => {
       try {
-        if (markerId) {
+        // Skip API call completely for temporary markers
+        if (markerId && !markerId.startsWith('temp-')) {
           const response = await fetch(`/api/vision-markers/${markerId}`)
           if (response.ok) {
             const data = await response.json()
@@ -68,20 +70,22 @@ const QuickStatusCard = ({
     try {
       setIsSaving(true)
       const session = await getSession()
-      const userName = session?.user?.name || "Unknown"
-      const userEmail = session?.user?.email || "unknown@example.com"
-      const userId = session?.user?.id || null
+      const user = session?.user as SessionUser | undefined
+      const userName = user?.name || "Unknown"
+      const userEmail = user?.email || "unknown@example.com"
+      const userId = user?.id || null
 
-      const newVisit: Visit = {
-        id: `visit-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      const newVisit = {
+        id: crypto.randomUUID(),
         timestamp: new Date().toISOString(),
         salesPersonId: userEmail,
         status: newStatus,
         notes: "",
       }
 
-      // Include previous visits in the update
-      const allVisits = [newVisit, ...previousVisits]
+      // Always create a new marker for temporary IDs
+      const isTemp = !markerId || markerId.startsWith('temp-')
+      const allVisits = isTemp ? [newVisit] : [newVisit, ...previousVisits]
 
       const visitData = {
         lat: position[0],
@@ -100,10 +104,9 @@ const QuickStatusCard = ({
         visits: allVisits,
       }
 
-      // Only use PUT if we have a non-temp markerId
-      const isTemp = !markerId || markerId.startsWith('temp-')
-      const url = !isTemp ? `/api/vision-markers/${markerId}` : "/api/vision-markers"
-      const method = !isTemp ? "PUT" : "POST"
+      // Always create a new marker for temporary IDs
+      const url = isTemp ? "/api/vision-markers" : `/api/vision-markers/${markerId}`
+      const method = isTemp ? "POST" : "PUT"
 
       console.log(`Making ${method} request to ${url} with data:`, visitData)
 

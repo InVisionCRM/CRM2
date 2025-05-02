@@ -1,14 +1,27 @@
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth-utils"
 import { getMarkerById, updateMarker, deleteMarker } from "@/lib/db/vision-markers"
-import { KnockStatus } from "@prisma/client"
+import { PrismaClient } from "@prisma/client"
+
+const prisma = new PrismaClient()
+type KnockStatus = 'NOT_VISITED' | 'KNOCKED' | 'NO_ANSWER' | 'INTERESTED' | 'APPOINTMENT_SET';
 
 // GET a specific vision marker by ID
-export async function GET(request: Request, { params }: { params: { id: string } }) {
-  try {
-    const id = params.id
+export async function GET(
+  request: Request,
+  { params }: { params: { id: Promise<string> } }
+) {
+  // Wait for the ID to be resolved
+  const id = await params.id;
+  const markerId = decodeURIComponent(id);
 
-    const marker = await getMarkerById(id)
+  // Return early for temporary markers
+  if (markerId.startsWith('temp-')) {
+    return NextResponse.json({ error: "Marker not found" }, { status: 404 })
+  }
+
+  try {
+    const marker = await getMarkerById(markerId)
 
     if (!marker) {
       return NextResponse.json({ error: "Marker not found" }, { status: 404 })
@@ -16,15 +29,26 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     return NextResponse.json(marker)
   } catch (error) {
-    console.error(`Error fetching vision marker ${params.id}:`, error)
+    console.error(`Error fetching vision marker ${markerId}:`, error)
     return NextResponse.json({ error: "Failed to fetch vision marker" }, { status: 500 })
   }
 }
 
 // PUT/UPDATE a vision marker
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: Promise<string> } }
+) {
+  // Wait for the ID to be resolved
+  const id = await params.id;
+  const markerId = decodeURIComponent(id);
+
+  // Return early for temporary markers
+  if (markerId.startsWith('temp-')) {
+    return NextResponse.json({ error: "Invalid marker ID" }, { status: 400 })
+  }
+
   try {
-    const id = params.id
     const body = await request.json()
     const session = await getSession()
 
@@ -48,7 +72,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     } = body
 
     // Get the existing marker to merge visits
-    const existingMarker = await getMarkerById(id)
+    const existingMarker = await getMarkerById(markerId)
 
     if (!existingMarker) {
       return NextResponse.json({ error: "Marker not found" }, { status: 404 })
@@ -78,7 +102,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
 
     // Update the marker
-    const updatedMarker = await updateMarker(id, {
+    const updatedMarker = await updateMarker(markerId, {
       ...(lat !== undefined && { latitude: lat }),
       ...(lng !== undefined && { longitude: lng }),
       ...(address !== undefined && { address }),
@@ -96,7 +120,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     return NextResponse.json(updatedMarker)
   } catch (error) {
-    console.error(`Error updating vision marker ${params.id}:`, error)
+    console.error(`Error updating vision marker ${markerId}:`, error)
     return NextResponse.json(
       { error: "Failed to update vision marker", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
@@ -105,14 +129,24 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 }
 
 // DELETE a vision marker
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  try {
-    const id = params.id
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: Promise<string> } }
+) {
+  // Wait for the ID to be resolved
+  const id = await params.id;
+  const markerId = decodeURIComponent(id);
 
-    const marker = await deleteMarker(id)
+  // Return early for temporary markers
+  if (markerId.startsWith('temp-')) {
+    return NextResponse.json({ error: "Invalid marker ID" }, { status: 400 })
+  }
+
+  try {
+    const marker = await deleteMarker(markerId)
     return NextResponse.json({ success: true, id: marker.id })
   } catch (error) {
-    console.error(`Error deleting vision marker ${params.id}:`, error)
+    console.error(`Error deleting vision marker ${markerId}:`, error)
     return NextResponse.json({ error: "Failed to delete vision marker" }, { status: 500 })
   }
 }
