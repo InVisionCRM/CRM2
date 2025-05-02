@@ -82,7 +82,7 @@ export function getMarkerColor(status?: string): string {
     case 'NOT_HOME': // Example: map "Not Home" to "No Answer"
       return markerColors.NO_ANSWER;
     case 'IN_CONTRACT': // Example: map "In Contract" if used
-        return markerColors.APPOINTMENT_SET; // Or assign a unique color
+        return markerColors.SEARCH; // Return Pink (#ec4899)
     default:
       console.warn(`Unknown marker status received: "${status}" (Normalized: "${normalizedStatus}")`);
       return markerColors.DEFAULT;

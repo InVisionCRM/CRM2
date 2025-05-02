@@ -9,15 +9,19 @@ const mapStringToKnockStatus = (statusString: string | undefined | null): KnockS
   switch (upperCaseStatus) {
     case "KNOCKED": return KnockStatus.KNOCKED;
     case "NO_ANSWER": return KnockStatus.NO_ANSWER;
-    case "INTERESTED": return KnockStatus.INTERESTED;
     case "APPOINTMENT_SET": return KnockStatus.APPOINTMENT_SET;
     case "INSPECTED": return KnockStatus.INSPECTED;
-    case "FOLLOW-UP": return KnockStatus.FOLLOW_UP; // Handle Follow-up
-    case "NOT_INTERESTED": return KnockStatus.NOT_INTERESTED; // Handle Not Interested
-    case "NOT_VISITED": return KnockStatus.NOT_VISITED;
+    case "FOLLOW-UP": return KnockStatus.FOLLOW_UP;
+    case "NOT_INTERESTED": return KnockStatus.NOT_INTERESTED;
+    case "IN_CONTRACT":
+      return KnockStatus.APPOINTMENT_SET;
     default:
-      console.warn(`Unknown status string received: '${statusString}', defaulting to NOT_VISITED.`);
-      return KnockStatus.NOT_VISITED; // Default fallback
+      if (upperCaseStatus === 'NOT_VISITED' || upperCaseStatus === 'INTERESTED') {
+        console.warn(`Status "${statusString}" is no longer used, defaulting to KNOCKED.`);
+        return KnockStatus.KNOCKED;
+      }
+      console.warn(`Unknown status string received: '${statusString}', defaulting to KNOCKED.`);
+      return KnockStatus.KNOCKED;
   }
 };
 
