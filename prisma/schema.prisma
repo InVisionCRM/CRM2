@@ -273,6 +273,8 @@ enum KnockStatus {
   INTERESTED
   APPOINTMENT_SET @map("Appointment Set")
   INSPECTED
+  FOLLOW_UP       @map("Follow-up")
+  NOT_INTERESTED  @map("Not Interested")
 }
 
 model File {

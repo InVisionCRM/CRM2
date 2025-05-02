@@ -11,7 +11,9 @@ const mapStringToKnockStatus = (statusString: string | undefined | null): KnockS
     case "NO_ANSWER": return KnockStatus.NO_ANSWER;
     case "INTERESTED": return KnockStatus.INTERESTED;
     case "APPOINTMENT_SET": return KnockStatus.APPOINTMENT_SET;
-    case "INSPECTED": return KnockStatus.INSPECTED; // Handle the new status
+    case "INSPECTED": return KnockStatus.INSPECTED;
+    case "FOLLOW-UP": return KnockStatus.FOLLOW_UP; // Handle Follow-up
+    case "NOT_INTERESTED": return KnockStatus.NOT_INTERESTED; // Handle Not Interested
     case "NOT_VISITED": return KnockStatus.NOT_VISITED;
     default:
       console.warn(`Unknown status string received: '${statusString}', defaulting to NOT_VISITED.`);

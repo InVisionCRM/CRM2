@@ -9,6 +9,24 @@ import {
 } from "@/lib/db/visits"
 import { KnockStatus } from "@prisma/client"
 
+// Helper function to map string to KnockStatus enum (copied from vision-markers route)
+const mapStringToKnockStatus = (statusString: string | undefined | null): KnockStatus => {
+  const upperCaseStatus = statusString?.toUpperCase().replace(" ", "_"); // Handle potential spaces like "Not Visited" -> "NOT_VISITED"
+  switch (upperCaseStatus) {
+    case "KNOCKED": return KnockStatus.KNOCKED;
+    case "NO_ANSWER": return KnockStatus.NO_ANSWER;
+    case "INTERESTED": return KnockStatus.INTERESTED;
+    case "APPOINTMENT_SET": return KnockStatus.APPOINTMENT_SET;
+    case "INSPECTED": return KnockStatus.INSPECTED;
+    case "FOLLOW-UP": return KnockStatus.FOLLOW_UP;
+    case "NOT_INTERESTED": return KnockStatus.NOT_INTERESTED;
+    case "NOT_VISITED": return KnockStatus.NOT_VISITED;
+    default:
+      console.warn(`[visits API] Unknown status string received: '${statusString}', defaulting to NOT_VISITED.`);
+      return KnockStatus.NOT_VISITED; // Default fallback
+  }
+};
+
 export async function GET(request: Request) {
   try {
     console.log("GET /api/visits - Fetching visits")
@@ -65,11 +83,14 @@ export async function POST(request: Request) {
       )
     }
 
+    // Use the helper function to safely map the status
+    const mappedStatus = mapStringToKnockStatus(status);
+
     const visit = await createVisit({
       address,
       latitude: lat,
       longitude: lng,
-      status: (status || "NOT_VISITED") as KnockStatus,
+      status: mappedStatus, // Use the safely mapped status enum value
       notes: notes || null,
       followUpDate: followUpDate ? new Date(followUpDate) : null,
       followUpTime: followUpTime || null,
