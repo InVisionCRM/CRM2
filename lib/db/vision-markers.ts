@@ -1,5 +1,5 @@
 import { prisma } from './prisma'
-import type { KnockStatus, Prisma } from '@prisma/client'
+import { KnockStatus, type Prisma } from '@prisma/client'
 
 interface ContactInfo {
   firstName?: string
@@ -108,7 +108,7 @@ export async function createMarker(data: CreateVisionMarkerInput): Promise<Visio
         longitude: data.longitude,
         address: data.address,
         notes: data.notes || null,
-        status: data.status || 'NOT_VISITED',
+        status: data.status || KnockStatus.KNOCKED,
         contactInfo: data.contactInfo ? (data.contactInfo as Prisma.InputJsonValue) : undefined,
         followUp: data.followUp ? (data.followUp as Prisma.InputJsonValue) : undefined,
         visits: data.visits ? (data.visits as unknown as Prisma.InputJsonValue) : undefined,
