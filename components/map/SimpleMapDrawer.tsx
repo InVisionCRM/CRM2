@@ -904,20 +904,28 @@ export function SimpleMapDrawer({
                     }
                   `}</style>
                   <div className="contact-form-container">
-                    <ContactForm 
-                      leadId={leadId || ""}
-                      initialData={{
-                        firstName: firstName || "",
-                        lastName: lastName || "",
-                        email: email || "",
-                        phone: phone || "",
-                        streetAddress: streetAddress || address || "",
-                        // Removed city, state, and zipcode fields
-                      }}
-                      onSuccess={() => {
-                        // Handle success, e.g., show a notification or update lead info
-                      }}
-                    />
+                    {leadId ? (
+                      <ContactForm 
+                        leadId={leadId}
+                        initialData={{
+                          firstName: firstName || "",
+                          lastName: lastName || "",
+                          email: email || "",
+                          phone: phone || "",
+                          streetAddress: streetAddress || address || "",
+                          city: city || "",
+                          state: state || "",
+                          zipcode: zipcode || ""
+                        }}
+                        onSuccess={() => {
+                          // Handle success, e.g., show a notification or update lead info
+                        }}
+                      />
+                    ) : (
+                      <div className="text-white text-opacity-70 text-sm p-4 text-center">
+                        Lead ID is required to update contact information
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

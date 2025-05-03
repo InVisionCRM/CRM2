@@ -15,10 +15,10 @@ const contactFormSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   phone: z.string().optional().or(z.literal("")),
-  streetAddress: z.string().optional().or(z.literal("")), // Keep as optional string
-  city: z.string().optional().or(z.literal("")),          // Keep as optional string
-  state: z.string().optional().or(z.literal("")),         // Keep as optional string
-  zipcode: z.string().optional().or(z.literal(""))         // Keep as optional string
+  streetAddress: z.string().optional().or(z.literal("")),
+  city: z.string().optional().or(z.literal("")),
+  state: z.string().optional().or(z.literal("")),
+  zipcode: z.string().optional().or(z.literal(""))
 })
 
 type ContactFormValues = z.infer<typeof contactFormSchema>
@@ -95,13 +95,27 @@ export function ContactForm({
     setSuccessMessage(null)
 
     try {
+      // Validate leadId
+      if (!leadId) {
+        throw new Error("Lead ID is required")
+      }
+
       // Call API route to update lead contact information
       const response = await fetch(`/api/leads/${leadId}/contact`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email || "",
+          phone: data.phone || "",
+          streetAddress: data.streetAddress || "",
+          city: data.city || "",
+          state: data.state || "",
+          zipcode: data.zipcode || ""
+        })
       })
 
       if (!response.ok) {
@@ -120,24 +134,27 @@ export function ContactForm({
 
   const emailDomainButtonStyle = {
     backgroundColor: "#000000",
-    color: "#84cc16", // lime-600
+    color: "#84cc16",
     border: "none",
     height: "100%",
-    padding: "0 5px",
+    padding: "0 4px",
     fontWeight: "bold",
-    fontSize: "0.7rem",
+    fontSize: "0.65rem",
     cursor: "pointer",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
+    width: "24px",
   };
 
+  const baseInputStyles = "bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-4 text-xs px-2"
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-2 w-full max-w-full">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-1 w-full max-w-full">
       {/* ROW 1: First Name / Last Name */}
       <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <Label htmlFor="firstName" className="text-white text-opacity-90 text-xs">
+        <div className="space-y-0.5">
+          <Label htmlFor="firstName" className="text-white text-opacity-90 text-[10px]">
             First Name
           </Label>
           <Input
@@ -145,15 +162,15 @@ export function ContactForm({
             placeholder="First name"
             {...register("firstName")}
             disabled={isLoading || isReadOnly}
-            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-8 text-xs px-2 py-1"
+            className={baseInputStyles}
           />
           {errors.firstName && (
-            <p className="text-red-400 text-xs">{errors.firstName.message}</p>
+            <p className="text-red-400 text-[10px]">{errors.firstName.message}</p>
           )}
         </div>
 
-        <div className="space-y-1">
-          <Label htmlFor="lastName" className="text-white text-opacity-90 text-xs">
+        <div className="space-y-0.5">
+          <Label htmlFor="lastName" className="text-white text-opacity-90 text-[10px]">
             Last Name
           </Label>
           <Input
@@ -161,17 +178,17 @@ export function ContactForm({
             placeholder="Last name"
             {...register("lastName")}
             disabled={isLoading || isReadOnly}
-            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-8 text-xs px-2 py-1"
+            className={baseInputStyles}
           />
           {errors.lastName && (
-            <p className="text-red-400 text-xs">{errors.lastName.message}</p>
+            <p className="text-red-400 text-[10px]">{errors.lastName.message}</p>
           )}
         </div>
       </div>
 
       {/* ROW 2: Email */}
-      <div className="space-y-1">
-        <Label htmlFor="email" className="text-white text-opacity-90 text-xs">
+      <div className="space-y-0.5">
+        <Label htmlFor="email" className="text-white text-opacity-90 text-[10px]">
           Email
         </Label>
         <div className="flex">
@@ -182,7 +199,7 @@ export function ContactForm({
               placeholder="Email address"
               {...register("email")}
               disabled={isLoading || isReadOnly}
-              className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 w-full h-8 text-xs px-2 py-1"
+              className={`${baseInputStyles} w-full`}
               style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
             />
           </div>
@@ -195,8 +212,9 @@ export function ContactForm({
               ...emailDomainButtonStyle,
               borderRight: "1px solid rgba(255,255,255,0.1)",
             }}
+            title="Add @gmail.com"
           >
-            @GMAIL
+            G
           </button>
           <button
             type="button"
@@ -204,21 +222,22 @@ export function ContactForm({
             disabled={isLoading || isReadOnly}
             style={{
               ...emailDomainButtonStyle,
-              borderTopRightRadius: "0.25rem",
-              borderBottomRightRadius: "0.25rem",
+              borderTopRightRadius: "0.125rem",
+              borderBottomRightRadius: "0.125rem",
             }}
+            title="Add @yahoo.com"
           >
-            @YAHOO
+            Y
           </button>
         </div>
         {errors.email && (
-          <p className="text-red-400 text-xs">{errors.email.message}</p>
+          <p className="text-red-400 text-[10px]">{errors.email.message}</p>
         )}
       </div>
 
       {/* ROW 3: Phone */}
-      <div className="space-y-1">
-        <Label htmlFor="phone" className="text-white text-opacity-90 text-xs">
+      <div className="space-y-0.5">
+        <Label htmlFor="phone" className="text-white text-opacity-90 text-[10px]">
           Phone
         </Label>
         <Input
@@ -226,17 +245,17 @@ export function ContactForm({
           placeholder="Phone number"
           {...register("phone")}
           disabled={isLoading || isReadOnly}
-          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-8 text-xs px-2 py-1"
+          className={baseInputStyles}
         />
         {errors.phone && (
-          <p className="text-red-400 text-xs">{errors.phone.message}</p>
+          <p className="text-red-400 text-[10px]">{errors.phone.message}</p>
         )}
       </div>
 
       {/* ROW 4: Street Address / Zip Code */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="col-span-2 space-y-1">
-          <Label htmlFor="streetAddress" className="text-white text-opacity-90 text-xs">
+        <div className="col-span-2 space-y-0.5">
+          <Label htmlFor="streetAddress" className="text-white text-opacity-90 text-[10px]">
             Street Address
           </Label>
           <Input
@@ -244,12 +263,12 @@ export function ContactForm({
             placeholder="Street address"
             {...register("streetAddress")}
             disabled={isLoading || isReadOnly}
-            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-8 text-xs px-2 py-1"
+            className={baseInputStyles}
           />
         </div>
         
-        <div className="space-y-1">
-          <Label htmlFor="zipcode" className="text-white text-opacity-90 text-xs">
+        <div className="space-y-0.5">
+          <Label htmlFor="zipcode" className="text-white text-opacity-90 text-[10px]">
             Zip Code
           </Label>
           <Input
@@ -257,15 +276,15 @@ export function ContactForm({
             placeholder="Zip Code"
             {...register("zipcode")}
             disabled={isLoading || isReadOnly}
-            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-8 text-xs px-2 py-1"
+            className={baseInputStyles}
           />
         </div>
       </div>
 
       {/* ROW 5: City / State */}
       <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <Label htmlFor="city" className="text-white text-opacity-90 text-xs">
+        <div className="space-y-0.5">
+          <Label htmlFor="city" className="text-white text-opacity-90 text-[10px]">
             City
           </Label>
           <Input
@@ -273,12 +292,12 @@ export function ContactForm({
             placeholder="City"
             {...register("city")}
             disabled={isLoading || isReadOnly}
-            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-8 text-xs px-2 py-1"
+            className={baseInputStyles}
           />
         </div>
         
-        <div className="space-y-1">
-          <Label htmlFor="state" className="text-white text-opacity-90 text-xs">
+        <div className="space-y-0.5">
+          <Label htmlFor="state" className="text-white text-opacity-90 text-[10px]">
             State
           </Label>
           <Input
@@ -286,7 +305,7 @@ export function ContactForm({
             placeholder="State"
             {...register("state")}
             disabled={isLoading || isReadOnly}
-            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-8 text-xs px-2 py-1"
+            className={baseInputStyles}
           />
         </div>
       </div>
@@ -297,11 +316,11 @@ export function ContactForm({
           <Button 
             type="submit" 
             disabled={isLoading} 
-            className="w-full bg-lime-600 hover:bg-lime-700 text-white h-8 text-xs mt-1"
+            className="w-full bg-lime-600 hover:bg-lime-700 text-white h-4 text-[10px] mt-1"
           >
             {isLoading ? (
               <>
-                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                <Loader2 className="mr-1 h-2 w-2 animate-spin" />
                 Saving...
               </>
             ) : (
@@ -310,13 +329,13 @@ export function ContactForm({
           </Button>
           
           {error && (
-            <div className="mt-1 text-red-400 text-xs p-1 bg-red-900 bg-opacity-25 rounded">
+            <div className="mt-0.5 text-red-400 text-[10px] p-0.5 bg-red-900 bg-opacity-25 rounded">
               {error}
             </div>
           )}
           
           {successMessage && (
-            <div className="mt-1 text-green-400 text-xs p-1 bg-green-900 bg-opacity-25 rounded">
+            <div className="mt-0.5 text-green-400 text-[10px] p-0.5 bg-green-900 bg-opacity-25 rounded">
               {successMessage}
             </div>
           )}
