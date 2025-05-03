@@ -88,12 +88,13 @@ export default function FollowUpsPage() {
   }
 
   const getStatusColor = (status: KnockStatus) => {
-    const colors = {
-      NOT_VISITED: "bg-gray-500",
-      KNOCKED: "bg-blue-500",
-      NO_ANSWER: "bg-yellow-500",
-      INTERESTED: "bg-green-500",
-      APPOINTMENT_SET: "bg-purple-500",
+    const colors: Partial<Record<KnockStatus, string>> = {
+      KNOCKED: "bg-sky-500",
+      NO_ANSWER: "bg-blue-500",
+      NOT_INTERESTED: "bg-red-500",
+      FOLLOW_UP: "bg-amber-500",
+      INSPECTED: "bg-green-500",
+      IN_CONTRACT: "bg-purple-500",
     }
     return colors[status] || "bg-gray-500"
   }

@@ -2,28 +2,49 @@ import { getSession } from "@/lib/auth-utils"
 import { NextResponse } from "next/server"
 import { getMarkers, createMarker } from "@/lib/db/vision-markers"
 import { KnockStatus } from "@prisma/client"
+import type { PropertyVisitStatus } from "@/components/map/MapInteractionDrawer" // Import frontend type for reference
 
-// Helper function to map string to KnockStatus enum
-const mapStringToKnockStatus = (statusString: string | undefined | null): KnockStatus => {
-  const upperCaseStatus = statusString?.toUpperCase().replace(" ", "_"); // Handle potential spaces like "Not Visited" -> "NOT_VISITED"
-  switch (upperCaseStatus) {
-    case "KNOCKED": return KnockStatus.KNOCKED;
-    case "NO_ANSWER": return KnockStatus.NO_ANSWER;
-    case "APPOINTMENT_SET": return KnockStatus.APPOINTMENT_SET;
-    case "INSPECTED": return KnockStatus.INSPECTED;
-    case "FOLLOW-UP": return KnockStatus.FOLLOW_UP;
-    case "NOT_INTERESTED": return KnockStatus.NOT_INTERESTED;
-    case "IN_CONTRACT":
-      return KnockStatus.APPOINTMENT_SET;
+// Helper function to map frontend status string to KnockStatus enum
+const mapStringToKnockStatus = (statusString: PropertyVisitStatus | "New" | "Search" | string | undefined | null): KnockStatus => {
+  // Handle potential frontend internal states
+  if (statusString === "New" || statusString === "Search" || !statusString) {
+      // Assuming KNOCKED represents the initial/unvisited state in the DB
+      // If you add a dedicated NEW status to the enum, map to that instead.
+      return KnockStatus.KNOCKED 
+  }
+
+  // Map the user-selectable statuses
+  switch (statusString) {
+    case "No Answer": return KnockStatus.NO_ANSWER;
+    case "Not Interested": return KnockStatus.NOT_INTERESTED;
+    case "Follow up": return KnockStatus.FOLLOW_UP;
+    case "Inspected": return KnockStatus.INSPECTED;
+    case "In Contract": return KnockStatus.IN_CONTRACT;
     default:
-      if (upperCaseStatus === 'NOT_VISITED' || upperCaseStatus === 'INTERESTED') {
-        console.warn(`Status "${statusString}" is no longer used, defaulting to KNOCKED.`);
-        return KnockStatus.KNOCKED;
-      }
-      console.warn(`Unknown status string received: '${statusString}', defaulting to KNOCKED.`);
-      return KnockStatus.KNOCKED;
+      // This should theoretically not happen due to frontend validation
+      // But handle it defensively
+      console.error(`Unknown status string received: '${statusString}', defaulting to KNOCKED.`);
+      // Consider throwing an error instead?
+      return KnockStatus.KNOCKED; 
   }
 };
+
+// Helper function to map KnockStatus enum back to frontend string
+const mapKnockStatusToString = (knockStatus: KnockStatus): PropertyVisitStatus | "New" => {
+  switch (knockStatus) {
+    case KnockStatus.NO_ANSWER: return "No Answer";
+    case KnockStatus.NOT_INTERESTED: return "Not Interested";
+    case KnockStatus.FOLLOW_UP: return "Follow up";
+    case KnockStatus.INSPECTED: return "Inspected";
+    case KnockStatus.IN_CONTRACT: return "In Contract";
+    case KnockStatus.KNOCKED: return "New"; // Map DB KNOCKED back to frontend "New"
+    // Add cases for any other potential enum values if they exist and map appropriately
+    default:
+      // Fallback for unexpected enum values
+      console.warn(`Unexpected KnockStatus encountered: ${knockStatus}, returning 'New'.`);
+      return "New";
+  }
+}
 
 // GET all vision markers
 export async function GET() {
@@ -34,7 +55,13 @@ export async function GET() {
     // Optional auth restriction
     // if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    const markers = await getMarkers()
+    const markersFromDb = await getMarkers()
+
+    // Map the status enum back to the string expected by the frontend
+    const markers = markersFromDb.map(marker => ({
+      ...marker,
+      status: mapKnockStatusToString(marker.status) // Use the new mapping function
+    }));
 
     console.log(`GET /api/vision-markers - Found ${markers.length} markers`)
     return NextResponse.json({ markers })
@@ -71,7 +98,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Use the helper function to safely map the status
+    // Use the helper function to safely map the status string from the request body
     const mappedStatus = mapStringToKnockStatus(status);
 
     // Create the marker

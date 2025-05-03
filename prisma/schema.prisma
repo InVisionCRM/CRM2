@@ -165,7 +165,7 @@ model VisionMarker {
   longitude      Float
   address        String
   notes          String?
-  status         KnockStatus @default(NOT_VISITED)
+  status         KnockStatus @default(KNOCKED)
   contactInfo    Json?
   visits         Json?      // Consider creating a separate visits model if this data is structured
   followUp       Json?      // Consider creating a structured followUp model if needed
@@ -267,14 +267,15 @@ enum ActivityStatus {
 }
 
 enum KnockStatus {
-  NOT_VISITED     @map("Not Visited")
-  KNOCKED
-  NO_ANSWER       @map("No Answer")
-  INTERESTED
-  APPOINTMENT_SET @map("Appointment Set")
+  KNOCKED        // Represents the initial state or "New"
+  NO_ANSWER
+  NOT_INTERESTED
+  FOLLOW_UP
   INSPECTED
-  FOLLOW_UP       @map("Follow-up")
-  NOT_INTERESTED  @map("Not Interested")
+  IN_CONTRACT    // Added
+  // NOT_VISITED     // Removed (using KNOCKED)
+  // INTERESTED      // Removed
+  // APPOINTMENT_SET // Removed
 }
 
 model File {

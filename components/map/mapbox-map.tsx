@@ -5,12 +5,19 @@ import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import { useMapContext } from "./map-context"
 import { getMarkerColor } from "@/lib/utils"
+import { PropertyVisitStatus } from "@/components/map/MapInteractionDrawer"
+
+// Simple address normalization helper
+function normalizeAddress(address: string): string {
+  if (!address) return "";
+  return address.toLowerCase().trim().replace(/\s+/g, ' '); // Lowercase, trim, collapse whitespace
+}
 
 export interface MarkerData {
   id: string
   position: [number, number]
   address: string
-  status?: string
+  status: PropertyVisitStatus | "New" | "Search"
   visits?: any[]
 }
 
@@ -75,23 +82,70 @@ const MapboxMap = memo(
           setIsLoading(false)
         })
 
-        // Add click handler to add markers
-        map.current.on("click", (e) => {
-          const { lng, lat } = e.lngLat
+        // Add click handler to add markers or select existing based on address
+        map.current.on("click", async (e) => {
+          if (!map.current) return; // Ensure map exists
 
-          // Reverse geocode to get address
-          fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${accessToken}`)
-            .then((response) => response.json())
-            .then((data) => {
-              if (data.features && data.features.length > 0) {
-                const address = data.features[0].place_name
-                onMarkerAdd([lat, lng], address)
-              }
-            })
-            .catch((error) => {
-              console.error("Error reverse geocoding:", error)
-              setError("Failed to get address. Please try again.")
-            })
+          // Check if the click was on an existing marker feature (prevent double handling)
+          const features = map.current.queryRenderedFeatures(e.point, {
+            layers: ['markers-layer'] // Assuming you create a layer named 'markers-layer' for marker elements
+          });
+          // Or, if not using layers, check if the click target is one of our custom markers
+          let clickedOnMarker = false;
+          if (e.originalEvent.target instanceof HTMLElement) {
+            clickedOnMarker = e.originalEvent.target.closest('.custom-marker') !== null;
+          }
+
+          if (features && features.length > 0 || clickedOnMarker) {
+            console.log("Clicked on an existing marker element, `onMarkerClick` will handle.");
+            return; // Let the marker's own click handler manage it
+          }
+
+          // --- Click was on the base map --- 
+          const { lng, lat } = e.lngLat;
+          setIsLoading(true); // Show loading state during geocoding
+          setError(null); // Clear previous errors
+
+          try {
+            // Reverse geocode to get address
+            const geoResponse = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?types=address&access_token=${accessToken}`);
+            if (!geoResponse.ok) {
+              throw new Error(`Reverse geocoding failed: ${geoResponse.statusText}`);
+            }
+            const geoData = await geoResponse.json();
+
+            if (!geoData.features || geoData.features.length === 0) {
+                console.warn("No address found for clicked location.");
+                setError("Could not find a specific address for this location.");
+                setIsLoading(false);
+                return; 
+            }
+
+            const fetchedAddress = geoData.features[0].place_name;
+            const normalizedFetchedAddress = normalizeAddress(fetchedAddress);
+
+            console.log("Map clicked address:", fetchedAddress, "Normalized:", normalizedFetchedAddress);
+
+            // Check if this address already exists in markers
+            const existingMarker = markers.find(marker => 
+              normalizeAddress(marker.address) === normalizedFetchedAddress
+            );
+
+            if (existingMarker) {
+              console.log("Address matches existing marker, triggering onMarkerClick:", existingMarker);
+              onMarkerClick(existingMarker); // Trigger click for existing marker
+            } else {
+              console.log("Address is new, triggering onMarkerAdd:", fetchedAddress);
+              // Address doesn't exist, add a new one
+              onMarkerAdd([lat, lng], fetchedAddress);
+            }
+
+          } catch (error) {
+            console.error("Error during map click handling:", error);
+            setError("Failed to get address details. Please try again.");
+          } finally {
+            setIsLoading(false);
+          }
         })
 
         // Update context with current map center

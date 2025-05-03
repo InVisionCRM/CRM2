@@ -1,10 +1,44 @@
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth-utils"
 import { getMarkerById, updateMarker, deleteMarker } from "@/lib/db/vision-markers"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient, KnockStatus } from "@prisma/client"
+import type { PropertyVisitStatus } from "@/components/map/MapInteractionDrawer"
 
 const prisma = new PrismaClient()
-type KnockStatus = 'NOT_VISITED' | 'KNOCKED' | 'NO_ANSWER' | 'INTERESTED' | 'APPOINTMENT_SET';
+
+// Helper function to map frontend status string to KnockStatus enum
+const mapStringToKnockStatus = (statusString: PropertyVisitStatus | "New" | "Search" | string | undefined | null): KnockStatus => {
+  // Handle potential frontend internal states
+  if (statusString === "New" || statusString === "Search" || !statusString) {
+      return KnockStatus.KNOCKED 
+  }
+  // Map the user-selectable statuses
+  switch (statusString) {
+    case "No Answer": return KnockStatus.NO_ANSWER;
+    case "Not Interested": return KnockStatus.NOT_INTERESTED;
+    case "Follow up": return KnockStatus.FOLLOW_UP;
+    case "Inspected": return KnockStatus.INSPECTED;
+    case "In Contract": return KnockStatus.IN_CONTRACT;
+    default:
+      console.error(`[vision-markers/[id]] Unknown status string received: '${statusString}', defaulting to KNOCKED.`);
+      return KnockStatus.KNOCKED; 
+  }
+};
+
+// Helper function to map KnockStatus enum back to frontend string
+const mapKnockStatusToString = (knockStatus: KnockStatus): PropertyVisitStatus | "New" => {
+  switch (knockStatus) {
+    case KnockStatus.NO_ANSWER: return "No Answer";
+    case KnockStatus.NOT_INTERESTED: return "Not Interested";
+    case KnockStatus.FOLLOW_UP: return "Follow up";
+    case KnockStatus.INSPECTED: return "Inspected";
+    case KnockStatus.IN_CONTRACT: return "In Contract";
+    case KnockStatus.KNOCKED: return "New";
+    default:
+      console.warn(`[vision-markers/[id]] Unexpected KnockStatus encountered: ${knockStatus}, returning 'New'.`);
+      return "New";
+  }
+}
 
 // GET a specific vision marker by ID
 export async function GET(
@@ -21,11 +55,17 @@ export async function GET(
   }
 
   try {
-    const marker = await getMarkerById(markerId)
+    const markerFromDb = await getMarkerById(markerId)
 
-    if (!marker) {
+    if (!markerFromDb) {
       return NextResponse.json({ error: "Marker not found" }, { status: 404 })
     }
+
+    // Map status enum to string for consistency
+    const marker = {
+        ...markerFromDb,
+        status: mapKnockStatusToString(markerFromDb.status)
+    };
 
     return NextResponse.json(marker)
   } catch (error) {
@@ -102,12 +142,13 @@ export async function PUT(
     }
 
     // Update the marker
-    const updatedMarker = await updateMarker(markerId, {
+    const dataToUpdate: any = {
       ...(lat !== undefined && { latitude: lat }),
       ...(lng !== undefined && { longitude: lng }),
       ...(address !== undefined && { address }),
       ...(notes !== undefined && { notes }),
-      ...(status !== undefined && { status: status as KnockStatus }),
+      // Use mapping function for status
+      ...(status !== undefined && { status: mapStringToKnockStatus(status) }), 
       ...(contactInfo !== undefined && { contactInfo }),
       followUp: {
         date: followUpDate || null,
@@ -116,9 +157,17 @@ export async function PUT(
       },
       visits,
       userId
-    })
+    }
 
-    return NextResponse.json(updatedMarker)
+    const updatedMarkerDb = await updateMarker(markerId, dataToUpdate);
+
+    // Map status back for response
+    const updatedMarkerResponse = {
+      ...updatedMarkerDb,
+      status: mapKnockStatusToString(updatedMarkerDb.status)
+    }
+
+    return NextResponse.json(updatedMarkerResponse)
   } catch (error) {
     console.error(`Error updating vision marker ${markerId}:`, error)
     return NextResponse.json(

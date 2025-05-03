@@ -8,28 +8,49 @@ import {
   deleteVisit 
 } from "@/lib/db/visits"
 import { KnockStatus } from "@prisma/client"
+import type { PropertyVisitStatus } from "@/components/map/MapInteractionDrawer"
 
-// Helper function to map string to KnockStatus enum (copied from vision-markers route)
-const mapStringToKnockStatus = (statusString: string | undefined | null): KnockStatus => {
-  const upperCaseStatus = statusString?.toUpperCase().replace(" ", "_"); // Handle potential spaces like "Not Visited" -> "NOT_VISITED"
-  switch (upperCaseStatus) {
-    case "KNOCKED": return KnockStatus.KNOCKED;
-    case "NO_ANSWER": return KnockStatus.NO_ANSWER;
-    case "APPOINTMENT_SET": return KnockStatus.APPOINTMENT_SET;
-    case "INSPECTED": return KnockStatus.INSPECTED;
-    case "FOLLOW-UP": return KnockStatus.FOLLOW_UP;
-    case "NOT_INTERESTED": return KnockStatus.NOT_INTERESTED;
-    case "IN_CONTRACT":
-      return KnockStatus.APPOINTMENT_SET;
+// Helper function to map frontend status string to KnockStatus enum
+const mapStringToKnockStatus = (statusString: PropertyVisitStatus | "New" | "Search" | string | undefined | null): KnockStatus => {
+  // Handle potential frontend internal states
+  if (statusString === "New" || statusString === "Search" || !statusString) {
+      // Assuming KNOCKED represents the initial/unvisited state in the DB
+      // If you add a dedicated NEW status to the enum, map to that instead.
+      return KnockStatus.KNOCKED 
+  }
+
+  // Map the user-selectable statuses
+  switch (statusString) {
+    case "No Answer": return KnockStatus.NO_ANSWER;
+    case "Not Interested": return KnockStatus.NOT_INTERESTED;
+    case "Follow up": return KnockStatus.FOLLOW_UP;
+    case "Inspected": return KnockStatus.INSPECTED;
+    case "In Contract": return KnockStatus.IN_CONTRACT;
     default:
-      if (upperCaseStatus === 'NOT_VISITED' || upperCaseStatus === 'INTERESTED') {
-        console.warn(`[visits API] Status "${statusString}" is no longer used, defaulting to KNOCKED.`);
-        return KnockStatus.KNOCKED;
-      }
-      console.warn(`[visits API] Unknown status string received: '${statusString}', defaulting to KNOCKED.`);
-      return KnockStatus.KNOCKED;
+      // This should theoretically not happen due to frontend validation
+      // But handle it defensively
+      console.error(`[visits API] Unknown status string received: '${statusString}', defaulting to KNOCKED.`);
+      // Consider throwing an error instead?
+      return KnockStatus.KNOCKED; 
   }
 };
+
+// Helper function to map KnockStatus enum back to frontend string
+const mapKnockStatusToString = (knockStatus: KnockStatus): PropertyVisitStatus | "New" => {
+  switch (knockStatus) {
+    case KnockStatus.NO_ANSWER: return "No Answer";
+    case KnockStatus.NOT_INTERESTED: return "Not Interested";
+    case KnockStatus.FOLLOW_UP: return "Follow up";
+    case KnockStatus.INSPECTED: return "Inspected";
+    case KnockStatus.IN_CONTRACT: return "In Contract";
+    case KnockStatus.KNOCKED: return "New"; // Map DB KNOCKED back to frontend "New"
+    // Add cases for any other potential enum values if they exist and map appropriately
+    default:
+      // Fallback for unexpected enum values
+      console.warn(`[visits API] Unexpected KnockStatus encountered: ${knockStatus}, returning 'New'.`);
+      return "New";
+  }
+}
 
 export async function GET(request: Request) {
   try {
@@ -43,8 +64,14 @@ export async function GET(request: Request) {
     }
 
     console.log("Fetching visits for address:", address)
-    const visits = await getVisitsByAddress(address)
-    console.log(`Found ${visits.length} visits for address: ${address}`)
+    const visitsFromDb = await getVisitsByAddress(address)
+    console.log(`Found ${visitsFromDb.length} visits for address: ${address}`)
+
+    // Map status enum to string
+    const visits = visitsFromDb.map(visit => ({
+      ...visit,
+      status: mapKnockStatusToString(visit.status)
+    }));
     
     return NextResponse.json(visits)
   } catch (error) {
@@ -138,15 +165,32 @@ export async function PUT(request: Request) {
       )
     }
 
-    const visit = await updateVisit(id, {
-      ...updateData,
-      latitude: updateData.lat,
-      longitude: updateData.lng,
-      status: updateData.status as KnockStatus,
-      followUpDate: updateData.followUpDate ? new Date(updateData.followUpDate) : undefined,
-    })
+    // Prepare data, mapping status string to enum
+    const dataToUpdate: any = { ...updateData }; // Use 'any' temporarily or create a specific type
+    if (updateData.status) {
+      dataToUpdate.status = mapStringToKnockStatus(updateData.status);
+    }
+    if (updateData.lat !== undefined) {
+        dataToUpdate.latitude = updateData.lat;
+        delete dataToUpdate.lat; // remove original key
+    }
+    if (updateData.lng !== undefined) {
+        dataToUpdate.longitude = updateData.lng;
+        delete dataToUpdate.lng; // remove original key
+    }
+    if (updateData.followUpDate) {
+        dataToUpdate.followUpDate = new Date(updateData.followUpDate);
+    }
 
-    return NextResponse.json(visit)
+    const visit = await updateVisit(id, dataToUpdate)
+
+    // Map status back for the response
+    const updatedVisitResponse = {
+        ...visit,
+        status: mapKnockStatusToString(visit.status)
+    };
+
+    return NextResponse.json(updatedVisitResponse)
   } catch (error) {
     console.error("Error updating visit:", error)
     return NextResponse.json(

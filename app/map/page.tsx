@@ -1,18 +1,35 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 import MapboxMap from "@/components/map/mapbox-map"
 import { AddressSearch } from "@/components/map/address-search"
-import { MapInteractionDrawer } from "@/components/map/MapInteractionDrawer"
+import { MapInteractionDrawer, PropertyVisitStatus } from "@/components/map/MapInteractionDrawer"
 import type { MarkerData } from "@/components/map/mapbox-map"
+import { DoorOpen } from 'lucide-react'; // Icon for counter
+// Import function to get session client-side if needed, or assume session info is available
+// import { useSession } from "next-auth/react" 
+
+// Helper function to validate status from API
+function isValidStatus(status: any): status is PropertyVisitStatus | "New" | "Search" {
+  const validStatuses: Array<PropertyVisitStatus | "New" | "Search"> = [
+    "No Answer",
+    "Not Interested",
+    "Follow up",
+    "Inspected",
+    "In Contract",
+    "New",
+    "Search",
+  ]
+  return typeof status === 'string' && validStatuses.includes(status as any);
+}
 
 // Define a type for the data needed by the drawer
 interface DrawerData {
   address: string
   position: [number, number]
   markerId?: string
-  currentStatus?: string
+  currentStatus?: PropertyVisitStatus | "New" | "Search"
   streetViewUrl?: string
 }
 
@@ -22,8 +39,10 @@ export default function MapPage() {
   const [selectedDrawerData, setSelectedDrawerData] = useState<DrawerData | null>(null)
   const [isDrawerExpanded, setIsDrawerExpanded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [knockCount, setKnockCount] = useState<number | null>(null)
   const mapRef = useRef<any>(null)
   const { toast } = useToast()
+  // const { data: session } = useSession(); // Example if using next-auth client hook
 
   // Use a stable ref for search results to avoid re-renders
   const searchResultRef = useRef<{
@@ -31,10 +50,11 @@ export default function MapPage() {
     address: string
   } | null>(null)
 
-  // Fetch markers only once on mount
+  // Fetch initial data (markers and knock count)
   useEffect(() => {
-    fetchMarkers()
-  }, [])
+    fetchMarkers();
+    fetchKnockCount(); // Fetch count on mount
+  }, []);
 
   // Function to fetch markers from the API
   const fetchMarkers = async () => {
@@ -54,13 +74,18 @@ export default function MapPage() {
       console.log("Markers API response:", data)
 
       if (data.markers) {
-        const formattedMarkers: MarkerData[] = data.markers.map((m: any) => ({
-          id: m.id,
-          position: [m.latitude, m.longitude],
-          address: m.address,
-          status: m.status || "New",
-          visits: m.visits || [],
-        }))
+        const formattedMarkers: MarkerData[] = data.markers.map((m: any) => {
+           // Validate the status from the API, default to 'New' if invalid or missing
+          const validatedStatus = isValidStatus(m.status) ? m.status : "New";
+
+          return {
+              id: m.id,
+              position: [m.latitude, m.longitude],
+              address: m.address,
+              status: validatedStatus,
+              visits: m.visits || [],
+          }
+        })
 
         console.log("Formatted markers with correct position mapping:", formattedMarkers)
         setMarkers(formattedMarkers)
@@ -80,16 +105,39 @@ export default function MapPage() {
     }
   }
 
+  // Function to fetch knock count
+  const fetchKnockCount = async () => {
+    try {
+        const response = await fetch("/api/users/knock-stats");
+        if (!response.ok) {
+            // Handle non-2xx responses gracefully (e.g., user not logged in?)
+            if (response.status === 401) {
+                console.warn("User not logged in, cannot fetch knock count.");
+                setKnockCount(0); // Or null, depending on desired display for logged-out users
+            } else {
+                throw new Error("Failed to fetch knock count");
+            }
+        } else {
+            const data = await response.json();
+            setKnockCount(data.count);
+        }
+    } catch (error) {
+        console.error("Error fetching knock count:", error);
+        // Optionally show a toast, but might be too noisy
+        setKnockCount(null); // Indicate error state
+    }
+  };
+
   // Use useCallback to ensure these functions don't change on re-renders
   const handleMarkerClick = useCallback((marker: MarkerData) => {
     console.log("Marker clicked:", marker)
-    const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${marker.position[0]},${marker.position[1]}&key=YOUR_GOOGLE_MAPS_API_KEY&return_error_codes=true` // Replace YOUR_GOOGLE_MAPS_API_KEY
+    const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${marker.position[0]},${marker.position[1]}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&return_error_codes=true` // Use env variable
 
     setSelectedDrawerData({
       address: marker.address,
       position: marker.position,
       markerId: marker.id,
-      currentStatus: marker.status, // Assuming status is on MarkerData
+      currentStatus: marker.status, // marker.status is now correctly typed
       streetViewUrl: streetViewUrl, // Add fetched/constructed URL
     })
     setIsDrawerExpanded(false) // Start collapsed
@@ -114,7 +162,7 @@ export default function MapPage() {
 
     // Set up the drawer with the new marker details
     // TODO: Implement logic to get Street View URL
-    const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${position[0]},${position[1]}&key=YOUR_GOOGLE_MAPS_API_KEY&return_error_codes=true` // Replace YOUR_GOOGLE_MAPS_API_KEY
+    const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${position[0]},${position[1]}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&return_error_codes=true` // Use env variable
 
     setSelectedDrawerData({
       address: address,
@@ -162,30 +210,127 @@ export default function MapPage() {
     }
   }, [])
 
-  // TODO: Implement actual status saving logic (e.g., call Server Action)
-  const handleStatusChange = useCallback((newStatus: string) => {
+  // Update status, persist marker, and record visit
+  const handleStatusChange = useCallback(async (newStatus: PropertyVisitStatus) => {
     if (!selectedDrawerData) return
 
-    console.log(`Status changed for ${selectedDrawerData.address} to: ${newStatus}`)
+    const { markerId, address, position } = selectedDrawerData;
 
-    // Update local state immediately for UI feedback
-    setSelectedDrawerData(prevData => prevData ? { ...prevData, currentStatus: newStatus } : null)
+    console.log(`Status change initiated for ${address} to: ${newStatus}`);
 
-    // Update the marker in the main markers array
+    // 1. Update local state immediately for UI feedback
+    const optimisticUiId = markerId || `temp-${Date.now()}`; 
+    
+    setSelectedDrawerData(prevData => prevData ? { ...prevData, currentStatus: newStatus } : null);
     setMarkers(prevMarkers => prevMarkers.map(m => 
-      m.id === selectedDrawerData.markerId ? { ...m, status: newStatus } : m
-    ))
-
-    // Optionally: Dispatch custom event for mapbox-map to update color instantly
+      m.id === optimisticUiId ? { ...m, status: newStatus } : m
+    ));
     window.dispatchEvent(new CustomEvent('markerStatusUpdate', { 
-      detail: { address: selectedDrawerData.address, status: newStatus }
+      detail: { markerId: optimisticUiId, status: newStatus }
     }));
 
-    // Future: Add API call here to persist the status change
-    // Example: updateVisitStatusAction(selectedDrawerData.markerId || selectedDrawerData.address, newStatus)
-    toast({ title: "Status Updated", description: `Status set to ${newStatus}` })
+    // 2. Persist marker change (Create or Update)
+    let currentMarkerId = markerId; 
+    let markerError: string | undefined = undefined; 
+    try {
+      if (markerId && markerId.startsWith('temp-')) {
+        console.log("Saving new marker to DB...");
+        const response = await fetch("/api/vision-markers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            lat: position[0],
+            lng: position[1],
+            address: address,
+            status: newStatus, 
+          }),
+        });
+        if (!response.ok) throw new Error("Failed to create marker");
+        const createdMarker = await response.json();
+        
+        if (typeof createdMarker.id !== 'string') {
+            throw new Error("Invalid marker ID received from API");
+        }
+        const realMarkerId = createdMarker.id; // Assign to new variable after check
+        currentMarkerId = realMarkerId; // Update the ID for visit recording
+        console.log("New marker created with ID:", realMarkerId);
 
-  }, [selectedDrawerData]) // Dependency on selectedDrawerData
+        // Update local state with the real ID
+        setMarkers(prevMarkers => 
+          prevMarkers.map(m => 
+            m.id === markerId // Find the marker with the old temp ID
+              ? { ...m, id: realMarkerId, status: newStatus } // Use the guaranteed string ID
+              : m 
+          )
+        );
+        setSelectedDrawerData(prevData => prevData ? { ...prevData, markerId: realMarkerId, currentStatus: newStatus } : null);
+
+      } else if (markerId) {
+        console.log(`Updating existing marker ${markerId} status to ${newStatus}...`);
+        const response = await fetch(`/api/vision-markers/${markerId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        if (!response.ok) throw new Error("Failed to update marker status");
+        console.log(`Marker ${markerId} status updated.`);
+      } else {
+        console.error("Cannot update status, markerId is missing.");
+        return; 
+      }
+    } catch (error) {
+      console.error("Error saving marker:", error);
+      markerError = error instanceof Error ? error.message : "Failed to save marker changes.";
+    }
+
+    // 3. Record the visit (only if marker was saved successfully)
+    let visitError: string | undefined = undefined; 
+    if (!markerError && currentMarkerId) { 
+        try {
+            console.log(`Recording visit for marker ${currentMarkerId} with status ${newStatus}...`);
+            const visitResponse = await fetch("/api/visits", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    address: address,
+                    lat: position[0],
+                    lng: position[1],
+                    status: newStatus,
+                }),
+            });
+             if (!visitResponse.ok) throw new Error("Failed to record visit");
+            console.log("Visit recorded successfully.");
+            // ---> Increment local count on successful visit recording <--- 
+            setKnockCount(prev => (prev !== null ? prev + 1 : 1)); 
+        } catch (error) {
+            console.error("Error recording visit:", error);
+            visitError = error instanceof Error ? error.message : "Failed to record visit activity.";
+        }
+    }
+
+    // 4. Show final user feedback and close drawer on success
+    if (markerError) { // Only check markerError for deciding if the main action failed
+      toast({ 
+        title: "Error Saving Status", 
+        description: markerError, 
+        variant: "destructive" 
+      });
+      // Don't close drawer if marker saving failed
+    } else {
+      // Show success toast (even if visit recording had a minor error)
+      toast({ 
+          title: "Status Updated", 
+          description: visitError 
+            ? `Status set to ${newStatus}. Error recording visit: ${visitError}` 
+            : `Status set to ${newStatus} and visit recorded.` 
+      });
+      // Close the drawer after successful marker save
+      setIsDrawerOpen(false); 
+      setSelectedDrawerData(null); // Clear selected data as well
+      setIsDrawerExpanded(false); // Ensure it's not expanded next time
+    }
+
+  }, [selectedDrawerData, toast, setIsDrawerOpen, setSelectedDrawerData, setIsDrawerExpanded]); // Add state setters to dependency array
 
   return (
     <div className="fullscreen-map-container relative [color-scheme:light]">
@@ -193,6 +338,17 @@ export default function MapPage() {
       <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 w-full max-w-md px-4">
         <AddressSearch onAddressSelect={handleAddressSelect} />
       </div>
+
+      {/* Knock Counter Display */}
+      {knockCount !== null && (
+          <div className="absolute top-4 right-4 z-10 bg-base-100/80 backdrop-blur-sm shadow-md rounded-lg p-2 flex items-center space-x-2 border border-base-300/50">
+              <DoorOpen className="h-5 w-5 text-primary" />
+              <span className="font-semibold text-base-content">
+                  {knockCount}
+              </span>
+              <span className="text-xs text-base-content/70">Knocks (12h)</span>
+          </div>
+      )}
 
       {/* Use a stable key to prevent re-mounting */}
       <MapboxMap
@@ -216,10 +372,17 @@ export default function MapPage() {
           // Pass individual props from selectedDrawerData
           address={selectedDrawerData.address}
           streetViewUrl={selectedDrawerData.streetViewUrl}
-          currentStatus={selectedDrawerData.currentStatus}
-          // Pass available statuses (customize this list as needed)
-          availableStatuses={["No Answer", "Not Home", "Not Interested", "Come Back Later", "Appointment Set", "Signed Contract"]}
-          onStatusChange={handleStatusChange} 
+          // Pass undefined if status is 'New' or 'Search', otherwise pass the status
+          currentStatus={selectedDrawerData.currentStatus === "New" || selectedDrawerData.currentStatus === "Search" ? undefined : selectedDrawerData.currentStatus}
+          // Pass the CORRECT available statuses
+          availableStatuses={[
+            "No Answer",
+            "Not Interested",
+            "Follow up",
+            "Inspected",
+            "In Contract",
+          ]}
+          onStatusChange={handleStatusChange}
           // Expansion control props
           isExpanded={isDrawerExpanded}
           onExpand={() => setIsDrawerExpanded(true)}
