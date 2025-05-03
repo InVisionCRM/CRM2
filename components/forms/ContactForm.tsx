@@ -15,11 +15,10 @@ const contactFormSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   phone: z.string().optional().or(z.literal("")),
-  streetAddress: z.string().optional().or(z.literal("")),
-  // Keep these in the schema for API compatibility, but we won't show them in the UI
-  city: z.string().optional().or(z.literal("")),
-  state: z.string().optional().or(z.literal("")),
-  zipcode: z.string().optional().or(z.literal(""))
+  streetAddress: z.string().optional().or(z.literal("")), // Keep as optional string
+  city: z.string().optional().or(z.literal("")),          // Keep as optional string
+  state: z.string().optional().or(z.literal("")),         // Keep as optional string
+  zipcode: z.string().optional().or(z.literal(""))         // Keep as optional string
 })
 
 type ContactFormValues = z.infer<typeof contactFormSchema>
@@ -96,22 +95,6 @@ export function ContactForm({
     setSuccessMessage(null)
 
     try {
-      // Extract city, state, zip from street address if possible
-      const addressParts = data.streetAddress?.split(',').map(part => part.trim()) || [];
-      if (addressParts.length >= 3) {
-        // Try to parse "7900 Mortenview Drive, Taylor, Michigan 48180, United States" format
-        const lastPart = addressParts[addressParts.length - 2] || ""; // e.g. "Michigan 48180"
-        const stateZipMatch = lastPart.match(/([A-Za-z\s]+)\s+(\d+)/);
-        
-        if (stateZipMatch) {
-          data.state = stateZipMatch[1]; // e.g. "Michigan"
-          data.zipcode = stateZipMatch[2]; // e.g. "48180"
-        }
-        
-        // City is typically the part before state
-        data.city = addressParts[addressParts.length - 3] || "";
-      }
-
       // Call API route to update lead contact information
       const response = await fetch(`/api/leads/${leadId}/contact`, {
         method: "PATCH",
@@ -140,9 +123,9 @@ export function ContactForm({
     color: "#84cc16", // lime-600
     border: "none",
     height: "100%",
-    padding: isMobile ? "0 5px" : "0 10px",
+    padding: isMobile ? "0 5px" : "0 10px", // Keep dynamic padding for now
     fontWeight: "bold",
-    fontSize: isMobile ? "0.7rem" : "0.9rem",
+    fontSize: isMobile ? "0.7rem" : "0.9rem", // Keep dynamic font size for now
     cursor: "pointer",
     display: "inline-flex",
     alignItems: "center",
@@ -151,9 +134,10 @@ export function ContactForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4 w-full">
+      {/* First Name / Last Name Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-        <div className="space-y-1 sm:space-y-2">
-          <Label htmlFor="firstName" className="text-white text-opacity-90 text-sm sm:text-base">
+        <div className="space-y-1 sm:space-y-1.5">
+          <Label htmlFor="firstName" className="text-white text-opacity-90 text-xs sm:text-sm">
             First Name
           </Label>
           <Input
@@ -161,15 +145,15 @@ export function ContactForm({
             placeholder="First name"
             {...register("firstName")}
             disabled={isLoading || isReadOnly}
-            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-9 sm:h-10 text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2"
           />
           {errors.firstName && (
             <p className="text-red-400 text-xs mt-1">{errors.firstName.message}</p>
           )}
         </div>
 
-        <div className="space-y-1 sm:space-y-2">
-          <Label htmlFor="lastName" className="text-white text-opacity-90 text-sm sm:text-base">
+        <div className="space-y-1 sm:space-y-1.5">
+          <Label htmlFor="lastName" className="text-white text-opacity-90 text-xs sm:text-sm">
             Last Name
           </Label>
           <Input
@@ -177,7 +161,7 @@ export function ContactForm({
             placeholder="Last name"
             {...register("lastName")}
             disabled={isLoading || isReadOnly}
-            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-9 sm:h-10 text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2"
           />
           {errors.lastName && (
             <p className="text-red-400 text-xs mt-1">{errors.lastName.message}</p>
@@ -185,8 +169,9 @@ export function ContactForm({
         </div>
       </div>
 
-      <div className="space-y-1 sm:space-y-2">
-        <Label htmlFor="email" className="text-white text-opacity-90 text-sm sm:text-base">
+      {/* Email */}
+      <div className="space-y-1 sm:space-y-1.5">
+        <Label htmlFor="email" className="text-white text-opacity-90 text-xs sm:text-sm">
           Email
         </Label>
         <div className="flex">
@@ -197,12 +182,11 @@ export function ContactForm({
               placeholder="Email address"
               {...register("email")}
               disabled={isLoading || isReadOnly}
-              className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 w-full h-10 sm:h-12 text-sm sm:text-base"
+              className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 w-full h-9 sm:h-10 text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2"
               style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
             />
           </div>
-          
-          {/* Email domain buttons - responsive for mobile */}
+          {/* Email domain buttons - styling adjusted slightly */}
           <button
             type="button"
             onClick={() => completeEmailWithDomain('@gmail.com')}
@@ -210,6 +194,7 @@ export function ContactForm({
             style={{
               ...emailDomainButtonStyle,
               borderRight: "1px solid rgba(255,255,255,0.1)",
+              // Adjust font-size/padding via style prop if needed based on isMobile state
             }}
           >
             @GMAIL
@@ -220,21 +205,22 @@ export function ContactForm({
             disabled={isLoading || isReadOnly}
             style={{
               ...emailDomainButtonStyle,
-              borderTopRightRadius: "0.375rem",
-              borderBottomRightRadius: "0.375rem",
+              borderTopRightRadius: "0.25rem", // Adjusted to match smaller input radius potentially
+              borderBottomRightRadius: "0.25rem",
+               // Adjust font-size/padding via style prop if needed based on isMobile state
             }}
           >
             @YAHOO
           </button>
         </div>
-        
         {errors.email && (
           <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>
         )}
       </div>
 
-      <div className="space-y-1 sm:space-y-2">
-        <Label htmlFor="phone" className="text-white text-opacity-90 text-sm sm:text-base">
+      {/* Phone */}
+      <div className="space-y-1 sm:space-y-1.5">
+        <Label htmlFor="phone" className="text-white text-opacity-90 text-xs sm:text-sm">
           Phone
         </Label>
         <Input
@@ -242,32 +228,79 @@ export function ContactForm({
           placeholder="Phone number"
           {...register("phone")}
           disabled={isLoading || isReadOnly}
-          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-9 sm:h-10 text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2"
         />
         {errors.phone && (
           <p className="text-red-400 text-xs mt-1">{errors.phone.message}</p>
         )}
       </div>
 
-      <div className="space-y-1 sm:space-y-2">
-        <Label htmlFor="streetAddress" className="text-white text-opacity-90 text-sm sm:text-base">
+      {/* Street Address */}
+      <div className="space-y-1 sm:space-y-1.5">
+        <Label htmlFor="streetAddress" className="text-white text-opacity-90 text-xs sm:text-sm">
           Street Address
         </Label>
         <Input
           id="streetAddress"
-          placeholder="Full address (including city, state, zip)"
+          placeholder="Street address"
           {...register("streetAddress")}
           disabled={isLoading || isReadOnly}
-          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-9 sm:h-10 text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2"
         />
+        {/* No error message needed here unless schema adds validation */}
       </div>
 
+      {/* City / State / Zip Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+        <div className="space-y-1 sm:space-y-1.5">
+          <Label htmlFor="city" className="text-white text-opacity-90 text-xs sm:text-sm">
+            City
+          </Label>
+          <Input
+            id="city"
+            placeholder="City"
+            {...register("city")}
+            disabled={isLoading || isReadOnly}
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-9 sm:h-10 text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2"
+          />
+          {/* No error message needed here unless schema adds validation */}
+        </div>
+        <div className="space-y-1 sm:space-y-1.5">
+          <Label htmlFor="state" className="text-white text-opacity-90 text-xs sm:text-sm">
+            State / Province
+          </Label>
+          <Input
+            id="state"
+            placeholder="State / Province"
+            {...register("state")}
+            disabled={isLoading || isReadOnly}
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-9 sm:h-10 text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2"
+          />
+          {/* No error message needed here unless schema adds validation */}
+        </div>
+        <div className="space-y-1 sm:space-y-1.5">
+          <Label htmlFor="zipcode" className="text-white text-opacity-90 text-xs sm:text-sm">
+            Zip / Postal Code
+          </Label>
+          <Input
+            id="zipcode"
+            placeholder="Zip / Postal Code"
+            {...register("zipcode")}
+            disabled={isLoading || isReadOnly}
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-9 sm:h-10 text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2"
+          />
+          {/* No error message needed here unless schema adds validation */}
+        </div>
+      </div>
+
+
+      {/* Submit Button & Messages */}
       {!isReadOnly && (
         <div className="pt-2">
           <Button 
             type="submit" 
             disabled={isLoading} 
-            className="w-full bg-lime-600 hover:bg-lime-700 text-white h-10 sm:h-12 text-sm sm:text-base"
+            className="w-full bg-lime-600 hover:bg-lime-700 text-white h-9 sm:h-10 text-xs sm:text-sm"
           >
             {isLoading ? (
               <>
@@ -280,13 +313,13 @@ export function ContactForm({
           </Button>
           
           {error && (
-            <div className="mt-3 text-red-400 text-sm p-3 bg-red-900 bg-opacity-25 rounded">
+            <div className="mt-2 text-red-400 text-xs p-2 bg-red-900 bg-opacity-25 rounded">
               {error}
             </div>
           )}
           
           {successMessage && (
-            <div className="mt-3 text-green-400 text-sm p-3 bg-green-900 bg-opacity-25 rounded">
+            <div className="mt-2 text-green-400 text-xs p-2 bg-green-900 bg-opacity-25 rounded">
               {successMessage}
             </div>
           )}

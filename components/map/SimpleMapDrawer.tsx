@@ -514,7 +514,6 @@ export function SimpleMapDrawer({
     }}>
       {/* Green gradient handle area */}
       <div 
-        onClick={isExpanded ? onCollapse : onExpand}
         style={{
           background: "linear-gradient(to bottom, rgba(101, 163, 13, 0.95) 0%, rgba(0, 0, 0, 0.7) 100%)",
           backdropFilter: "blur(2px)",
@@ -523,29 +522,67 @@ export function SimpleMapDrawer({
           width: "100%",
           cursor: "pointer",
           display: "flex",
-          justifyContent: "center",
+          justifyContent: "space-between",
           alignItems: "center",
           transition: "height 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.15)"
+          borderBottom: "1px solid rgba(255, 255, 255, 0.15)",
+          position: "relative",
+          padding: "0 16px"
         }}
       >
-        <div style={{
-          width: handleWidth,
-          height: "6px",
-          borderRadius: "3px",
-          background: `linear-gradient(90deg, 
-            rgba(163, 230, 53, 0.9) 0%, 
-            #a3e635 20%, 
-            #84cc16 40%, 
-            #ecfccb 50%, 
-            #84cc16 60%, 
-            #a3e635 80%, 
-            rgba(163, 230, 53, 0.9) 100%)`,
-          backgroundSize: "200% 100%",
-          transition: "width 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
-          animation: "shimmer 3s infinite linear",
-          boxShadow: "0 0 6px #a3e635"
-        }}></div>
+        <div style={{ width: "24px" }}></div> {/* Empty spacer for alignment */}
+        
+        <div 
+          onClick={isExpanded ? onCollapse : onExpand}
+          style={{
+            width: handleWidth,
+            height: "6px",
+            borderRadius: "3px",
+            background: `linear-gradient(90deg, 
+              rgba(163, 230, 53, 0.9) 0%, 
+              #a3e635 20%, 
+              #84cc16 40%, 
+              #ecfccb 50%, 
+              #84cc16 60%, 
+              #a3e635 80%, 
+              rgba(163, 230, 53, 0.9) 100%)`,
+            backgroundSize: "200% 100%",
+            transition: "width 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
+            animation: "shimmer 3s infinite linear",
+            boxShadow: "0 0 6px #a3e635"
+          }}
+        ></div>
+        
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          style={{
+            background: "rgba(0, 0, 0, 0.3)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            borderRadius: "50%",
+            width: isMobile ? "20px" : "24px",
+            height: isMobile ? "20px" : "24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            padding: 0,
+            transition: "all 0.2s ease",
+            boxShadow: "0 0 5px rgba(0, 0, 0, 0.3)"
+          }}
+          aria-label="Close drawer"
+        >
+          <X 
+            size={isMobile ? 14 : 16} 
+            color="white" 
+            style={{ 
+              opacity: 0.8,
+              strokeWidth: 2.5 
+            }} 
+          />
+        </button>
       </div>
 
       {/* Content area */}

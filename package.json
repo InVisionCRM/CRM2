@@ -14,7 +14,7 @@
     "@cloudflare/workers-types": "latest",
     "@electric-sql/pglite": "latest",
     "@emotion/is-prop-valid": "latest",
-    "@hookform/resolvers": "latest",
+    "@hookform/resolvers": "^5.0.1",
     "@libsql/client": "latest",
     "@libsql/client-wasm": "latest",
     "@neondatabase/serverless": "latest",
@@ -104,7 +104,7 @@
     "tailwindcss-animate": "^1.0.7",
     "uuid": "latest",
     "vaul": "latest",
-    "zod": "latest"
+    "zod": "^3.24.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

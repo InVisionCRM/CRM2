@@ -70,7 +70,7 @@ export function SummaryCards() {
 
   return (
     <>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-4 md:grid-cols-4 gap-4">
         {LEAD_STATUSES.map((status) => {
           const statusLeads = getLeadsByStatus(status)
           return (
