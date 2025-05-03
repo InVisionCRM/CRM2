@@ -27,6 +27,7 @@ const CustomDatePicker = ({
   const [selectedDate, setSelectedDate] = useState<Date | null>(value ? new Date(value) : null);
   const [currentMonth, setCurrentMonth] = useState<Date>(selectedDate || new Date());
   const modalRef = useRef<HTMLDivElement>(null);
+  const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
 
   const daysInMonth = (year: number, month: number) => {
     return new Date(year, month + 1, 0).getDate();
@@ -73,8 +74,8 @@ const CustomDatePicker = ({
     <div className="w-full">
       <div 
         className={cn(
-          "flex items-center justify-between px-5 py-3 bg-white bg-opacity-10 rounded-md cursor-pointer h-[3.5rem]",
-          "border border-transparent hover:border-gray-600 text-white w-full text-lg",
+          "flex items-center justify-between px-3 sm:px-5 py-2 sm:py-3 bg-white bg-opacity-10 rounded-md cursor-pointer",
+          "border border-transparent hover:border-gray-600 text-white w-full text-sm sm:text-lg h-10 sm:h-[3.5rem]",
           disabled && "opacity-50 cursor-not-allowed"
         )}
         onClick={() => !disabled && setIsOpen(true)}
@@ -82,61 +83,61 @@ const CustomDatePicker = ({
         <span className={selectedDate ? "text-white" : "text-white text-opacity-50"}>
           {selectedDate ? format(selectedDate, 'MM/dd/yyyy') : placeholder}
         </span>
-        <Calendar size={28} className="text-white opacity-70" />
+        <Calendar size={isMobile ? 20 : 28} className="text-white opacity-70" />
       </div>
 
       {isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-2 sm:p-4">
           <div 
             ref={modalRef}
-            className="bg-zinc-800 rounded-xl shadow-xl w-full max-w-lg sm:max-w-xl overflow-hidden"
+            className="bg-zinc-800 rounded-xl shadow-xl w-full max-w-sm sm:max-w-lg overflow-hidden"
             role="dialog"
             aria-modal="true"
             aria-label="Date picker dialog"
           >
-            <div className="p-5 bg-zinc-700 flex justify-between items-center">
-              <h3 className="text-white text-xl font-semibold">Select Date</h3>
+            <div className="p-3 sm:p-5 bg-zinc-700 flex justify-between items-center">
+              <h3 className="text-white text-base sm:text-xl font-semibold">Select Date</h3>
               <button 
                 onClick={() => setIsOpen(false)}
-                className="text-white hover:bg-zinc-600 rounded-full p-3"
+                className="text-white hover:bg-zinc-600 rounded-full p-2 sm:p-3"
                 aria-label="Close date picker"
               >
-                <X size={32} />
+                <X size={isMobile ? 24 : 32} />
               </button>
             </div>
 
-            <div className="p-4 sm:p-6">
-              <div className="flex justify-between items-center mb-6">
+            <div className="p-2 sm:p-4 md:p-6">
+              <div className="flex justify-between items-center mb-4 sm:mb-6">
                 <button 
                   onClick={prevMonth}
-                  className="text-white bg-zinc-700 hover:bg-zinc-600 p-4 rounded-full touch-manipulation"
+                  className="text-white bg-zinc-700 hover:bg-zinc-600 p-2 sm:p-4 rounded-full touch-manipulation"
                   aria-label="Previous month"
                 >
-                  <ChevronUp size={36} className="rotate-270" />
+                  <ChevronUp size={isMobile ? 24 : 36} className="rotate-270" />
                 </button>
-                <div className="text-white text-2xl font-medium">
+                <div className="text-white text-lg sm:text-2xl font-medium">
                   {`${monthName} ${currentMonth.getFullYear()}`}
                 </div>
                 <button 
                   onClick={nextMonth}
-                  className="text-white bg-zinc-700 hover:bg-zinc-600 p-4 rounded-full touch-manipulation"
+                  className="text-white bg-zinc-700 hover:bg-zinc-600 p-2 sm:p-4 rounded-full touch-manipulation"
                   aria-label="Next month"
                 >
-                  <ChevronDown size={36} className="rotate-90" />
+                  <ChevronDown size={isMobile ? 24 : 36} className="rotate-90" />
                 </button>
               </div>
 
-              <div className="grid grid-cols-7 gap-2 mb-3">
+              <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2 sm:mb-3">
                 {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                  <div key={day} className="text-center text-gray-400 text-base font-medium py-3">
+                  <div key={day} className="text-center text-gray-400 text-xs sm:text-base font-medium py-1 sm:py-3">
                     {day}
                   </div>
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1 sm:gap-2">
                 {Array.from({ length: firstDayOfMonth(currentMonth.getFullYear(), currentMonth.getMonth()) }).map((_, i) => (
-                  <div key={`empty-${i}`} className="p-2"></div>
+                  <div key={`empty-${i}`} className="p-1 sm:p-2"></div>
                 ))}
 
                 {Array.from({ length: daysInMonth(currentMonth.getFullYear(), currentMonth.getMonth()) }).map((_, i) => {
@@ -153,7 +154,7 @@ const CustomDatePicker = ({
                       key={day}
                       onClick={() => handleDateSelect(day)}
                       className={cn(
-                        "h-14 w-14 sm:h-16 sm:w-16 rounded-full text-white flex items-center justify-center text-xl touch-manipulation",
+                        "h-8 w-8 sm:h-14 sm:w-14 md:h-16 md:w-16 rounded-full text-white flex items-center justify-center text-xs sm:text-base md:text-xl touch-manipulation",
                         isSelected 
                           ? "bg-lime-600 font-bold" 
                           : "hover:bg-zinc-700"
@@ -167,17 +168,17 @@ const CustomDatePicker = ({
               </div>
             </div>
 
-            <div className="p-5 bg-zinc-700 flex justify-end space-x-4">
+            <div className="p-3 sm:p-5 bg-zinc-700 flex justify-end space-x-2 sm:space-x-4">
               <Button 
                 onClick={() => setIsOpen(false)}
-                className="bg-zinc-600 hover:bg-zinc-500 text-white px-6 py-3 h-14 text-lg"
+                className="bg-zinc-600 hover:bg-zinc-500 text-white px-3 sm:px-6 py-2 sm:py-3 h-9 sm:h-14 text-sm sm:text-lg"
                 type="button"
               >
                 Cancel
               </Button>
               <Button 
                 onClick={() => setIsOpen(false)}
-                className="bg-lime-600 hover:bg-lime-700 text-white px-6 py-3 h-14 text-lg"
+                className="bg-lime-600 hover:bg-lime-700 text-white px-3 sm:px-6 py-2 sm:py-3 h-9 sm:h-14 text-sm sm:text-lg"
                 type="button"
               >
                 Done
@@ -264,10 +265,23 @@ export function InsuranceForm({
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isCustomCompany, setIsCustomCompany] = useState(false)
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [damageTypeDropdownOpen, setDamageTypeDropdownOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
+  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false)
+  const [showDamageTypeDropdown, setShowDamageTypeDropdown] = useState(false)
+  const companyDropdownRef = useRef<HTMLDivElement>(null)
   const damageTypeDropdownRef = useRef<HTMLDivElement>(null)
+  const [isMobile, setIsMobile] = useState(false)
+  
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const {
     register,
@@ -288,11 +302,11 @@ export function InsuranceForm({
   // Handle click outside to close dropdowns
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false)
+      if (companyDropdownRef.current && !companyDropdownRef.current.contains(event.target as Node)) {
+        setShowCompanyDropdown(false)
       }
       if (damageTypeDropdownRef.current && !damageTypeDropdownRef.current.contains(event.target as Node)) {
-        setDamageTypeDropdownOpen(false)
+        setShowDamageTypeDropdown(false)
       }
     }
     
@@ -348,12 +362,12 @@ export function InsuranceForm({
       }
     }
     
-    setDropdownOpen(false)
+    setShowCompanyDropdown(false)
   }
 
   const handleDamageTypeSelect = (damageType: string) => {
     setValue("damageType", damageType as "HAIL" | "WIND" | "FIRE")
-    setDamageTypeDropdownOpen(false)
+    setShowDamageTypeDropdown(false)
   }
 
   const onSubmit = async (data: InsuranceFormValues) => {
@@ -400,24 +414,26 @@ export function InsuranceForm({
     <div className="relative" ref={damageTypeDropdownRef}>
       <div
         className={cn(
-          "flex items-center justify-between px-5 py-3 bg-white bg-opacity-10 rounded-md cursor-pointer h-[3.5rem]",
-          "border border-transparent hover:border-gray-600 text-white w-full text-lg",
+          "flex items-center justify-between px-3 sm:p-4 bg-white bg-opacity-10 rounded-md cursor-pointer h-10 sm:h-12",
+          "border border-transparent",
+          showDamageTypeDropdown ? "hover:border-gray-600" : "cursor-not-allowed opacity-70",
+          "text-sm sm:text-base"
         )}
-        onClick={() => !isReadOnly && !isLoading && setDamageTypeDropdownOpen(!damageTypeDropdownOpen)}
+        onClick={() => !isReadOnly && !isLoading && setShowDamageTypeDropdown(!showDamageTypeDropdown)}
       >
         <span className={selectedDamageType ? "text-white" : "text-white text-opacity-50"}>
           {selectedDamageType ? DAMAGE_TYPES.find(d => d.value === selectedDamageType)?.label : "Select damage type"}
         </span>
-        <span>{damageTypeDropdownOpen ? <ChevronUp size={28} /> : <ChevronDown size={28} />}</span>
+        <ChevronDown className="ml-2 h-4 w-4 text-white text-opacity-70" />
       </div>
       
-      {damageTypeDropdownOpen && (
+      {showDamageTypeDropdown && (
         <div className="absolute z-50 w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg max-h-60 overflow-auto">
           {DAMAGE_TYPES.map((damageType) => (
             <div
               key={damageType.value}
               className={cn(
-                "px-5 py-4 cursor-pointer hover:bg-zinc-700 flex justify-between items-center text-lg",
+                "px-3 sm:px-4 py-4 cursor-pointer hover:bg-zinc-700 flex justify-between items-center text-sm sm:text-base",
                 selectedDamageType === damageType.value ? "bg-zinc-700" : ""
               )}
               onClick={() => handleDamageTypeSelect(damageType.value)}
@@ -433,27 +449,29 @@ export function InsuranceForm({
 
   // Custom dropdown component for insurance company
   const CompanyDropdown = () => (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative" ref={companyDropdownRef}>
       <div
         className={cn(
-          "flex items-center justify-between px-5 py-3 bg-white bg-opacity-10 rounded-md cursor-pointer h-[3.5rem]",
-          "border border-transparent hover:border-gray-600 text-white w-full text-lg"
+          "flex items-center justify-between px-3 sm:p-4 bg-white bg-opacity-10 rounded-md cursor-pointer h-10 sm:h-12",
+          "border border-transparent",
+          showCompanyDropdown ? "hover:border-gray-600" : "cursor-not-allowed opacity-70",
+          "text-sm sm:text-base"
         )}
-        onClick={() => !isReadOnly && !isLoading && setDropdownOpen(!dropdownOpen)}
+        onClick={() => !isReadOnly && !isLoading && setShowCompanyDropdown(!showCompanyDropdown)}
       >
         <span className={selectedCompany ? "text-white" : "text-white text-opacity-50"}>
           {selectedCompany || "Select insurance company"}
         </span>
-        <span>{dropdownOpen ? <ChevronUp size={28} /> : <ChevronDown size={28} />}</span>
+        <ChevronDown className="ml-2 h-4 w-4 text-white text-opacity-70" />
       </div>
       
-      {dropdownOpen && (
+      {showCompanyDropdown && (
         <div className="absolute z-50 w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg max-h-60 overflow-auto">
           {INSURANCE_COMPANIES.map((company) => (
             <div
               key={company.name}
               className={cn(
-                "px-5 py-4 cursor-pointer hover:bg-zinc-700 flex justify-between items-center text-lg",
+                "px-3 sm:px-4 py-4 cursor-pointer hover:bg-zinc-700 flex justify-between items-center text-sm sm:text-base",
                 selectedCompany === company.name ? "bg-zinc-700" : ""
               )}
               onClick={() => handleCompanySelect(company.name)}
@@ -468,7 +486,7 @@ export function InsuranceForm({
   )
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 w-full">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4 w-full">
       <style jsx global>{`
         input[type="date"]::-webkit-calendar-picker-indicator {
           transform: scale(1.5);
@@ -496,78 +514,86 @@ export function InsuranceForm({
         }
       `}</style>
       
-      {/* Row 1: Insurance Company / Policy Number */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="insuranceCompany" className="form-label text-white text-opacity-90 text-2xl font-bold">
-            Insurance Company
-          </Label>
-          <input
-            type="hidden"
-            {...register("insuranceCompany")}
-          />
+      <div className="space-y-1 sm:space-y-2">
+        <Label htmlFor="insuranceCompany" className="text-white text-opacity-90 text-sm sm:text-base">
+          Insurance Company
+        </Label>
+        <div className="relative">
+          <div
+            onClick={() => !isReadOnly && setShowCompanyDropdown(!showCompanyDropdown)}
+            className={cn(
+              "flex items-center justify-between p-3 sm:p-4 bg-white bg-opacity-10 rounded-md cursor-pointer h-10 sm:h-12",
+              "border border-transparent",
+              isReadOnly ? "cursor-not-allowed opacity-70" : "hover:border-gray-600",
+              "text-sm sm:text-base"
+            )}
+          >
+            <span className={watch("insuranceCompany") ? "text-white" : "text-white text-opacity-50"}>
+              {watch("insuranceCompany") || "Select insurance company"}
+            </span>
+            <ChevronDown className="ml-2 h-4 w-4 text-white text-opacity-70" />
+          </div>
           <CompanyDropdown />
-          
-          {isCustomCompany && (
-            <div className="mt-2">
-              <Input
-                id="customInsuranceCompany"
-                placeholder="Enter insurance company name"
-                {...register("customInsuranceCompany")}
-                disabled={isLoading || isReadOnly}
-                className="input-text bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-[4rem] px-5 py-3 text-xl w-full"
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="insurancePolicyNumber" className="form-label text-white text-opacity-90 text-2xl font-bold">
-            Policy Number
-          </Label>
-          <Input
-            id="insurancePolicyNumber"
-            placeholder="Policy number"
-            {...register("insurancePolicyNumber")}
-            disabled={isLoading || isReadOnly}
-            className="input-text bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-[4rem] px-5 py-3 text-xl w-full"
-          />
         </div>
       </div>
-      
-      {/* Row 2: Insurance Phone / Secondary Phone */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="insurancePhone" className="form-label text-white text-opacity-90 text-2xl font-bold">
+
+      <div className="space-y-1 sm:space-y-2">
+        <Label htmlFor="insurancePolicyNumber" className="text-white text-opacity-90 text-sm sm:text-base">
+          Policy Number
+        </Label>
+        <Input
+          id="insurancePolicyNumber"
+          placeholder="Enter policy number"
+          {...register("insurancePolicyNumber")}
+          disabled={isLoading || isReadOnly}
+          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+        <div className="space-y-1 sm:space-y-2">
+          <Label htmlFor="insurancePhone" className="text-white text-opacity-90 text-sm sm:text-base">
             Insurance Phone
           </Label>
           <Input
             id="insurancePhone"
-            placeholder="Insurance company phone"
+            placeholder="Primary phone number"
             {...register("insurancePhone")}
             disabled={isLoading || isReadOnly}
-            className="input-text bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-[4rem] px-5 py-3 text-xl w-full"
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="insuranceSecondaryPhone" className="form-label text-white text-opacity-90 text-2xl font-bold">
+        <div className="space-y-1 sm:space-y-2">
+          <Label htmlFor="insuranceSecondaryPhone" className="text-white text-opacity-90 text-sm sm:text-base">
             Secondary Phone
           </Label>
           <Input
             id="insuranceSecondaryPhone"
-            placeholder="Secondary phone (optional)"
+            placeholder="Optional secondary number"
             {...register("insuranceSecondaryPhone")}
             disabled={isLoading || isReadOnly}
-            className="input-text bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-[4rem] px-5 py-3 text-xl w-full"
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
           />
         </div>
       </div>
-      
-      {/* Row 3: Date of Loss / Damage Type */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="dateOfLoss" className="form-label text-white text-opacity-90 text-2xl font-bold">
+
+      <div className="space-y-1 sm:space-y-2">
+        <Label htmlFor="claimNumber" className="text-white text-opacity-90 text-sm sm:text-base">
+          Claim Number
+        </Label>
+        <Input
+          id="claimNumber"
+          placeholder="Enter claim number (if available)"
+          {...register("claimNumber")}
+          disabled={isLoading || isReadOnly}
+          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+        <div className="space-y-1 sm:space-y-2">
+          <Label htmlFor="dateOfLoss" className="text-white text-opacity-90 text-sm sm:text-base">
             Date of Loss
           </Label>
           <Controller
@@ -576,7 +602,7 @@ export function InsuranceForm({
             render={({ field }) => (
               <CustomDatePicker
                 value={field.value}
-                onChange={(date) => field.onChange(date)}
+                onChange={field.onChange}
                 disabled={isLoading || isReadOnly}
                 placeholder="Select date of loss"
               />
@@ -584,74 +610,74 @@ export function InsuranceForm({
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="damageType" className="form-label text-white text-opacity-90 text-2xl font-bold">
+        <div className="space-y-1 sm:space-y-2">
+          <Label htmlFor="damageType" className="text-white text-opacity-90 text-sm sm:text-base">
             Damage Type
           </Label>
-          <input
-            type="hidden"
-            {...register("damageType")}
-          />
-          <DamageTypeDropdown />
-        </div>
-      </div>
-      
-      {/* Row 4: Deductible / Claim Number */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="insuranceDeductible" className="form-label text-white text-opacity-90 text-2xl font-bold">
-            Deductible
-          </Label>
-          <Input
-            id="insuranceDeductible"
-            placeholder="Deductible amount"
-            {...register("insuranceDeductible")}
-            disabled={isLoading || isReadOnly}
-            className="input-text bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-[4rem] px-5 py-3 text-xl w-full"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="claimNumber" className="form-label text-white text-opacity-90 text-2xl font-bold">
-            Claim Number
-          </Label>
-          <Input
-            id="claimNumber"
-            placeholder="Claim number"
-            {...register("claimNumber")}
-            disabled={isLoading || isReadOnly}
-            className="input-text bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-[4rem] px-5 py-3 text-xl w-full"
-          />
+          <div className="relative">
+            <div
+              onClick={() => !isReadOnly && setShowDamageTypeDropdown(!showDamageTypeDropdown)}
+              className={cn(
+                "flex items-center justify-between p-3 sm:p-4 bg-white bg-opacity-10 rounded-md cursor-pointer h-10 sm:h-12",
+                "border border-transparent",
+                isReadOnly ? "cursor-not-allowed opacity-70" : "hover:border-gray-600",
+                "text-sm sm:text-base"
+              )}
+            >
+              <span className={watch("damageType") ? "text-white" : "text-white text-opacity-50"}>
+                {watch("damageType") ? 
+                  (watch("damageType") || "").charAt(0) + (watch("damageType") || "").slice(1).toLowerCase() : 
+                  "Select damage type"}
+              </span>
+              <ChevronDown className="ml-2 h-4 w-4 text-white text-opacity-70" />
+            </div>
+            <DamageTypeDropdown />
+          </div>
         </div>
       </div>
 
-      {error && (
-        <div className="rounded bg-red-500 bg-opacity-20 p-4 text-red-200 text-xl">
-          {error}
-        </div>
-      )}
-
-      {successMessage && (
-        <div className="rounded bg-green-500 bg-opacity-20 p-4 text-green-200 text-xl">
-          {successMessage}
-        </div>
-      )}
+      <div className="space-y-1 sm:space-y-2">
+        <Label htmlFor="insuranceDeductible" className="text-white text-opacity-90 text-sm sm:text-base">
+          Deductible Amount
+        </Label>
+        <Input
+          id="insuranceDeductible"
+          placeholder="$"
+          {...register("insuranceDeductible")}
+          disabled={isLoading || isReadOnly}
+          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+        />
+      </div>
 
       {!isReadOnly && (
-        <Button
-          type="submit"
-          disabled={isLoading}
-          className="submit-button w-full bg-lime-600 hover:bg-lime-700 text-white h-[4rem] text-2xl font-semibold"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-3 h-7 w-7 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save Insurance Info"
+        <div className="pt-2">
+          <Button 
+            type="submit" 
+            disabled={isLoading} 
+            className="w-full bg-lime-600 hover:bg-lime-700 text-white h-10 sm:h-12 text-sm sm:text-base"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Insurance Info"
+            )}
+          </Button>
+          
+          {error && (
+            <div className="mt-3 text-red-400 text-sm p-3 bg-red-900 bg-opacity-25 rounded">
+              {error}
+            </div>
           )}
-        </Button>
+          
+          {successMessage && (
+            <div className="mt-3 text-green-400 text-sm p-3 bg-green-900 bg-opacity-25 rounded">
+              {successMessage}
+            </div>
+          )}
+        </div>
       )}
     </form>
   )

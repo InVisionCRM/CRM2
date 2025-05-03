@@ -678,12 +678,28 @@ export function AdjusterForm({
   onSuccess,
   isReadOnly = false
 }: AdjusterFormProps) {
-  const [isLoadingAdjuster, setIsLoadingAdjuster] = useState(false)
-  const [isLoadingAppointment, setIsLoadingAppointment] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
-  const [showCalendarModal, setShowCalendarModal] = useState(false)
+  const [showCalendar, setShowCalendar] = useState(false)
+  const [calendarView, setCalendarView] = useState<"month" | "day">("month")
+  const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null)
+  // Get appointments for the current month
+  const [appointments, setAppointments] = useState<CalendarAppointment[]>(mockAppointments)
+  const [isMobile, setIsMobile] = useState(false)
+  
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const {
     register,
@@ -691,14 +707,16 @@ export function AdjusterForm({
     formState: { errors },
     control,
     reset,
-    getValues
+    getValues,
+    watch,
+    setValue
   } = useForm<AdjusterFormValues>({
     resolver: zodResolver(adjusterFormSchema),
     defaultValues: initialData
   })
 
   const saveAdjusterInfo = async () => {
-    setIsLoadingAdjuster(true)
+    setIsLoading(true)
     setError(null)
     setSuccessMessage(null)
 
@@ -730,12 +748,12 @@ export function AdjusterForm({
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred")
     } finally {
-      setIsLoadingAdjuster(false)
+      setIsLoading(false)
     }
   }
 
   const saveAppointment = async () => {
-    setIsLoadingAppointment(true)
+    setIsLoading(true)
     setError(null)
     setSuccessMessage(null)
 
@@ -830,7 +848,7 @@ export function AdjusterForm({
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred")
     } finally {
-      setIsLoadingAppointment(false)
+      setIsLoading(false)
     }
   }
 
@@ -848,229 +866,156 @@ export function AdjusterForm({
   };
 
   return (
-    <div className="space-y-6 w-full">
-      <style jsx global>{`
-        input[type="date"]::-webkit-calendar-picker-indicator {
-          transform: scale(1.5);
-          margin-right: 6px;
-        }
-        
-        /* Force larger text sizes on all relevant elements */
-        .form-label {
-          font-size: 1.5rem !important;
-          font-weight: 700 !important;
-          letter-spacing: -0.02em !important;
-        }
-        
-        input, select, .input-text, .dropdown-text {
-          font-size: 1.25rem !important;
-        }
-        
-        input::placeholder {
-          font-size: 1.25rem !important;
-        }
-        
-        button.submit-button {
-          font-size: 1.5rem !important;
-          font-weight: 600 !important;
-        }
-        
-        .section-divider {
-          height: 2rem;
-        }
-        
-        .section-title {
-          font-size: 1.75rem !important;
-          font-weight: 800 !important;
-          padding-top: 1.5rem;
-          padding-bottom: 0.5rem;
-          border-bottom: 2px solid rgba(163, 230, 53, 0.3);
-          margin-bottom: 1.5rem;
-          color: rgba(255, 255, 255, 0.95);
-        }
-      `}</style>
-      
-      {/* Section 1: Adjuster Information */}
-      <div>
-        {/* Row 1: Name / Phone */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="space-y-2">
-            <Label htmlFor="insuranceAdjusterName" className="form-label text-white text-opacity-90 text-2xl font-bold">
-              Adjuster Name
-            </Label>
-            <Input
-              id="insuranceAdjusterName"
-              placeholder="Adjuster's name"
-              {...register("insuranceAdjusterName")}
-              disabled={isLoadingAdjuster || isReadOnly}
-              className="input-text bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-[4rem] px-5 py-3 text-xl w-full"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="insuranceAdjusterPhone" className="form-label text-white text-opacity-90 text-2xl font-bold">
-              Adjuster Phone
-            </Label>
-            <Input
-              id="insuranceAdjusterPhone"
-              placeholder="Adjuster's phone"
-              {...register("insuranceAdjusterPhone")}
-              disabled={isLoadingAdjuster || isReadOnly}
-              className="input-text bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-[4rem] px-5 py-3 text-xl w-full"
-            />
-          </div>
-        </div>
-
-        {/* Row 2: Email / Notes */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="space-y-2">
-            <Label htmlFor="insuranceAdjusterEmail" className="form-label text-white text-opacity-90 text-2xl font-bold">
-              Adjuster Email
-            </Label>
-            <Input
-              id="insuranceAdjusterEmail"
-              type="email"
-              placeholder="Adjuster's email"
-              {...register("insuranceAdjusterEmail")}
-              disabled={isLoadingAdjuster || isReadOnly}
-              className="input-text bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-[4rem] px-5 py-3 text-xl w-full"
-            />
-            {errors.insuranceAdjusterEmail && (
-              <p className="text-red-400 text-xs mt-1">{errors.insuranceAdjusterEmail.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="adjusterAppointmentNotes" className="form-label text-white text-opacity-90 text-2xl font-bold">
-              Notes
-            </Label>
-            <Input
-              id="adjusterAppointmentNotes"
-              placeholder="Any notes about the adjuster"
-              {...register("adjusterAppointmentNotes")}
-              disabled={isLoadingAdjuster || isReadOnly}
-              className="input-text bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-[4rem] px-5 py-3 text-xl w-full"
-            />
-          </div>
-        </div>
-
-        {/* Row 3: Save Adjuster Info Button */}
-        {!isReadOnly && (
-          <Button
-            type="button"
-            onClick={saveAdjusterInfo}
-            disabled={isLoadingAdjuster}
-            className="submit-button w-full bg-lime-600 hover:bg-lime-700 text-white h-[4rem] mb-8"
-          >
-            {isLoadingAdjuster ? (
-              <>
-                <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save Adjuster Info"
-            )}
-          </Button>
+    <div className="space-y-3 sm:space-y-4 w-full">
+      <div className="space-y-1 sm:space-y-2">
+        <Label htmlFor="insuranceAdjusterName" className="text-white text-opacity-90 text-sm sm:text-base">
+          Adjuster Name
+        </Label>
+        <Input
+          id="insuranceAdjusterName"
+          placeholder="Adjuster's full name"
+          {...register("insuranceAdjusterName")}
+          disabled={isLoading || isReadOnly}
+          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+        />
+        {errors.insuranceAdjusterName && (
+          <p className="text-red-400 text-xs mt-1">{errors.insuranceAdjusterName.message}</p>
         )}
+      </div>
 
-        {/* Row 4: Empty space */}
-        <div className="section-divider"></div>
-
-        {/* Row 5: Section Title for Appointment */}
-        <h2 className="section-title">Adjuster Appointment</h2>
-
-        {/* Row 6: Date / Time */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="space-y-2">
-            <Label htmlFor="adjusterAppointmentDate" className="form-label text-white text-opacity-90 text-2xl font-bold">
-              Appointment Date
-            </Label>
-            <Controller
-              name="adjusterAppointmentDate"
-              control={control}
-              render={({ field }) => (
-                <CustomDatePicker
-                  value={field.value}
-                  onChange={(date) => field.onChange(date)}
-                  disabled={isLoadingAppointment || isReadOnly}
-                  placeholder="Select appointment date"
-                />
-              )}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="adjusterAppointmentTime" className="form-label text-white text-opacity-90 text-2xl font-bold">
-              Appointment Time
-            </Label>
-            <Controller
-              name="adjusterAppointmentTime"
-              control={control}
-              render={({ field }) => (
-                <CustomTimePicker
-                  value={field.value}
-                  onChange={(time) => field.onChange(time)}
-                  disabled={isLoadingAppointment || isReadOnly}
-                  placeholder="Select appointment time"
-                />
-              )}
-            />
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+        <div className="space-y-1 sm:space-y-2">
+          <Label htmlFor="insuranceAdjusterPhone" className="text-white text-opacity-90 text-sm sm:text-base">
+            Adjuster Phone
+          </Label>
+          <Input
+            id="insuranceAdjusterPhone"
+            placeholder="Adjuster's phone number"
+            {...register("insuranceAdjusterPhone")}
+            disabled={isLoading || isReadOnly}
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+          />
         </div>
 
-        {/* Row 7: Empty space */}
-        <div className="section-divider"></div>
-
-        {/* Row 8: Save Appointment Button */}
-        {!isReadOnly && (
-          <Button
-            type="button"
-            onClick={saveAppointment}
-            disabled={isLoadingAppointment}
-            className="submit-button w-full bg-lime-600 hover:bg-lime-700 text-white h-[4rem] mb-8"
-          >
-            {isLoadingAppointment ? (
-              <>
-                <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                Saving Appointment...
-              </>
-            ) : (
-              "Save Appointment"
-            )}
-          </Button>
-        )}
-
-        {/* Row 9: Calendar Links */}
-        <div className="grid grid-cols-2 gap-4">
-          <a 
-            href="https://calendar.google.com/calendar/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white h-[3.5rem] rounded-md text-lg transition-colors"
-          >
-            <CalendarIcon className="mr-2 h-5 w-5" />
-            Google Calendar
-          </a>
-          
-          <Button 
-            onClick={() => setShowCalendarModal(true)}
-            className="flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white h-[3.5rem] rounded-md text-lg transition-colors"
-          >
-            <CalendarDays className="mr-2 h-5 w-5" />
-            Calendar View
-          </Button>
+        <div className="space-y-1 sm:space-y-2">
+          <Label htmlFor="insuranceAdjusterEmail" className="text-white text-opacity-90 text-sm sm:text-base">
+            Adjuster Email
+          </Label>
+          <Input
+            id="insuranceAdjusterEmail"
+            type="email"
+            placeholder="Adjuster's email address"
+            {...register("insuranceAdjusterEmail")}
+            disabled={isLoading || isReadOnly}
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+          />
         </div>
       </div>
 
-      {error && (
-        <div className="rounded bg-red-500 bg-opacity-20 p-2 text-red-200 text-sm mt-4">
-          {error}
+      <div className="space-y-1 sm:space-y-2">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="adjusterAppointmentDate" className="text-white text-opacity-90 text-sm sm:text-base">
+            Appointment Date & Time
+          </Label>
+          <Button
+            type="button"
+            onClick={() => setShowCalendar(true)}
+            variant="ghost"
+            className="text-white text-opacity-80 hover:text-opacity-100 px-2 py-1 h-auto text-xs sm:text-sm"
+          >
+            <CalendarDays className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+            View Calendar
+          </Button>
         </div>
-      )}
+        <div className="grid grid-cols-2 gap-2">
+          <Controller
+            name="adjusterAppointmentDate"
+            control={control}
+            render={({ field }) => (
+              <CustomDatePicker
+                value={field.value}
+                onChange={field.onChange}
+                disabled={isLoading || isReadOnly}
+                placeholder="Select date"
+              />
+            )}
+          />
+          <Controller
+            name="adjusterAppointmentTime"
+            control={control}
+            render={({ field }) => (
+              <CustomTimePicker
+                value={field.value}
+                onChange={field.onChange}
+                disabled={isLoading || isReadOnly}
+                placeholder="Select time"
+              />
+            )}
+          />
+        </div>
+      </div>
 
-      {successMessage && (
-        <div className="rounded bg-green-500 bg-opacity-20 p-2 text-green-200 text-sm mt-4">
-          {successMessage}
+      <div className="space-y-1 sm:space-y-2">
+        <Label htmlFor="adjusterAppointmentNotes" className="text-white text-opacity-90 text-sm sm:text-base">
+          Appointment Notes
+        </Label>
+        <textarea
+          id="adjusterAppointmentNotes"
+          placeholder="Enter any notes or instructions for the adjuster appointment"
+          {...register("adjusterAppointmentNotes")}
+          disabled={isLoading || isReadOnly}
+          rows={isMobile ? 3 : 5}
+          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 w-full p-3 rounded-md text-sm sm:text-base"
+        />
+      </div>
+
+      {!isReadOnly && (
+        <div className="pt-2 space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <Button 
+              type="button" 
+              onClick={saveAdjusterInfo}
+              disabled={isLoading}
+              className="bg-zinc-700 hover:bg-zinc-600 text-white h-10 sm:h-12 text-sm sm:text-base"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Info"
+              )}
+            </Button>
+            
+            <Button 
+              type="button" 
+              onClick={saveAppointment}
+              disabled={isLoading || !watch("adjusterAppointmentDate") || !watch("adjusterAppointmentTime")}
+              className="bg-lime-600 hover:bg-lime-700 text-white h-10 sm:h-12 text-sm sm:text-base"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Scheduling...
+                </>
+              ) : (
+                "Schedule Appointment"
+              )}
+            </Button>
+          </div>
+          
+          {error && (
+            <div className="mt-3 text-red-400 text-sm p-3 bg-red-900 bg-opacity-25 rounded">
+              {error}
+            </div>
+          )}
+          
+          {successMessage && (
+            <div className="mt-3 text-green-400 text-sm p-3 bg-green-900 bg-opacity-25 rounded">
+              {successMessage}
+            </div>
+          )}
         </div>
       )}
 
@@ -1078,54 +1023,128 @@ export function AdjusterForm({
       <SuccessDialog
         isOpen={showSuccessDialog}
         onClose={() => setShowSuccessDialog(false)}
-        appointmentDate={getValues("adjusterAppointmentDate")}
-        appointmentTime={getValues("adjusterAppointmentTime")}
-        adjusterName={getValues("insuranceAdjusterName")}
-        appointmentNotes={getValues("adjusterAppointmentNotes")}
+        appointmentDate={watch("adjusterAppointmentDate")}
+        appointmentTime={watch("adjusterAppointmentTime")}
+        adjusterName={watch("insuranceAdjusterName")}
+        appointmentNotes={watch("adjusterAppointmentNotes")}
       />
 
-      {/* Fullscreen Calendar Modal - Directly using the Calendar component */}
-      <FullscreenCalendarModal 
-        isOpen={showCalendarModal} 
-        onClose={() => setShowCalendarModal(false)}
+      {/* Fullscreen Calendar Modal */}
+      <FullscreenCalendarModal
+        isOpen={showCalendar}
+        onClose={() => setShowCalendar(false)}
       >
-        <div className="w-full h-full bg-slate-800 rounded-lg overflow-hidden p-2">
-          {/* Legend of appointment types */}
-          <div className="flex flex-wrap gap-3 mb-4 pb-3 border-b border-slate-700">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-lime-500"></div>
-              <span className="text-white text-sm">Initial Consultation</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-              <span className="text-white text-sm">Estimate</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-              <span className="text-white text-sm">Follow Up</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-              <span className="text-white text-sm">Inspection</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-              <span className="text-white text-sm">Contract Signing</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-gray-500"></div>
-              <span className="text-white text-sm">Other</span>
-            </div>
+        <div className="h-full overflow-y-auto">
+          <div className="p-4 bg-zinc-800">
+            <h2 className="text-lg sm:text-2xl font-bold text-white mb-1">
+              {calendarView === "month" ? "Appointments Calendar" : (
+                selectedDayDate ? format(selectedDayDate, "EEEE, MMMM d, yyyy") : "Daily Schedule"
+              )}
+            </h2>
+            <p className="text-sm sm:text-base text-gray-300 mb-4">
+              {calendarView === "month" 
+                ? "Click on a day to view appointments" 
+                : "Click on an available time slot to select it"}
+            </p>
+            
+            {calendarView === "month" ? (
+              <Calendar 
+                appointments={appointments}
+                onDateClick={handleDateClick}
+                onAppointmentClick={handleAppointmentClick}
+                onSwitchToDay={handleSwitchToDay}
+              />
+            ) : (
+              <div>
+                <button
+                  onClick={() => setCalendarView("month")}
+                  className="mb-4 px-3 py-2 bg-zinc-700 text-white rounded-md text-sm flex items-center"
+                >
+                  <ChevronUp className="mr-2 h-4 w-4" />
+                  Back to Calendar
+                </button>
+                
+                <div className="bg-zinc-900 rounded-lg p-3 sm:p-4 mb-6">
+                  <h3 className="font-medium text-base sm:text-lg text-white mb-2">Appointments on this day:</h3>
+                  {appointments.filter(apt => 
+                    selectedDayDate && 
+                    apt.date?.getDate() === selectedDayDate.getDate() &&
+                    apt.date?.getMonth() === selectedDayDate.getMonth() &&
+                    apt.date?.getFullYear() === selectedDayDate.getFullYear()
+                  ).length > 0 ? (
+                    <div className="space-y-2">
+                      {appointments.filter(apt => 
+                        selectedDayDate && 
+                        apt.date?.getDate() === selectedDayDate.getDate() &&
+                        apt.date?.getMonth() === selectedDayDate.getMonth() &&
+                        apt.date?.getFullYear() === selectedDayDate.getFullYear()
+                      ).map(apt => (
+                        <div 
+                          key={apt.id} 
+                          className="bg-zinc-800 p-3 rounded-md border border-zinc-700"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-white">{apt.title}</p>
+                              <p className="text-sm text-gray-300">{apt.startTime} - {apt.endTime}</p>
+                            </div>
+                            <div className="px-2 py-1 bg-blue-900 text-blue-200 rounded-md text-xs">
+                              {apt.purpose}
+                            </div>
+                          </div>
+                          {apt.notes && (
+                            <p className="text-sm text-gray-400 mt-2">{apt.notes}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-400 text-sm">No appointments scheduled</p>
+                  )}
+                </div>
+                
+                <div className="bg-zinc-900 rounded-lg p-3 sm:p-4">
+                  <h3 className="font-medium text-base sm:text-lg text-white mb-3">Available Time Slots:</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {["9:00 AM", "10:00 AM", "11:00 AM", "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM"].map(time => {
+                      // Check if this time slot is already booked
+                      const isBooked = selectedDayDate && appointments.some(apt => 
+                        apt.date?.getDate() === selectedDayDate.getDate() &&
+                        apt.date?.getMonth() === selectedDayDate.getMonth() &&
+                        apt.date?.getFullYear() === selectedDayDate.getFullYear() &&
+                        apt.startTime === time
+                      );
+                      
+                      return (
+                        <button
+                          key={time}
+                          onClick={() => {
+                            if (!isBooked && selectedDayDate) {
+                              setValue("adjusterAppointmentDate", format(selectedDayDate, 'yyyy-MM-dd'));
+                              setValue("adjusterAppointmentTime", time);
+                              setShowCalendar(false);
+                            }
+                          }}
+                          className={cn(
+                            "py-2 px-3 rounded-md text-white text-sm sm:text-base text-center",
+                            isBooked 
+                              ? "bg-zinc-700 text-zinc-400 cursor-not-allowed" 
+                              : "bg-zinc-800 hover:bg-lime-900 active:bg-lime-800 cursor-pointer"
+                          )}
+                          disabled={isBooked}
+                        >
+                          {time}
+                          {isBooked && <span className="block text-xs text-red-400">Booked</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-          
-          <Calendar
-            appointments={mockAppointments}
-            onDateClick={handleDateClick}
-            onAppointmentClick={handleAppointmentClick}
-            onSwitchToDay={handleSwitchToDay}
-          />
         </div>
       </FullscreenCalendarModal>
     </div>
-  )
+  );
 } 

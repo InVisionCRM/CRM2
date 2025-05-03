@@ -41,6 +41,19 @@ export function ContactForm({
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [emailPrefix, setEmailPrefix] = useState<string>("")
+  const [isMobile, setIsMobile] = useState(false)
+  
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   const {
     register,
@@ -127,9 +140,9 @@ export function ContactForm({
     color: "#84cc16", // lime-600
     border: "none",
     height: "100%",
-    padding: "0 10px",
+    padding: isMobile ? "0 5px" : "0 10px",
     fontWeight: "bold",
-    fontSize: "0.9rem",
+    fontSize: isMobile ? "0.7rem" : "0.9rem",
     cursor: "pointer",
     display: "inline-flex",
     alignItems: "center",
@@ -137,10 +150,10 @@ export function ContactForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label htmlFor="firstName" className="text-white text-opacity-90">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4 w-full">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+        <div className="space-y-1 sm:space-y-2">
+          <Label htmlFor="firstName" className="text-white text-opacity-90 text-sm sm:text-base">
             First Name
           </Label>
           <Input
@@ -148,15 +161,15 @@ export function ContactForm({
             placeholder="First name"
             {...register("firstName")}
             disabled={isLoading || isReadOnly}
-            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50"
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
           />
           {errors.firstName && (
             <p className="text-red-400 text-xs mt-1">{errors.firstName.message}</p>
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="lastName" className="text-white text-opacity-90">
+        <div className="space-y-1 sm:space-y-2">
+          <Label htmlFor="lastName" className="text-white text-opacity-90 text-sm sm:text-base">
             Last Name
           </Label>
           <Input
@@ -164,7 +177,7 @@ export function ContactForm({
             placeholder="Last name"
             {...register("lastName")}
             disabled={isLoading || isReadOnly}
-            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50"
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
           />
           {errors.lastName && (
             <p className="text-red-400 text-xs mt-1">{errors.lastName.message}</p>
@@ -172,8 +185,8 @@ export function ContactForm({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="email" className="text-white text-opacity-90">
+      <div className="space-y-1 sm:space-y-2">
+        <Label htmlFor="email" className="text-white text-opacity-90 text-sm sm:text-base">
           Email
         </Label>
         <div className="flex">
@@ -184,12 +197,12 @@ export function ContactForm({
               placeholder="Email address"
               {...register("email")}
               disabled={isLoading || isReadOnly}
-              className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 w-full"
+              className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 w-full h-10 sm:h-12 text-sm sm:text-base"
               style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
             />
           </div>
           
-          {/* Email domain buttons at the end of the field */}
+          {/* Email domain buttons - responsive for mobile */}
           <button
             type="button"
             onClick={() => completeEmailWithDomain('@gmail.com')}
@@ -220,8 +233,8 @@ export function ContactForm({
         )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="phone" className="text-white text-opacity-90">
+      <div className="space-y-1 sm:space-y-2">
+        <Label htmlFor="phone" className="text-white text-opacity-90 text-sm sm:text-base">
           Phone
         </Label>
         <Input
@@ -229,15 +242,15 @@ export function ContactForm({
           placeholder="Phone number"
           {...register("phone")}
           disabled={isLoading || isReadOnly}
-          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50"
+          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
         />
         {errors.phone && (
           <p className="text-red-400 text-xs mt-1">{errors.phone.message}</p>
         )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="streetAddress" className="text-white text-opacity-90">
+      <div className="space-y-1 sm:space-y-2">
+        <Label htmlFor="streetAddress" className="text-white text-opacity-90 text-sm sm:text-base">
           Street Address
         </Label>
         <Input
@@ -245,42 +258,39 @@ export function ContactForm({
           placeholder="Full address (including city, state, zip)"
           {...register("streetAddress")}
           disabled={isLoading || isReadOnly}
-          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50"
+          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
         />
       </div>
 
-      {/* Hidden inputs for city, state, zipcode - still part of the form data */}
-      <input type="hidden" {...register("city")} />
-      <input type="hidden" {...register("state")} />
-      <input type="hidden" {...register("zipcode")} />
-
-      {error && (
-        <div className="rounded bg-red-500 bg-opacity-20 p-2 text-red-200 text-sm">
-          {error}
-        </div>
-      )}
-
-      {successMessage && (
-        <div className="rounded bg-green-500 bg-opacity-20 p-2 text-green-200 text-sm">
-          {successMessage}
-        </div>
-      )}
-
       {!isReadOnly && (
-        <Button
-          type="submit"
-          disabled={isLoading}
-          className="w-full bg-lime-600 hover:bg-lime-700 text-white"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save Contact Info"
+        <div className="pt-2">
+          <Button 
+            type="submit" 
+            disabled={isLoading} 
+            className="w-full bg-lime-600 hover:bg-lime-700 text-white h-10 sm:h-12 text-sm sm:text-base"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Contact Info"
+            )}
+          </Button>
+          
+          {error && (
+            <div className="mt-3 text-red-400 text-sm p-3 bg-red-900 bg-opacity-25 rounded">
+              {error}
+            </div>
           )}
-        </Button>
+          
+          {successMessage && (
+            <div className="mt-3 text-green-400 text-sm p-3 bg-green-900 bg-opacity-25 rounded">
+              {successMessage}
+            </div>
+          )}
+        </div>
       )}
     </form>
   )
