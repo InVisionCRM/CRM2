@@ -16,6 +16,7 @@ const contactFormSchema = z.object({
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   phone: z.string().optional().or(z.literal("")),
   streetAddress: z.string().optional().or(z.literal("")),
+  // Keep these in the schema for API compatibility, but we won't show them in the UI
   city: z.string().optional().or(z.literal("")),
   state: z.string().optional().or(z.literal("")),
   zipcode: z.string().optional().or(z.literal(""))
@@ -40,19 +41,6 @@ export function ContactForm({
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [emailPrefix, setEmailPrefix] = useState<string>("")
-  const [isMobile, setIsMobile] = useState(false)
-  
-  // Check if we're on mobile
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
   
   const {
     register,
@@ -95,9 +83,20 @@ export function ContactForm({
     setSuccessMessage(null)
 
     try {
-      // Validate leadId
-      if (!leadId) {
-        throw new Error("Lead ID is required")
+      // Extract city, state, zip from street address if possible
+      const addressParts = data.streetAddress?.split(',').map(part => part.trim()) || [];
+      if (addressParts.length >= 3) {
+        // Try to parse "7900 Mortenview Drive, Taylor, Michigan 48180, United States" format
+        const lastPart = addressParts[addressParts.length - 2] || ""; // e.g. "Michigan 48180"
+        const stateZipMatch = lastPart.match(/([A-Za-z\s]+)\s+(\d+)/);
+        
+        if (stateZipMatch) {
+          data.state = stateZipMatch[1]; // e.g. "Michigan"
+          data.zipcode = stateZipMatch[2]; // e.g. "48180"
+        }
+        
+        // City is typically the part before state
+        data.city = addressParts[addressParts.length - 3] || "";
       }
 
       // Call API route to update lead contact information
@@ -106,16 +105,7 @@ export function ContactForm({
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email || "",
-          phone: data.phone || "",
-          streetAddress: data.streetAddress || "",
-          city: data.city || "",
-          state: data.state || "",
-          zipcode: data.zipcode || ""
-        })
+        body: JSON.stringify(data)
       })
 
       if (!response.ok) {
@@ -134,27 +124,23 @@ export function ContactForm({
 
   const emailDomainButtonStyle = {
     backgroundColor: "#000000",
-    color: "#84cc16",
+    color: "#84cc16", // lime-600
     border: "none",
     height: "100%",
-    padding: "0 4px",
+    padding: "0 10px",
     fontWeight: "bold",
-    fontSize: "0.65rem",
+    fontSize: "0.9rem",
     cursor: "pointer",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    width: "24px",
   };
 
-  const baseInputStyles = "bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-4 text-xs px-2"
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-1 w-full max-w-full">
-      {/* ROW 1: First Name / Last Name */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-0.5">
-          <Label htmlFor="firstName" className="text-white text-opacity-90 text-[10px]">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label htmlFor="firstName" className="text-white text-opacity-90">
             First Name
           </Label>
           <Input
@@ -162,15 +148,15 @@ export function ContactForm({
             placeholder="First name"
             {...register("firstName")}
             disabled={isLoading || isReadOnly}
-            className={baseInputStyles}
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50"
           />
           {errors.firstName && (
-            <p className="text-red-400 text-[10px]">{errors.firstName.message}</p>
+            <p className="text-red-400 text-xs mt-1">{errors.firstName.message}</p>
           )}
         </div>
 
-        <div className="space-y-0.5">
-          <Label htmlFor="lastName" className="text-white text-opacity-90 text-[10px]">
+        <div className="space-y-2">
+          <Label htmlFor="lastName" className="text-white text-opacity-90">
             Last Name
           </Label>
           <Input
@@ -178,17 +164,16 @@ export function ContactForm({
             placeholder="Last name"
             {...register("lastName")}
             disabled={isLoading || isReadOnly}
-            className={baseInputStyles}
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50"
           />
           {errors.lastName && (
-            <p className="text-red-400 text-[10px]">{errors.lastName.message}</p>
+            <p className="text-red-400 text-xs mt-1">{errors.lastName.message}</p>
           )}
         </div>
       </div>
 
-      {/* ROW 2: Email */}
-      <div className="space-y-0.5">
-        <Label htmlFor="email" className="text-white text-opacity-90 text-[10px]">
+      <div className="space-y-2">
+        <Label htmlFor="email" className="text-white text-opacity-90">
           Email
         </Label>
         <div className="flex">
@@ -199,11 +184,12 @@ export function ContactForm({
               placeholder="Email address"
               {...register("email")}
               disabled={isLoading || isReadOnly}
-              className={`${baseInputStyles} w-full`}
+              className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 w-full"
               style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
             />
           </div>
-          {/* Email domain buttons */}
+          
+          {/* Email domain buttons at the end of the field */}
           <button
             type="button"
             onClick={() => completeEmailWithDomain('@gmail.com')}
@@ -212,9 +198,8 @@ export function ContactForm({
               ...emailDomainButtonStyle,
               borderRight: "1px solid rgba(255,255,255,0.1)",
             }}
-            title="Add @gmail.com"
           >
-            G
+            @GMAIL
           </button>
           <button
             type="button"
@@ -222,22 +207,21 @@ export function ContactForm({
             disabled={isLoading || isReadOnly}
             style={{
               ...emailDomainButtonStyle,
-              borderTopRightRadius: "0.125rem",
-              borderBottomRightRadius: "0.125rem",
+              borderTopRightRadius: "0.375rem",
+              borderBottomRightRadius: "0.375rem",
             }}
-            title="Add @yahoo.com"
           >
-            Y
+            @YAHOO
           </button>
         </div>
+        
         {errors.email && (
-          <p className="text-red-400 text-[10px]">{errors.email.message}</p>
+          <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>
         )}
       </div>
 
-      {/* ROW 3: Phone */}
-      <div className="space-y-0.5">
-        <Label htmlFor="phone" className="text-white text-opacity-90 text-[10px]">
+      <div className="space-y-2">
+        <Label htmlFor="phone" className="text-white text-opacity-90">
           Phone
         </Label>
         <Input
@@ -245,101 +229,58 @@ export function ContactForm({
           placeholder="Phone number"
           {...register("phone")}
           disabled={isLoading || isReadOnly}
-          className={baseInputStyles}
+          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50"
         />
         {errors.phone && (
-          <p className="text-red-400 text-[10px]">{errors.phone.message}</p>
+          <p className="text-red-400 text-xs mt-1">{errors.phone.message}</p>
         )}
       </div>
 
-      {/* ROW 4: Street Address / Zip Code */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="col-span-2 space-y-0.5">
-          <Label htmlFor="streetAddress" className="text-white text-opacity-90 text-[10px]">
-            Street Address
-          </Label>
-          <Input
-            id="streetAddress"
-            placeholder="Street address"
-            {...register("streetAddress")}
-            disabled={isLoading || isReadOnly}
-            className={baseInputStyles}
-          />
-        </div>
-        
-        <div className="space-y-0.5">
-          <Label htmlFor="zipcode" className="text-white text-opacity-90 text-[10px]">
-            Zip Code
-          </Label>
-          <Input
-            id="zipcode"
-            placeholder="Zip Code"
-            {...register("zipcode")}
-            disabled={isLoading || isReadOnly}
-            className={baseInputStyles}
-          />
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor="streetAddress" className="text-white text-opacity-90">
+          Street Address
+        </Label>
+        <Input
+          id="streetAddress"
+          placeholder="Full address (including city, state, zip)"
+          {...register("streetAddress")}
+          disabled={isLoading || isReadOnly}
+          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50"
+        />
       </div>
 
-      {/* ROW 5: City / State */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-0.5">
-          <Label htmlFor="city" className="text-white text-opacity-90 text-[10px]">
-            City
-          </Label>
-          <Input
-            id="city"
-            placeholder="City"
-            {...register("city")}
-            disabled={isLoading || isReadOnly}
-            className={baseInputStyles}
-          />
-        </div>
-        
-        <div className="space-y-0.5">
-          <Label htmlFor="state" className="text-white text-opacity-90 text-[10px]">
-            State
-          </Label>
-          <Input
-            id="state"
-            placeholder="State"
-            {...register("state")}
-            disabled={isLoading || isReadOnly}
-            className={baseInputStyles}
-          />
-        </div>
-      </div>
+      {/* Hidden inputs for city, state, zipcode - still part of the form data */}
+      <input type="hidden" {...register("city")} />
+      <input type="hidden" {...register("state")} />
+      <input type="hidden" {...register("zipcode")} />
 
-      {/* ROW 6: Save Button */}
+      {error && (
+        <div className="rounded bg-red-500 bg-opacity-20 p-2 text-red-200 text-sm">
+          {error}
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="rounded bg-green-500 bg-opacity-20 p-2 text-green-200 text-sm">
+          {successMessage}
+        </div>
+      )}
+
       {!isReadOnly && (
-        <div>
-          <Button 
-            type="submit" 
-            disabled={isLoading} 
-            className="w-full bg-lime-600 hover:bg-lime-700 text-white h-4 text-[10px] mt-1"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-1 h-2 w-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save Contact Info"
-            )}
-          </Button>
-          
-          {error && (
-            <div className="mt-0.5 text-red-400 text-[10px] p-0.5 bg-red-900 bg-opacity-25 rounded">
-              {error}
-            </div>
+        <Button
+          type="submit"
+          disabled={isLoading}
+          className="w-full bg-lime-600 hover:bg-lime-700 text-white"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Contact Info"
           )}
-          
-          {successMessage && (
-            <div className="mt-0.5 text-green-400 text-[10px] p-0.5 bg-green-900 bg-opacity-25 rounded">
-              {successMessage}
-            </div>
-          )}
-        </div>
+        </Button>
       )}
     </form>
   )
