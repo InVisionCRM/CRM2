@@ -261,8 +261,16 @@ export function SimpleMapDrawer({
     return () => window.removeEventListener("message", handleIframeMessage);
   }, []);
   
-  // Create a portal element on mount
+  // Create a portal element on mount and add viewport meta tag for mobile
   useEffect(() => {
+    // Add viewport meta tag if it doesn't exist to ensure proper mobile scaling
+    if (!document.querySelector('meta[name="viewport"]')) {
+      const meta = document.createElement('meta');
+      meta.name = 'viewport';
+      meta.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
+      document.head.appendChild(meta);
+    }
+    
     // Create a new div element for the portal
     const el = document.createElement('div');
     el.id = 'map-drawer-portal';
@@ -280,7 +288,7 @@ export function SimpleMapDrawer({
     document.body.appendChild(el);
     setPortalElement(el);
     
-    // Add a global style to force black background
+    // Add a global style for mobile optimization
     const style = document.createElement('style');
     style.innerHTML = `
       #map-drawer-portal * {
@@ -297,6 +305,43 @@ export function SimpleMapDrawer({
         }
         100% {
           background-position: 200% 0;
+        }
+      }
+      @media (max-width: 767px) {
+        .map-drawer {
+          font-size: 14px !important;
+        }
+        .map-drawer h2, .map-drawer h3 {
+          font-size: 1.1rem !important;
+        }
+        .map-drawer button {
+          font-size: 0.9rem !important;
+        }
+        .contact-form-container .form-label {
+          font-size: 1.2rem !important;
+        }
+        .contact-form-container input {
+          font-size: 1rem !important;
+          height: 3rem !important;
+        }
+        .contact-form-container button {
+          font-size: 1.1rem !important;
+          height: 3rem !important;
+        }
+        .map-drawer textarea {
+          font-size: 0.9rem !important;
+        }
+        /* Additional mobile-specific styles */
+        .contact-form-container .form-label {
+          margin-bottom: 0.3rem !important;
+        }
+        .contact-form-container .grid {
+          gap: 0.75rem !important;
+        }
+        /* Improve mobile form readability */
+        input, select, textarea {
+          -webkit-appearance: none !important;
+          border-radius: 8px !important;
         }
       }
     `;
@@ -357,19 +402,49 @@ export function SimpleMapDrawer({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isContractFullscreen]);
   
+  // Add responsive detection
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile devices
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
   // Don't render anything if not open or portal element isn't ready
   if (!isOpen || !portalElement) {
     return null;
   }
 
-  // Determine the drawer height based on expanded state
-  const drawerHeight = isExpanded ? "90vh" : "25vh";
-  
-  // Calculate the bezel height - increased by 30% when expanded
-  const bezelHeight = isExpanded ? "3.25rem" : "2.5rem";
+  // Determine the drawer height based on expanded state - improve SSR handling
+  const getViewportAdjustedValue = (expandedValue: string, mobileValue: string, desktopValue: string) => {
+    // Server-side rendering check
+    if (typeof window === 'undefined') {
+      return desktopValue; // Default to desktop value during SSR
+    }
+    
+    const isMobileViewport = window.innerWidth < 768;
+    if (isExpanded) {
+      return expandedValue;
+    } else {
+      return isMobileViewport ? mobileValue : desktopValue;
+    }
+  };
 
-  // Calculate the handle width - increases when expanded
-  const handleWidth = isExpanded ? "180px" : "40px";
+  // Use the helper function for drawer height
+  const drawerHeight = getViewportAdjustedValue("90vh", "40vh", "25vh");
+
+  // Use the helper function for bezel height  
+  const bezelHeight = getViewportAdjustedValue("3.25rem", "2rem", "2.5rem");
+
+  // Use the helper function for handle width
+  const handleWidth = getViewportAdjustedValue("180px", "30px", "40px");
 
   // Toggle an accordion section
   const toggleSection = (section: string) => {
@@ -488,6 +563,7 @@ export function SimpleMapDrawer({
           // Non-expanded view with street view and buttons side by side
           <div style={{
             display: "flex",
+            flexDirection: isMobile ? "column" : "row",
             padding: "8px",
             height: "100%",
             transition: "height 0.7s cubic-bezier(0.16, 1, 0.3, 1), min-height 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
@@ -495,9 +571,10 @@ export function SimpleMapDrawer({
           }}>
             {/* Left: Street view */}
             <div style={{
-              width: "40%",
-              marginRight: "8px",
-              height: "100%"
+              width: isMobile ? "100%" : "40%",
+              marginRight: isMobile ? "0" : "8px",
+              marginBottom: isMobile ? "8px" : "0",
+              height: isMobile ? "30%" : "100%"
             }}>
               <div style={{
                 height: "100%",
@@ -527,7 +604,7 @@ export function SimpleMapDrawer({
                 }}>
                   <p style={{
                     margin: 0,
-                    fontSize: "14px",
+                    fontSize: isMobile ? "12px" : "14px",
                     fontWeight: "bold",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -539,13 +616,13 @@ export function SimpleMapDrawer({
 
             {/* Right: Status buttons */}
             <div style={{
-              width: "60%",
-              height: "100%",
+              width: isMobile ? "100%" : "60%",
+              height: isMobile ? "70%" : "100%",
               display: "flex",
               flexDirection: "column",
               gap: "3px",
               backgroundColor: "transparent",
-              padding: "0 0 0 8px"
+              padding: isMobile ? "0" : "0 0 0 8px"
             }}>
               {/* No Answer button at top */}
               <button
@@ -556,7 +633,7 @@ export function SimpleMapDrawer({
                   background: `linear-gradient(145deg, ${statusColors["No Answer"]} 0%, #1e40af 100%)`,
                   border: currentStatus === "No Answer" ? "2px solid #ffffff" : "1px solid rgba(132, 204, 22, 0.7)",
                   color: "white",
-                  fontSize: "22px",
+                  fontSize: isMobile ? "18px" : "22px",
                   fontWeight: "bold",
                   borderRadius: "12px",
                   cursor: "pointer",
@@ -564,11 +641,11 @@ export function SimpleMapDrawer({
                   justifyContent: "center",
                   alignItems: "center",
                   textAlign: "center",
-                  padding: "4px",
+                  padding: isMobile ? "2px" : "4px",
                   margin: 0,
                   opacity: hoveredButton === "No Answer" ? 1 : 0.9,
                   flex: "1 1 0",
-                  minHeight: "40%",
+                  minHeight: isMobile ? "30%" : "40%",
                   boxShadow: hoveredButton === "No Answer" 
                     ? "0 6px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4)" 
                     : "0 4px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)",
@@ -589,7 +666,7 @@ export function SimpleMapDrawer({
                 gridTemplateRows: "1fr",
                 gap: "3px",
                 flex: "1 1 0",
-                minHeight: "40%"
+                minHeight: isMobile ? "60%" : "40%"
               }}>
                 {availableStatuses
                   .filter(status => status !== "No Answer")
@@ -607,7 +684,7 @@ export function SimpleMapDrawer({
                           background: getButtonGradient(status, backgroundColor),
                           border: isActive ? "2px solid #ffffff" : "1px solid rgba(132, 204, 22, 0.7)",
                           color: "white",
-                          fontSize: "18px",
+                          fontSize: isMobile ? "14px" : "18px",
                           fontWeight: "bold",
                           borderRadius: "12px",
                           cursor: "pointer",
@@ -615,7 +692,7 @@ export function SimpleMapDrawer({
                           justifyContent: "center",
                           alignItems: "center",
                           textAlign: "center",
-                          padding: "4px",
+                          padding: isMobile ? "2px" : "4px",
                           margin: 0,
                           opacity: hoveredButton === status ? 1 : 0.85,
                           width: "100%",
@@ -644,12 +721,12 @@ export function SimpleMapDrawer({
           <div style={{
             height: "100%",
             overflowY: "auto",
-            padding: "12px",
+            padding: isMobile ? "8px" : "12px",
             opacity: isExpanded ? 1 : 0,
             transition: "opacity 0.7s ease-in, height 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
             display: "flex",
             flexDirection: "column",
-            gap: "8px"
+            gap: isMobile ? "6px" : "8px"
           }}>
             {/* StreetView Section */}
             <div style={{
@@ -667,7 +744,10 @@ export function SimpleMapDrawer({
             }}>
               <div 
                 onClick={() => toggleSection("streetview")} 
-                style={getAccordionHeaderStyle("streetview", expandedSection)}
+                style={{
+                  ...getAccordionHeaderStyle("streetview", expandedSection),
+                  padding: isMobile ? "12px 16px" : "16px 20px",
+                }}
               >
                 <div style={{ 
                   display: "flex", 
@@ -676,10 +756,10 @@ export function SimpleMapDrawer({
                   width: "100%",
                   justifyContent: "center"
                 }}>
-                  <MapPin size={28} className="text-lime-500" />
+                  <MapPin size={isMobile ? 20 : 28} className="text-lime-500" />
                   <span style={{ 
                     fontWeight: "bold", 
-                    fontSize: "24px", 
+                    fontSize: isMobile ? "18px" : "24px", 
                     letterSpacing: "-0.02em",
                     textAlign: "center",
                     maxWidth: "90%",
@@ -690,7 +770,7 @@ export function SimpleMapDrawer({
                     {address}
                   </span>
                 </div>
-                {expandedSection === "streetview" ? <ChevronUp size={28} /> : <ChevronDown size={28} />}
+                {expandedSection === "streetview" ? <ChevronUp size={isMobile ? 20 : 28} /> : <ChevronDown size={isMobile ? 20 : 28} />}
                 {expandedSection === "streetview" && <div style={getAnimatedBezelStyle()} />}
               </div>
               {expandedSection === "streetview" && (
@@ -731,13 +811,22 @@ export function SimpleMapDrawer({
             }}>
               <div 
                 onClick={() => toggleSection("contact")} 
-                style={getAccordionHeaderStyle("contact", expandedSection)}
+                style={{
+                  ...getAccordionHeaderStyle("contact", expandedSection),
+                  padding: isMobile ? "12px 16px" : "16px 20px",
+                }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <User size={28} />
-                  <span style={{ fontWeight: "bold", fontSize: "20px", letterSpacing: "-0.02em" }}>Contact Information</span>
+                  <User size={isMobile ? 20 : 28} />
+                  <span style={{ 
+                    fontWeight: "bold", 
+                    fontSize: isMobile ? "16px" : "20px", 
+                    letterSpacing: "-0.02em" 
+                  }}>
+                    Contact Information
+                  </span>
                 </div>
-                {expandedSection === "contact" ? <ChevronUp size={28} /> : <ChevronDown size={28} />}
+                {expandedSection === "contact" ? <ChevronUp size={isMobile ? 20 : 28} /> : <ChevronDown size={isMobile ? 20 : 28} />}
                 {expandedSection === "contact" && <div style={getAnimatedBezelStyle()} />}
               </div>
               {expandedSection === "contact" && (
@@ -813,13 +902,22 @@ export function SimpleMapDrawer({
             }}>
               <div 
                 onClick={() => toggleSection("insurance")} 
-                style={getAccordionHeaderStyle("insurance", expandedSection)}
+                style={{
+                  ...getAccordionHeaderStyle("insurance", expandedSection),
+                  padding: isMobile ? "12px 16px" : "16px 20px",
+                }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <FileText size={28} />
-                  <span style={{ fontWeight: "bold", fontSize: "20px", letterSpacing: "-0.02em" }}>Insurance Information</span>
+                  <FileText size={isMobile ? 20 : 28} />
+                  <span style={{ 
+                    fontWeight: "bold", 
+                    fontSize: isMobile ? "16px" : "20px", 
+                    letterSpacing: "-0.02em" 
+                  }}>
+                    Insurance Information
+                  </span>
                 </div>
-                {expandedSection === "insurance" ? <ChevronUp size={28} /> : <ChevronDown size={28} />}
+                {expandedSection === "insurance" ? <ChevronUp size={isMobile ? 20 : 28} /> : <ChevronDown size={isMobile ? 20 : 28} />}
                 {expandedSection === "insurance" && <div style={getAnimatedBezelStyle()} />}
               </div>
               {expandedSection === "insurance" && (
@@ -867,13 +965,22 @@ export function SimpleMapDrawer({
             }}>
               <div 
                 onClick={() => toggleSection("adjuster")} 
-                style={getAccordionHeaderStyle("adjuster", expandedSection)}
+                style={{
+                  ...getAccordionHeaderStyle("adjuster", expandedSection),
+                  padding: isMobile ? "12px 16px" : "16px 20px",
+                }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <Sliders size={28} />
-                  <span style={{ fontWeight: "bold", fontSize: "20px", letterSpacing: "-0.02em" }}>Adjuster Information</span>
+                  <Sliders size={isMobile ? 20 : 28} />
+                  <span style={{ 
+                    fontWeight: "bold", 
+                    fontSize: isMobile ? "16px" : "20px", 
+                    letterSpacing: "-0.02em" 
+                  }}>
+                    Adjuster Information
+                  </span>
                 </div>
-                {expandedSection === "adjuster" ? <ChevronUp size={28} /> : <ChevronDown size={28} />}
+                {expandedSection === "adjuster" ? <ChevronUp size={isMobile ? 20 : 28} /> : <ChevronDown size={isMobile ? 20 : 28} />}
                 {expandedSection === "adjuster" && <div style={getAnimatedBezelStyle()} />}
               </div>
               {expandedSection === "adjuster" && (
@@ -919,13 +1026,22 @@ export function SimpleMapDrawer({
             }}>
               <div 
                 onClick={() => toggleSection("contract")} 
-                style={getAccordionHeaderStyle("contract", expandedSection)}
+                style={{
+                  ...getAccordionHeaderStyle("contract", expandedSection),
+                  padding: isMobile ? "12px 16px" : "16px 20px",
+                }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <Clipboard size={28} />
-                  <span style={{ fontWeight: "bold", fontSize: "20px", letterSpacing: "-0.02em" }}>Contract</span>
+                  <Clipboard size={isMobile ? 20 : 28} />
+                  <span style={{ 
+                    fontWeight: "bold", 
+                    fontSize: isMobile ? "16px" : "20px", 
+                    letterSpacing: "-0.02em" 
+                  }}>
+                    Contract
+                  </span>
                 </div>
-                {expandedSection === "contract" ? <ChevronUp size={28} /> : <ChevronDown size={28} />}
+                {expandedSection === "contract" ? <ChevronUp size={isMobile ? 20 : 28} /> : <ChevronDown size={isMobile ? 20 : 28} />}
                 {expandedSection === "contract" && <div style={getAnimatedBezelStyle()} />}
               </div>
               {expandedSection === "contract" && (
@@ -1206,18 +1322,27 @@ export function SimpleMapDrawer({
             }}>
               <div 
                 onClick={() => toggleSection("notes")} 
-                style={getAccordionHeaderStyle("notes", expandedSection)}
+                style={{
+                  ...getAccordionHeaderStyle("notes", expandedSection),
+                  padding: isMobile ? "12px 16px" : "16px 20px",
+                }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <MessageSquare size={28} />
-                  <span style={{ fontWeight: "bold", fontSize: "20px", letterSpacing: "-0.02em" }}>Notes</span>
+                  <MessageSquare size={isMobile ? 20 : 28} />
+                  <span style={{ 
+                    fontWeight: "bold", 
+                    fontSize: isMobile ? "16px" : "20px", 
+                    letterSpacing: "-0.02em" 
+                  }}>
+                    Notes
+                  </span>
                 </div>
-                {expandedSection === "notes" ? <ChevronUp size={28} /> : <ChevronDown size={28} />}
+                {expandedSection === "notes" ? <ChevronUp size={isMobile ? 20 : 28} /> : <ChevronDown size={isMobile ? 20 : 28} />}
                 {expandedSection === "notes" && <div style={getAnimatedBezelStyle()} />}
               </div>
               {expandedSection === "notes" && (
                 <div style={{ 
-                  padding: "16px", 
+                  padding: isMobile ? "12px" : "16px", 
                   background: "rgba(255, 255, 255, 0.015)",
                   flex: "1",
                   display: "flex",
@@ -1244,7 +1369,7 @@ export function SimpleMapDrawer({
                       <textarea
                         id="note-content"
                         placeholder="Enter your notes here..."
-                        rows={5}
+                        rows={isMobile ? 3 : 5}
                         disabled={isSavingNote}
                         style={{
                           backgroundColor: "rgba(255, 255, 255, 0.1)",
@@ -1252,7 +1377,7 @@ export function SimpleMapDrawer({
                           border: "none",
                           borderRadius: "8px",
                           padding: "12px",
-                          fontSize: "16px",
+                          fontSize: isMobile ? "14px" : "16px",
                           resize: "vertical",
                           width: "100%",
                         }}
