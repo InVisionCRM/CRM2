@@ -1,7 +1,13 @@
 import { FloatingDock } from "@/components/ui/floating-dock"
+import { DockThemeToggle } from "@/components/theme-toggle"
 
 export default function FloatingDockIOS() {
   const links = [
+    {
+      title: "Theme",
+      icon: <DockThemeToggle />,
+      href: "#",
+    },
     {
       title: "Dashboard",
       icon: (

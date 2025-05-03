@@ -2,6 +2,11 @@ import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { LeadStatus } from "@/types/dashboard"
 
+/**
+ * Merges class names with Tailwind CSS classes and resolves conflicts
+ * @param inputs - Class name inputs
+ * @returns Merged and deduplicated class string
+ */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }

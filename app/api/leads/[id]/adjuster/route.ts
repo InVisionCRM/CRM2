@@ -5,15 +5,13 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
 // Schema for validation
-const contactUpdateSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  phone: z.string().optional().or(z.literal("")),
-  streetAddress: z.string().optional().or(z.literal("")),
-  city: z.string().optional().or(z.literal("")),
-  state: z.string().optional().or(z.literal("")),
-  zipcode: z.string().optional().or(z.literal(""))
+const adjusterUpdateSchema = z.object({
+  insuranceAdjusterName: z.string().optional().or(z.literal("")),
+  insuranceAdjusterPhone: z.string().optional().or(z.literal("")),
+  insuranceAdjusterEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
+  adjusterAppointmentDate: z.string().optional().or(z.literal("")),
+  adjusterAppointmentTime: z.string().optional().or(z.literal("")),
+  adjusterAppointmentNotes: z.string().optional().or(z.literal(""))
 })
 
 export async function PATCH(
@@ -41,7 +39,7 @@ export async function PATCH(
 
     // Parse and validate the request body
     const body = await request.json()
-    const validationResult = contactUpdateSchema.safeParse(body)
+    const validationResult = adjusterUpdateSchema.safeParse(body)
     
     if (!validationResult.success) {
       return new NextResponse(
@@ -67,18 +65,22 @@ export async function PATCH(
       )
     }
 
-    // Update the lead contact information
+    // Convert appointment date string to DateTime if provided
+    let appointmentDate = undefined
+    if (data.adjusterAppointmentDate && data.adjusterAppointmentDate.trim() !== '') {
+      appointmentDate = new Date(data.adjusterAppointmentDate)
+    }
+
+    // Update the lead adjuster information
     const updatedLead = await prisma.lead.update({
       where: { id },
       data: {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        phone: data.phone,
-        streetAddress: data.streetAddress,
-        city: data.city,
-        state: data.state,
-        zipcode: data.zipcode,
+        insuranceAdjusterName: data.insuranceAdjusterName,
+        insuranceAdjusterPhone: data.insuranceAdjusterPhone,
+        insuranceAdjusterEmail: data.insuranceAdjusterEmail,
+        adjusterAppointmentDate: appointmentDate,
+        adjusterAppointmentTime: data.adjusterAppointmentTime,
+        adjusterAppointmentNotes: data.adjusterAppointmentNotes,
         updatedAt: new Date()
       }
     })
@@ -87,8 +89,8 @@ export async function PATCH(
     await prisma.activity.create({
       data: {
         type: 'LEAD_UPDATED',
-        title: 'Contact information updated',
-        description: `Contact information updated for ${data.firstName} ${data.lastName}`,
+        title: 'Adjuster information updated',
+        description: `Adjuster information updated for lead ${id}`,
         userId: session.user.id,
         leadId: id,
         status: 'COMPLETED'
@@ -96,24 +98,22 @@ export async function PATCH(
     })
 
     return NextResponse.json({ 
-      message: 'Contact information updated successfully',
+      message: 'Adjuster information updated successfully',
       lead: {
         id: updatedLead.id,
-        firstName: updatedLead.firstName,
-        lastName: updatedLead.lastName,
-        email: updatedLead.email,
-        phone: updatedLead.phone,
-        streetAddress: updatedLead.streetAddress,
-        city: updatedLead.city,
-        state: updatedLead.state,
-        zipcode: updatedLead.zipcode
+        insuranceAdjusterName: updatedLead.insuranceAdjusterName,
+        insuranceAdjusterPhone: updatedLead.insuranceAdjusterPhone,
+        insuranceAdjusterEmail: updatedLead.insuranceAdjusterEmail,
+        adjusterAppointmentDate: updatedLead.adjusterAppointmentDate,
+        adjusterAppointmentTime: updatedLead.adjusterAppointmentTime,
+        adjusterAppointmentNotes: updatedLead.adjusterAppointmentNotes
       }
     })
   } catch (error) {
-    console.error('Error updating lead contact information:', error)
+    console.error('Error updating adjuster information:', error)
     return new NextResponse(
       JSON.stringify({ message: 'Internal server error' }),
       { status: 500 }
     )
   }
-}
+} 

@@ -91,6 +91,9 @@ model Lead {
   insuranceAdjusterEmail    String?
   insuranceDeductible       String?
   insuranceSecondaryPhone   String?
+  dateOfLoss                DateTime? @db.Timestamptz(6)
+  damageType                DamageType?
+  claimNumber               String?
   adjusterAppointmentDate   DateTime? @db.Timestamptz(6)
   adjusterAppointmentTime   String?
   adjusterAppointmentNotes  String?
@@ -276,6 +279,12 @@ enum KnockStatus {
   // NOT_VISITED     // Removed (using KNOCKED)
   // INTERESTED      // Removed
   // APPOINTMENT_SET // Removed
+}
+
+enum DamageType {
+  HAIL
+  WIND
+  FIRE
 }
 
 model File {

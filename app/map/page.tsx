@@ -7,6 +7,7 @@ import { AddressSearch } from "@/components/map/address-search"
 import { MapInteractionDrawer, PropertyVisitStatus } from "@/components/map/MapInteractionDrawer"
 import type { MarkerData } from "@/components/map/mapbox-map"
 import { DoorOpen } from 'lucide-react'; // Icon for counter
+import { SimpleMapDrawer } from "@/components/map/SimpleMapDrawer"
 // Import function to get session client-side if needed, or assume session info is available
 // import { useSession } from "next-auth/react" 
 
@@ -334,7 +335,7 @@ export default function MapPage() {
   }, [selectedDrawerData, toast, setIsDrawerOpen, setSelectedDrawerData, setIsDrawerExpanded]); // Add state setters to dependency array
 
   return (
-    <div className="fullscreen-map-container relative [color-scheme:light]">
+    <div className="fullscreen-map-container relative">
       {/* Search bar positioned at the top center of the map */}
       <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 w-full max-w-md px-4">
         <AddressSearch onAddressSelect={handleAddressSelect} />
@@ -363,7 +364,7 @@ export default function MapPage() {
       />
 
       {isDrawerOpen && selectedDrawerData && (
-        <MapInteractionDrawer
+        <SimpleMapDrawer
           isOpen={isDrawerOpen}
           onClose={() => {
             setIsDrawerOpen(false)

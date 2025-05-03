@@ -47,3 +47,48 @@ export function ThemeToggle() {
     </Button>
   )
 }
+
+export function DockThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme()
+  const [isMounted, setIsMounted] = React.useState(false)
+
+  // After mounting, we have access to the theme
+  React.useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  function toggleTheme(e: React.MouseEvent) {
+    e.preventDefault()
+    setTheme(resolvedTheme === "dark" ? "light" : "dark")
+  }
+
+  if (!isMounted) {
+    return (
+      <div className="flex items-center justify-center w-full h-full opacity-70">
+        <Moon className="h-10 w-10 text-gray-400" />
+      </div>
+    )
+  }
+
+  return (
+    <div 
+      className="flex items-center justify-center w-full h-full cursor-pointer" 
+      onClick={toggleTheme}
+      role="button"
+      tabIndex={0}
+      aria-label={resolvedTheme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setTheme(resolvedTheme === "dark" ? "light" : "dark");
+        }
+      }}
+    >
+      {resolvedTheme === "dark" ? (
+        <Sun className="h-12 w-12 text-amber-400" />
+      ) : (
+        <Moon className="h-12 w-12 text-indigo-600" />
+      )}
+    </div>
+  )
+}

@@ -5,15 +5,15 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
 // Schema for validation
-const contactUpdateSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  phone: z.string().optional().or(z.literal("")),
-  streetAddress: z.string().optional().or(z.literal("")),
-  city: z.string().optional().or(z.literal("")),
-  state: z.string().optional().or(z.literal("")),
-  zipcode: z.string().optional().or(z.literal(""))
+const insuranceUpdateSchema = z.object({
+  insuranceCompany: z.string().optional().or(z.literal("")),
+  insurancePolicyNumber: z.string().optional().or(z.literal("")),
+  insurancePhone: z.string().optional().or(z.literal("")),
+  insuranceDeductible: z.string().optional().or(z.literal("")),
+  insuranceSecondaryPhone: z.string().optional().or(z.literal("")),
+  dateOfLoss: z.string().optional().or(z.literal("")),
+  damageType: z.enum(["HAIL", "WIND", "FIRE"]).optional().or(z.literal("")),
+  claimNumber: z.string().optional().or(z.literal(""))
 })
 
 export async function PATCH(
@@ -41,7 +41,7 @@ export async function PATCH(
 
     // Parse and validate the request body
     const body = await request.json()
-    const validationResult = contactUpdateSchema.safeParse(body)
+    const validationResult = insuranceUpdateSchema.safeParse(body)
     
     if (!validationResult.success) {
       return new NextResponse(
@@ -67,18 +67,24 @@ export async function PATCH(
       )
     }
 
-    // Update the lead contact information
+    // Convert date of loss string to DateTime if provided
+    let dateOfLoss = undefined
+    if (data.dateOfLoss && data.dateOfLoss.trim() !== '') {
+      dateOfLoss = new Date(data.dateOfLoss)
+    }
+
+    // Update the lead insurance information
     const updatedLead = await prisma.lead.update({
       where: { id },
       data: {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        phone: data.phone,
-        streetAddress: data.streetAddress,
-        city: data.city,
-        state: data.state,
-        zipcode: data.zipcode,
+        insuranceCompany: data.insuranceCompany,
+        insurancePolicyNumber: data.insurancePolicyNumber,
+        insurancePhone: data.insurancePhone,
+        insuranceDeductible: data.insuranceDeductible,
+        insuranceSecondaryPhone: data.insuranceSecondaryPhone,
+        dateOfLoss: dateOfLoss,
+        damageType: data.damageType || null,
+        claimNumber: data.claimNumber,
         updatedAt: new Date()
       }
     })
@@ -87,8 +93,8 @@ export async function PATCH(
     await prisma.activity.create({
       data: {
         type: 'LEAD_UPDATED',
-        title: 'Contact information updated',
-        description: `Contact information updated for ${data.firstName} ${data.lastName}`,
+        title: 'Insurance information updated',
+        description: `Insurance information updated for lead ${id}`,
         userId: session.user.id,
         leadId: id,
         status: 'COMPLETED'
@@ -96,24 +102,24 @@ export async function PATCH(
     })
 
     return NextResponse.json({ 
-      message: 'Contact information updated successfully',
+      message: 'Insurance information updated successfully',
       lead: {
         id: updatedLead.id,
-        firstName: updatedLead.firstName,
-        lastName: updatedLead.lastName,
-        email: updatedLead.email,
-        phone: updatedLead.phone,
-        streetAddress: updatedLead.streetAddress,
-        city: updatedLead.city,
-        state: updatedLead.state,
-        zipcode: updatedLead.zipcode
+        insuranceCompany: updatedLead.insuranceCompany,
+        insurancePolicyNumber: updatedLead.insurancePolicyNumber,
+        insurancePhone: updatedLead.insurancePhone,
+        insuranceDeductible: updatedLead.insuranceDeductible,
+        insuranceSecondaryPhone: updatedLead.insuranceSecondaryPhone,
+        dateOfLoss: updatedLead.dateOfLoss,
+        damageType: updatedLead.damageType,
+        claimNumber: updatedLead.claimNumber
       }
     })
   } catch (error) {
-    console.error('Error updating lead contact information:', error)
+    console.error('Error updating lead insurance information:', error)
     return new NextResponse(
       JSON.stringify({ message: 'Internal server error' }),
       { status: 500 }
     )
   }
-}
+} 

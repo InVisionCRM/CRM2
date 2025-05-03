@@ -55,9 +55,15 @@ const FloatingDockMobile = ({
                 }}
                 transition={{ delay: (items.length - 1 - idx) * 0.05 }}
               >
-                <a href={item.href} key={item.title} className="flex h-16 w-16 items-center justify-center">
-                  <div className="h-16 w-16">{item.icon}</div>
-                </a>
+                {item.href === "#" ? (
+                  <div className="flex h-16 w-16 items-center justify-center" role="button" aria-label={item.title}>
+                    <div className="h-16 w-16">{item.icon}</div>
+                  </div>
+                ) : (
+                  <a href={item.href} className="flex h-16 w-16 items-center justify-center">
+                    <div className="h-16 w-16">{item.icon}</div>
+                  </a>
+                )}
               </motion.div>
             ))}
           </motion.div>
@@ -142,6 +148,27 @@ function IconContainer({
   })
 
   const [hovered, setHovered] = useState(false)
+
+  // For special case like theme toggle which should not navigate
+  if (href === "#") {
+    return (
+      <div className="-mx-1">
+        <motion.div
+          ref={ref}
+          style={{ width, height }}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          className="relative flex aspect-square items-center justify-center"
+          role="button"
+          aria-label={title}
+        >
+          <motion.div style={{ width: widthIcon, height: heightIcon }} className="flex items-center justify-center">
+            {icon}
+          </motion.div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <a href={href} className="-mx-1">
