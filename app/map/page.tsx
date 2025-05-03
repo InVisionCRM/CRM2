@@ -235,6 +235,7 @@ export default function MapPage() {
     try {
       if (markerId && markerId.startsWith('temp-')) {
         console.log("Saving new marker to DB...");
+        console.log("Sending status value:", newStatus); // Debug the exact status value being sent
         const response = await fetch("/api/vision-markers", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -242,7 +243,7 @@ export default function MapPage() {
             lat: position[0],
             lng: position[1],
             address: address,
-            status: newStatus, 
+            status: newStatus, // This should be the string like "No Answer" 
           }),
         });
         if (!response.ok) throw new Error("Failed to create marker");

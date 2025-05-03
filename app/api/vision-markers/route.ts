@@ -8,23 +8,23 @@ import type { PropertyVisitStatus } from "@/components/map/MapInteractionDrawer"
 const mapStringToKnockStatus = (statusString: PropertyVisitStatus | "New" | "Search" | string | undefined | null): KnockStatus => {
   // Handle potential frontend internal states
   if (statusString === "New" || statusString === "Search" || !statusString) {
-      // Assuming KNOCKED represents the initial/unvisited state in the DB
-      // If you add a dedicated NEW status to the enum, map to that instead.
       return KnockStatus.KNOCKED 
   }
 
-  // Map the user-selectable statuses
+  // Debug log to help diagnose issues
+  console.log(`Mapping status: '${statusString}' to KnockStatus enum`);
+
+  // Map the user-selectable statuses - Note that KnockStatus.NO_ANSWER is an enum value, not a string
   switch (statusString) {
-    case "No Answer": return KnockStatus.NO_ANSWER;
+    case "No Answer": 
+      console.log("Mapping 'No Answer' to KnockStatus.NO_ANSWER enum:", KnockStatus.NO_ANSWER);
+      return KnockStatus.NO_ANSWER;
     case "Not Interested": return KnockStatus.NOT_INTERESTED;
     case "Follow up": return KnockStatus.FOLLOW_UP;
     case "Inspected": return KnockStatus.INSPECTED;
     case "In Contract": return KnockStatus.IN_CONTRACT;
     default:
-      // This should theoretically not happen due to frontend validation
-      // But handle it defensively
       console.error(`Unknown status string received: '${statusString}', defaulting to KNOCKED.`);
-      // Consider throwing an error instead?
       return KnockStatus.KNOCKED; 
   }
 };
@@ -100,6 +100,11 @@ export async function POST(request: Request) {
 
     // Use the helper function to safely map the status string from the request body
     const mappedStatus = mapStringToKnockStatus(status);
+    console.log("POST /api/vision-markers - Mapped status:", {
+      originalStatus: status,
+      mappedStatus: mappedStatus,
+      validEnumValues: Object.values(KnockStatus)
+    });
 
     // Create the marker
     const marker = await createMarker({

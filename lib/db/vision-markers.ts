@@ -102,13 +102,35 @@ export async function getMarkersByAddress(address: string): Promise<VisionMarker
  */
 export async function createMarker(data: CreateVisionMarkerInput): Promise<VisionMarker> {
   try {
+    // Add debugging to verify the enum value being passed
+    console.log("Creating marker with status:", {
+      providedStatus: data.status,
+      isEnumValue: typeof data.status === 'string' ? 'String (should be enum)' : 'Enum value (correct)',
+      validValues: Object.values(KnockStatus)
+    });
+
+    // Ensure status is a valid KnockStatus enum value
+    const statusToUse = data.status || KnockStatus.KNOCKED;
+    
+    // Validate that status is a valid enum value
+    if (typeof statusToUse === 'string' && !Object.values(KnockStatus).includes(statusToUse as any)) {
+      console.warn(`Received string status '${statusToUse}' instead of enum. Valid values are:`, Object.values(KnockStatus));
+      // Try to convert if it's a string that matches an enum key
+      const matchingEnumKey = Object.keys(KnockStatus).find(key => 
+        key === statusToUse || key === statusToUse.toUpperCase().replace(' ', '_')
+      );
+      if (matchingEnumKey) {
+        console.log(`Converting string '${statusToUse}' to matching enum value: ${KnockStatus[matchingEnumKey as keyof typeof KnockStatus]}`);
+      }
+    }
+
     const marker = await prisma.visionMarker.create({
       data: {
         latitude: data.latitude,
         longitude: data.longitude,
         address: data.address,
         notes: data.notes || null,
-        status: data.status || KnockStatus.KNOCKED,
+        status: statusToUse,
         contactInfo: data.contactInfo ? (data.contactInfo as Prisma.InputJsonValue) : undefined,
         followUp: data.followUp ? (data.followUp as Prisma.InputJsonValue) : undefined,
         visits: data.visits ? (data.visits as unknown as Prisma.InputJsonValue) : undefined,
