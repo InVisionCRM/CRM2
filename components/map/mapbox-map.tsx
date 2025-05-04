@@ -19,6 +19,7 @@ export interface MarkerData {
   address: string
   status: PropertyVisitStatus | "New" | "Search"
   visits?: any[]
+  leadId?: string
 }
 
 interface MapboxMapProps {

@@ -106,6 +106,7 @@ model Lead {
   visits                   Visit[]
   files                    File[]
   contracts                Contract[]
+  visionMarker             VisionMarker?
 
   @@index([assignedToId], map: "idx_leads_assigned_to")
   @@index([status], map: "idx_leads_status")
@@ -172,6 +173,9 @@ model VisionMarker {
   // Relations
   userId         String?    @db.Uuid
   user           User?      @relation(fields: [userId], references: [id])
+  
+  leadId         String?    @db.VarChar(255) @unique
+  lead           Lead?      @relation(fields: [leadId], references: [id])
 
   createdAt      DateTime   @default(now()) @db.Timestamptz(6)
   updatedAt      DateTime   @default(now()) @updatedAt @db.Timestamptz(6)
@@ -180,6 +184,7 @@ model VisionMarker {
   @@index([longitude], map: "idx_vision_markers_lng")
   @@index([status], map: "idx_vision_markers_status")
   @@index([userId])
+  @@index([leadId])
 }
 
 model Visit {

@@ -32,6 +32,7 @@ interface DrawerData {
   markerId?: string
   currentStatus?: PropertyVisitStatus | "New" | "Search"
   streetViewUrl?: string
+  leadId?: string
 }
 
 export default function MapPage() {
@@ -85,6 +86,7 @@ export default function MapPage() {
               address: m.address,
               status: validatedStatus,
               visits: m.visits || [],
+              leadId: m.leadId,
           }
         })
 
@@ -140,6 +142,7 @@ export default function MapPage() {
       markerId: marker.id,
       currentStatus: marker.status, // marker.status is now correctly typed
       streetViewUrl: streetViewUrl, // Add fetched/constructed URL
+      leadId: marker.leadId // Include the leadId from the marker data
     })
     setIsDrawerExpanded(false) // Start collapsed
     setIsDrawerOpen(true)
@@ -157,6 +160,7 @@ export default function MapPage() {
       position: position,
       address: address,
       status: "New", // Default status for a new potential marker
+      leadId: tempId, // Use the temporary ID as leadId
     }
 
     setMarkers((prevMarkers) => [...prevMarkers, newMarker])
@@ -171,6 +175,7 @@ export default function MapPage() {
       markerId: tempId, // Use the temporary ID
       currentStatus: undefined, // No status selected yet for a new location
       streetViewUrl: streetViewUrl,
+      leadId: tempId, // Use the temporary ID as leadId
     })
     setIsDrawerExpanded(false) // Start collapsed
     setIsDrawerOpen(true)
@@ -195,6 +200,7 @@ export default function MapPage() {
         position,
         address,
         status: "Search", // Special status for search markers
+        leadId: searchMarkerId, // Use the temporary ID as leadId
       }
 
       // Update markers with the new search marker
@@ -389,6 +395,7 @@ export default function MapPage() {
           isExpanded={isDrawerExpanded}
           onExpand={() => setIsDrawerExpanded(true)}
           onCollapse={() => setIsDrawerExpanded(false)} // Pass the collapse handler
+          leadId={selectedDrawerData.leadId}
         />
       )}
     </div>

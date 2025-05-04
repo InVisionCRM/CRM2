@@ -1,16 +1,18 @@
 "use client"
 
-import { useState, useEffect, useRef, forwardRef, useImperativeHandle, memo } from "react"
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle, memo } from "react"
 import { Loader } from "@googlemaps/js-api-loader"
 import { useMapContext } from "./map-context"
 import { getMarkerColor } from "@/lib/utils"
+import { PropertyVisitStatus } from "./MapInteractionDrawer"
 
 export interface MarkerData {
   id: string
   position: [number, number]
   address: string
-  status?: string
+  status: PropertyVisitStatus | "New" | "Search"
   visits?: any[]
+  leadId?: string
 }
 
 interface GoogleMapProps {

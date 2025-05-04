@@ -35,6 +35,7 @@ interface CreateVisionMarkerInput {
   followUp?: FollowUp
   visits?: Visit[]
   userId?: string | null
+  leadId?: string | null
 }
 
 interface UpdateVisionMarkerInput extends Partial<CreateVisionMarkerInput> {}
@@ -47,7 +48,10 @@ type VisionMarker = Prisma.VisionMarkerGetPayload<{}>
 export async function getMarkers(): Promise<VisionMarker[]> {
   try {
     const markers = await prisma.visionMarker.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      include: {
+        lead: true
+      }
     })
     return markers
   } catch (error) {
@@ -67,7 +71,10 @@ export async function getMarkerById(id: string): Promise<VisionMarker | null> {
     }
 
     const marker = await prisma.visionMarker.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        lead: true
+      }
     })
     return marker
   } catch (error) {
@@ -88,7 +95,10 @@ export async function getMarkersByAddress(address: string): Promise<VisionMarker
           mode: 'insensitive'
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      include: {
+        lead: true
+      }
     })
     return markers
   } catch (error) {
@@ -134,7 +144,11 @@ export async function createMarker(data: CreateVisionMarkerInput): Promise<Visio
         contactInfo: data.contactInfo ? (data.contactInfo as Prisma.InputJsonValue) : undefined,
         followUp: data.followUp ? (data.followUp as Prisma.InputJsonValue) : undefined,
         visits: data.visits ? (data.visits as unknown as Prisma.InputJsonValue) : undefined,
-        userId: data.userId
+        userId: data.userId,
+        leadId: data.leadId
+      },
+      include: {
+        lead: true
       }
     })
 
@@ -160,12 +174,16 @@ export async function updateMarker(id: string, data: UpdateVisionMarkerInput): P
       ...(data.contactInfo !== undefined && { contactInfo: data.contactInfo as Prisma.InputJsonValue }),
       ...(data.followUp !== undefined && { followUp: data.followUp as Prisma.InputJsonValue }),
       ...(data.visits !== undefined && { visits: data.visits as unknown as Prisma.InputJsonValue }),
-      ...(data.userId !== undefined && { userId: data.userId })
+      ...(data.userId !== undefined && { userId: data.userId }),
+      ...(data.leadId !== undefined && { leadId: data.leadId })
     }
 
     const marker = await prisma.visionMarker.update({
       where: { id },
-      data: updateData
+      data: updateData,
+      include: {
+        lead: true
+      }
     })
 
     console.log("Vision marker updated successfully:", marker)
