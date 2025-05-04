@@ -13,6 +13,27 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: 'https://api.mapbox.com'
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET,OPTIONS'
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Origin, X-Requested-With, Content-Type, Accept'
+          }
+        ]
+      }
+    ]
+  }
 }
 
 module.exports = nextConfig

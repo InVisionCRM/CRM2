@@ -75,14 +75,10 @@ model Lead {
   lastName                  String?   @db.VarChar(255)
   email                     String?   @db.VarChar(255)
   phone                     String?   @db.VarChar(50)
-  address                   String?
+  address                   String?   @db.VarChar(510)
   status                    LeadStatus @default(NEW)
   assignedToId              String?   @db.Uuid
   notes                     String?
-  streetAddress             String?   @db.VarChar(255)
-  city                      String?   @db.VarChar(100)
-  state                     String?   @db.VarChar(100)
-  zipcode                   String?   @db.VarChar(20)
   insuranceCompany          String?
   insurancePolicyNumber     String?
   insurancePhone            String?

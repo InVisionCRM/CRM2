@@ -49,7 +49,7 @@ const mockAppointments: CalendarAppointment[] = [
 const CustomDatePicker = ({ 
   value = "", 
   onChange, 
-  disabled,
+  disabled = false,
   placeholder = "Select date" 
 }: { 
   value?: string; 
@@ -61,6 +61,7 @@ const CustomDatePicker = ({
   const [selectedDate, setSelectedDate] = useState<Date | null>(value ? new Date(value) : null);
   const [currentMonth, setCurrentMonth] = useState<Date>(selectedDate || new Date());
   const modalRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   const daysInMonth = (year: number, month: number) => {
     return new Date(year, month + 1, 0).getDate();
@@ -103,12 +104,24 @@ const CustomDatePicker = ({
     };
   }, [isOpen]);
 
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
     <div className="w-full">
       <div 
         className={cn(
-          "flex items-center justify-between px-5 py-3 bg-white bg-opacity-10 rounded-md cursor-pointer h-[3.5rem]",
-          "border border-transparent hover:border-gray-600 text-white w-full text-lg",
+          "flex items-center justify-between px-3 py-2 bg-white bg-opacity-10 rounded-md cursor-pointer h-9 sm:h-10",
+          "border border-transparent hover:border-gray-600 text-white w-full text-sm",
           disabled && "opacity-50 cursor-not-allowed"
         )}
         onClick={() => !disabled && setIsOpen(true)}
@@ -116,61 +129,61 @@ const CustomDatePicker = ({
         <span className={selectedDate ? "text-white" : "text-white text-opacity-50"}>
           {selectedDate ? format(selectedDate, 'MM/dd/yyyy') : placeholder}
         </span>
-        <CalendarIcon size={28} className="text-white opacity-70" />
+        <CalendarIcon size={16} className="text-white opacity-70" />
       </div>
 
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-2 sm:p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-2">
           <div 
             ref={modalRef}
-            className="bg-zinc-800 rounded-xl shadow-xl w-full max-w-lg sm:max-w-xl overflow-hidden"
+            className="bg-zinc-800 rounded-lg shadow-xl w-full max-w-xs overflow-hidden"
             role="dialog"
             aria-modal="true"
             aria-label="Date picker dialog"
           >
-            <div className="p-5 bg-zinc-700 flex justify-between items-center">
-              <h3 className="text-white text-xl font-semibold">Select Date</h3>
+            <div className="p-3 bg-zinc-700 flex justify-between items-center">
+              <h3 className="text-white text-base font-semibold">Select Date</h3>
               <button 
                 onClick={() => setIsOpen(false)}
-                className="text-white hover:bg-zinc-600 rounded-full p-3"
+                className="text-white hover:bg-zinc-600 rounded-full p-1.5"
                 aria-label="Close date picker"
               >
-                <X size={32} />
+                <X size={20} />
               </button>
             </div>
 
-            <div className="p-4 sm:p-6">
-              <div className="flex justify-between items-center mb-6">
+            <div className="p-3">
+              <div className="flex justify-between items-center mb-3">
                 <button 
                   onClick={prevMonth}
-                  className="text-white bg-zinc-700 hover:bg-zinc-600 p-4 rounded-full touch-manipulation"
+                  className="text-white bg-zinc-700 hover:bg-zinc-600 p-2 rounded-full touch-manipulation"
                   aria-label="Previous month"
                 >
-                  <ChevronUp size={36} className="rotate-270" />
+                  <ChevronUp size={18} className="rotate-270" />
                 </button>
-                <div className="text-white text-2xl font-medium">
+                <div className="text-white text-base font-medium">
                   {`${monthName} ${currentMonth.getFullYear()}`}
                 </div>
                 <button 
                   onClick={nextMonth}
-                  className="text-white bg-zinc-700 hover:bg-zinc-600 p-4 rounded-full touch-manipulation"
+                  className="text-white bg-zinc-700 hover:bg-zinc-600 p-2 rounded-full touch-manipulation"
                   aria-label="Next month"
                 >
-                  <ChevronDown size={36} className="rotate-90" />
+                  <ChevronDown size={18} className="rotate-90" />
                 </button>
               </div>
 
-              <div className="grid grid-cols-7 gap-2 mb-3">
+              <div className="grid grid-cols-7 gap-1 mb-1">
                 {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                  <div key={day} className="text-center text-gray-400 text-base font-medium py-3">
+                  <div key={day} className="text-center text-gray-400 text-xs font-medium py-1">
                     {day}
                   </div>
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1">
                 {Array.from({ length: firstDayOfMonth(currentMonth.getFullYear(), currentMonth.getMonth()) }).map((_, i) => (
-                  <div key={`empty-${i}`} className="p-2"></div>
+                  <div key={`empty-${i}`} className="p-1"></div>
                 ))}
 
                 {Array.from({ length: daysInMonth(currentMonth.getFullYear(), currentMonth.getMonth()) }).map((_, i) => {
@@ -187,7 +200,7 @@ const CustomDatePicker = ({
                       key={day}
                       onClick={() => handleDateSelect(day)}
                       className={cn(
-                        "h-14 w-14 sm:h-16 sm:w-16 rounded-full text-white flex items-center justify-center text-xl touch-manipulation",
+                        "h-7 w-7 rounded-full text-white flex items-center justify-center text-sm touch-manipulation",
                         isSelected 
                           ? "bg-lime-600 font-bold" 
                           : "hover:bg-zinc-700"
@@ -201,17 +214,17 @@ const CustomDatePicker = ({
               </div>
             </div>
 
-            <div className="p-5 bg-zinc-700 flex justify-end space-x-4">
+            <div className="p-3 bg-zinc-700 flex justify-end space-x-2">
               <Button 
                 onClick={() => setIsOpen(false)}
-                className="bg-zinc-600 hover:bg-zinc-500 text-white px-6 py-3 h-14 text-lg"
+                className="bg-zinc-600 hover:bg-zinc-500 text-white px-3 py-1.5 h-8 text-sm"
                 type="button"
               >
                 Cancel
               </Button>
               <Button 
                 onClick={() => setIsOpen(false)}
-                className="bg-lime-600 hover:bg-lime-700 text-white px-6 py-3 h-14 text-lg"
+                className="bg-lime-600 hover:bg-lime-700 text-white px-3 py-1.5 h-8 text-sm"
                 type="button"
               >
                 Done
@@ -1108,12 +1121,12 @@ export function AdjusterForm({
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {["9:00 AM", "10:00 AM", "11:00 AM", "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM"].map(time => {
                       // Check if this time slot is already booked
-                      const isBooked = selectedDayDate && appointments.some(apt => 
+                      const isBooked = Boolean(selectedDayDate && appointments.some(apt => 
                         apt.date?.getDate() === selectedDayDate.getDate() &&
                         apt.date?.getMonth() === selectedDayDate.getMonth() &&
                         apt.date?.getFullYear() === selectedDayDate.getFullYear() &&
                         apt.startTime === time
-                      );
+                      ));
                       
                       return (
                         <button
@@ -1131,7 +1144,7 @@ export function AdjusterForm({
                               ? "bg-zinc-700 text-zinc-400 cursor-not-allowed" 
                               : "bg-zinc-800 hover:bg-lime-900 active:bg-lime-800 cursor-pointer"
                           )}
-                          disabled={isBooked}
+                          disabled={isBooked as boolean}
                         >
                           {time}
                           {isBooked && <span className="block text-xs text-red-400">Booked</span>}

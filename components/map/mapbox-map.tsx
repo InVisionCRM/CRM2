@@ -51,12 +51,27 @@ const MapboxMap = memo(
       try {
         mapboxgl.accessToken = accessToken
 
+        // Configure Mapbox to use transformRequest for CORS
+        const transformRequest = (url: string, resourceType?: string) => {
+          // Add specific handling for style URLs
+          if (url.includes('mapbox.com')) {
+            return {
+              url: url,
+              headers: {
+                'Origin': window.location.origin
+              }
+            }
+          }
+          return { url }
+        }
+
         map.current = new mapboxgl.Map({
           container: mapContainer.current,
-          style: "mapbox://styles/invisionpjm/cm966bqbg00br01qugzbw7vef",
-          center: [-82.91925, 42.668805], // Center of US
+          style: "mapbox://styles/mapbox/streets-v12", // Use public style instead of custom style
+          center: [-82.91925, 42.668805],
           zoom: 5,
-          preserveDrawingBuffer: true, // Helps with rendering issues
+          preserveDrawingBuffer: true,
+          transformRequest,
         })
 
         map.current.addControl(new mapboxgl.NavigationControl(), "top-right")
@@ -76,11 +91,46 @@ const MapboxMap = memo(
           setIsLoading(false)
         })
 
-        map.current.on("error", (e) => {
-          console.error("Mapbox error:", e)
-          setError("Error loading map. Please try again.")
-          setIsLoading(false)
-        })
+        // Add detailed error logging
+        map.current.on('error', (e: { error: Error & { status?: number } }) => {
+          console.error('Mapbox error:', {
+            error: e.error,
+            message: e.error.message,
+            status: e.error.status,
+            stack: e.error.stack
+          });
+          
+          if (e.error.message?.includes('style')) {
+            setError('Unable to load map style. Trying to recover...');
+            // Try to fallback to a different style
+            if (map.current) {
+              map.current.setStyle('mapbox://styles/mapbox/light-v11');
+            }
+          } else if (e.error.status === 401) {
+            setError('Map authentication failed. Please check your access token.');
+          } else if (e.error.status === 403) {
+            setError('Access to map resources denied. Please check domain restrictions.');
+          } else {
+            setError('An error occurred while loading the map.');
+          }
+          setIsLoading(false);
+        });
+
+        // Add events error handler
+        map.current.on('style.load', () => {
+          try {
+            const style = map.current?.getStyle();
+            const eventsSource = style?.sources?.events as mapboxgl.AnySourceImpl;
+            if (eventsSource) {
+              (eventsSource as any).on?.('error', (e: Error) => {
+                console.warn('Mapbox events error:', e);
+                // Suppress events errors as they are non-critical
+              });
+            }
+          } catch (err) {
+            console.warn('Error setting up events error handler:', err);
+          }
+        });
 
         // Add click handler to add markers or select existing based on address
         map.current.on("click", async (e) => {

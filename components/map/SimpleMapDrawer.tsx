@@ -238,28 +238,38 @@ export function SimpleMapDrawer({
     }
   }, [isExpanded]);
   
-  // Add event listener for messages from contract iframe
+  // Add timeout for iframe loading
   useEffect(() => {
-    const handleIframeMessage = (event: MessageEvent) => {
-      // Verify origin for security
-      if (event.origin !== "https://contracts.purlin.pro") return;
-      
-      // Handle contract system messages
-      if (event.data && typeof event.data === "object") {
-        if (event.data.type === "CONTRACT_SIGNED") {
-          // Handle contract signed event
-          console.log("Contract signed:", event.data);
-          // Could update status or show notification
-        } else if (event.data.type === "CONTRACT_ERROR") {
-          // Handle error from contract system
-          setIframeError(true);
-        }
+    let timeoutId: NodeJS.Timeout;
+    
+    if (expandedSection === "contract" && iframeLoading) {
+      // Set a 15-second timeout for iframe loading
+      timeoutId = setTimeout(() => {
+        console.error("Contract iframe loading timeout");
+        setIframeLoading(false);
+        setIframeError(true);
+      }, 15000);
+    }
+    
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
     };
-    
-    window.addEventListener("message", handleIframeMessage);
-    return () => window.removeEventListener("message", handleIframeMessage);
-  }, []);
+  }, [expandedSection, iframeLoading]);
+
+  // Handle iframe loading state changes
+  const handleIframeLoad = () => {
+    console.log("Contract iframe loaded successfully");
+    setIframeLoading(false);
+    setIframeError(false);
+  };
+
+  const handleIframeError = (error: React.SyntheticEvent<HTMLIFrameElement, Event>) => {
+    console.error("Contract iframe loading error:", error);
+    setIframeLoading(false);
+    setIframeError(true);
+  };
   
   // Create a portal element on mount and add viewport meta tag for mobile
   useEffect(() => {
@@ -496,60 +506,45 @@ export function SimpleMapDrawer({
     };
   };
 
+  // Add these utility functions at the top of the file with other functions
+  const getAccordionHeaderBaseClasses = (isExpanded: boolean) => `
+    flex justify-between items-center
+    bg-gradient-to-r from-white/8 to-transparent
+    cursor-pointer relative
+    ${isExpanded ? 'rounded-t-xl rounded-b' : 'rounded'}
+    transition-[border-radius,background] duration-400 ease-out
+    border-b border-white/10
+  `;
+
+  const getAnimatedBezelClasses = () => `
+    absolute bottom-0 left-0 h-[3px] w-full
+    bg-gradient-to-r from-lime-400 to-lime-400/10
+    animate-[glowFadeRight_1.5s_ease_forwards]
+    shadow-[0_0_10px_rgba(163,230,53,0.7)]
+  `;
+
   // Render the drawer in the portal
   return createPortal(
-    <div className="map-drawer" style={{
-      backgroundColor: "rgba(0, 0, 0, 0.7)",
-      backdropFilter: "blur(5px)",
-      WebkitBackdropFilter: "blur(5px)",
-      color: "white",
-      borderTopLeftRadius: "8px",
-      borderTopRightRadius: "8px",
-      overflow: "hidden",
-      height: drawerHeight,
-      transition: "height 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
-      boxShadow: "0 -4px 15px -1px rgba(0, 0, 0, 0.4), 0 -2px 8px -1px rgba(0, 0, 0, 0.3)",
-      border: "1px solid rgba(255, 255, 255, 0.1)",
-      borderBottom: "none"
-    }}>
-      {/* Green gradient handle area */}
+    <div 
+      className="fixed bottom-0 left-0 right-0 bg-black/70 backdrop-blur-md text-white rounded-t-lg overflow-hidden shadow-lg border border-white/10 border-b-0 transition-[height] duration-700 ease-[cubic\-bezier(0\.16\,1\,0\.3\,1)]"
+      style={{
+        height: drawerHeight,
+      }}
+    >
+      {/* Green gradient bezel/handle area */}
       <div 
+        className="flex justify-between items-center cursor-pointer relative px-4 border-b border-white/15 transition-[height] duration-700 ease-[cubic\-bezier(0\.16\,1\,0\.3\,1)] bg-gradient-to-b from-lime-700/95 to-black/70 backdrop-blur-sm"
         style={{
-          background: "linear-gradient(to bottom, rgba(101, 163, 13, 0.95) 0%, rgba(0, 0, 0, 0.7) 100%)",
-          backdropFilter: "blur(2px)",
-          WebkitBackdropFilter: "blur(2px)",
           height: bezelHeight,
-          width: "100%",
-          cursor: "pointer",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          transition: "height 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.15)",
-          position: "relative",
-          padding: "0 16px"
         }}
       >
-        <div style={{ width: "24px" }}></div> {/* Empty spacer for alignment */}
+        <div className="w-6"></div> {/* Empty spacer for alignment */}
         
         <div 
           onClick={isExpanded ? onCollapse : onExpand}
+          className="h-1.5 rounded-full shadow-lg shadow-lime-500 bg-gradient-to-r from-lime-500/90 via-lime-300 to-lime-500/90 bg-[length:200%_100%] animate-shimmer transition-[width] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
           style={{
             width: handleWidth,
-            height: "6px",
-            borderRadius: "3px",
-            background: `linear-gradient(90deg, 
-              rgba(163, 230, 53, 0.9) 0%, 
-              #a3e635 20%, 
-              #84cc16 40%, 
-              #ecfccb 50%, 
-              #84cc16 60%, 
-              #a3e635 80%, 
-              rgba(163, 230, 53, 0.9) 100%)`,
-            backgroundSize: "200% 100%",
-            transition: "width 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
-            animation: "shimmer 3s infinite linear",
-            boxShadow: "0 0 6px #a3e635"
           }}
         ></div>
         
@@ -558,153 +553,81 @@ export function SimpleMapDrawer({
             e.stopPropagation();
             onClose();
           }}
-          style={{
-            background: "rgba(0, 0, 0, 0.3)",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
-            borderRadius: "50%",
-            width: isMobile ? "20px" : "24px",
-            height: isMobile ? "20px" : "24px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            padding: 0,
-            transition: "all 0.2s ease",
-            boxShadow: "0 0 5px rgba(0, 0, 0, 0.3)"
-          }}
+          className={`bg-black/30 border border-white/20 rounded-full flex items-center justify-center cursor-pointer p-0 transition-all duration-200 shadow-md ${isMobile ? 'w-5 h-5' : 'w-6 h-6'}`}
           aria-label="Close drawer"
         >
           <X 
             size={isMobile ? 14 : 16} 
-            color="white" 
-            style={{ 
-              opacity: 0.8,
-              strokeWidth: 2.5 
-            }} 
+            className="opacity-80 stroke-[2.5]"
           />
         </button>
       </div>
 
       {/* Content area */}
-      <div style={{
-        display: "flex",
-        flexDirection: "column",
-        height: `calc(${drawerHeight} - ${bezelHeight})`,
-        position: "relative",
-        overflow: "hidden",
-        transition: "height 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
-        backgroundColor: "rgba(0, 0, 0, 0.2)"
-      }}>
+      <div 
+        className="flex flex-col relative overflow-hidden transition-[height] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] bg-black/20"
+        style={{
+          height: `calc(${drawerHeight} - ${bezelHeight})`,
+        }}
+      >
         {/* Status buttons - visible only in non-expanded state */}
         {!isExpanded ? (
           // Non-expanded view with street view and buttons side by side
-          <div style={{
-            display: "flex",
-            flexDirection: isMobile ? "column" : "row",
-            padding: "8px",
-            height: "100%",
-            transition: "height 0.7s cubic-bezier(0.16, 1, 0.3, 1), min-height 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
-            position: "relative"
-          }}>
+          <div className={`
+            flex ${isMobile ? 'flex-col' : 'flex-row'} p-2 h-full relative
+            transition-[height] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]
+          `}>
             {/* Left: Street view */}
-            <div style={{
-              width: isMobile ? "100%" : "40%",
-              marginRight: isMobile ? "0" : "8px",
-              marginBottom: isMobile ? "8px" : "0",
-              height: isMobile ? "30%" : "100%"
-            }}>
-              <div style={{
-                height: "100%",
-                position: "relative",
-                borderRadius: "4px",
-                overflow: "hidden",
-                backgroundColor: "rgba(31, 41, 55, 0.7)",
-                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
-              }}>
+            <div className={`
+              ${isMobile ? 'w-full h-[30%] mb-2' : 'w-[40%] h-full mr-2'}
+            `}>
+              <div className="h-full relative rounded overflow-hidden bg-gray-800/70 shadow-md">
                 <img 
                   src={streetViewUrl} 
                   alt={`Street view of ${address}`}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover"
-                  }}
+                  className="w-full h-full object-cover"
                 />
-                <div style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  padding: "8px",
-                  background: "linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.4) 50%, transparent)",
-                  color: "white"
-                }}>
-                  <p style={{
-                    margin: 0,
-                    fontSize: isMobile ? "12px" : "14px",
-                    fontWeight: "bold",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap"
-                  }}>{address}</p>
+                <div className="absolute top-0 left-0 right-0 p-2 bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+                  <p className={`
+                    m-0 font-bold overflow-hidden text-ellipsis whitespace-nowrap
+                    ${isMobile ? 'text-xs' : 'text-sm'}
+                  `}>
+                    {address}
+                  </p>
                 </div>
               </div>
             </div>
 
             {/* Right: Status buttons */}
-            <div style={{
-              width: isMobile ? "100%" : "60%",
-              height: isMobile ? "70%" : "100%",
-              display: "flex",
-              flexDirection: "column",
-              gap: "3px",
-              backgroundColor: "transparent",
-              padding: isMobile ? "0" : "0 0 0 8px"
-            }}>
+            <div className={`
+              ${isMobile ? 'w-full h-[70%]' : 'w-[60%] h-full'} 
+              flex flex-col gap-[3px] bg-transparent
+              ${isMobile ? '' : 'pl-2'}
+            `}>
               {/* No Answer button at top */}
               <button
                 onClick={() => onStatusChange("No Answer")}
                 onMouseOver={() => setHoveredButton("No Answer")}
                 onMouseOut={() => setHoveredButton(null)}
-                style={{
-                  background: `linear-gradient(145deg, ${statusColors["No Answer"]} 0%, #1e40af 100%)`,
-                  border: currentStatus === "No Answer" ? "2px solid #ffffff" : "1px solid rgba(132, 204, 22, 0.7)",
-                  color: "white",
-                  fontSize: isMobile ? "18px" : "22px",
-                  fontWeight: "bold",
-                  borderRadius: "12px",
-                  cursor: "pointer",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  textAlign: "center",
-                  padding: isMobile ? "2px" : "4px",
-                  margin: 0,
-                  opacity: hoveredButton === "No Answer" ? 1 : 0.9,
-                  flex: "1 1 0",
-                  minHeight: isMobile ? "30%" : "40%",
-                  boxShadow: hoveredButton === "No Answer" 
-                    ? "0 6px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4)" 
-                    : "0 4px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)",
-                  textShadow: "0 1px 2px rgba(0, 0, 0, 0.5)",
-                  transform: hoveredButton === "No Answer" ? "translateY(-2px)" : "translateY(0)",
-                  transition: "all 0.5s ease",
-                  backdropFilter: "blur(4px)",
-                  WebkitBackdropFilter: "blur(4px)"
-                }}
+                className={`
+                  bg-gradient-to-br from-blue-500 to-blue-800
+                  ${currentStatus === "No Answer" ? 'border-2 border-white' : 'border border-lime-500/70'}
+                  text-white font-bold rounded-xl cursor-pointer
+                  flex justify-center items-center text-center
+                  ${isMobile ? 'text-lg p-0.5' : 'text-2xl p-1'}
+                  ${hoveredButton === "No Answer" ? 'opacity-100 translate-y-[-2px]' : 'opacity-90'}
+                  flex-1 ${isMobile ? 'min-h-[30%]' : 'min-h-[40%]'}
+                  ${hoveredButton === "No Answer" 
+                    ? 'shadow-lg shadow-black/40' 
+                    : 'shadow-md shadow-black/30'}
+                  transition-all duration-500 backdrop-blur-sm
+                `}
               >
                 No Answer
               </button>
               
               {/* Bottom row of 4 equal buttons */}
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
-                gridTemplateRows: "1fr",
-                gap: "3px",
-                flex: "1 1 0",
-                minHeight: isMobile ? "60%" : "40%"
-              }}>
+              <div className="grid grid-cols-4 gap-[3px] flex-1 min-h-[40%]">
                 {availableStatuses
                   .filter(status => status !== "No Answer")
                   .map((status) => {
@@ -717,31 +640,20 @@ export function SimpleMapDrawer({
                         onClick={() => onStatusChange(status)}
                         onMouseOver={() => setHoveredButton(status)}
                         onMouseOut={() => setHoveredButton(null)}
+                        className={`
+                          ${isActive ? 'border-2 border-white' : 'border border-lime-500/70'}
+                          text-white font-bold rounded-xl cursor-pointer
+                          flex justify-center items-center text-center
+                          ${isMobile ? 'text-sm p-0.5' : 'text-lg p-1'}
+                          ${hoveredButton === status ? 'opacity-100 translate-y-[-2px]' : 'opacity-85'}
+                          w-full h-full
+                          ${hoveredButton === status 
+                            ? 'shadow-lg shadow-black/30' 
+                            : 'shadow-md shadow-black/20'}
+                          transition-all duration-500 backdrop-blur-sm
+                        `}
                         style={{
                           background: getButtonGradient(status, backgroundColor),
-                          border: isActive ? "2px solid #ffffff" : "1px solid rgba(132, 204, 22, 0.7)",
-                          color: "white",
-                          fontSize: isMobile ? "14px" : "18px",
-                          fontWeight: "bold",
-                          borderRadius: "12px",
-                          cursor: "pointer",
-                          display: "flex",
-                          justifyContent: "center",
-                          alignItems: "center",
-                          textAlign: "center",
-                          padding: isMobile ? "2px" : "4px",
-                          margin: 0,
-                          opacity: hoveredButton === status ? 1 : 0.85,
-                          width: "100%",
-                          height: "100%",
-                          boxShadow: hoveredButton === status 
-                            ? "0 6px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)" 
-                            : "0 4px 6px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
-                          textShadow: "0 1px 2px rgba(0, 0, 0, 0.5)",
-                          transform: hoveredButton === status ? "translateY(-2px)" : "translateY(0)",
-                          transition: "all 0.5s ease",
-                          backdropFilter: "blur(4px)",
-                          WebkitBackdropFilter: "blur(4px)"
                         }}
                       >
                         {status}
@@ -755,154 +667,90 @@ export function SimpleMapDrawer({
 
         {/* Accordion sections */}
         {isExpanded && (
-          <div style={{
-            height: "100%",
-            overflowY: "auto",
-            padding: isMobile ? "8px" : "12px",
-            opacity: isExpanded ? 1 : 0,
-            transition: "opacity 0.7s ease-in, height 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
-            display: "flex",
-            flexDirection: "column",
-            gap: isMobile ? "6px" : "8px"
-          }}>
+          <div className={`
+            h-full overflow-y-auto ${isMobile ? 'p-2' : 'p-3'}
+            opacity-100 transition-[opacity,height] duration-700 ease-in
+            flex flex-col gap-2
+          `}>
             {/* StreetView Section */}
-            <div style={{
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-              borderRadius: "8px",
-              overflow: "hidden",
-              flex: expandedSection === "streetview" ? "1" : "none",
-              transition: "flex 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
-              display: "flex",
-              flexDirection: "column",
-              backgroundColor: "rgba(10, 10, 10, 0.2)",
-              backdropFilter: "blur(6px)",
-              WebkitBackdropFilter: "blur(6px)",
-              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
-            }}>
+            <div className={`
+              border border-white/15 rounded-lg overflow-hidden
+              ${expandedSection === "streetview" ? 'flex-1' : 'flex-none'}
+              transition-[flex] duration-700 ease-[cubic\-bezier(0\.16\,1\,0\.3\,1)]
+              flex flex-col bg-black/20 backdrop-blur-md shadow-md
+            `}>
               <div 
                 onClick={() => toggleSection("streetview")} 
-                style={{
-                  ...getAccordionHeaderStyle("streetview", expandedSection),
-                  padding: isMobile ? "12px 16px" : "16px 20px",
-                }}
+                className={`
+                  ${getAccordionHeaderBaseClasses(expandedSection === "streetview")}
+                  ${isMobile ? 'py-3 px-4' : 'py-4 px-5'}
+                `}
               >
-                <div style={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  gap: "12px",
-                  width: "100%",
-                  justifyContent: "center"
-                }}>
+                <div className="flex items-center gap-3 w-full justify-center">
                   <MapPin size={isMobile ? 20 : 28} className="text-lime-500" />
-                  <span style={{ 
-                    fontWeight: "bold", 
-                    fontSize: isMobile ? "18px" : "24px", 
-                    letterSpacing: "-0.02em",
-                    textAlign: "center",
-                    maxWidth: "90%",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap"
-                  }}>
+                  <span className={`
+                    font-bold tracking-tight text-center max-w-[90%] 
+                    overflow-hidden text-ellipsis whitespace-nowrap
+                    ${isMobile ? 'text-lg' : 'text-2xl'}
+                  `}>
                     {address}
                   </span>
                 </div>
-                {expandedSection === "streetview" ? <ChevronUp size={isMobile ? 20 : 28} /> : <ChevronDown size={isMobile ? 20 : 28} />}
-                {expandedSection === "streetview" && <div style={getAnimatedBezelStyle()} />}
+                {expandedSection === "streetview" ? (
+                  <ChevronUp size={isMobile ? 20 : 28} />
+                ) : (
+                  <ChevronDown size={isMobile ? 20 : 28} />
+                )}
+                {expandedSection === "streetview" && (
+                  <div className={getAnimatedBezelClasses()} />
+                )}
               </div>
               {expandedSection === "streetview" && (
-                <div style={{ 
-                  padding: "0", 
-                  flex: "1",
-                  display: "flex",
-                  flexDirection: "column",
-                  position: "relative",
-                  height: "100%"
-                }}>
+                <div className="p-0 flex-1 flex flex-col relative h-full">
                   <img 
                     src={streetViewUrl} 
                     alt={`Street view of ${address}`}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover"
-                    }}
+                    className="w-full h-full object-cover"
                   />
                 </div>
               )}
             </div>
 
             {/* Contact Info Section */}
-            <div style={{
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-              borderRadius: "8px",
-              overflow: "hidden",
-              flex: expandedSection === "contact" ? "1" : "none",
-              transition: "flex 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
-              display: "flex",
-              flexDirection: "column",
-              backgroundColor: "rgba(10, 10, 10, 0.2)",
-              backdropFilter: "blur(6px)",
-              WebkitBackdropFilter: "blur(6px)",
-              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
-            }}>
+            <div className={`
+              border border-white/15 rounded-lg overflow-hidden
+              ${expandedSection === "contact" ? 'flex-1' : 'flex-none'}
+              transition-[flex] duration-700 ease-[cubic\-bezier(0\.16\,1\,0\.3\,1)]
+              flex flex-col bg-black/20 backdrop-blur-md shadow-md
+            `}>
               <div 
                 onClick={() => toggleSection("contact")} 
-                style={{
-                  ...getAccordionHeaderStyle("contact", expandedSection),
-                  padding: isMobile ? "12px 16px" : "16px 20px",
-                }}
+                className={`
+                  ${getAccordionHeaderBaseClasses(expandedSection === "contact")}
+                  ${isMobile ? 'py-3 px-4' : 'py-4 px-5'}
+                `}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div className="flex items-center gap-3 w-full justify-center">
                   <User size={isMobile ? 20 : 28} />
-                  <span style={{ 
-                    fontWeight: "bold", 
-                    fontSize: isMobile ? "16px" : "20px", 
-                    letterSpacing: "-0.02em" 
-                  }}>
+                  <span className={`
+                    font-bold tracking-tight text-center max-w-[90%] 
+                    overflow-hidden text-ellipsis whitespace-nowrap
+                    ${isMobile ? 'text-lg' : 'text-2xl'}
+                  `}>
                     Contact Information
                   </span>
                 </div>
-                {expandedSection === "contact" ? <ChevronUp size={isMobile ? 20 : 28} /> : <ChevronDown size={isMobile ? 20 : 28} />}
-                {expandedSection === "contact" && <div style={getAnimatedBezelStyle()} />}
+                {expandedSection === "contact" ? (
+                  <ChevronUp size={isMobile ? 20 : 28} />
+                ) : (
+                  <ChevronDown size={isMobile ? 20 : 28} />
+                )}
+                {expandedSection === "contact" && (
+                  <div className={getAnimatedBezelClasses()} />
+                )}
               </div>
               {expandedSection === "contact" && (
-                <div style={{ 
-                  padding: "16px", 
-                  background: "rgba(255, 255, 255, 0.015)",
-                  flex: "1",
-                  display: "flex",
-                  flexDirection: "column",
-                  overflowY: "auto" 
-                }}>
-                  <style jsx global>{`
-                    /* Larger text for contact form */
-                    .contact-form-container .form-label {
-                      font-size: 1.5rem !important;
-                      font-weight: 700 !important;
-                      letter-spacing: -0.02em !important;
-                    }
-                    
-                    .contact-form-container input {
-                      font-size: 1.25rem !important;
-                      height: 4rem !important;
-                      padding: 0 1.25rem !important;
-                    }
-                    
-                    .contact-form-container input::placeholder {
-                      font-size: 1.25rem !important;
-                    }
-                    
-                    .contact-form-container button {
-                      font-size: 1.5rem !important;
-                      font-weight: 600 !important;
-                      height: 4rem !important;
-                    }
-                    
-                    .contact-form-container .text-xs {
-                      font-size: 0.875rem !important;
-                    }
-                  `}</style>
+                <div className="p-0 flex-1 flex flex-col relative h-full">
                   <div className="contact-form-container">
                     {leadId ? (
                       <ContactForm 
@@ -932,48 +780,40 @@ export function SimpleMapDrawer({
             </div>
 
             {/* Insurance Info Section */}
-            <div style={{
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-              borderRadius: "8px",
-              overflow: "hidden",
-              flex: expandedSection === "insurance" ? "1" : "none",
-              transition: "flex 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
-              display: "flex",
-              flexDirection: "column",
-              backgroundColor: "rgba(10, 10, 10, 0.2)",
-              backdropFilter: "blur(6px)",
-              WebkitBackdropFilter: "blur(6px)",
-              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
-            }}>
+            <div className={`
+              border border-white/15 rounded-lg overflow-hidden
+              ${expandedSection === "insurance" ? 'flex-1' : 'flex-none'}
+              transition-[flex] duration-700 ease-[cubic\-bezier(0\.16\,1\,0\.3\,1)]
+              flex flex-col bg-black/20 backdrop-blur-md shadow-md
+            `}>
               <div 
                 onClick={() => toggleSection("insurance")} 
-                style={{
-                  ...getAccordionHeaderStyle("insurance", expandedSection),
-                  padding: isMobile ? "12px 16px" : "16px 20px",
-                }}
+                className={`
+                  ${getAccordionHeaderBaseClasses(expandedSection === "insurance")}
+                  ${isMobile ? 'py-3 px-4' : 'py-4 px-5'}
+                `}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div className="flex items-center gap-3 w-full justify-center">
                   <FileText size={isMobile ? 20 : 28} />
-                  <span style={{ 
-                    fontWeight: "bold", 
-                    fontSize: isMobile ? "16px" : "20px", 
-                    letterSpacing: "-0.02em" 
-                  }}>
+                  <span className={`
+                    font-bold tracking-tight text-center max-w-[90%] 
+                    overflow-hidden text-ellipsis whitespace-nowrap
+                    ${isMobile ? 'text-lg' : 'text-2xl'}
+                  `}>
                     Insurance Information
                   </span>
                 </div>
-                {expandedSection === "insurance" ? <ChevronUp size={isMobile ? 20 : 28} /> : <ChevronDown size={isMobile ? 20 : 28} />}
-                {expandedSection === "insurance" && <div style={getAnimatedBezelStyle()} />}
+                {expandedSection === "insurance" ? (
+                  <ChevronUp size={isMobile ? 20 : 28} />
+                ) : (
+                  <ChevronDown size={isMobile ? 20 : 28} />
+                )}
+                {expandedSection === "insurance" && (
+                  <div className={getAnimatedBezelClasses()} />
+                )}
               </div>
               {expandedSection === "insurance" && (
-                <div style={{ 
-                  padding: "16px", 
-                  background: "rgba(255, 255, 255, 0.015)",
-                  flex: "1",
-                  display: "flex",
-                  flexDirection: "column",
-                  overflowY: "auto"
-                }}>
+                <div className="p-0 flex-1 flex flex-col relative h-full">
                   <InsuranceForm 
                     leadId={leadId || ""}
                     initialData={{
@@ -995,48 +835,40 @@ export function SimpleMapDrawer({
             </div>
 
             {/* Adjuster Info Section */}
-            <div style={{
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-              borderRadius: "8px",
-              overflow: "hidden",
-              flex: expandedSection === "adjuster" ? "1" : "none",
-              transition: "flex 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
-              display: "flex",
-              flexDirection: "column",
-              backgroundColor: "rgba(10, 10, 10, 0.2)",
-              backdropFilter: "blur(6px)",
-              WebkitBackdropFilter: "blur(6px)",
-              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
-            }}>
+            <div className={`
+              border border-white/15 rounded-lg overflow-hidden
+              ${expandedSection === "adjuster" ? 'flex-1' : 'flex-none'}
+              transition-[flex] duration-700 ease-[cubic\-bezier(0\.16\,1\,0\.3\,1)]
+              flex flex-col bg-black/20 backdrop-blur-md shadow-md
+            `}>
               <div 
                 onClick={() => toggleSection("adjuster")} 
-                style={{
-                  ...getAccordionHeaderStyle("adjuster", expandedSection),
-                  padding: isMobile ? "12px 16px" : "16px 20px",
-                }}
+                className={`
+                  ${getAccordionHeaderBaseClasses(expandedSection === "adjuster")}
+                  ${isMobile ? 'py-3 px-4' : 'py-4 px-5'}
+                `}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div className="flex items-center gap-3 w-full justify-center">
                   <Sliders size={isMobile ? 20 : 28} />
-                  <span style={{ 
-                    fontWeight: "bold", 
-                    fontSize: isMobile ? "16px" : "20px", 
-                    letterSpacing: "-0.02em" 
-                  }}>
+                  <span className={`
+                    font-bold tracking-tight text-center max-w-[90%] 
+                    overflow-hidden text-ellipsis whitespace-nowrap
+                    ${isMobile ? 'text-lg' : 'text-2xl'}
+                  `}>
                     Adjuster Information
                   </span>
                 </div>
-                {expandedSection === "adjuster" ? <ChevronUp size={isMobile ? 20 : 28} /> : <ChevronDown size={isMobile ? 20 : 28} />}
-                {expandedSection === "adjuster" && <div style={getAnimatedBezelStyle()} />}
+                {expandedSection === "adjuster" ? (
+                  <ChevronUp size={isMobile ? 20 : 28} />
+                ) : (
+                  <ChevronDown size={isMobile ? 20 : 28} />
+                )}
+                {expandedSection === "adjuster" && (
+                  <div className={getAnimatedBezelClasses()} />
+                )}
               </div>
               {expandedSection === "adjuster" && (
-                <div style={{ 
-                  padding: "16px", 
-                  background: "rgba(255, 255, 255, 0.015)",
-                  flex: "1",
-                  display: "flex",
-                  flexDirection: "column",
-                  overflowY: "auto"
-                }}>
+                <div className="p-0 flex-1 flex flex-col relative h-full">
                   <AdjusterForm 
                     leadId={leadId || ""}
                     initialData={{
@@ -1056,50 +888,40 @@ export function SimpleMapDrawer({
             </div>
 
             {/* Contract Section */}
-            <div style={{
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-              borderRadius: "8px",
-              overflow: "hidden",
-              flex: expandedSection === "contract" ? "1" : "none",
-              transition: "flex 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
-              display: "flex",
-              flexDirection: "column",
-              backgroundColor: "rgba(10, 10, 10, 0.2)",
-              backdropFilter: "blur(6px)",
-              WebkitBackdropFilter: "blur(6px)",
-              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
-            }}>
+            <div className={`
+              border border-white/15 rounded-lg overflow-hidden
+              ${expandedSection === "contract" ? 'flex-1' : 'flex-none'}
+              transition-[flex] duration-700 ease-[cubic\-bezier(0\.16\,1\,0\.3\,1)]
+              flex flex-col bg-black/20 backdrop-blur-md shadow-md
+            `}>
               <div 
                 onClick={() => toggleSection("contract")} 
-                style={{
-                  ...getAccordionHeaderStyle("contract", expandedSection),
-                  padding: isMobile ? "12px 16px" : "16px 20px",
-                }}
+                className={`
+                  ${getAccordionHeaderBaseClasses(expandedSection === "contract")}
+                  ${isMobile ? 'py-3 px-4' : 'py-4 px-5'}
+                `}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div className="flex items-center gap-3 w-full justify-center">
                   <Clipboard size={isMobile ? 20 : 28} />
-                  <span style={{ 
-                    fontWeight: "bold", 
-                    fontSize: isMobile ? "16px" : "20px", 
-                    letterSpacing: "-0.02em" 
-                  }}>
+                  <span className={`
+                    font-bold tracking-tight text-center max-w-[90%] 
+                    overflow-hidden text-ellipsis whitespace-nowrap
+                    ${isMobile ? 'text-lg' : 'text-2xl'}
+                  `}>
                     Contract
                   </span>
                 </div>
-                {expandedSection === "contract" ? <ChevronUp size={isMobile ? 20 : 28} /> : <ChevronDown size={isMobile ? 20 : 28} />}
-                {expandedSection === "contract" && <div style={getAnimatedBezelStyle()} />}
+                {expandedSection === "contract" ? (
+                  <ChevronUp size={isMobile ? 20 : 28} />
+                ) : (
+                  <ChevronDown size={isMobile ? 20 : 28} />
+                )}
+                {expandedSection === "contract" && (
+                  <div className={getAnimatedBezelClasses()} />
+                )}
               </div>
               {expandedSection === "contract" && (
-                <div style={{ 
-                  padding: "0", 
-                  background: "rgba(255, 255, 255, 0.015)",
-                  flex: "1",
-                  display: "flex",
-                  flexDirection: "column",
-                  position: "relative",
-                  height: "100%",
-                  minHeight: "500px"
-                }}>
+                <div className="p-0 flex-1 flex flex-col relative h-full">
                   {/* Fullscreen Toggle Button */}
                   {!isContractFullscreen && (
                     <button
@@ -1127,287 +949,15 @@ export function SimpleMapDrawer({
                     </button>
                   )}
 
-                  {iframeLoading && (
-                    <div style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: "rgba(0, 0, 0, 0.4)",
-                      zIndex: 5,
-                      backdropFilter: "blur(4px)",
-                      WebkitBackdropFilter: "blur(4px)",
-                    }}>
-                      <div style={{ 
-                        display: "flex", 
-                        flexDirection: "column", 
-                        alignItems: "center", 
-                        gap: "12px" 
-                      }}>
-                        <Loader2 size={40} className="animate-spin text-lime-500" />
-                        <span style={{ 
-                          color: "white", 
-                          fontSize: "16px",
-                          fontWeight: "500" 
-                        }}>
-                          Loading contracts...
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {iframeError && (
-                    <div style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      padding: "32px",
-                      textAlign: "center",
-                      height: "100%"
-                    }}>
-                      <div style={{
-                        backgroundColor: "rgba(239, 68, 68, 0.1)",
-                        borderRadius: "8px",
-                        padding: "24px",
-                        maxWidth: "400px"
-                      }}>
-                        <h3 style={{ color: "white", fontSize: "18px", fontWeight: "bold", marginBottom: "12px" }}>
-                          Unable to load contracts
-                        </h3>
-                        <p style={{ color: "rgba(255, 255, 255, 0.8)", fontSize: "14px", marginBottom: "16px" }}>
-                          There was a problem loading the contract system. Please try again later or contact support.
-                        </p>
-                        <button
-                          onClick={() => {
-                            setIframeLoading(true);
-                            setIframeError(false);
-                            // Force iframe reload by toggling and reopening the section
-                            setExpandedSection(null);
-                            setTimeout(() => setExpandedSection("contract"), 100);
-                          }}
-                          style={{
-                            backgroundColor: "rgba(132, 204, 22, 0.8)",
-                            color: "white",
-                            padding: "8px 16px",
-                            borderRadius: "4px",
-                            border: "none",
-                            cursor: "pointer",
-                            fontWeight: "bold",
-                            fontSize: "14px"
-                          }}
-                        >
-                          Try Again
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <iframe 
-                    ref={contractIframeRef}
-                    src="https://contracts.purlin.pro/" 
-                    title="In-Vision Construction Contracts"
-                    style={{
-                      width: "100%",
-                      height: "100%", 
-                      border: "none",
-                      borderRadius: "0 0 8px 8px",
-                      backgroundColor: "#1e293b",
-                      display: iframeError ? "none" : "block",
-                      boxShadow: "inset 0 1px 3px rgba(0,0,0,0.3)"
-                    }}
-                    onLoad={() => setIframeLoading(false)}
-                    onError={() => {
-                      setIframeLoading(false);
-                      setIframeError(true);
-                    }}
-                    allow="clipboard-write"
-                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* Fullscreen Contract Modal */}
-            {isContractFullscreen && contractIframeRef.current && createPortal(
-              <div style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: "#1e293b",
-                zIndex: 99999,
-                display: "flex",
-                flexDirection: "column"
-              }}>
-                <div style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "12px 16px",
-                  backgroundColor: "rgba(0, 0, 0, 0.6)",
-                  borderBottom: "1px solid rgba(255, 255, 255, 0.1)"
-                }}>
-                  <h2 style={{
-                    color: "white",
-                    fontSize: "18px",
-                    fontWeight: "bold",
-                    margin: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px"
-                  }}>
-                    <Clipboard size={20} />
-                    In-Vision Construction Contracts
-                  </h2>
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    <button
-                      onClick={() => setIsContractFullscreen(false)}
-                      style={{
-                        backgroundColor: "rgba(15, 23, 42, 0.8)",
-                        border: "none",
-                        borderRadius: "6px",
-                        width: "40px",
-                        height: "40px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        cursor: "pointer",
-                        transition: "all 0.2s ease"
-                      }}
-                      aria-label="Exit fullscreen"
-                    >
-                      <Minimize2 size={20} color="white" />
-                    </button>
-                    <button
-                      onClick={() => setIsContractFullscreen(false)}
-                      style={{
-                        backgroundColor: "rgba(239, 68, 68, 0.8)",
-                        border: "none",
-                        borderRadius: "6px",
-                        width: "40px",
-                        height: "40px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        cursor: "pointer",
-                        transition: "all 0.2s ease"
-                      }}
-                      aria-label="Close"
-                    >
-                      <X size={20} color="white" />
-                    </button>
-                  </div>
-                </div>
-                <div style={{ flex: 1, position: "relative" }}>
-                  {iframeLoading && (
-                    <div style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: "rgba(0, 0, 0, 0.4)",
-                      zIndex: 5
-                    }}>
-                      <div style={{ 
-                        display: "flex", 
-                        flexDirection: "column", 
-                        alignItems: "center", 
-                        gap: "12px" 
-                      }}>
-                        <Loader2 size={40} className="animate-spin text-lime-500" />
-                        <span style={{ color: "white", fontSize: "16px" }}>Loading contracts...</span>
-                      </div>
-                    </div>
-                  )}
-                  <iframe 
-                    src="https://contracts.purlin.pro/" 
-                    title="In-Vision Construction Contracts (Fullscreen)"
-                    style={{
-                      width: "100%",
-                      height: "100%", 
-                      border: "none",
-                      backgroundColor: "#1e293b"
-                    }}
-                    onLoad={() => setIframeLoading(false)}
-                    onError={() => {
-                      setIframeLoading(false);
-                      setIframeError(true);
-                    }}
-                    allow="clipboard-write"
-                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
-                  />
-                </div>
-              </div>,
-              document.body
-            )}
-
-            {/* Notes Section */}
-            <div style={{
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-              borderRadius: "8px",
-              overflow: "hidden",
-              flex: expandedSection === "notes" ? "1" : "none",
-              transition: "flex 0.7s cubic-bezier(0.16, 1, 0.3, 1)",
-              display: "flex",
-              flexDirection: "column",
-              backgroundColor: "rgba(10, 10, 10, 0.2)",
-              backdropFilter: "blur(6px)",
-              WebkitBackdropFilter: "blur(6px)",
-              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
-            }}>
-              <div 
-                onClick={() => toggleSection("notes")} 
-                style={{
-                  ...getAccordionHeaderStyle("notes", expandedSection),
-                  padding: isMobile ? "12px 16px" : "16px 20px",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <MessageSquare size={isMobile ? 20 : 28} />
-                  <span style={{ 
-                    fontWeight: "bold", 
-                    fontSize: isMobile ? "16px" : "20px", 
-                    letterSpacing: "-0.02em" 
-                  }}>
-                    Notes
-                  </span>
-                </div>
-                {expandedSection === "notes" ? <ChevronUp size={isMobile ? 20 : 28} /> : <ChevronDown size={isMobile ? 20 : 28} />}
-                {expandedSection === "notes" && <div style={getAnimatedBezelStyle()} />}
-              </div>
-              {expandedSection === "notes" && (
-                <div style={{ 
-                  padding: isMobile ? "12px" : "16px", 
-                  background: "rgba(255, 255, 255, 0.015)",
-                  flex: "1",
-                  display: "flex",
-                  flexDirection: "column",
-                  overflowY: "auto"
-                }}>
                   {/* Add note form */}
                   <form
                     onSubmit={handleNoteSubmit(onSubmitNote)}
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "12px",
-                      marginBottom: "24px"
-                    }}
+                    className="flex flex-col gap-3 mb-6"
                   >
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div className="flex flex-col gap-2">
                       <Label 
                         htmlFor="note-content" 
-                        className="form-label text-white text-opacity-90 text-xl font-bold"
+                        className="text-white/90 text-xl font-bold"
                       >
                         Add Note
                       </Label>
@@ -1416,46 +966,39 @@ export function SimpleMapDrawer({
                         placeholder="Enter your notes here..."
                         rows={isMobile ? 3 : 5}
                         disabled={isSavingNote}
-                        style={{
-                          backgroundColor: "rgba(255, 255, 255, 0.1)",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "8px",
-                          padding: "12px",
-                          fontSize: isMobile ? "14px" : "16px",
-                          resize: "vertical",
-                          width: "100%",
-                        }}
+                        className={`
+                          bg-white/10 text-white rounded-lg p-3
+                          ${isMobile ? 'text-sm' : 'text-base'}
+                          resize-vertical w-full
+                          placeholder:text-white/50
+                          focus:outline-none focus:ring-2 focus:ring-lime-500/50
+                          disabled:opacity-50 disabled:cursor-not-allowed
+                        `}
                         {...registerNote("content")}
                       />
                       {noteErrors.content && (
-                        <p style={{ color: "#ef4444", fontSize: "14px", margin: "4px 0 0" }}>
+                        <p className="text-red-400 text-sm mt-1">
                           {noteErrors.content.message}
                         </p>
                       )}
                     </div>
                     
-                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <div className="flex justify-end">
                       <Button 
                         type="submit"
                         disabled={isSavingNote}
-                        style={{
-                          backgroundColor: "rgba(132, 204, 22, 0.8)",
-                          color: "white",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          padding: "10px 16px",
-                          fontSize: "16px",
-                          borderRadius: "8px",
-                          border: "none",
-                          cursor: isSavingNote ? "not-allowed" : "pointer",
-                          opacity: isSavingNote ? 0.7 : 1,
-                        }}
+                        className={`
+                          bg-lime-500/80 text-white
+                          flex items-center gap-2 px-4 py-2.5 text-base
+                          rounded-lg border-none
+                          ${isSavingNote ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer opacity-100'}
+                          transition-all duration-200
+                          hover:bg-lime-500/90 hover:shadow-lg
+                        `}
                       >
                         {isSavingNote ? (
                           <>
-                            <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
+                            <Loader2 size={18} className="animate-spin" />
                             <span>Saving...</span>
                           </>
                         ) : (
@@ -1469,80 +1012,39 @@ export function SimpleMapDrawer({
                     
                     {/* Messages */}
                     {noteError && (
-                      <div style={{
-                        backgroundColor: "rgba(239, 68, 68, 0.1)",
-                        padding: "10px",
-                        borderRadius: "6px",
-                        color: "#fecaca",
-                        fontSize: "14px",
-                        marginTop: "8px"
-                      }}>
+                      <div className="bg-red-500/10 p-2.5 rounded-md text-red-200 text-sm mt-2">
                         {noteError}
                       </div>
                     )}
                     
                     {noteSuccess && (
-                      <div style={{
-                        backgroundColor: "rgba(34, 197, 94, 0.1)",
-                        padding: "10px",
-                        borderRadius: "6px",
-                        color: "#bbf7d0",
-                        fontSize: "14px",
-                        marginTop: "8px"
-                      }}>
+                      <div className="bg-green-500/10 p-2.5 rounded-md text-green-200 text-sm mt-2">
                         {noteSuccess}
                       </div>
                     )}
                   </form>
                   
                   {/* Note history */}
-                  <div style={{ marginTop: "16px" }}>
-                    <h3 style={{
-                      color: "white",
-                      fontSize: "18px",
-                      fontWeight: "bold",
-                      marginBottom: "12px",
-                      borderBottom: "1px solid rgba(132, 204, 22, 0.3)",
-                      paddingBottom: "8px"
-                    }}>
+                  <div className="mt-4">
+                    <h3 className="text-white text-lg font-bold mb-3 border-b border-lime-500/30 pb-2">
                       Previous Notes
                     </h3>
                     
                     {noteHistory.length === 0 ? (
-                      <p style={{
-                        color: "rgba(255, 255, 255, 0.5)",
-                        fontSize: "15px",
-                        textAlign: "center",
-                        padding: "20px 0"
-                      }}>
+                      <p className="text-white/50 text-sm text-center py-5">
                         No notes yet
                       </p>
                     ) : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                      <div className="flex flex-col gap-3">
                         {noteHistory.map(note => (
                           <div
                             key={note.id}
-                            style={{
-                              backgroundColor: "rgba(30, 41, 59, 0.4)",
-                              borderRadius: "8px",
-                              padding: "12px",
-                              border: "1px solid rgba(148, 163, 184, 0.1)"
-                            }}
+                            className="bg-slate-900/40 rounded-lg p-3 border border-slate-400/10"
                           >
-                            <p style={{
-                              color: "white",
-                              fontSize: "15px",
-                              whiteSpace: "pre-wrap",
-                              marginBottom: "8px"
-                            }}>
+                            <p className="text-white text-sm whitespace-pre-wrap mb-2">
                               {note.content}
                             </p>
-                            <div style={{
-                              color: "rgba(255, 255, 255, 0.5)",
-                              fontSize: "13px",
-                              textAlign: "right",
-                              fontStyle: "italic"
-                            }}>
+                            <div className="text-white/50 text-xs text-right italic">
                               {formatDate(note.date)}
                             </div>
                           </div>
@@ -1553,6 +1055,100 @@ export function SimpleMapDrawer({
                 </div>
               )}
             </div>
+
+            {/* Fullscreen Contract Modal */}
+            {isContractFullscreen && contractIframeRef.current && createPortal(
+              <div className="fixed inset-0 bg-slate-900 z-[99999] flex flex-col">
+                <div className="flex justify-between items-center px-4 py-3 bg-black/60 border-b border-white/10">
+                  <h2 className="text-white text-lg font-bold m-0 flex items-center gap-2">
+                    <Clipboard size={20} />
+                    In-Vision Construction Contracts
+                  </h2>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setIsContractFullscreen(false)}
+                      className="bg-slate-900/80 border-none rounded-md w-10 h-10
+                        flex items-center justify-center cursor-pointer
+                        transition-all duration-200 hover:bg-slate-800/80"
+                      aria-label="Exit fullscreen"
+                    >
+                      <Minimize2 size={20} className="text-white" />
+                    </button>
+                    <button
+                      onClick={() => setIsContractFullscreen(false)}
+                      className="bg-red-500/80 border-none rounded-md w-10 h-10
+                        flex items-center justify-center cursor-pointer
+                        transition-all duration-200 hover:bg-red-600/80"
+                      aria-label="Close"
+                    >
+                      <X size={20} className="text-white" />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex-1 relative">
+                  {iframeLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-5">
+                      <div className="flex flex-col items-center gap-3">
+                        <Loader2 size={40} className="animate-spin text-lime-500" />
+                        <span className="text-white text-base font-medium">
+                          Loading contracts...
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <iframe 
+                    ref={contractIframeRef}
+                    src="https://contracts.purlin.pro/" 
+                    title="In-Vision Construction Contracts (Fullscreen)"
+                    className="w-full h-full border-none bg-slate-900"
+                    onLoad={handleIframeLoad}
+                    onError={handleIframeError}
+                    allow="clipboard-write"
+                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
+                  />
+                </div>
+              </div>,
+              document.body
+            )}
+
+            {/* Loading Overlay */}
+            {iframeLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-5">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 size={40} className="animate-spin text-lime-500" />
+                  <span className="text-white text-base font-medium">
+                    Loading contracts...
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {iframeError && (
+              <div className="flex flex-col items-center justify-center p-8 text-center h-full">
+                <div className="bg-red-500/10 rounded-lg p-6 max-w-md">
+                  <h3 className="text-white text-lg font-bold mb-3">
+                    Unable to load contracts
+                  </h3>
+                  <p className="text-white/80 text-sm mb-4">
+                    There was a problem loading the contract system. Please try again later or contact support.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setIframeLoading(true);
+                      setIframeError(false);
+                      setExpandedSection(null);
+                      setTimeout(() => setExpandedSection("contract"), 100);
+                    }}
+                    className="bg-lime-500/80 text-white px-4 py-2 rounded
+                      border-none cursor-pointer font-bold text-sm
+                      hover:bg-lime-500/90 transition-colors duration-200"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

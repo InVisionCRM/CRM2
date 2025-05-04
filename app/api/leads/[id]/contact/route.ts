@@ -10,10 +10,7 @@ const contactUpdateSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   phone: z.string().optional().or(z.literal("")),
-  streetAddress: z.string().optional().or(z.literal("")),
-  city: z.string().optional().or(z.literal("")),
-  state: z.string().optional().or(z.literal("")),
-  zipcode: z.string().optional().or(z.literal(""))
+  address: z.string().optional().or(z.literal("")),
 })
 
 export async function PATCH(
@@ -75,10 +72,7 @@ export async function PATCH(
         lastName: data.lastName,
         email: data.email,
         phone: data.phone,
-        streetAddress: data.streetAddress,
-        city: data.city,
-        state: data.state,
-        zipcode: data.zipcode,
+        address: data.address,
         updatedAt: new Date()
       }
     })
@@ -103,10 +97,7 @@ export async function PATCH(
         lastName: updatedLead.lastName,
         email: updatedLead.email,
         phone: updatedLead.phone,
-        streetAddress: updatedLead.streetAddress,
-        city: updatedLead.city,
-        state: updatedLead.state,
-        zipcode: updatedLead.zipcode
+        address: updatedLead.address
       }
     })
   } catch (error) {

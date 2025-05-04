@@ -15,11 +15,8 @@ const contactFormSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address").optional().or(z.literal("")),
   phone: z.string().optional().or(z.literal("")),
-  streetAddress: z.string().optional().or(z.literal("")),
-  // Keep these in the schema for API compatibility, but we won't show them in the UI
-  city: z.string().optional().or(z.literal("")),
-  state: z.string().optional().or(z.literal("")),
-  zipcode: z.string().optional().or(z.literal(""))
+  address: z.string().optional().or(z.literal("")),
+  // Removed city, state, zipcode as they are no longer managed separately here
 })
 
 type ContactFormValues = z.infer<typeof contactFormSchema>
@@ -83,21 +80,8 @@ export function ContactForm({
     setSuccessMessage(null)
 
     try {
-      // Extract city, state, zip from street address if possible
-      const addressParts = data.streetAddress?.split(',').map(part => part.trim()) || [];
-      if (addressParts.length >= 3) {
-        // Try to parse "7900 Mortenview Drive, Taylor, Michigan 48180, United States" format
-        const lastPart = addressParts[addressParts.length - 2] || ""; // e.g. "Michigan 48180"
-        const stateZipMatch = lastPart.match(/([A-Za-z\s]+)\s+(\d+)/);
-        
-        if (stateZipMatch) {
-          data.state = stateZipMatch[1]; // e.g. "Michigan"
-          data.zipcode = stateZipMatch[2]; // e.g. "48180"
-        }
-        
-        // City is typically the part before state
-        data.city = addressParts[addressParts.length - 3] || "";
-      }
+      // Removed the logic for parsing address into city/state/zip
+      // The full address string will be sent directly to the API
 
       // Call API route to update lead contact information
       const response = await fetch(`/api/leads/${leadId}/contact`, {
@@ -105,20 +89,29 @@ export function ContactForm({
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data) // Sends { firstName, lastName, email, phone, address }
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Failed to update contact information")
+        let errorMessage = "Failed to update contact information";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (parseError) {
+          // If we can't parse the error response as JSON, use the status text
+          errorMessage = `Error: ${response.statusText || errorMessage}`;
+        }
+        throw new Error(errorMessage);
       }
 
-      setSuccessMessage("Contact information updated successfully")
-      onSuccess?.()
+      const result = await response.json();
+      setSuccessMessage(result.message || "Contact information updated successfully");
+      onSuccess?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred")
+      console.error("Error saving contact:", err);
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -237,22 +230,17 @@ export function ContactForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="streetAddress" className="text-white text-opacity-90">
-          Street Address
+        <Label htmlFor="address" className="text-white text-opacity-90">
+          Address
         </Label>
         <Input
-          id="streetAddress"
-          placeholder="Full address (including city, state, zip)"
-          {...register("streetAddress")}
+          id="address"
+          placeholder="Full address"
+          {...register("address")}
           disabled={isLoading || isReadOnly}
           className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50"
         />
       </div>
-
-      {/* Hidden inputs for city, state, zipcode - still part of the form data */}
-      <input type="hidden" {...register("city")} />
-      <input type="hidden" {...register("state")} />
-      <input type="hidden" {...register("zipcode")} />
 
       {error && (
         <div className="rounded bg-red-500 bg-opacity-20 p-2 text-red-200 text-sm">

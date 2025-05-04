@@ -514,43 +514,59 @@ export function InsuranceForm({
         }
       `}</style>
       
-      <div className="space-y-1 sm:space-y-2">
-        <Label htmlFor="insuranceCompany" className="text-white text-opacity-90 text-sm sm:text-base">
-          Insurance Company
-        </Label>
-        <div className="relative">
-          <div
-            onClick={() => !isReadOnly && setShowCompanyDropdown(!showCompanyDropdown)}
-            className={cn(
-              "flex items-center justify-between p-3 sm:p-4 bg-white bg-opacity-10 rounded-md cursor-pointer h-10 sm:h-12",
-              "border border-transparent",
-              isReadOnly ? "cursor-not-allowed opacity-70" : "hover:border-gray-600",
-              "text-sm sm:text-base"
-            )}
-          >
-            <span className={watch("insuranceCompany") ? "text-white" : "text-white text-opacity-50"}>
-              {watch("insuranceCompany") || "Select insurance company"}
-            </span>
-            <ChevronDown className="ml-2 h-4 w-4 text-white text-opacity-70" />
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        <div className="space-y-1 sm:space-y-2">
+          <Label htmlFor="insuranceCompany" className="text-white text-opacity-90 text-sm sm:text-base">
+            Insurance Company
+          </Label>
+          <div className="relative">
+            <CompanyDropdown />
           </div>
-          <CompanyDropdown />
+        </div>
+
+        <div className="space-y-1 sm:space-y-2">
+          <Label htmlFor="claimNumber" className="text-white text-opacity-90 text-sm sm:text-base">
+            Claim Number
+          </Label>
+          <Input
+            id="claimNumber"
+            placeholder="Enter claim number (if available)"
+            {...register("claimNumber")}
+            disabled={isLoading || isReadOnly}
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+          />
         </div>
       </div>
 
-      <div className="space-y-1 sm:space-y-2">
-        <Label htmlFor="insurancePolicyNumber" className="text-white text-opacity-90 text-sm sm:text-base">
-          Policy Number
-        </Label>
-        <Input
-          id="insurancePolicyNumber"
-          placeholder="Enter policy number"
-          {...register("insurancePolicyNumber")}
-          disabled={isLoading || isReadOnly}
-          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
-        />
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        <div className="space-y-1 sm:space-y-2">
+          <Label htmlFor="insurancePolicyNumber" className="text-white text-opacity-90 text-sm sm:text-base">
+            Policy Number
+          </Label>
+          <Input
+            id="insurancePolicyNumber"
+            placeholder="Enter policy number"
+            {...register("insurancePolicyNumber")}
+            disabled={isLoading || isReadOnly}
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+          />
+        </div>
+
+        <div className="space-y-1 sm:space-y-2">
+          <Label htmlFor="insuranceDeductible" className="text-white text-opacity-90 text-sm sm:text-base">
+            Deductible Amount
+          </Label>
+          <Input
+            id="insuranceDeductible"
+            placeholder="$"
+            {...register("insuranceDeductible")}
+            disabled={isLoading || isReadOnly}
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+          />
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         <div className="space-y-1 sm:space-y-2">
           <Label htmlFor="insurancePhone" className="text-white text-opacity-90 text-sm sm:text-base">
             Insurance Phone
@@ -578,19 +594,6 @@ export function InsuranceForm({
         </div>
       </div>
 
-      <div className="space-y-1 sm:space-y-2">
-        <Label htmlFor="claimNumber" className="text-white text-opacity-90 text-sm sm:text-base">
-          Claim Number
-        </Label>
-        <Input
-          id="claimNumber"
-          placeholder="Enter claim number (if available)"
-          {...register("claimNumber")}
-          disabled={isLoading || isReadOnly}
-          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
-        />
-      </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
         <div className="space-y-1 sm:space-y-2">
           <Label htmlFor="dateOfLoss" className="text-white text-opacity-90 text-sm sm:text-base">
@@ -615,38 +618,9 @@ export function InsuranceForm({
             Damage Type
           </Label>
           <div className="relative">
-            <div
-              onClick={() => !isReadOnly && setShowDamageTypeDropdown(!showDamageTypeDropdown)}
-              className={cn(
-                "flex items-center justify-between p-3 sm:p-4 bg-white bg-opacity-10 rounded-md cursor-pointer h-10 sm:h-12",
-                "border border-transparent",
-                isReadOnly ? "cursor-not-allowed opacity-70" : "hover:border-gray-600",
-                "text-sm sm:text-base"
-              )}
-            >
-              <span className={watch("damageType") ? "text-white" : "text-white text-opacity-50"}>
-                {watch("damageType") ? 
-                  (watch("damageType") || "").charAt(0) + (watch("damageType") || "").slice(1).toLowerCase() : 
-                  "Select damage type"}
-              </span>
-              <ChevronDown className="ml-2 h-4 w-4 text-white text-opacity-70" />
-            </div>
             <DamageTypeDropdown />
           </div>
         </div>
-      </div>
-
-      <div className="space-y-1 sm:space-y-2">
-        <Label htmlFor="insuranceDeductible" className="text-white text-opacity-90 text-sm sm:text-base">
-          Deductible Amount
-        </Label>
-        <Input
-          id="insuranceDeductible"
-          placeholder="$"
-          {...register("insuranceDeductible")}
-          disabled={isLoading || isReadOnly}
-          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
-        />
       </div>
 
       {!isReadOnly && (
