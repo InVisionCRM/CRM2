@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, CSSProperties } from "react"
 import { createPortal } from "react-dom"
 import { PropertyVisitStatus } from "./MapInteractionDrawer"
-import { ChevronDown, ChevronUp, User, FileText, Clipboard, MessageSquare, MapPin, Sliders, Loader2, Maximize2, Minimize2, X, Save } from "lucide-react"
+import { ChevronDown, ChevronUp, User, FileText, Clipboard, MessageSquare, MapPin, Sliders, Loader2, Maximize2, Minimize2, X, Save, ExternalLink } from "lucide-react"
 import { ContactForm } from "@/components/forms/ContactForm"
 import { InsuranceForm } from "@/components/forms/InsuranceForm"
 import { AdjusterForm } from "@/components/forms/AdjusterForm"
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
+import Link from 'next/link'
 
 interface SimpleMapDrawerProps {
   isOpen: boolean
@@ -121,11 +122,6 @@ export function SimpleMapDrawer({
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
   // Add state for expanded accordion sections
   const [expandedSection, setExpandedSection] = useState<string | null>("streetview");
-  // Add state for iframe loading
-  const [iframeLoading, setIframeLoading] = useState(true);
-  const [iframeError, setIframeError] = useState(false);
-  // Add state for fullscreen mode
-  const [isContractFullscreen, setIsContractFullscreen] = useState(false);
   const contractIframeRef = useRef<HTMLIFrameElement>(null);
   
   // Notes form functionality
@@ -237,39 +233,6 @@ export function SimpleMapDrawer({
       setExpandedSection("streetview");
     }
   }, [isExpanded]);
-  
-  // Add timeout for iframe loading
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    
-    if (expandedSection === "contract" && iframeLoading) {
-      // Set a 15-second timeout for iframe loading
-      timeoutId = setTimeout(() => {
-        console.error("Contract iframe loading timeout");
-        setIframeLoading(false);
-        setIframeError(true);
-      }, 15000);
-    }
-    
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [expandedSection, iframeLoading]);
-
-  // Handle iframe loading state changes
-  const handleIframeLoad = () => {
-    console.log("Contract iframe loaded successfully");
-    setIframeLoading(false);
-    setIframeError(false);
-  };
-
-  const handleIframeError = (error: React.SyntheticEvent<HTMLIFrameElement, Event>) => {
-    console.error("Contract iframe loading error:", error);
-    setIframeLoading(false);
-    setIframeError(true);
-  };
   
   // Create a portal element on mount and add viewport meta tag for mobile
   useEffect(() => {
@@ -400,18 +363,6 @@ export function SimpleMapDrawer({
     }
   }, [isOpen]);
   
-  // Add useEffect for ESC key to exit fullscreen
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isContractFullscreen) {
-        setIsContractFullscreen(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isContractFullscreen]);
-  
   // Add responsive detection
   const [isMobile, setIsMobile] = useState(false);
 
@@ -458,12 +409,6 @@ export function SimpleMapDrawer({
 
   // Toggle an accordion section
   const toggleSection = (section: string) => {
-    // Reset iframe loading state when expanding contract section
-    if (section === "contract" && expandedSection !== "contract") {
-      setIframeLoading(true);
-      setIframeError(false);
-    }
-    
     setExpandedSection(expandedSection === section ? null : section);
   };
 
@@ -751,7 +696,7 @@ export function SimpleMapDrawer({
               </div>
               {expandedSection === "contact" && (
                 <div className="p-0 flex-1 flex flex-col relative h-full">
-                  <div className="contact-form-container">
+                  <div className="contact-form-container p-4">
                     {leadId ? (
                       <ContactForm 
                         leadId={leadId}
@@ -760,10 +705,7 @@ export function SimpleMapDrawer({
                           lastName: lastName || "",
                           email: email || "",
                           phone: phone || "",
-                          streetAddress: streetAddress || address || "",
-                          city: city || "",
-                          state: state || "",
-                          zipcode: zipcode || ""
+                          address: address || "",
                         }}
                         onSuccess={() => {
                           // Handle success, e.g., show a notification or update lead info
@@ -887,272 +829,198 @@ export function SimpleMapDrawer({
               )}
             </div>
 
-            {/* Contract Section */}
+            {/* Notes Section (moved from Contract) */}
             <div className={`
               border border-white/15 rounded-lg overflow-hidden
-              ${expandedSection === "contract" ? 'flex-1' : 'flex-none'}
-              transition-[flex] duration-700 ease-[cubic\-bezier(0\.16\,1\,0\.3\,1)]
+              ${expandedSection === "notes" ? 'flex-1' : 'flex-none'}
+              transition-[flex] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]
               flex flex-col bg-black/20 backdrop-blur-md shadow-md
             `}>
               <div 
-                onClick={() => toggleSection("contract")} 
+                onClick={() => toggleSection("notes")} 
                 className={`
-                  ${getAccordionHeaderBaseClasses(expandedSection === "contract")}
+                  ${getAccordionHeaderBaseClasses(expandedSection === "notes")}
                   ${isMobile ? 'py-3 px-4' : 'py-4 px-5'}
                 `}
               >
                 <div className="flex items-center gap-3 w-full justify-center">
-                  <Clipboard size={isMobile ? 20 : 28} />
+                  <MessageSquare size={isMobile ? 20 : 28} />
                   <span className={`
                     font-bold tracking-tight text-center max-w-[90%] 
                     overflow-hidden text-ellipsis whitespace-nowrap
                     ${isMobile ? 'text-lg' : 'text-2xl'}
                   `}>
-                    Contract
+                    Notes
                   </span>
                 </div>
-                {expandedSection === "contract" ? (
+                {expandedSection === "notes" ? (
                   <ChevronUp size={isMobile ? 20 : 28} />
                 ) : (
                   <ChevronDown size={isMobile ? 20 : 28} />
                 )}
-                {expandedSection === "contract" && (
+                {expandedSection === "notes" && (
                   <div className={getAnimatedBezelClasses()} />
                 )}
               </div>
-              {expandedSection === "contract" && (
-                <div className="p-0 flex-1 flex flex-col relative h-full">
-                  {/* Fullscreen Toggle Button */}
-                  {!isContractFullscreen && (
-                    <button
-                      onClick={() => setIsContractFullscreen(true)}
-                      style={{
-                        position: "absolute",
-                        top: "10px",
-                        right: "10px",
-                        zIndex: 10,
-                        backgroundColor: "rgba(0, 0, 0, 0.6)",
-                        border: "none",
-                        borderRadius: "50%",
-                        width: "40px",
-                        height: "40px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        cursor: "pointer",
-                        transition: "all 0.2s ease",
-                        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)"
-                      }}
-                      aria-label="Expand to fullscreen"
-                    >
-                      <Maximize2 size={20} color="white" />
-                    </button>
-                  )}
-
+              {expandedSection === "notes" && (
+                <div className="p-4 flex-1 flex flex-col relative h-full">
                   {/* Add note form */}
                   <form
                     onSubmit={handleNoteSubmit(onSubmitNote)}
-                    className="flex flex-col gap-3 mb-6"
+                    className="flex flex-col gap-3 mb-4"
                   >
-                    <div className="flex flex-col gap-2">
-                      <Label 
-                        htmlFor="note-content" 
-                        className="text-white/90 text-xl font-bold"
-                      >
-                        Add Note
-                      </Label>
-                      <textarea
-                        id="note-content"
-                        placeholder="Enter your notes here..."
-                        rows={isMobile ? 3 : 5}
-                        disabled={isSavingNote}
-                        className={`
-                          bg-white/10 text-white rounded-lg p-3
-                          ${isMobile ? 'text-sm' : 'text-base'}
-                          resize-vertical w-full
-                          placeholder:text-white/50
-                          focus:outline-none focus:ring-2 focus:ring-lime-500/50
-                          disabled:opacity-50 disabled:cursor-not-allowed
-                        `}
-                        {...registerNote("content")}
-                      />
-                      {noteErrors.content && (
-                        <p className="text-red-400 text-sm mt-1">
-                          {noteErrors.content.message}
-                        </p>
-                      )}
-                    </div>
-                    
-                    <div className="flex justify-end">
-                      <Button 
-                        type="submit"
-                        disabled={isSavingNote}
-                        className={`
-                          bg-lime-500/80 text-white
-                          flex items-center gap-2 px-4 py-2.5 text-base
-                          rounded-lg border-none
-                          ${isSavingNote ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer opacity-100'}
-                          transition-all duration-200
-                          hover:bg-lime-500/90 hover:shadow-lg
-                        `}
-                      >
-                        {isSavingNote ? (
-                          <>
-                            <Loader2 size={18} className="animate-spin" />
-                            <span>Saving...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Save size={18} />
-                            <span>Save Note</span>
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                    
-                    {/* Messages */}
-                    {noteError && (
-                      <div className="bg-red-500/10 p-2.5 rounded-md text-red-200 text-sm mt-2">
-                        {noteError}
-                      </div>
-                    )}
-                    
-                    {noteSuccess && (
-                      <div className="bg-green-500/10 p-2.5 rounded-md text-green-200 text-sm mt-2">
-                        {noteSuccess}
-                      </div>
-                    )}
-                  </form>
-                  
-                  {/* Note history */}
-                  <div className="mt-4">
-                    <h3 className="text-white text-lg font-bold mb-3 border-b border-lime-500/30 pb-2">
-                      Previous Notes
-                    </h3>
-                    
-                    {noteHistory.length === 0 ? (
-                      <p className="text-white/50 text-sm text-center py-5">
-                        No notes yet
-                      </p>
-                    ) : (
-                      <div className="flex flex-col gap-3">
-                        {noteHistory.map(note => (
-                          <div
-                            key={note.id}
-                            className="bg-slate-900/40 rounded-lg p-3 border border-slate-400/10"
-                          >
-                            <p className="text-white text-sm whitespace-pre-wrap mb-2">
-                              {note.content}
-                            </p>
-                            <div className="text-white/50 text-xs text-right italic">
-                              {formatDate(note.date)}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+                   <div className="flex flex-col gap-2">
+                     <Label 
+                       htmlFor="note-content" 
+                       className="text-white/90 text-xl font-bold"
+                     >
+                       Add Note
+                     </Label>
+                     <textarea
+                       id="note-content"
+                       placeholder="Enter your notes here..."
+                       rows={isMobile ? 3 : 5}
+                       disabled={isSavingNote}
+                       className={`
+                         bg-white/10 text-white rounded-lg p-3
+                         ${isMobile ? 'text-sm' : 'text-base'}
+                         resize-vertical w-full
+                         placeholder:text-white/50
+                         focus:outline-none focus:ring-2 focus:ring-lime-500/50
+                         disabled:opacity-50 disabled:cursor-not-allowed
+                       `}
+                       {...registerNote("content")}
+                     />
+                     {noteErrors.content && (
+                       <p className="text-red-400 text-sm mt-1">
+                         {noteErrors.content.message}
+                       </p>
+                     )}
+                   </div>
+                   
+                   <div className="flex justify-end">
+                     <Button 
+                       type="submit"
+                       disabled={isSavingNote}
+                       className={`
+                         bg-lime-500/80 text-white
+                         flex items-center gap-2 px-4 py-2.5 text-base
+                         rounded-lg border-none
+                         ${isSavingNote ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer opacity-100'}
+                         transition-all duration-200
+                         hover:bg-lime-500/90 hover:shadow-lg
+                       `}
+                     >
+                       {isSavingNote ? (
+                         <>
+                           <Loader2 size={18} className="animate-spin" />
+                           <span>Saving...</span>
+                         </>
+                       ) : (
+                         <>
+                           <Save size={18} />
+                           <span>Save Note</span>
+                         </>
+                       )}
+                     </Button>
+                   </div>
+                   
+                   {/* Messages */}
+                   {noteError && (
+                     <div className="bg-red-500/10 p-2.5 rounded-md text-red-200 text-sm mt-2">
+                       {noteError}
+                     </div>
+                   )}
+                   
+                   {noteSuccess && (
+                     <div className="bg-green-500/10 p-2.5 rounded-md text-green-200 text-sm mt-2">
+                       {noteSuccess}
+                     </div>
+                   )}
+                 </form>
+                 
+                 {/* Note history */}
+                 <div className="flex-1 overflow-y-auto pr-1">
+                   <h3 className="text-white text-lg font-bold mb-3 border-b border-lime-500/30 pb-2 sticky top-0 bg-black/20 backdrop-blur-sm">
+                     Previous Notes
+                   </h3>
+                   {noteHistory.length === 0 ? (
+                     <p className="text-white/50 text-sm text-center py-5">
+                       No notes yet
+                     </p>
+                   ) : (
+                     <div className="flex flex-col gap-3">
+                       {noteHistory.map(note => (
+                         <div
+                           key={note.id}
+                           className="bg-slate-900/40 rounded-lg p-3 border border-slate-400/10"
+                         >
+                           <p className="text-white text-sm whitespace-pre-wrap mb-2">
+                             {note.content}
+                           </p>
+                           <div className="text-white/50 text-xs text-right italic">
+                             {formatDate(note.date)}
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   )}
+                 </div>
+               </div>
+             )}
+           </div>
 
-            {/* Fullscreen Contract Modal */}
-            {isContractFullscreen && contractIframeRef.current && createPortal(
-              <div className="fixed inset-0 bg-slate-900 z-[99999] flex flex-col">
-                <div className="flex justify-between items-center px-4 py-3 bg-black/60 border-b border-white/10">
-                  <h2 className="text-white text-lg font-bold m-0 flex items-center gap-2">
-                    <Clipboard size={20} />
-                    In-Vision Construction Contracts
-                  </h2>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setIsContractFullscreen(false)}
-                      className="bg-slate-900/80 border-none rounded-md w-10 h-10
-                        flex items-center justify-center cursor-pointer
-                        transition-all duration-200 hover:bg-slate-800/80"
-                      aria-label="Exit fullscreen"
-                    >
-                      <Minimize2 size={20} className="text-white" />
-                    </button>
-                    <button
-                      onClick={() => setIsContractFullscreen(false)}
-                      className="bg-red-500/80 border-none rounded-md w-10 h-10
-                        flex items-center justify-center cursor-pointer
-                        transition-all duration-200 hover:bg-red-600/80"
-                      aria-label="Close"
-                    >
-                      <X size={20} className="text-white" />
-                    </button>
-                  </div>
-                </div>
-                <div className="flex-1 relative">
-                  {iframeLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-5">
-                      <div className="flex flex-col items-center gap-3">
-                        <Loader2 size={40} className="animate-spin text-lime-500" />
-                        <span className="text-white text-base font-medium">
-                          Loading contracts...
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  <iframe 
-                    ref={contractIframeRef}
-                    src="https://contracts.purlin.pro/" 
-                    title="In-Vision Construction Contracts (Fullscreen)"
-                    className="w-full h-full border-none bg-slate-900"
-                    onLoad={handleIframeLoad}
-                    onError={handleIframeError}
-                    allow="clipboard-write"
-                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads"
-                  />
-                </div>
-              </div>,
-              document.body
-            )}
-
-            {/* Loading Overlay */}
-            {iframeLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-5">
-                <div className="flex flex-col items-center gap-3">
-                  <Loader2 size={40} className="animate-spin text-lime-500" />
-                  <span className="text-white text-base font-medium">
-                    Loading contracts...
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Error State */}
-            {iframeError && (
-              <div className="flex flex-col items-center justify-center p-8 text-center h-full">
-                <div className="bg-red-500/10 rounded-lg p-6 max-w-md">
-                  <h3 className="text-white text-lg font-bold mb-3">
-                    Unable to load contracts
-                  </h3>
-                  <p className="text-white/80 text-sm mb-4">
-                    There was a problem loading the contract system. Please try again later or contact support.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setIframeLoading(true);
-                      setIframeError(false);
-                      setExpandedSection(null);
-                      setTimeout(() => setExpandedSection("contract"), 100);
-                    }}
-                    className="bg-lime-500/80 text-white px-4 py-2 rounded
-                      border-none cursor-pointer font-bold text-sm
-                      hover:bg-lime-500/90 transition-colors duration-200"
-                  >
-                    Try Again
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>,
-    portalElement
-  );
+           {/* Contract Section (Modified) */}
+           <div className={`
+             border border-white/15 rounded-lg overflow-hidden
+             ${expandedSection === "contract" ? 'flex-1' : 'flex-none'}
+             transition-[flex] duration-700 ease-[cubic\-bezier(0\.16\,1\,0\.3\,1)]
+             flex flex-col bg-black/20 backdrop-blur-md shadow-md
+           `}>
+             <div 
+               onClick={() => toggleSection("contract")} 
+               className={`
+                 ${getAccordionHeaderBaseClasses(expandedSection === "contract")}
+                 ${isMobile ? 'py-3 px-4' : 'py-4 px-5'}
+               `}
+             >
+               <div className="flex items-center gap-3 w-full justify-center">
+                 <Clipboard size={isMobile ? 20 : 28} />
+                 <span className={`
+                   font-bold tracking-tight text-center max-w-[90%] 
+                   overflow-hidden text-ellipsis whitespace-nowrap
+                   ${isMobile ? 'text-lg' : 'text-2xl'}
+                 `}>
+                   Contract System
+                 </span>
+               </div>
+               {expandedSection === "contract" ? (
+                 <ChevronUp size={isMobile ? 20 : 28} />
+               ) : (
+                 <ChevronDown size={isMobile ? 20 : 28} />
+               )}
+               {expandedSection === "contract" && (
+                 <div className={getAnimatedBezelClasses()} />
+               )}
+             </div>
+             {expandedSection === "contract" && (
+               <div className="p-4 flex-1 flex flex-col items-center justify-center relative h-full">
+                 <p className="text-white/80 text-center mb-4 ${isMobile ? 'text-sm' : 'text-base'}">
+                   Access the contract management system externally.
+                 </p>
+                 <Button asChild className="bg-lime-600 hover:bg-lime-700 text-white font-bold ${isMobile ? 'px-4 py-2 text-sm' : 'px-6 py-3 text-base'}">
+                   <Link href="https://contracts.purlin.pro/" target="_blank" rel="noopener noreferrer">
+                     Open Contract System
+                     <ExternalLink className="ml-2" size={isMobile ? 16 : 20} />
+                   </Link>
+                 </Button>
+               </div>
+             )}
+           </div>
+         </div>
+       )}
+     </div>
+   </div>,
+   portalElement
+ );
 } 

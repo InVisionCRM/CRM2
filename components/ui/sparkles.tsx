@@ -2,10 +2,51 @@
 import { useId } from "react"
 import { useEffect, useState } from "react"
 import Particles, { initParticlesEngine } from "@tsparticles/react"
-import type { Container, SingleOrMultiple } from "@tsparticles/engine"
+import type { Container, SingleOrMultiple, ISourceOptions } from "@tsparticles/engine"
 import { loadSlim } from "@tsparticles/slim"
 import { cn } from "@/lib/utils"
 import { motion, useAnimation } from "framer-motion"
+
+// Helper function for deep merging options (simple version)
+// In a real app, consider using a library like lodash.merge
+function mergeOptions(baseOptions: ISourceOptions, customOptions?: ISourceOptions): ISourceOptions {
+  if (!customOptions) return baseOptions;
+
+  // Basic deep merge for relevant properties
+  const merged = { ...baseOptions };
+
+  if (customOptions.particles) {
+    merged.particles = { ...(baseOptions.particles || {}), ...customOptions.particles };
+    if (customOptions.particles.move) {
+      merged.particles.move = { ...(baseOptions.particles?.move || {}), ...customOptions.particles.move };
+    }
+    if (customOptions.particles.shape) {
+      merged.particles.shape = { ...(baseOptions.particles?.shape || {}), ...customOptions.particles.shape };
+    }
+    if (customOptions.particles.size) {
+      merged.particles.size = { ...(baseOptions.particles?.size || {}), ...customOptions.particles.size };
+    }
+    if (customOptions.particles.opacity) {
+      merged.particles.opacity = { ...(baseOptions.particles?.opacity || {}), ...customOptions.particles.opacity };
+    }
+    // Add more nested properties if needed
+  }
+
+  if (customOptions.interactivity) {
+    merged.interactivity = { ...(baseOptions.interactivity || {}), ...customOptions.interactivity };
+    if (customOptions.interactivity.events) {
+      merged.interactivity.events = { ...(baseOptions.interactivity?.events || {}), ...customOptions.interactivity.events };
+    }
+    // Add more nested properties if needed
+  }
+
+  // Merge other top-level properties if provided
+  if (customOptions.polygon) {
+      merged.polygon = { ...(baseOptions.polygon || {}), ...customOptions.polygon };
+  }
+
+  return merged;
+}
 
 type ParticlesProps = {
   id?: string
@@ -17,9 +58,11 @@ type ParticlesProps = {
   speed?: number
   particleColor?: string
   particleDensity?: number
+  options?: ISourceOptions; // <-- Add options prop
 }
+
 export const SparklesCore = (props: ParticlesProps) => {
-  const { id, className, background, minSize, maxSize, speed, particleColor, particleDensity } = props
+  const { id, className, background, minSize, maxSize, speed, particleColor, particleDensity, options: customOptions } = props // <-- Destructure options
   const [init, setInit] = useState(false)
   useEffect(() => {
     initParticlesEngine(async (engine) => {
@@ -42,6 +85,86 @@ export const SparklesCore = (props: ParticlesProps) => {
   }
 
   const generatedId = useId()
+
+  // --- Define Base Options --- 
+  const baseOptions: ISourceOptions = {
+    background: {
+      color: {
+        value: background || "#000000", // Default background to black if none provided
+      },
+    },
+    fullScreen: {
+      enable: false, // Ensure it doesn't take fullscreen
+      zIndex: 1,
+    },
+    fpsLimit: 120,
+    interactivity: {
+      events: {
+        onClick: {
+          enable: true,
+          mode: "push",
+        },
+        onHover: {
+          enable: false, // Keep hover off by default
+          mode: "repulse",
+        },
+        resize: true as any,
+      },
+      modes: {
+        push: {
+          quantity: 4,
+        },
+        repulse: {
+          distance: 200,
+          duration: 0.4,
+        },
+      },
+    },
+    particles: {
+      color: {
+        value: particleColor || "#ffffff",
+      },
+      move: {
+        direction: "none",
+        enable: true,
+        outModes: {
+          default: "out",
+        },
+        random: false,
+        speed: speed || 1, // Use speed prop or default
+        straight: false,
+      },
+      number: {
+        density: {
+          enable: true,
+          width: 800, // Use area instead of value/width for density
+          height: 800,
+        },
+        value: particleDensity || 80, // Default particle number
+      },
+      opacity: {
+        value: { min: 0.1, max: 0.5 }, // Default opacity range
+        animation: {
+          enable: true,
+          speed: speed || 3, // Use speed prop or default
+          sync: false,
+          startValue: "random",
+        },
+      },
+      shape: {
+        type: "circle",
+      },
+      size: {
+        value: { min: minSize || 1, max: maxSize || 3 }, // Use size props or defaults
+        animation: {
+          enable: false, // Keep size animation off by default
+        },
+      },
+    },
+    detectRetina: true,
+  };
+  // --- End Base Options ---
+
   return (
     <motion.div animate={controls} className={cn("opacity-0", className)}>
       {init && (
@@ -49,375 +172,7 @@ export const SparklesCore = (props: ParticlesProps) => {
           id={id || generatedId}
           className={cn("h-full w-full")}
           particlesLoaded={particlesLoaded}
-          options={{
-            background: {
-              color: {
-                value: background || "#0d47a1",
-              },
-            },
-            fullScreen: {
-              enable: false,
-              zIndex: 1,
-            },
-
-            fpsLimit: 120,
-            interactivity: {
-              events: {
-                onClick: {
-                  enable: true,
-                  mode: "push",
-                },
-                onHover: {
-                  enable: false,
-                  mode: "repulse",
-                },
-                resize: true as any,
-              },
-              modes: {
-                push: {
-                  quantity: 4,
-                },
-                repulse: {
-                  distance: 200,
-                  duration: 0.4,
-                },
-              },
-            },
-            particles: {
-              bounce: {
-                horizontal: {
-                  value: 1,
-                },
-                vertical: {
-                  value: 1,
-                },
-              },
-              collisions: {
-                absorb: {
-                  speed: 2,
-                },
-                bounce: {
-                  horizontal: {
-                    value: 1,
-                  },
-                  vertical: {
-                    value: 1,
-                  },
-                },
-                enable: false,
-                maxSpeed: 50,
-                mode: "bounce",
-                overlap: {
-                  enable: true,
-                  retries: 0,
-                },
-              },
-              color: {
-                value: particleColor || "#ffffff",
-                animation: {
-                  h: {
-                    count: 0,
-                    enable: false,
-                    speed: 1,
-                    decay: 0,
-                    delay: 0,
-                    sync: true,
-                    offset: 0,
-                  },
-                  s: {
-                    count: 0,
-                    enable: false,
-                    speed: 1,
-                    decay: 0,
-                    delay: 0,
-                    sync: true,
-                    offset: 0,
-                  },
-                  l: {
-                    count: 0,
-                    enable: false,
-                    speed: 1,
-                    decay: 0,
-                    delay: 0,
-                    sync: true,
-                    offset: 0,
-                  },
-                },
-              },
-              effect: {
-                close: true,
-                fill: true,
-                options: {},
-                type: {} as SingleOrMultiple<string> | undefined,
-              },
-              groups: {},
-              move: {
-                angle: {
-                  offset: 0,
-                  value: 90,
-                },
-                attract: {
-                  distance: 200,
-                  enable: false,
-                  rotate: {
-                    x: 3000,
-                    y: 3000,
-                  },
-                },
-                center: {
-                  x: 50,
-                  y: 50,
-                  mode: "percent",
-                  radius: 0,
-                },
-                decay: 0,
-                distance: {},
-                direction: "none",
-                drift: 0,
-                enable: true,
-                gravity: {
-                  acceleration: 9.81,
-                  enable: false,
-                  inverse: false,
-                  maxSpeed: 50,
-                },
-                path: {
-                  clamp: true,
-                  delay: {
-                    value: 0,
-                  },
-                  enable: false,
-                  options: {},
-                },
-                outModes: {
-                  default: "out",
-                },
-                random: false,
-                size: false,
-                speed: {
-                  min: 0.1,
-                  max: 1,
-                },
-                spin: {
-                  acceleration: 0,
-                  enable: false,
-                },
-                straight: false,
-                trail: {
-                  enable: false,
-                  length: 10,
-                  fill: {},
-                },
-                vibrate: false,
-                warp: false,
-              },
-              number: {
-                density: {
-                  enable: true,
-                  width: 400,
-                  height: 400,
-                },
-                limit: {
-                  mode: "delete",
-                  value: 0,
-                },
-                value: particleDensity || 120,
-              },
-              opacity: {
-                value: {
-                  min: 0.1,
-                  max: 1,
-                },
-                animation: {
-                  count: 0,
-                  enable: true,
-                  speed: speed || 4,
-                  decay: 0,
-                  delay: 0,
-                  sync: false,
-                  mode: "auto",
-                  startValue: "random",
-                  destroy: "none",
-                },
-              },
-              reduceDuplicates: false,
-              shadow: {
-                blur: 0,
-                color: {
-                  value: "#000",
-                },
-                enable: false,
-                offset: {
-                  x: 0,
-                  y: 0,
-                },
-              },
-              shape: {
-                close: true,
-                fill: true,
-                options: {},
-                type: "circle",
-              },
-              size: {
-                value: {
-                  min: minSize || 1,
-                  max: maxSize || 3,
-                },
-                animation: {
-                  count: 0,
-                  enable: false,
-                  speed: 5,
-                  decay: 0,
-                  delay: 0,
-                  sync: false,
-                  mode: "auto",
-                  startValue: "random",
-                  destroy: "none",
-                },
-              },
-              stroke: {
-                width: 0,
-              },
-              zIndex: {
-                value: 0,
-                opacityRate: 1,
-                sizeRate: 1,
-                velocityRate: 1,
-              },
-              destroy: {
-                bounds: {},
-                mode: "none",
-                split: {
-                  count: 1,
-                  factor: {
-                    value: 3,
-                  },
-                  rate: {
-                    value: {
-                      min: 4,
-                      max: 9,
-                    },
-                  },
-                  sizeOffset: true,
-                },
-              },
-              roll: {
-                darken: {
-                  enable: false,
-                  value: 0,
-                },
-                enable: false,
-                enlighten: {
-                  enable: false,
-                  value: 0,
-                },
-                mode: "vertical",
-                speed: 25,
-              },
-              tilt: {
-                value: 0,
-                animation: {
-                  enable: false,
-                  speed: 0,
-                  decay: 0,
-                  sync: false,
-                },
-                direction: "clockwise",
-                enable: false,
-              },
-              twinkle: {
-                lines: {
-                  enable: false,
-                  frequency: 0.05,
-                  opacity: 1,
-                },
-                particles: {
-                  enable: false,
-                  frequency: 0.05,
-                  opacity: 1,
-                },
-              },
-              wobble: {
-                distance: 5,
-                enable: false,
-                speed: {
-                  angle: 50,
-                  move: 10,
-                },
-              },
-              life: {
-                count: 0,
-                delay: {
-                  value: 0,
-                  sync: false,
-                },
-                duration: {
-                  value: 0,
-                  sync: false,
-                },
-              },
-              rotate: {
-                value: 0,
-                animation: {
-                  enable: false,
-                  speed: 0,
-                  decay: 0,
-                  sync: false,
-                },
-                direction: "clockwise",
-                path: false,
-              },
-              orbit: {
-                animation: {
-                  count: 0,
-                  enable: false,
-                  speed: 1,
-                  decay: 0,
-                  delay: 0,
-                  sync: false,
-                },
-                enable: false,
-                opacity: 1,
-                rotation: {
-                  value: 45,
-                },
-                width: 1,
-              },
-              links: {
-                blink: false,
-                color: {
-                  value: "#fff",
-                },
-                consent: false,
-                distance: 100,
-                enable: false,
-                frequency: 1,
-                opacity: 1,
-                shadow: {
-                  blur: 5,
-                  color: {
-                    value: "#000",
-                  },
-                  enable: false,
-                },
-                triangles: {
-                  enable: false,
-                  frequency: 1,
-                },
-                width: 1,
-                warp: false,
-              },
-              repulse: {
-                value: 0,
-                enabled: false,
-                distance: 1,
-                duration: 1,
-                factor: 1,
-                speed: 1,
-              },
-            },
-            detectRetina: true,
-          }}
+          options={mergeOptions(baseOptions, customOptions)} // <-- Merge options here
         />
       )}
     </motion.div>
