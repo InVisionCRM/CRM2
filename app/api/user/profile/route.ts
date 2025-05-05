@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { put } from '@vercel/blob';
 
 // Enable more detailed logging for debugging
 const DEBUG = true;
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      if (!isValidFileSize(avatarFile.size, 2)) { // 2MB max to keep base64 size reasonable
+      if (!isValidFileSize(avatarFile.size, 2)) {
         return NextResponse.json(
           { error: "Image file is too large. Maximum size is 2MB." },
           { status: 400 }
@@ -82,15 +83,25 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        // Convert the file to base64
-        const arrayBuffer = await avatarFile.arrayBuffer();
-        const base64 = Buffer.from(arrayBuffer).toString('base64');
-        const dataUrl = `data:${avatarFile.type};base64,${base64}`;
+        // Generate a unique path for the blob
+        const filename = `${userId}-${Date.now()}.${avatarFile.type.split('/')[1]}`;
+        const pathname = `avatars/${filename}`;
         
-        // Save the data URL to the user's image field
-        updateData.image = dataUrl;
+        logDebug("Uploading file to Vercel Blob", { pathname });
+
+        // Upload to Vercel Blob storage
+        const blob = await put(pathname, avatarFile, {
+          access: 'public',
+          contentType: avatarFile.type,
+        });
         
-        logDebug("Image converted to base64 data URL");
+        logDebug("File uploaded to Vercel Blob", { 
+          url: blob.url,
+          pathname: blob.pathname
+        });
+
+        // Update the image URL to use the Blob URL
+        updateData.image = blob.url;
       } catch (fileError) {
         console.error("File handling error:", fileError);
         logDebug("File handling error", { error: fileError });
@@ -104,7 +115,7 @@ export async function POST(request: NextRequest) {
     logDebug("Updating user in database", { 
       updateData: { 
         ...updateData, 
-        image: updateData.image ? `[base64 image data - ${Math.round((updateData.image.length * 0.75) / 1024)} KB]` : undefined 
+        image: updateData.image ? updateData.image : undefined 
       } 
     });
     
@@ -123,7 +134,7 @@ export async function POST(request: NextRequest) {
       
       logDebug("User updated successfully", { 
         ...updatedUser,
-        image: updatedUser.image ? `[base64 image data - truncated]` : null 
+        image: updatedUser.image || null
       });
   
       // Return success response
