@@ -85,21 +85,35 @@ export default function MapPage() {
       console.log("Markers API response:", data)
 
       if (data.markers) {
-        // Map API response to MapboxMarkerData format
+        // Map API response to MapboxMarkerData format (GeoJSON Feature)
         const formattedMarkers: MapboxMarkerData[] = data.markers.map((m: any) => {
-           const validatedStatus = isValidStatus(m.status) ? m.status : "New";
-           return {
-               id: m.id,
-               // IMPORTANT: Map API lat, lng to Mapbox lng, lat
-               position: [m.longitude, m.latitude], 
-               address: m.address,
-               status: validatedStatus,
-               // visits: m.visits || [], // Keep visits if needed by MapboxMarkerData
-               leadId: m.leadId,
-           }
-        }).filter((m: MapboxMarkerData) => m.position[0] != null && m.position[1] != null); // Filter out markers with invalid coordinates
+          const validatedStatus = isValidStatus(m.status) ? m.status : "New";
+          // Ensure coordinates are valid numbers
+          const longitude = typeof m.longitude === 'number' ? m.longitude : null;
+          const latitude = typeof m.latitude === 'number' ? m.latitude : null;
 
-        console.log("Formatted markers for Mapbox:", formattedMarkers)
+          if (longitude === null || latitude === null) {
+              console.warn(`Invalid coordinates for marker ${m.id}:`, m.longitude, m.latitude);
+              return null; // Skip this marker
+          }
+
+          return {
+              type: 'Feature', // Add GeoJSON type
+              geometry: {
+                  type: 'Point',
+                  coordinates: [longitude, latitude] // [lng, lat]
+              },
+              properties: { // Move other data into properties
+                  address: m.address,
+                  status: validatedStatus,
+                  leadId: m.leadId,
+                  // visits: m.visits || [], // Include if needed by MapboxMarkerData properties
+              },
+              id: m.id, // Keep id at the top level
+          }
+        }).filter((m: MapboxMarkerData | null): m is MapboxMarkerData => m !== null); // Filter out nulls from invalid coordinates
+
+        console.log("Formatted markers for Mapbox (GeoJSON):", formattedMarkers)
         console.log("MapPage: fetchMarkers finished, setting markers"); // Log before setting state
         setMarkers(formattedMarkers)
       } else {
@@ -145,44 +159,53 @@ export default function MapPage() {
   // handleMarkerClick - receives MapboxMarkerData
   const handleMarkerClick = useCallback((marker: MapboxMarkerData) => {
     console.log("Marker clicked (Mapbox):", marker)
-    // Removed Google Street View logic
-    
+
+    // Cast coordinates to [number, number] for ModalData
+    const position = marker.geometry.coordinates as [number, number];
+
     setSelectedModalData({
-      address: marker.address,
-      position: marker.position, // [lng, lat]
+      address: marker.properties.address,
+      position: position, // Use the casted position
       markerId: marker.id,
-      currentStatus: marker.status === "New" || marker.status === "Search" ? undefined : marker.status,
-      leadId: marker.leadId
+      currentStatus: marker.properties.status === "New" || marker.properties.status === "Search" ? undefined : marker.properties.status,
+      leadId: marker.properties.leadId
     })
     setIsModalOpen(true)
   }, []) // Empty dependency array: assumes it doesn't depend on other state/props
 
-  // handleMarkerAdd - receives [lng, lat] from Mapbox map click
-  const handleMarkerAdd = useCallback((position: [number, number], address?: string) => {
-    console.log("Adding marker at position (Mapbox):", position, "address:", address)
+  // handleMarkerAdd - now triggered by onMapClick, receives [lng, lat]
+  const handleMapClick = useCallback((position: [number, number], address?: string) => {
+    console.log("Map clicked at position (Mapbox):", position, "address:", address);
 
-    const tempId = `temp-${Date.now()}`
+    const tempId = `temp-${Date.now()}`;
+    // Create marker in GeoJSON format
     const newMarker: MapboxMarkerData = {
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: position // [lng, lat]
+      },
+      properties: {
+        address: address || "Unknown Address", // Use placeholder if address not yet geocoded
+        status: "New",
+        leadId: tempId, // Link temporary marker to potential lead creation
+      },
       id: tempId,
-      position: position, // [lng, lat]
-      address: address || "Unknown Address", // Use placeholder if address not yet geocoded
-      status: "New",
-      leadId: tempId, // Link temporary marker to potential lead creation
-    }
+    };
 
-    setMarkers((prevMarkers) => [...prevMarkers, newMarker])
 
-    // Removed Google Street View logic
+    setMarkers((prevMarkers) => [...prevMarkers, newMarker]);
 
+    // Prepare data for the modal (still uses simple position for now)
     setSelectedModalData({
-      address: newMarker.address,
-      position: position, // [lng, lat]
+      address: newMarker.properties.address,
+      position: position, // Keep [lng, lat] for modal state
       markerId: tempId,
       currentStatus: undefined, // New marker starts with no set status in modal
-      leadId: tempId, 
-    })
-    setIsModalOpen(true)
-  }, []) // Empty dependency array: assumes it doesn't depend on other state/props
+      leadId: tempId,
+    });
+    setIsModalOpen(true);
+  }, []); // Empty dependency array
 
   // handleAddressSelect - Commented out as AddressSearch is removed
   // const handleAddressSelect = useCallback((result: { /* Mapbox geocoding result type */ }) => {
@@ -204,13 +227,15 @@ export default function MapPage() {
 
     console.log(`Status change initiated for ${address} to: ${newStatus}`);
 
-    // 1. Update local state immediately
+    // 1. Update local state immediately (using GeoJSON format)
     const optimisticUiId = markerId || `temp-${Date.now()}`;
 
     setSelectedModalData(prevData => prevData ? { ...prevData, currentStatus: newStatus } : null);
+    // Update the properties within the GeoJSON structure
     setMarkers(prevMarkers => prevMarkers.map(m =>
-      m.id === optimisticUiId ? { ...m, status: newStatus } : m
+        m.id === optimisticUiId ? { ...m, properties: { ...m.properties, status: newStatus } } : m
     ));
+
     // Optional: Dispatch custom event if needed elsewhere
     // window.dispatchEvent(new CustomEvent('markerStatusUpdate', {
     //   detail: { markerId: optimisticUiId, status: newStatus }
@@ -242,11 +267,11 @@ export default function MapPage() {
         currentMarkerId = realMarkerId;
         console.log("New marker created with ID:", realMarkerId);
 
-        // Update local state with the real ID
+        // Update local state with the real ID and status (in GeoJSON structure)
         setMarkers(prevMarkers =>
           prevMarkers.map(m =>
             m.id === markerId
-              ? { ...m, id: realMarkerId, status: newStatus }
+              ? { ...m, id: realMarkerId, properties: { ...m.properties, status: newStatus } }
               : m
           )
         );
@@ -269,9 +294,9 @@ export default function MapPage() {
     } catch (error) {
       console.error("Error saving marker:", error);
       markerError = error instanceof Error ? error.message : "Failed to save marker changes.";
-      // Revert optimistic UI update on marker save error
-      setMarkers(prevMarkers => prevMarkers.map(m => 
-        m.id === optimisticUiId ? { ...m, status: selectedModalData.currentStatus || 'New' } : m
+      // Revert optimistic UI update on marker save error (in GeoJSON structure)
+      setMarkers(prevMarkers => prevMarkers.map(m =>
+        m.id === optimisticUiId ? { ...m, properties: { ...m.properties, status: selectedModalData.currentStatus || 'New' } } : m
       ));
     }
 
@@ -343,11 +368,12 @@ export default function MapPage() {
         <MapboxMap
           key="mapbox-map-instance" 
           ref={mapRef}
-          markers={markers} // Pass MapboxMarkerData[]
+          // Ensure accessToken is passed (replace with your actual token source)
+          accessToken={process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || ""}
+          markersData={markers} // Use correct prop name
           onMarkerClick={handleMarkerClick}
-          onMarkerAdd={handleMarkerAdd}
-          // Removed searchResult prop
-          // Removed apiKey prop
+          onMapClick={handleMapClick} // Pass the correct handler
+          // Pass other props as needed, e.g., initialCenter, initialZoom
         />
 
         {isModalOpen && selectedModalData && (
