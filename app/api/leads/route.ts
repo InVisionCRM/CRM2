@@ -11,12 +11,24 @@ export async function GET(request: Request) {
     // Fetch leads from the database
     const leads = await getLeads()
 
-    // Filter by status if provided
-    const filteredLeads = status ? leads.filter((lead) => lead.status.toLowerCase() === status.toLowerCase()) : leads
+    // Log the raw leads data received from the database function
+    console.log("Raw leads fetched from DB:", JSON.stringify(leads, null, 2));
+
+    // Filter by status if provided, with added safety check
+    const filteredLeads = status
+      ? leads.filter((lead) => 
+          lead.status && // Check if status exists
+          typeof lead.status === 'string' && // Check if status is a string
+          lead.status.toLowerCase() === status.toLowerCase()
+        )
+      : leads;
+      
+    // Log the filtered leads before sending
+    console.log(`Filtered leads for status '${status || 'all'}':`, JSON.stringify(filteredLeads, null, 2));
 
     return NextResponse.json(filteredLeads)
   } catch (error) {
-    console.error("Error fetching leads:", error)
+    console.error("Error in GET /api/leads:", error) // Log the specific error location
     return NextResponse.json({ error: "Failed to fetch leads" }, { status: 500 })
   }
 }

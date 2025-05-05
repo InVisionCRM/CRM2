@@ -44,13 +44,16 @@ export function useLeads(options: UseLeadsOptions = {}): UseLeadsResult {
         // Transform the data to match LeadSummary type if needed
         const transformedLeads: LeadSummary[] = data.map((lead: any) => ({
           id: lead.id,
-          name: lead.name,
+          name: `${lead.firstName || ''} ${lead.lastName || ''}`.trim(),
           address: lead.address || "",
           phone: lead.phone || "",
           email: lead.email || "",
-          status: lead.status.toLowerCase(),
+          status: lead.status && typeof lead.status === 'string' 
+                    ? lead.status.toLowerCase() 
+                    : 'unknown',
           appointmentDate: lead.adjusterAppointmentDate || null,
-          assignedTo: lead.assignedTo || null,
+          assignedTo: lead.assignedTo?.name || null,
+          createdAt: lead.createdAt
         }))
 
         setLeads(transformedLeads)
