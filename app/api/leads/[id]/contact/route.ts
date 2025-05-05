@@ -15,7 +15,7 @@ const contactUpdateSchema = z.object({
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: Promise<string> | string } }
 ) {
   try {
     // Verify authentication
@@ -27,8 +27,9 @@ export async function PATCH(
       )
     }
 
-    // Get the lead ID from params
-    const { id } = params
+    // Get the lead ID from params - properly await it
+    const id = typeof params.id === 'string' ? params.id : await params.id
+    
     if (!id) {
       return new NextResponse(
         JSON.stringify({ message: 'Lead ID is required' }),
@@ -52,7 +53,48 @@ export async function PATCH(
 
     const data = validationResult.data
 
-    // Check if lead exists
+    // Check if this is a temporary ID (new lead creation)
+    if (id.startsWith('temp-')) {
+      // Create a new lead with the contact information
+      const newLead = await prisma.lead.create({
+        data: {
+          id: id, // Use the temporary ID so the frontend can track it
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          phone: data.phone,
+          address: data.address,
+          status: 'NEW', // Default status for new leads
+          assignedToId: session.user.id, // Assign to the current user
+        }
+      })
+
+      // Create activity log for this creation
+      await prisma.activity.create({
+        data: {
+          type: 'LEAD_CREATED',
+          title: 'Lead created',
+          description: `New lead created for ${data.firstName} ${data.lastName}`,
+          userId: session.user.id,
+          leadId: id,
+          status: 'COMPLETED'
+        }
+      })
+
+      return NextResponse.json({ 
+        message: 'Lead created successfully',
+        lead: {
+          id: newLead.id,
+          firstName: newLead.firstName,
+          lastName: newLead.lastName,
+          email: newLead.email,
+          phone: newLead.phone,
+          address: newLead.address
+        }
+      }, { status: 201 })
+    }
+
+    // For existing leads, check if lead exists
     const existingLead = await prisma.lead.findUnique({
       where: { id }
     })
