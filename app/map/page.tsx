@@ -58,13 +58,11 @@ export default function MapPage() {
   }, [markers]);
 
   // Fetch initial data (markers and knock count)
-  /* <<< COMMENT OUT START
   useEffect(() => {
     console.log("MapPage: Initial fetch effect running."); // Log initial fetch
     fetchMarkers();
     fetchKnockCount(); // Fetch count on mount
   }, []);
-  COMMENT OUT END >>> */
 
   // Function to fetch markers from the API
   const fetchMarkers = async () => {
@@ -346,7 +344,7 @@ export default function MapPage() {
 
   return (
     <MapProvider> 
-      <div className="fullscreen-map-container relative" style={{ height: "100vh", width: "100%" }}>
+      <div className="fullscreen-map-container relative" style={{ height: "100vh", width: "100%", position: "relative", overflow: "hidden" }}>
         {/* Search bar - Commented out for now */}
         {/* <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 w-full max-w-md px-4"> */}
           {/* TODO: Replace with Mapbox Geocoder component */}
@@ -364,18 +362,22 @@ export default function MapPage() {
           </div>
         )}
 
-        {/* Render MapboxMap */}
-        <MapboxMap
-          key="mapbox-map-instance" 
-          ref={mapRef}
-          // Ensure accessToken is passed (replace with your actual token source)
-          accessToken={process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || ""}
-          markersData={markers} // Use correct prop name
-          onMarkerClick={handleMarkerClick}
-          onMapClick={handleMapClick} // Pass the correct handler
-          // Pass other props as needed, e.g., initialCenter, initialZoom
-        />
+        {/* Map Container with fixed styling */}
+        <div className="absolute inset-0" style={{ zIndex: 0 }}>
+          <MapboxMap
+            key="mapbox-map-instance" 
+            ref={mapRef}
+            accessToken={process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || ""}
+            markersData={markers} 
+            onMarkerClick={handleMarkerClick}
+            onMapClick={handleMapClick} 
+            initialCenter={[-122.4194, 37.7749]}
+            initialZoom={10}
+            mapStyle="mapbox://styles/mapbox/streets-v12"
+          />
+        </div>
 
+        {/* Modal (high z-index to appear above map) */}
         {isModalOpen && selectedModalData && (
           <SimpleMapCardModal
             isOpen={isModalOpen}
