@@ -1,8 +1,9 @@
-import type React from "react"
+import React from "react"
 import "./globals.css"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
-import { Providers } from "./providers"
+import LayoutClientWrapper from "@/components/LayoutClientWrapper"
+import { AuthProvider } from "./auth-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -20,7 +21,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.className} h-screen`}>
-        <Providers>{children}</Providers>
+        <AuthProvider>
+          <LayoutClientWrapper>{children}</LayoutClientWrapper>
+        </AuthProvider>
       </body>
     </html>
   )
