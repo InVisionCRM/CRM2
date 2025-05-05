@@ -1,190 +1,380 @@
 "use client"
 
-import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle, useCallback } from 'react';
-import mapboxgl, { Map, Marker, LngLatLike } from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { cn } from '@/lib/utils'; // Assuming you have this utility
-import { PropertyVisitStatus } from './types'; // Assuming this type exists
+import React, { useEffect, useRef, useState, forwardRef, useImperativeHandle, useCallback } from "react"
+import mapboxgl, { LngLatLike, Map, Marker } from "mapbox-gl"
+import "mapbox-gl/dist/mapbox-gl.css"
+import { useMapContext } from "./map-context"
+import { getMarkerColor } from "@/lib/utils"
+import { PropertyVisitStatus } from "./types" // Assuming types are defined here
+import { Feature, Point } from 'geojson';
 
-// Define MarkerData type expected by this component
-// IMPORTANT: Mapbox typically uses [longitude, latitude]
-export interface MapboxMarkerData {
-  id: string;
-  position: [number, number]; // [lng, lat]
-  address?: string; // Optional address info
-  status?: PropertyVisitStatus | 'New' | 'Search'; // Optional status
-  leadId?: string; // Add leadId
-  // Add other properties as needed by your application
+// Define the Marker data structure expected by this component
+export interface MapboxMarkerData extends Feature<Point> {
+    id: string; // Unique identifier for the marker
+    properties: {
+        address: string;
+        status: PropertyVisitStatus | "New" | "Search";
+        leadId?: string;
+        visits?: any[]; // Define more specific type if possible
+        // Add any other relevant properties for popups or interactions
+    };
 }
 
+// Define the props for the MapboxMap component
 interface MapboxMapProps {
-  markers: MapboxMarkerData[];
-  onMarkerClick?: (marker: MapboxMarkerData) => void;
-  onMarkerAdd?: (position: [number, number], address?: string) => void; // Address might need reverse geocoding
-  initialCenter?: [number, number]; // [lng, lat]
-  initialZoom?: number;
-  className?: string;
-  mapStyle?: string;
+    markersData: MapboxMarkerData[];
+    onMarkerClick: (markerData: MapboxMarkerData) => void;
+    onMapClick?: (coordinates: [number, number], address?: string) => void; // Optional map click handler
+    initialCenter?: [number, number];
+    initialZoom?: number;
+    accessToken: string;
+    mapStyle?: string;
+    searchResultMarker?: MapboxMarkerData | null; // Optional marker for search results
+    showUserLocation?: boolean; // Prop to control showing user location
 }
 
+// Define the functions exposed via the ref
 export interface MapboxMapRef {
-  flyTo: (position: [number, number], zoom?: number) => void;
-  getMap: () => Map | null;
-  // Add other methods you might need to expose
+    getMapInstance: () => Map | null;
+    flyTo: (center: LngLatLike, zoom?: number) => void;
+    fitBounds: (bounds: mapboxgl.LngLatBoundsLike, options?: mapboxgl.FitBoundsOptions) => void;
+    addMarker: (markerData: MapboxMarkerData) => void;
+    removeMarker: (markerId: string) => void;
+    updateMarker: (markerData: MapboxMarkerData) => void;
+    // Add other useful methods as needed
 }
 
 const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>((
-  {
-    markers,
-    onMarkerClick,
-    onMarkerAdd,
-    initialCenter = [-98.5795, 39.8283], // Default center of US [lng, lat]
-    initialZoom = 4,
-    className = "",
-    mapStyle = 'mapbox://styles/mapbox/streets-v12',
-  },
-  ref
+    {
+        markersData,
+        onMarkerClick,
+        onMapClick,
+        initialCenter = [-98.5795, 39.8283], // Default center (USA)
+        initialZoom = 4,
+        accessToken,
+        mapStyle = "mapbox://styles/mapbox/streets-v12",
+        searchResultMarker,
+        showUserLocation = true, // Default to showing user location
+    },
+    ref
 ) => {
-  console.log("--- Rendering MapboxMap ---"); // Log component render
+    const mapContainer = useRef<HTMLDivElement>(null);
+    const mapRef = useRef<Map | null>(null);
+    const markersRef = useRef<{ [key: string]: Marker }>({});
+    const geolocateControlRef = useRef<mapboxgl.GeolocateControl | null>(null);
+    const [mapLoaded, setMapLoaded] = useState(false);
+    const { setIsLoading, setError, setLocation } = useMapContext();
 
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<Map | null>(null);
-  const markersRef = useRef<{ [key: string]: Marker }>({});
-  const [mapLoaded, setMapLoaded] = useState(false);
+    mapboxgl.accessToken = accessToken;
 
-  // Log when markers prop changes
-  useEffect(() => {
-    console.log("MapboxMap: Markers prop changed", markers);
-  }, [markers]);
+    // --- Map Initialization Effect ---
+    useEffect(() => {
+        if (mapRef.current || !mapContainer.current) return; // Initialize map only once
 
-  // Initialize Mapbox Map
-  useEffect(() => {
-    console.log("MapboxMap: Initialization effect running");
-    const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-    if (!mapboxToken) {
-      console.error("Mapbox Access Token is missing!");
-      // TODO: Add proper error handling (e.g., show message to user)
-      return;
-    }
-    mapboxgl.accessToken = mapboxToken;
+        setIsLoading(true);
+        setError(null);
 
-    if (map.current || !mapContainer.current) return; // Initialize map only once
+        try {
+            const map = new Map({
+                container: mapContainer.current,
+                style: mapStyle,
+                center: initialCenter,
+                zoom: initialZoom,
+                attributionControl: false, // Optional: Hide default attribution
+            });
 
-    map.current = new Map({
-      container: mapContainer.current,
-      style: mapStyle,
-      center: initialCenter, // [lng, lat]
-      zoom: initialZoom,
-    });
+            mapRef.current = map;
 
-    map.current.on('load', () => {
-      console.log('Mapbox map loaded');
-      setMapLoaded(true);
-      // Add map controls (optional)
-      map.current?.addControl(new mapboxgl.NavigationControl());
-      map.current?.addControl(new mapboxgl.FullscreenControl());
-    });
+            map.on("load", () => {
+                console.log("[MapboxMap] Map Loaded");
+                setMapLoaded(true);
+                setIsLoading(false);
 
-    // Add click handler for adding markers (if prop provided)
-    if (onMarkerAdd) {
-      map.current.on('click', (e) => {
-        const coordinates: [number, number] = [e.lngLat.lng, e.lngLat.lat];
-        console.log('Map clicked at:', coordinates);
-        // TODO: Reverse geocode coordinates to get address if needed
-        onMarkerAdd(coordinates /*, optional address */);
-      });
-    }
+                // Add standard controls
+                map.addControl(new mapboxgl.NavigationControl(), "top-right");
+                map.addControl(new mapboxgl.ScaleControl());
+                map.addControl(new mapboxgl.AttributionControl({ compact: true }), "bottom-right");
 
-    // Cleanup function
-    return () => {
-      console.log("MapboxMap: Cleanup effect running"); // Log cleanup
-      map.current?.remove();
-      map.current = null;
-      setMapLoaded(false);
-    };
-  }, [initialCenter, initialZoom, mapStyle, onMarkerAdd]); // Dependencies for map initialization
+                // Geolocation Control (conditionally added)
+                if (showUserLocation) {
+                    const geolocate = new mapboxgl.GeolocateControl({
+                        positionOptions: {
+                            enableHighAccuracy: true,
+                        },
+                        trackUserLocation: true,
+                        showUserHeading: true,
+                    });
+                    geolocateControlRef.current = geolocate;
+                    map.addControl(geolocate, "top-right");
 
-  // Update markers when the markers prop changes
-  useEffect(() => {
-    console.log("MapboxMap: Marker update effect running");
-    if (!mapLoaded || !map.current) return;
+                    geolocate.on('geolocate', (e) => {
+                        // Cast event to expected shape with coords
+                        const geolocateEvent = e as { coords: { latitude: number; longitude: number; } };
+                        if (geolocateEvent.coords) {
+                            const { longitude, latitude } = geolocateEvent.coords;
+                            console.log(`[MapboxMap] User location: ${latitude}, ${longitude}`);
+                            // Update context or state if needed
+                            setLocation({ lat: latitude, lng: longitude });
+                        }
+                    });
+                    geolocate.on('error', (e) => {
+                        console.error('[MapboxMap] Geolocation error:', e.message);
+                        setError('Geolocation failed. Please ensure location services are enabled and permissions granted.');
+                        // Optionally remove the control if it errors persistently
+                        if (geolocateControlRef.current && mapRef.current) {
+                            // mapRef.current.removeControl(geolocateControlRef.current);
+                        }
+                    });
+                }
+            });
 
-    const currentMarkerIds = Object.keys(markersRef.current);
-    const incomingMarkerIds = markers.map(m => m.id);
+            map.on("error", (e) => {
+                console.error("[MapboxMap] MapLibre GL Error:", e.error?.message || e);
+                setError(`Map error: ${e.error?.message || 'Unknown error'}`);
+                setIsLoading(false);
+            });
 
-    // Remove markers that are no longer present
-    currentMarkerIds.forEach(id => {
-      if (!incomingMarkerIds.includes(id)) {
-        markersRef.current[id]?.remove();
-        delete markersRef.current[id];
-      }
-    });
+            // Handle Map Clicks (if handler provided)
+            if (onMapClick) {
+                map.on("click", (e) => {
+                    console.log("[MapboxMap] Map clicked", e.lngLat);
+                    // Basic reverse geocode (consider a more robust service for production)
+                    // Note: Mapbox Geocoding requires separate API calls usually
+                    onMapClick([e.lngLat.lng, e.lngLat.lat]);
+                });
+            }
 
-    // Add or update markers
-    markers.forEach(markerData => {
-      const { id, position, status } = markerData; // position is [lng, lat]
-
-      if (markersRef.current[id]) {
-        // Update existing marker (position and potentially style)
-        markersRef.current[id].setLngLat(position as LngLatLike);
-        // TODO: Update marker style based on status if needed
-        // Example: markersRef.current[id].getElement().style.backgroundColor = getMarkerColor(status);
-      } else {
-        // Create new marker
-        const el = document.createElement('div');
-        el.className = 'mapbox-marker'; // Add a class for potential default styling
-        // TODO: Style the marker based on status (e.g., background color)
-        // Example: el.style.backgroundColor = getMarkerColor(status);
-        el.style.width = '15px';
-        el.style.height = '15px';
-        el.style.borderRadius = '50%';
-        el.style.border = '1px solid white';
-
-        const marker = new Marker(el)
-          .setLngLat(position as LngLatLike)
-          .addTo(map.current!); // Add marker to map
-
-        // Add click listener if handler provided
-        if (onMarkerClick) {
-          marker.getElement().addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent map click event from firing
-            console.log('Marker clicked:', markerData.id);
-            onMarkerClick(markerData);
-          });
+        } catch (error) {
+            console.error("[MapboxMap] Failed to initialize map:", error);
+            setError("Failed to initialize the map. Please check your Mapbox access token and network connection.");
+            setIsLoading(false);
         }
 
-        markersRef.current[id] = marker;
-      }
-    });
+        // Cleanup function
+        return () => {
+            console.log("[MapboxMap] Cleaning up map instance...");
+            mapRef.current?.remove();
+            mapRef.current = null;
+            setMapLoaded(false);
+            markersRef.current = {}; // Clear marker references
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [accessToken, mapStyle, initialCenter.toString(), initialZoom, showUserLocation]); // Dependencies for re-initialization
 
-  }, [markers, mapLoaded, onMarkerClick]); // Dependencies for marker updates
 
-  // Expose map control methods via ref
-  useImperativeHandle(ref, () => {
-    console.log("MapboxMap: useImperativeHandle running");
-    return {
-      flyTo: (position: [number, number], zoom = 15) => {
-        map.current?.flyTo({
-          center: position as LngLatLike, // [lng, lat]
-          zoom: zoom,
-          essential: true, // Animation is essential
+    // --- Marker Management Effect ---
+    const syncMarkers = useCallback(() => {
+        if (!mapRef.current || !mapLoaded) return;
+        console.log('[MapboxMap] Syncing markers...');
+        const map = mapRef.current;
+        const currentMarkerIds = Object.keys(markersRef.current);
+        const newMarkerIds = new Set(markersData.map(m => m.id));
+
+        // 1. Remove markers that are no longer in markersData
+        currentMarkerIds.forEach(id => {
+            if (!newMarkerIds.has(id)) {
+                console.log(`[MapboxMap] Removing marker: ${id}`);
+                markersRef.current[id]?.remove();
+                delete markersRef.current[id];
+            }
         });
-      },
-      getMap: () => map.current,
-      // Add other methods here
-    };
-  }, [mapLoaded]); // Ensure map is loaded before exposing methods
 
-  return (
-    <div
-      ref={mapContainer}
-      className={cn("w-full h-full", className)} // Use cn for merging classes
-      style={{ minHeight: '300px' }} // Example minimum height
-      aria-label="Mapbox Map"
-    />
-  );
+        // 2. Add new markers or update existing ones
+        markersData.forEach(markerData => {
+            const { id, geometry, properties } = markerData;
+            const position = geometry.coordinates as [number, number]; // LngLat
+            const color = getMarkerColor(properties.status);
+
+            if (markersRef.current[id]) {
+                // Marker exists, check if update needed (e.g., position or color)
+                const existingMarker = markersRef.current[id];
+                const existingLngLat = existingMarker.getLngLat();
+                const existingColor = (existingMarker.getElement().firstChild as HTMLElement)?.style.color;
+
+                let needsUpdate = false;
+                if (existingLngLat.lng !== position[0] || existingLngLat.lat !== position[1]) {
+                    console.log(`[MapboxMap] Updating marker position: ${id}`);
+                    existingMarker.setLngLat(position);
+                    needsUpdate = true;
+                }
+                // Simple color check - might need refinement based on how getMarkerColor works
+                if (existingColor !== color) {
+                     console.log(`[MapboxMap] Updating marker color: ${id}`);
+                    const markerElement = existingMarker.getElement();
+                    const svgElement = markerElement.querySelector('svg');
+                    if (svgElement) {
+                       svgElement.style.fill = color;
+                       svgElement.style.stroke = 'white'; // Optional: maintain stroke
+                       svgElement.style.strokeWidth = '2px'; // Optional: maintain stroke width
+                    }
+                    needsUpdate = true;
+                }
+                if (needsUpdate) {
+                    // Update popup content if necessary (example)
+                     existingMarker.getPopup()?.setHTML(`
+                        <div>
+                            <strong>${properties.address || 'Address N/A'}</strong><br>
+                            Status: ${properties.status}<br>
+                            ID: ${id}
+                        </div>
+                    `);
+                }
+
+            } else {
+                // Marker doesn't exist, create and add it
+                 console.log(`[MapboxMap] Adding marker: ${id}`);
+                 const markerElement = document.createElement('div');
+                 markerElement.innerHTML = `
+                    <svg viewBox="0 0 24 24" width="32" height="32" fill="${color}" stroke="white" stroke-width="1.5" style="cursor: pointer; filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.5));">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+                    </svg>
+                 `;
+                 markerElement.style.width = '32px';
+                 markerElement.style.height = '32px';
+
+                const marker = new Marker({ element: markerElement })
+                    .setLngLat(position)
+                    .setPopup(new mapboxgl.Popup({ offset: 25, closeButton: false }).setHTML(`
+                        <div>
+                            <strong>${properties.address || 'Address N/A'}</strong><br>
+                            Status: ${properties.status}<br>
+                            ID: ${id}
+                        </div>
+                    `))
+                    .addTo(map);
+
+                // Add click listener
+                marker.getElement().addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent map click event
+                    console.log(`[MapboxMap] Marker clicked: ${id}`);
+                    onMarkerClick(markerData);
+                     // Optional: Fly to marker on click
+                    mapRef.current?.flyTo({ center: position, zoom: Math.max(mapRef.current.getZoom(), 15) });
+                });
+
+                markersRef.current[id] = marker;
+            }
+        });
+
+         console.log(`[MapboxMap] Marker sync complete. Current markers: ${Object.keys(markersRef.current).length}`);
+    }, [mapLoaded, markersData, onMarkerClick]); // Dependencies for marker sync
+
+    useEffect(() => {
+        syncMarkers();
+    }, [syncMarkers]);
+
+    // --- Search Result Marker Effect ---
+    useEffect(() => {
+        if (!mapRef.current || !mapLoaded) return;
+
+        // Remove previous search marker if it exists
+        const existingSearchMarker = markersRef.current["search-result"];
+        if (existingSearchMarker) {
+            existingSearchMarker.remove();
+            delete markersRef.current["search-result"];
+        }
+
+        if (searchResultMarker) {
+            console.log("[MapboxMap] Adding search result marker");
+            const position = searchResultMarker.geometry.coordinates as [number, number];
+            const searchMarker = new Marker({ color: '#FFA500' }) // Orange color for search result
+                .setLngLat(position)
+                .setPopup(new mapboxgl.Popup({ offset: 25 }).setText(searchResultMarker.properties.address || 'Search Result'))
+                .addTo(mapRef.current);
+
+            markersRef.current["search-result"] = searchMarker;
+
+            // Optionally fly to the search result
+            mapRef.current.flyTo({ center: position, zoom: 15 });
+        }
+    }, [searchResultMarker, mapLoaded]);
+
+    // --- Expose Imperative Methods --- Access map functions from parent
+    useImperativeHandle(ref, () => ({
+        getMapInstance: () => mapRef.current,
+        flyTo: (center, zoom) => {
+            mapRef.current?.flyTo({ center, zoom });
+        },
+        fitBounds: (bounds, options) => {
+            mapRef.current?.fitBounds(bounds, options);
+        },
+        addMarker: (markerData) => {
+            // This might be redundant if parent manages markersData prop,
+            // but can be useful for temporary additions
+            if (!mapRef.current || !mapLoaded || markersRef.current[markerData.id]) return;
+            console.log(`[MapboxMap] Imperatively adding marker: ${markerData.id}`);
+
+            const position = markerData.geometry.coordinates as [number, number];
+            const color = getMarkerColor(markerData.properties.status);
+            const markerElement = document.createElement('div');
+                 markerElement.innerHTML = `
+                    <svg viewBox="0 0 24 24" width="32" height="32" fill="${color}" stroke="white" stroke-width="1.5" style="cursor: pointer; filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.5));">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+                    </svg>
+                 `;
+                 markerElement.style.width = '32px';
+                 markerElement.style.height = '32px';
+
+            const marker = new Marker({ element: markerElement })
+                .setLngLat(position)
+                .setPopup(new mapboxgl.Popup({ offset: 25, closeButton: false }).setHTML(`
+                    <div>
+                        <strong>${markerData.properties.address || 'Address N/A'}</strong><br>
+                        Status: ${markerData.properties.status}<br>
+                        ID: ${markerData.id}
+                    </div>
+                 `))
+                .addTo(mapRef.current);
+
+            marker.getElement().addEventListener('click', (e) => {
+                e.stopPropagation();
+                onMarkerClick(markerData);
+            });
+
+            markersRef.current[markerData.id] = marker;
+        },
+        removeMarker: (markerId) => {
+            if (!mapRef.current || !mapLoaded || !markersRef.current[markerId]) return;
+            console.log(`[MapboxMap] Imperatively removing marker: ${markerId}`);
+            markersRef.current[markerId]?.remove();
+            delete markersRef.current[markerId];
+        },
+        updateMarker: (markerData) => {
+             if (!mapRef.current || !mapLoaded || !markersRef.current[markerData.id]) return;
+            console.log(`[MapboxMap] Imperatively updating marker: ${markerData.id}`);
+             const marker = markersRef.current[markerData.id];
+             const position = markerData.geometry.coordinates as [number, number];
+             const color = getMarkerColor(markerData.properties.status);
+
+             marker.setLngLat(position);
+
+             // Update color via SVG fill
+             const markerElement = marker.getElement();
+             const svgElement = markerElement.querySelector('svg');
+             if (svgElement) {
+                 svgElement.style.fill = color;
+             }
+
+             // Update popup
+             marker.getPopup()?.setHTML(`
+                <div>
+                    <strong>${markerData.properties.address || 'Address N/A'}</strong><br>
+                    Status: ${markerData.properties.status}<br>
+                    ID: ${markerData.id}
+                </div>
+             `);
+        },
+    }));
+
+    return (
+        <div
+            ref={mapContainer}
+            className="absolute inset-0 w-full h-full"
+            aria-label="Map showing property locations"
+        />
+    );
 });
 
 MapboxMap.displayName = "MapboxMap";
 
-export default MapboxMap; 
+export default MapboxMap;
