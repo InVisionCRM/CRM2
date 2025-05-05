@@ -128,24 +128,17 @@ body {
   height: 100%;
 }
 
-/* Force light mode on map page */
+/* Update the CSS to exclude the map container */
 .fullscreen-map-container,
-.fullscreen-map-container * {
+.fullscreen-map-container *:not(.map-container) {
   color-scheme: light !important;
   background-color: white;
   color: black;
 }
 
-.fullscreen-map-container input,
-.fullscreen-map-container textarea {
-  background-color: white !important;
-  color: black !important;
-  border-color: #e5e7eb !important;
-}
-
-.fullscreen-map-container .dialog-content {
-  background-color: white !important;
-  color: black !important;
+/* Add specific styling for the map container */
+.map-container {
+  background: transparent !important;
 }
 
 /* Responsive modal styles */

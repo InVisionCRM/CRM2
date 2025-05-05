@@ -7,6 +7,8 @@ import { LeadsDrawer } from "@/components/leads-drawer"
 import { AppointmentsDrawer } from "@/components/appointments/appointments-drawer"
 import { FilesSheet } from "@/components/files/files-sheet"
 import { SimpleCalculator } from "@/components/calculator/simple-calculator"
+import type { LeadFile } from "@/types/documents"
+import { useSession } from "next-auth/react"
 
 function ExpandedMenu({
   isOpen,
@@ -74,13 +76,15 @@ function ExpandedMenu({
 }
 
 export function MobileNavigation() {
+  const { data: session } = useSession()
+  const userId = session?.user?.id
+
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLeadsDrawerOpen, setIsLeadsDrawerOpen] = useState(false)
   const [isAppointmentsDrawerOpen, setIsAppointmentsDrawerOpen] = useState(false)
   const [isFilesSheetOpen, setIsFilesSheetOpen] = useState(false)
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false)
 
-  // Close expanded menu when any drawer opens
   useEffect(() => {
     if (isLeadsDrawerOpen || isAppointmentsDrawerOpen || isFilesSheetOpen || isCalculatorOpen) {
       setIsExpanded(false)
@@ -90,24 +94,27 @@ export function MobileNavigation() {
   const navItems = [
     { icon: Home, label: "Dashboard", action: () => {} },
     { icon: UserPlus, label: "Leads", action: () => setIsLeadsDrawerOpen(true) },
-    { icon: Calendar, label: "Appointments", action: () => setIsAppointmentsDrawerOpen(true) },
+    { icon: Calendar, label: "Appointments", action: () => userId && setIsAppointmentsDrawerOpen(true), disabled: !userId },
     { icon: FolderOpen, label: "Files", action: () => setIsFilesSheetOpen(true) },
   ]
 
-  // Mock files for demonstration
-  const mockFiles = []
+  const mockFiles: LeadFile[] = []
 
   return (
     <>
-      {/* Navigation bar removed as requested */}
-
       <ExpandedMenu
         isOpen={isExpanded}
         onClose={() => setIsExpanded(false)}
         setIsCalculatorOpen={setIsCalculatorOpen}
       />
       <LeadsDrawer isOpen={isLeadsDrawerOpen} onClose={() => setIsLeadsDrawerOpen(false)} />
-      <AppointmentsDrawer isOpen={isAppointmentsDrawerOpen} onClose={() => setIsAppointmentsDrawerOpen(false)} />
+      {userId && (
+        <AppointmentsDrawer 
+          isOpen={isAppointmentsDrawerOpen} 
+          onClose={() => setIsAppointmentsDrawerOpen(false)} 
+          userId={userId}
+        />
+      )}
       <FilesSheet
         isOpen={isFilesSheetOpen}
         onClose={() => setIsFilesSheetOpen(false)}

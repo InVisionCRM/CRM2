@@ -7,7 +7,8 @@ import GoogleMap from "@/components/map/google-map" // Add GoogleMap import
 import { AddressSearch } from "@/components/map/address-search"
 // Adjust MarkerData if needed, though [lat, lng] seems compatible with google-map.tsx
 // Keep original MarkerData for now, as google-map.tsx uses it for callbacks
-import type { MarkerData } from "@/components/map/mapbox-map" // Keep this type for now
+// import type { MarkerData } from "@/components/map/mapbox-map" // Keep this type for now -- REMOVE THIS
+import type { MarkerData } from "@/components/map/google-map" // Import MarkerData from google-map
 import { PropertyVisitStatus } from "@/components/map/types"
 import { DoorOpen } from 'lucide-react'; // Icon for counter
 import { SimpleMapCardModal } from "@/components/map/SimpleMapCardModal"
@@ -56,6 +57,7 @@ export default function MapPage() {
 
   // Fetch initial data (markers and knock count)
   useEffect(() => {
+    console.log("Google Maps API Key:", process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
     fetchMarkers();
     fetchKnockCount(); // Fetch count on mount
   }, []);
