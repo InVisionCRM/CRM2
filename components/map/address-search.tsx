@@ -1,69 +1,146 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { Input } from "@/components/ui/input"
 import { X } from "lucide-react"
+import { Loader } from "@googlemaps/js-api-loader"
 
 interface AddressSearchProps {
-  onAddressSelect: (result: any) => void
+  onAddressSelect: (result: {
+    place_name: string
+    center: { lat: number; lng: number }
+  }) => void
 }
 
 export function AddressSearch({ onAddressSelect }: AddressSearchProps) {
   const [query, setQuery] = useState("")
-  const [suggestions, setSuggestions] = useState<any[]>([])
+  const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const searchBoxRef = useRef<HTMLInputElement>(null)
   const debounceTimeout = useRef<NodeJS.Timeout | undefined>(undefined)
 
+  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null)
+  const placesService = useRef<google.maps.places.PlacesService | null>(null)
+  const geocoderService = useRef<google.maps.Geocoder | null>(null)
+
   useEffect(() => {
-    if (!query) {
+    const loader = new Loader({
+      apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+      version: "weekly",
+      libraries: ["places", "geocoding"],
+    })
+
+    loader.load().then((google) => {
+      autocompleteService.current = new google.maps.places.AutocompleteService()
+      const dummyDiv = document.createElement("div")
+      placesService.current = new google.maps.places.PlacesService(dummyDiv)
+      geocoderService.current = new google.maps.Geocoder()
+      console.log("Google Places and Geocoding Services initialized for AddressSearch")
+    }).catch(e => {
+      console.error("Failed to load Google Maps API for AddressSearch:", e)
+    })
+  }, [])
+
+  const fetchSuggestions = useCallback(() => {
+    if (!query || !autocompleteService.current) {
       setSuggestions([])
       return
     }
 
-    // Clear previous timeout
+    setIsLoading(true)
+    autocompleteService.current.getPlacePredictions(
+      {
+        input: query,
+        componentRestrictions: { country: "us" },
+        types: ['address']
+      },
+      (predictions, status) => {
+        setIsLoading(false)
+        if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+          setSuggestions(predictions)
+        } else if (status !== google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+          console.error("Autocomplete prediction failed:", status)
+          setSuggestions([])
+        } else {
+          setSuggestions([])
+        }
+      }
+    )
+  }, [query])
+
+  useEffect(() => {
     if (debounceTimeout.current) {
       clearTimeout(debounceTimeout.current)
     }
-
-    // Set new timeout
-    debounceTimeout.current = setTimeout(async () => {
-      try {
-        setIsLoading(true)
-        const response = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-            query
-          )}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}&country=us&types=address`
-        )
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch suggestions")
-        }
-
-        const data = await response.json()
-        setSuggestions(data.features || [])
-      } catch (error) {
-        console.error("Error fetching suggestions:", error)
-        setSuggestions([])
-      } finally {
-        setIsLoading(false)
-      }
-    }, 300) // 300ms debounce
+    debounceTimeout.current = setTimeout(fetchSuggestions, 300)
 
     return () => {
       if (debounceTimeout.current) {
         clearTimeout(debounceTimeout.current)
       }
     }
-  }, [query])
+  }, [fetchSuggestions])
 
-  const handleSelect = (suggestion: any) => {
-    setQuery(suggestion.place_name)
+  const handleSelect = (suggestion: google.maps.places.AutocompletePrediction) => {
+    setQuery(suggestion.description)
     setSuggestions([])
-    onAddressSelect({
-      center: [suggestion.center[1], suggestion.center[0]],
-      place_name: suggestion.place_name,
-    })
+    setIsLoading(true)
+
+    if (!placesService.current || !suggestion.place_id) {
+      console.error("PlacesService not ready or place_id missing")
+      setIsLoading(false)
+      if (geocoderService.current && suggestion.description) {
+        console.log("Falling back to Geocoder for:", suggestion.description)
+        geocoderService.current.geocode({ address: suggestion.description }, (results, status) => {
+          setIsLoading(false)
+          if (status === google.maps.GeocoderStatus.OK && results?.[0]?.geometry?.location) {
+            const location = results[0].geometry.location
+            onAddressSelect({
+              place_name: suggestion.description,
+              center: { lat: location.lat(), lng: location.lng() },
+            })
+          } else {
+            console.error("Geocoder fallback failed:", status)
+          }
+        })
+      }
+      return
+    }
+
+    placesService.current.getDetails(
+      {
+        placeId: suggestion.place_id,
+        fields: ["name", "formatted_address", "geometry.location"],
+      },
+      (place, status) => {
+        setIsLoading(false)
+        if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+          onAddressSelect({
+            place_name: place.formatted_address || place.name || suggestion.description,
+            center: {
+              lat: place.geometry.location.lat(),
+              lng: place.geometry.location.lng(),
+            },
+          })
+        } else {
+          console.error("Place details request failed:", status)
+          if (geocoderService.current && suggestion.description) {
+            console.log("Falling back to Geocoder after Place Details failure for:", suggestion.description)
+            geocoderService.current.geocode({ address: suggestion.description }, (results, geoStatus) => {
+              if (geoStatus === google.maps.GeocoderStatus.OK && results?.[0]?.geometry?.location) {
+                const location = results[0].geometry.location
+                onAddressSelect({
+                  place_name: suggestion.description,
+                  center: { lat: location.lat(), lng: location.lng() },
+                })
+              } else {
+                console.error("Geocoder fallback also failed:", geoStatus)
+              }
+            })
+          }
+        }
+      }
+    )
   }
 
   const handleCloseDropdown = () => {
@@ -87,13 +164,13 @@ export function AddressSearch({ onAddressSelect }: AddressSearchProps) {
       )}
       {suggestions.length > 0 && (
         <div className="absolute z-10 w-full mt-1 bg-white/95 backdrop-blur-sm rounded-md shadow-lg border border-gray-200">
-          {suggestions.map((suggestion, index) => (
+          {suggestions.map((suggestion) => (
             <div
-              key={index}
+              key={suggestion.place_id}
               className="px-4 py-2 hover:bg-gray-100/90 cursor-pointer transition-colors duration-150 first:rounded-t-md last:border-0 border-b border-gray-100"
               onClick={() => handleSelect(suggestion)}
             >
-              {suggestion.place_name}
+              {suggestion.description}
             </div>
           ))}
           <button 

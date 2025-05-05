@@ -1,15 +1,16 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Loader2, ChevronDown, ChevronUp, Check, Calendar, X } from "lucide-react"
+import { Loader2, ChevronDown, ChevronUp, Check, Calendar, X, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
+import debounce from 'lodash.debounce'
 
 // Custom DatePicker Component
 const CustomDatePicker = ({ 
@@ -270,7 +271,9 @@ export function InsuranceForm({
   const companyDropdownRef = useRef<HTMLDivElement>(null)
   const damageTypeDropdownRef = useRef<HTMLDivElement>(null)
   const [isMobile, setIsMobile] = useState(false)
-  
+  const [isDirty, setIsDirty] = useState(false)
+  const storageKey = `draft-lead-insurance-${leadId}`
+
   // Check if we're on mobile
   useEffect(() => {
     const checkMobile = () => {
@@ -296,8 +299,68 @@ export function InsuranceForm({
     defaultValues: initialData
   })
 
-  const selectedCompany = watch("insuranceCompany")
-  const selectedDamageType = watch("damageType")
+  // --- Draft Loading ---
+  useEffect(() => {
+    if (!leadId || isReadOnly) return;
+
+    const draft = sessionStorage.getItem(storageKey);
+    if (draft) {
+      try {
+        const parsedDraft = JSON.parse(draft);
+        // Check if the loaded draft has a custom company name scenario
+        const company = INSURANCE_COMPANIES.find(c => c.name === parsedDraft.insuranceCompany);
+        if (!company || company.name === "Not Listed") {
+          setIsCustomCompany(true);
+        } else {
+          setIsCustomCompany(false);
+        }
+        reset(parsedDraft);
+        setIsDirty(true);
+        console.log("Loaded insurance draft for lead:", leadId);
+      } catch (e) {
+        console.error("Failed to parse insurance draft:", e);
+        sessionStorage.removeItem(storageKey);
+        reset(initialData); // Fallback
+        setIsDirty(false);
+        const initialCompany = INSURANCE_COMPANIES.find(c => c.name === initialData.insuranceCompany);
+        setIsCustomCompany(!initialCompany || initialCompany.name === "Not Listed");
+      }
+    } else {
+      reset(initialData);
+      setIsDirty(false);
+      const initialCompany = INSURANCE_COMPANIES.find(c => c.name === initialData.insuranceCompany);
+      setIsCustomCompany(!initialCompany || initialCompany.name === "Not Listed");
+    }
+  }, [leadId, storageKey, reset, initialData, isReadOnly]);
+
+  // --- Draft Saving ---
+  const watchedValues = watch();
+
+  const saveDraft = useCallback(
+    debounce((data: InsuranceFormValues) => {
+      if (leadId && isDirty && !isReadOnly) {
+        console.log("Saving insurance draft for lead:", leadId);
+        sessionStorage.setItem(storageKey, JSON.stringify(data));
+      }
+    }, 500),
+    [storageKey, leadId, isDirty, isReadOnly]
+  );
+
+  useEffect(() => {
+    const hasChanged = JSON.stringify(watchedValues) !== JSON.stringify(initialData);
+    if(hasChanged && !isDirty) {
+       setIsDirty(true);
+    }
+    if (isDirty) {
+      saveDraft(watchedValues);
+    }
+    return () => {
+      saveDraft.cancel();
+    };
+  }, [watchedValues, saveDraft, isDirty, initialData]);
+
+  const selectedCompany = watchedValues.insuranceCompany
+  const selectedDamageType = watchedValues.damageType
 
   // Handle click outside to close dropdowns
   useEffect(() => {
@@ -316,17 +379,6 @@ export function InsuranceForm({
     }
   }, [])
 
-  // Set initial custom company state
-  useEffect(() => {
-    if (initialData.insuranceCompany) {
-      const company = INSURANCE_COMPANIES.find(c => c.name === initialData.insuranceCompany)
-      if (!company || company.name === "Not Listed") {
-        setIsCustomCompany(true)
-        setValue("customInsuranceCompany", initialData.insuranceCompany)
-      }
-    }
-  }, [initialData, setValue])
-
   // Handle company selection
   useEffect(() => {
     if (selectedCompany) {
@@ -334,21 +386,25 @@ export function InsuranceForm({
       if (company) {
         if (company.name === "Not Listed") {
           setIsCustomCompany(true)
-          setValue("insurancePhone", "")
-          setValue("insuranceSecondaryPhone", "")
+          // Don't clear phone numbers if user might be editing them from a draft
+          // setValue("insurancePhone", "");
+          // setValue("insuranceSecondaryPhone", "");
         } else {
           setIsCustomCompany(false)
-          setValue("insurancePhone", company.phone)
-          setValue("insuranceSecondaryPhone", company.secondaryPhone || "")
+          // Only set if the current value is empty or matches the default, to avoid overwriting draft edits
+          if (!watchedValues.insurancePhone || watchedValues.insurancePhone === INSURANCE_COMPANIES.find(c => c.name === initialData.insuranceCompany)?.phone) {
+            setValue("insurancePhone", company.phone)
+          }
+          if (!watchedValues.insuranceSecondaryPhone || watchedValues.insuranceSecondaryPhone === INSURANCE_COMPANIES.find(c => c.name === initialData.insuranceCompany)?.secondaryPhone) {
+             setValue("insuranceSecondaryPhone", company.secondaryPhone || "")
+          }
         }
       }
     }
-  }, [selectedCompany, setValue])
+  }, [selectedCompany, setValue, initialData.insuranceCompany, watchedValues.insurancePhone, watchedValues.insuranceSecondaryPhone])
 
   const handleCompanySelect = (companyName: string) => {
-    setValue("insuranceCompany", companyName)
-    
-    // Immediately update phone numbers when company changes
+    setValue("insuranceCompany", companyName, { shouldDirty: true })
     const company = INSURANCE_COMPANIES.find(c => c.name === companyName)
     if (company) {
       if (company.name === "Not Listed") {
@@ -361,12 +417,11 @@ export function InsuranceForm({
         setValue("insuranceSecondaryPhone", company.secondaryPhone || "")
       }
     }
-    
     setShowCompanyDropdown(false)
   }
 
   const handleDamageTypeSelect = (damageType: string) => {
-    setValue("damageType", damageType as "HAIL" | "WIND" | "FIRE")
+    setValue("damageType", damageType as "HAIL" | "WIND" | "FIRE", { shouldDirty: true })
     setShowDamageTypeDropdown(false)
   }
 
@@ -401,6 +456,9 @@ export function InsuranceForm({
       }
 
       setSuccessMessage("Insurance information updated successfully")
+      sessionStorage.removeItem(storageKey)
+      setIsDirty(false)
+      reset(submissionData as InsuranceFormValues)
       onSuccess?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred")
@@ -408,6 +466,19 @@ export function InsuranceForm({
       setIsLoading(false)
     }
   }
+
+  // --- Discard Draft ---
+  const handleDiscard = () => {
+    if (window.confirm("Are you sure you want to discard unsaved changes?")) {
+      sessionStorage.removeItem(storageKey);
+      reset(initialData);
+      setIsDirty(false);
+      // Reset custom company state based on initialData
+      const initialCompany = INSURANCE_COMPANIES.find(c => c.name === initialData.insuranceCompany);
+      setIsCustomCompany(!initialCompany || initialCompany.name === "Not Listed");
+      console.log("Discarded insurance draft for lead:", leadId);
+    }
+  };
 
   // Custom dropdown component for damage type
   const DamageTypeDropdown = () => (
@@ -522,6 +593,15 @@ export function InsuranceForm({
           <div className="relative">
             <CompanyDropdown />
           </div>
+          {isCustomCompany && (
+            <Input
+              id="customInsuranceCompany"
+              placeholder="Enter company name"
+              {...register("customInsuranceCompany")}
+              disabled={isLoading || isReadOnly}
+              className="mt-2 bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+            />
+          )}
         </div>
 
         <div className="space-y-1 sm:space-y-2">
@@ -605,7 +685,10 @@ export function InsuranceForm({
             render={({ field }) => (
               <CustomDatePicker
                 value={field.value}
-                onChange={field.onChange}
+                onChange={(date) => {
+                  field.onChange(date);
+                  setIsDirty(true);
+                }}
                 disabled={isLoading || isReadOnly}
                 placeholder="Select date of loss"
               />
@@ -624,11 +707,11 @@ export function InsuranceForm({
       </div>
 
       {!isReadOnly && (
-        <div className="pt-2">
-          <Button 
-            type="submit" 
-            disabled={isLoading} 
-            className="w-full bg-lime-600 hover:bg-lime-700 text-white h-10 sm:h-12 text-sm sm:text-base"
+        <div className="pt-2 flex items-center gap-2">
+          <Button
+            type="submit"
+            disabled={isLoading || !isDirty}
+            className="flex-grow bg-lime-600 hover:bg-lime-700 text-white h-10 sm:h-12 text-sm sm:text-base"
           >
             {isLoading ? (
               <>
@@ -639,18 +722,30 @@ export function InsuranceForm({
               "Save Insurance Info"
             )}
           </Button>
-          
-          {error && (
-            <div className="mt-3 text-red-400 text-sm p-3 bg-red-900 bg-opacity-25 rounded">
-              {error}
-            </div>
+          {isDirty && (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDiscard}
+              disabled={isLoading}
+              className="flex-shrink-0 h-10 sm:h-12"
+              aria-label="Discard changes"
+            >
+              <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+            </Button>
           )}
-          
-          {successMessage && (
-            <div className="mt-3 text-green-400 text-sm p-3 bg-green-900 bg-opacity-25 rounded">
-              {successMessage}
-            </div>
-          )}
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-3 text-red-400 text-sm p-3 bg-red-900 bg-opacity-25 rounded">
+          {error}
+        </div>
+      )}
+      
+      {successMessage && (
+        <div className="mt-3 text-green-400 text-sm p-3 bg-green-900 bg-opacity-25 rounded">
+          {successMessage}
         </div>
       )}
     </form>

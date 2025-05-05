@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { LeadStatus } from '@prisma/client'
 
 // Schema for validation
 const contactUpdateSchema = z.object({
@@ -64,7 +65,7 @@ export async function PATCH(
           email: data.email,
           phone: data.phone,
           address: data.address,
-          status: 'NEW', // Default status for new leads
+          status: LeadStatus.follow_ups,
           assignedToId: session.user.id, // Assign to the current user
         }
       })

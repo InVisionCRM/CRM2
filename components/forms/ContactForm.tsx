@@ -1,13 +1,14 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Loader2, Mail } from "lucide-react"
+import { Loader2, Mail, Trash2 } from "lucide-react"
+import debounce from 'lodash.debounce'; // Import debounce
 
 // Form schema based on Prisma Lead model fields
 const contactFormSchema = z.object({
@@ -38,7 +39,9 @@ export function ContactForm({
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [emailPrefix, setEmailPrefix] = useState<string>("")
-  
+  const [isDirty, setIsDirty] = useState(false); // Track if form is dirty
+  const storageKey = `draft-lead-contact-${leadId}`;
+
   const {
     register,
     handleSubmit,
@@ -51,6 +54,64 @@ export function ContactForm({
     resolver: zodResolver(contactFormSchema),
     defaultValues: initialData
   })
+
+  // --- Draft Loading ---
+  useEffect(() => {
+    if (!leadId || isReadOnly) return; // Don't load draft if no leadId or read-only
+
+    const draft = sessionStorage.getItem(storageKey);
+    if (draft) {
+      try {
+        const parsedDraft = JSON.parse(draft);
+        reset(parsedDraft); // Load draft into the form
+        setIsDirty(true); // Mark as dirty if a draft was loaded
+        console.log("Loaded contact draft for lead:", leadId);
+      } catch (e) {
+        console.error("Failed to parse contact draft:", e);
+        sessionStorage.removeItem(storageKey); // Clear invalid draft
+        reset(initialData); // Fallback to initial data
+        setIsDirty(false);
+      }
+    } else {
+      reset(initialData); // No draft, ensure form has initial data
+      setIsDirty(false);
+    }
+  }, [leadId, storageKey, reset, initialData, isReadOnly]); // Rerun if leadId or initialData changes
+
+
+  // --- Draft Saving ---
+  const watchedValues = watch(); // Watch all fields
+
+  const saveDraft = useCallback(
+    debounce((data: ContactFormValues) => {
+      if (leadId && isDirty && !isReadOnly) { // Only save if dirty and not read-only
+        console.log("Saving contact draft for lead:", leadId);
+        sessionStorage.setItem(storageKey, JSON.stringify(data));
+      }
+    }, 500), // Debounce time in ms
+    [storageKey, leadId, isDirty, isReadOnly] // Dependencies for the debounced function
+  );
+
+  useEffect(() => {
+    // Trigger saveDraft whenever watchedValues change (debounced)
+    // Check if the watched values are different from initial data to set dirty flag
+    const hasChanged = JSON.stringify(watchedValues) !== JSON.stringify(initialData);
+    // We only set dirty to true, never false here based on comparison,
+    // as it might override the dirty state set by loading a draft.
+    if(hasChanged && !isDirty) {
+       setIsDirty(true);
+    }
+
+    if (isDirty) { // Only save if the form is considered dirty
+      saveDraft(watchedValues);
+    }
+
+    // Cleanup function for debounce
+    return () => {
+      saveDraft.cancel();
+    };
+  }, [watchedValues, saveDraft, isDirty, initialData]);
+
 
   // Watch the email field to extract the prefix
   const emailValue = watch("email") || "";
@@ -106,6 +167,9 @@ export function ContactForm({
 
       const result = await response.json();
       setSuccessMessage(result.message || "Contact information updated successfully");
+      sessionStorage.removeItem(storageKey); // Clear draft on successful save
+      setIsDirty(false); // Reset dirty state
+      reset(data); // Update form state to reflect saved data
       onSuccess?.();
     } catch (err) {
       console.error("Error saving contact:", err);
@@ -114,6 +178,16 @@ export function ContactForm({
       setIsLoading(false);
     }
   }
+
+  // --- Discard Draft ---
+  const handleDiscard = () => {
+    if (window.confirm("Are you sure you want to discard unsaved changes?")) {
+      sessionStorage.removeItem(storageKey); // Clear draft
+      reset(initialData); // Reset form to original data
+      setIsDirty(false); // Reset dirty state
+      console.log("Discarded contact draft for lead:", leadId);
+    }
+  };
 
   const emailDomainButtonStyle = {
     backgroundColor: "#000000",
@@ -255,20 +329,34 @@ export function ContactForm({
       )}
 
       {!isReadOnly && (
-        <Button
-          type="submit"
-          disabled={isLoading}
-          className="w-full bg-lime-600 hover:bg-lime-700 text-white"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save Contact Info"
+        <div className="flex items-center gap-2">
+          <Button
+            type="submit"
+            disabled={isLoading || !isDirty} // Disable if not dirty
+            className="flex-grow bg-lime-600 hover:bg-lime-700 text-white"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Contact Info"
+            )}
+          </Button>
+          {isDirty && ( // Show discard button only if dirty
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDiscard}
+              disabled={isLoading}
+              className="flex-shrink-0"
+              aria-label="Discard changes"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           )}
-        </Button>
+        </div>
       )}
     </form>
   )

@@ -1,35 +1,34 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Loader2, ChevronDown, ChevronUp, Check, Calendar as CalendarIcon, X, Clock, CalendarDays } from "lucide-react"
+import { Loader2, ChevronDown, ChevronUp, Check, Calendar as CalendarIcon, X, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 import Link from "next/link"
 import { createPortal } from "react-dom"
-import { Calendar } from "@/components/appointments/calendar" 
+import { Calendar } from "@/components/appointments/calendar"
 import type { CalendarAppointment } from "@/types/appointments"
 import { AppointmentPurposeEnum } from '@/types/appointments'
+import debounce from 'lodash.debounce'
 
 // Mock data for appointments (can be replaced with real data fetching)
 const mockAppointments: CalendarAppointment[] = [
   {
     id: "1",
-    title: "Initial Roof Assessment",
-    date: new Date(2023, 6, 25, 10, 30),
-    startTime: "10:30 AM",
-    endTime: "11:30 AM",
-    purpose: AppointmentPurposeEnum.INITIAL_CONSULTATION,
-    status: "scheduled",
-    leadId: "1",
-    leadName: "John Smith",
-    address: "123 Main St, Anytown",
-    notes: "Check for hail damage on north side of roof",
+    title: "Initial Consultation with Lead 123",
+    startTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now
+    endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString(), // 1 hour duration
+    purpose: AppointmentPurposeEnum.OTHER, // Changed from INITIAL_CONSULTATION
+    address: "123 Main St, Anytown, USA",
+    leadId: "lead123",
+    status: "SCHEDULED", // Example status, use appropriate enum/type if available
+    leadName: "Lead 123 Name" // Example name
   },
   {
     id: "2",
@@ -129,7 +128,7 @@ const CustomDatePicker = ({
         <span className={selectedDate ? "text-white" : "text-white text-opacity-50"}>
           {selectedDate ? format(selectedDate, 'MM/dd/yyyy') : placeholder}
         </span>
-        <CalendarIcon size={16} className="text-white opacity-70" />
+        <CalendarIcon size={28} className="text-white opacity-70" />
       </div>
 
       {isOpen && (
@@ -319,7 +318,7 @@ const CustomTimePicker = ({
         <span className={value ? "text-white" : "text-white text-opacity-50"}>
           {value ? formatTimeForDisplay(value) : placeholder}
         </span>
-        <Clock size={28} className="text-white opacity-70" />
+        <CalendarIcon size={28} className="text-white opacity-70" />
       </div>
 
       {isOpen && (
@@ -483,7 +482,7 @@ const SuccessDialog = ({
             rel="noopener noreferrer"
             className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white h-[3.5rem] rounded-md text-lg transition-colors w-full"
           >
-            <CalendarIcon className="mr-2 h-5 w-5" />
+            <CalendarIcon size={20} className="mr-2 h-5 w-5" />
             Add to Google Calendar
           </a>
           
@@ -644,7 +643,7 @@ const FullscreenCalendarModal = ({
       >
         <div className="bg-slate-900 p-4 flex justify-between items-center border-b border-lime-800">
           <h2 className="text-white text-xl font-bold flex items-center">
-            <CalendarDays className="mr-2 h-6 w-6 text-lime-500" />
+            <CalendarIcon className="mr-2 h-6 w-6 text-lime-500" />
             <span>Appointments Calendar</span>
           </h2>
           <Button 
@@ -701,6 +700,8 @@ export function AdjusterForm({
   // Get appointments for the current month
   const [appointments, setAppointments] = useState<CalendarAppointment[]>(mockAppointments)
   const [isMobile, setIsMobile] = useState(false)
+  const [isDirty, setIsDirty] = useState(false)
+  const storageKey = `draft-lead-adjuster-${leadId}`
   
   // Check if we're on mobile
   useEffect(() => {
@@ -727,6 +728,55 @@ export function AdjusterForm({
     resolver: zodResolver(adjusterFormSchema),
     defaultValues: initialData
   })
+
+  // --- Draft Loading ---
+  useEffect(() => {
+    if (!leadId || isReadOnly) return;
+
+    const draft = sessionStorage.getItem(storageKey);
+    if (draft) {
+      try {
+        const parsedDraft = JSON.parse(draft);
+        reset(parsedDraft);
+        setIsDirty(true);
+        console.log("Loaded adjuster draft for lead:", leadId);
+      } catch (e) {
+        console.error("Failed to parse adjuster draft:", e);
+        sessionStorage.removeItem(storageKey);
+        reset(initialData); // Fallback
+        setIsDirty(false);
+      }
+    } else {
+      reset(initialData);
+      setIsDirty(false);
+    }
+  }, [leadId, storageKey, reset, initialData, isReadOnly]);
+
+  // --- Draft Saving ---
+  const watchedValues = watch();
+
+  const saveDraft = useCallback(
+    debounce((data: AdjusterFormValues) => {
+      if (leadId && isDirty && !isReadOnly) {
+        console.log("Saving adjuster draft for lead:", leadId);
+        sessionStorage.setItem(storageKey, JSON.stringify(data));
+      }
+    }, 500),
+    [storageKey, leadId, isDirty, isReadOnly]
+  );
+
+  useEffect(() => {
+    const hasChanged = JSON.stringify(watchedValues) !== JSON.stringify(initialData);
+     if(hasChanged && !isDirty) {
+       setIsDirty(true);
+    }
+    if (isDirty) {
+      saveDraft(watchedValues);
+    }
+    return () => {
+      saveDraft.cancel();
+    };
+  }, [watchedValues, saveDraft, isDirty, initialData]);
 
   const saveAdjusterInfo = async () => {
     setIsLoading(true)
@@ -757,6 +807,9 @@ export function AdjusterForm({
       }
 
       setSuccessMessage("Adjuster information updated successfully")
+      sessionStorage.removeItem(storageKey); // Clear draft
+      setIsDirty(false); // Reset dirty state
+      reset(adjusterData); // Reset form with saved data
       onSuccess?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred")
@@ -878,6 +931,16 @@ export function AdjusterForm({
     console.log("Switch to day:", date, "time:", time);
   };
 
+  // --- Discard Draft ---
+  const handleDiscard = () => {
+    if (window.confirm("Are you sure you want to discard unsaved changes?")) {
+      sessionStorage.removeItem(storageKey);
+      reset(initialData);
+      setIsDirty(false);
+      console.log("Discarded adjuster draft for lead:", leadId);
+    }
+  };
+
   return (
     <div className="space-y-3 sm:space-y-4 w-full">
       <div className="space-y-1 sm:space-y-2">
@@ -936,7 +999,7 @@ export function AdjusterForm({
             variant="ghost"
             className="text-white text-opacity-80 hover:text-opacity-100 px-2 py-1 h-auto text-xs sm:text-sm"
           >
-            <CalendarDays className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+            <CalendarIcon size={20} className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
             View Calendar
           </Button>
         </div>
