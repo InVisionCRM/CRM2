@@ -23,8 +23,8 @@ export const DynamicGeneralContract = dynamic(
   { ssr: false }
 )
 
-// GoogleMap is exported as default
-export const DynamicGoogleMap = dynamic(
-  () => import('@/components/map/google-map'),
-  { ssr: false }
+// Dynamically import the MapboxMap component
+export const DynamicMapboxMap = dynamic(
+  () => import('@/components/map/mapbox-map'), // Use the Mapbox component path
+  { ssr: false } // Keep client-side rendering for map components
 ) 

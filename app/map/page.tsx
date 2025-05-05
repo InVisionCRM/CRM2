@@ -2,18 +2,18 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { useToast } from "@/components/ui/use-toast"
-// import MapboxMap from "@/components/map/mapbox-map" // Remove Mapbox import
-import GoogleMap from "@/components/map/google-map" // Add GoogleMap import
-import { AddressSearch } from "@/components/map/address-search"
-// Adjust MarkerData if needed, though [lat, lng] seems compatible with google-map.tsx
-// Keep original MarkerData for now, as google-map.tsx uses it for callbacks
-// import type { MarkerData } from "@/components/map/mapbox-map" // Keep this type for now -- REMOVE THIS
-import type { MarkerData } from "@/components/map/google-map" // Import MarkerData from google-map
+// Import MapboxMap and its types
+import MapboxMap, { MapboxMarkerData, MapboxMapRef } from "@/components/map/mapbox-map"
+// Remove GoogleMap import
+// import GoogleMap from "@/components/map/google-map" 
+// Remove AddressSearch import (for now)
+// import { AddressSearch } from "@/components/map/address-search"
+// Remove Google-specific MarkerData import
+// import type { MarkerData } from "@/components/map/google-map" 
 import { PropertyVisitStatus } from "@/components/map/types"
 import { DoorOpen } from 'lucide-react'; // Icon for counter
 import { SimpleMapCardModal } from "@/components/map/SimpleMapCardModal"
-// Import function to get session client-side if needed, or assume session info is available
-// import { useSession } from "next-auth/react" 
+import { MapProvider } from "@/components/map/map-context" 
 
 // Helper function to validate status from API
 function isValidStatus(status: any): status is PropertyVisitStatus | "New" | "Search" {
@@ -29,41 +29,46 @@ function isValidStatus(status: any): status is PropertyVisitStatus | "New" | "Se
   return typeof status === 'string' && validStatuses.includes(status as any);
 }
 
-// Define a type for the data needed by the modal
+// Define a type for the data needed by the modal (using Mapbox position format)
 interface ModalData {
-  address: string
-  position: [number, number] // [lat, lng]
+  address?: string // Address might be optional initially
+  position: [number, number] // [lng, lat]
   markerId?: string
   currentStatus?: PropertyVisitStatus | "New" | "Search"
-  streetViewUrl?: string
   leadId?: string
+  // Removed streetViewUrl as it was Google-specific
 }
 
 export default function MapPage() {
-  const [markers, setMarkers] = useState<MarkerData[]>([])
+  console.log("--- Rendering MapPage ---"); // Log page render
+
+  // Use MapboxMarkerData for state
+  const [markers, setMarkers] = useState<MapboxMarkerData[]>([]) 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedModalData, setSelectedModalData] = useState<ModalData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [knockCount, setKnockCount] = useState<number | null>(null)
-  const mapRef = useRef<any>(null) // Keep ref as any for now
+  // Use MapboxMapRef type for the ref
+  const mapRef = useRef<MapboxMapRef>(null) 
   const { toast } = useToast()
-  // const { data: session } = useSession(); // Example if using next-auth client hook
 
-  // Search result structure from Google Places
-  const searchResultRef = useRef<{
-    position: [number, number] // [lat, lng]
-    address: string
-  } | null>(null)
+  // Log when markers state changes
+  useEffect(() => {
+    console.log("MapPage: Markers state updated", markers);
+  }, [markers]);
 
   // Fetch initial data (markers and knock count)
+  /* <<< COMMENT OUT START
   useEffect(() => {
-    console.log("Google Maps API Key:", process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+    console.log("MapPage: Initial fetch effect running."); // Log initial fetch
     fetchMarkers();
     fetchKnockCount(); // Fetch count on mount
   }, []);
+  COMMENT OUT END >>> */
 
   // Function to fetch markers from the API
   const fetchMarkers = async () => {
+    console.log("MapPage: fetchMarkers called"); // Log fetch call
     try {
       setIsLoading(true)
       console.log("Fetching markers from API...")
@@ -80,21 +85,22 @@ export default function MapPage() {
       console.log("Markers API response:", data)
 
       if (data.markers) {
-        const formattedMarkers: MarkerData[] = data.markers.map((m: any) => {
-           // Validate the status from the API, default to 'New' if invalid or missing
-          const validatedStatus = isValidStatus(m.status) ? m.status : "New";
+        // Map API response to MapboxMarkerData format
+        const formattedMarkers: MapboxMarkerData[] = data.markers.map((m: any) => {
+           const validatedStatus = isValidStatus(m.status) ? m.status : "New";
+           return {
+               id: m.id,
+               // IMPORTANT: Map API lat, lng to Mapbox lng, lat
+               position: [m.longitude, m.latitude], 
+               address: m.address,
+               status: validatedStatus,
+               // visits: m.visits || [], // Keep visits if needed by MapboxMarkerData
+               leadId: m.leadId,
+           }
+        }).filter((m: MapboxMarkerData) => m.position[0] != null && m.position[1] != null); // Filter out markers with invalid coordinates
 
-          return {
-              id: m.id,
-              position: [m.latitude, m.longitude], // API provides lat, lng
-              address: m.address,
-              status: validatedStatus,
-              visits: m.visits || [],
-              leadId: m.leadId,
-          }
-        })
-
-        console.log("Formatted markers with correct position mapping:", formattedMarkers)
+        console.log("Formatted markers for Mapbox:", formattedMarkers)
+        console.log("MapPage: fetchMarkers finished, setting markers"); // Log before setting state
         setMarkers(formattedMarkers)
       } else {
         console.warn("No markers found in API response")
@@ -114,6 +120,7 @@ export default function MapPage() {
 
   // Function to fetch knock count
   const fetchKnockCount = async () => {
+    console.log("MapPage: fetchKnockCount called"); // Log fetch call
     try {
         const response = await fetch("/api/users/knock-stats");
         if (!response.ok) {
@@ -135,97 +142,65 @@ export default function MapPage() {
     }
   };
 
-  // handleMarkerClick - Google Map component passes the original MarkerData back
-  // Street view URL uses position[0] (lat), position[1] (lng) correctly
-  const handleMarkerClick = useCallback((marker: MarkerData) => {
-    console.log("Marker clicked:", marker)
-    // Ensure the Google Maps API key is used here
-    const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${marker.position[0]},${marker.position[1]}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&return_error_codes=true`
-
+  // handleMarkerClick - receives MapboxMarkerData
+  const handleMarkerClick = useCallback((marker: MapboxMarkerData) => {
+    console.log("Marker clicked (Mapbox):", marker)
+    // Removed Google Street View logic
+    
     setSelectedModalData({
       address: marker.address,
-      position: marker.position, // [lat, lng]
+      position: marker.position, // [lng, lat]
       markerId: marker.id,
-      currentStatus: marker.status,
-      streetViewUrl: streetViewUrl,
+      currentStatus: marker.status === "New" || marker.status === "Search" ? undefined : marker.status,
       leadId: marker.leadId
     })
     setIsModalOpen(true)
-  }, [])
+  }, []) // Empty dependency array: assumes it doesn't depend on other state/props
 
-  // handleMarkerAdd - Google Map component passes [lat, lng] and address
-  const handleMarkerAdd = useCallback((position: [number, number], address: string) => {
-    console.log("Adding marker at position:", position, "address:", address) // position is [lat, lng]
+  // handleMarkerAdd - receives [lng, lat] from Mapbox map click
+  const handleMarkerAdd = useCallback((position: [number, number], address?: string) => {
+    console.log("Adding marker at position (Mapbox):", position, "address:", address)
 
     const tempId = `temp-${Date.now()}`
-    const newMarker: MarkerData = {
+    const newMarker: MapboxMarkerData = {
       id: tempId,
-      position: position, // [lat, lng]
-      address: address,
+      position: position, // [lng, lat]
+      address: address || "Unknown Address", // Use placeholder if address not yet geocoded
       status: "New",
-      leadId: tempId,
+      leadId: tempId, // Link temporary marker to potential lead creation
     }
 
     setMarkers((prevMarkers) => [...prevMarkers, newMarker])
 
-    // Use Google Maps API key for Street View
-    const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${position[0]},${position[1]}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&return_error_codes=true`
+    // Removed Google Street View logic
 
     setSelectedModalData({
-      address: address,
-      position: position, // [lat, lng]
+      address: newMarker.address,
+      position: position, // [lng, lat]
       markerId: tempId,
-      currentStatus: undefined,
-      streetViewUrl: streetViewUrl,
-      leadId: tempId,
+      currentStatus: undefined, // New marker starts with no set status in modal
+      leadId: tempId, 
     })
     setIsModalOpen(true)
-  }, [])
+  }, []) // Empty dependency array: assumes it doesn't depend on other state/props
 
-  // handleAddressSelect - updated AddressSearch passes { place_name: string, center: { lat, lng } }
-  const handleAddressSelect = useCallback((result: {
-    place_name: string
-    center: { lat: number; lng: number }
-  }) => {
-    if (result && result.center) {
-      console.log("Address selected (Google):", result)
+  // handleAddressSelect - Commented out as AddressSearch is removed
+  // const handleAddressSelect = useCallback((result: { /* Mapbox geocoding result type */ }) => {
+  //   console.log("Address selected (Mapbox - TODO):", result)
+  //   // TODO: Implement using Mapbox Geocoding API
+  //   // 1. Get coordinates [lng, lat] from result
+  //   // 2. Create temporary search marker (MapboxMarkerData)
+  //   // 3. Update markers state
+  //   // 4. Call mapRef.current.flyTo(position)
+  // }, [])
 
-      // Extract lat/lng and format as [lat, lng] array
-      const position: [number, number] = [result.center.lat, result.center.lng]
-      const address = result.place_name
-
-      // Store in ref
-      searchResultRef.current = { position, address }
-
-      // Create temporary search marker
-      const searchMarkerId = `search-${Date.now()}`
-      const newSearchMarker: MarkerData = {
-        id: searchMarkerId,
-        position, // [lat, lng]
-        address,
-        status: "Search",
-        leadId: searchMarkerId,
-      }
-
-      // Update markers state
-      setMarkers((prevMarkers) => {
-        const filteredMarkers = prevMarkers.filter((m) => !m.id.startsWith("search-"))
-        return [...filteredMarkers, newSearchMarker]
-      })
-
-      // Fly to location using GoogleMap's flyTo method
-      if (mapRef.current && mapRef.current.flyTo) {
-        mapRef.current.flyTo(position, 18) // Pass [lat, lng]
-      }
-    }
-  }, [])
-
-  // handleStatusChange - logic remains mostly the same
-  // API calls use position[0] (lat), position[1] (lng)
+  // handleStatusChange - uses [lng, lat] but sends lat/lng separately to API
   const handleStatusChange = useCallback(async (newStatus: PropertyVisitStatus) => {
     if (!selectedModalData) return
 
-    const { markerId, address, position } = selectedModalData; // position is [lat, lng]
+    // Destructure position as [lng, lat]
+    const { markerId, address, position } = selectedModalData;
+    const [longitude, latitude] = position; // Extract lng and lat
 
     console.log(`Status change initiated for ${address} to: ${newStatus}`);
 
@@ -236,11 +211,12 @@ export default function MapPage() {
     setMarkers(prevMarkers => prevMarkers.map(m =>
       m.id === optimisticUiId ? { ...m, status: newStatus } : m
     ));
-    window.dispatchEvent(new CustomEvent('markerStatusUpdate', {
-      detail: { markerId: optimisticUiId, status: newStatus }
-    }));
+    // Optional: Dispatch custom event if needed elsewhere
+    // window.dispatchEvent(new CustomEvent('markerStatusUpdate', {
+    //   detail: { markerId: optimisticUiId, status: newStatus }
+    // }));
 
-    // 2. Persist marker change
+    // 2. Persist marker change (API expects lat, lng)
     let currentMarkerId = markerId;
     let markerError: string | undefined = undefined;
     try {
@@ -250,9 +226,9 @@ export default function MapPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            lat: position[0], // Send lat
-            lng: position[1], // Send lng
-            address: address,
+            lat: latitude, // Send latitude
+            lng: longitude, // Send longitude
+            address: address || "Unknown Address",
             status: newStatus,
           }),
         });
@@ -287,14 +263,19 @@ export default function MapPage() {
         console.log(`Marker ${markerId} status updated.`);
       } else {
         console.error("Cannot update status, markerId is missing.");
-        return;
+        // Optional: Show error toast if needed
+        return; // Exit if no markerId
       }
     } catch (error) {
       console.error("Error saving marker:", error);
       markerError = error instanceof Error ? error.message : "Failed to save marker changes.";
+      // Revert optimistic UI update on marker save error
+      setMarkers(prevMarkers => prevMarkers.map(m => 
+        m.id === optimisticUiId ? { ...m, status: selectedModalData.currentStatus || 'New' } : m
+      ));
     }
 
-    // 3. Record the visit
+    // 3. Record the visit (API expects lat, lng)
     let visitError: string | undefined = undefined;
     if (!markerError && currentMarkerId) {
         try {
@@ -303,15 +284,16 @@ export default function MapPage() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    address: address,
-                    lat: position[0], // Send lat
-                    lng: position[1], // Send lng
+                    address: address || "Unknown Address",
+                    lat: latitude, // Send latitude
+                    lng: longitude, // Send longitude
                     status: newStatus,
                 }),
             });
              if (!visitResponse.ok) throw new Error("Failed to record visit");
             console.log("Visit recorded successfully.");
-            setKnockCount(prev => (prev !== null ? prev + 1 : 1));
+            // Fetch knock count again after successful visit recording
+            fetchKnockCount(); 
         } catch (error) {
             console.error("Error recording visit:", error);
             visitError = error instanceof Error ? error.message : "Failed to record visit activity.";
@@ -328,63 +310,68 @@ export default function MapPage() {
             ? `Status set to ${newStatus}. Error recording visit: ${visitError}`
             : `Status set to ${newStatus} and visit recorded.`
       });
-      setIsModalOpen(false);
-      setSelectedModalData(null);
     }
+    // Close modal regardless of visit recording success/failure if marker was saved
+    setIsModalOpen(false);
+    setSelectedModalData(null);
 
-  }, [selectedModalData, toast, setIsModalOpen, setSelectedModalData]);
+  }, [selectedModalData, toast, setIsModalOpen, setSelectedModalData, fetchKnockCount]);
+
+  console.log("MapPage: Passing markers to MapboxMap:", markers); // Log markers prop
 
   return (
-    <div className="fullscreen-map-container relative">
-      {/* Search bar positioned at the top center of the map */}
-      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 w-full max-w-md px-4">
-        {/* AddressSearch now uses Google Places */}
-        <AddressSearch onAddressSelect={handleAddressSelect} />
-      </div>
+    <MapProvider> 
+      <div className="fullscreen-map-container relative" style={{ height: "100vh", width: "100%" }}>
+        {/* Search bar - Commented out for now */}
+        {/* <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 w-full max-w-md px-4"> */}
+          {/* TODO: Replace with Mapbox Geocoder component */}
+          {/* <AddressSearch onAddressSelect={handleAddressSelect} /> */}
+        {/* </div> */}
 
-      {/* Knock Counter Display */}
-      {knockCount !== null && (
+        {/* Knock Counter Display (remains the same) */}
+        {knockCount !== null && (
           <div className="absolute top-4 right-4 z-10 bg-base-100/80 backdrop-blur-sm shadow-md rounded-lg p-2 flex items-center space-x-2 border border-base-300/50">
-              <DoorOpen className="h-5 w-5 text-primary" />
-              <span className="font-semibold text-base-content">
-                  {knockCount}
-              </span>
-              <span className="text-xs text-base-content/70">Knocks (12h)</span>
+            <DoorOpen className="h-5 w-5 text-primary" />
+            <span className="font-semibold text-base-content">
+              {knockCount}
+            </span>
+            <span className="text-xs text-base-content/70">Knocks (12h)</span>
           </div>
-      )}
+        )}
 
-      {/* Replace MapboxMap with GoogleMap */}
-      <GoogleMap
-        key="google-map-instance" // Changed key just in case
-        ref={mapRef}
-        markers={markers}
-        onMarkerClick={handleMarkerClick}
-        onMarkerAdd={handleMarkerAdd}
-        searchResult={searchResultRef.current}
-        apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""} // Use Google API key
-      />
-
-      {isModalOpen && selectedModalData && (
-        <SimpleMapCardModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false)
-            setSelectedModalData(null)
-          }}
-          address={selectedModalData.address}
-          streetViewUrl={selectedModalData.streetViewUrl} // URL now uses Google key
-          currentStatus={selectedModalData.currentStatus === "New" || selectedModalData.currentStatus === "Search" ? undefined : selectedModalData.currentStatus}
-          availableStatuses={[
-            "No Answer",
-            "Not Interested",
-            "Follow up",
-            "Inspected",
-            "In Contract",
-          ]}
-          onStatusChange={handleStatusChange}
-          leadId={selectedModalData.leadId}
+        {/* Render MapboxMap */}
+        <MapboxMap
+          key="mapbox-map-instance" 
+          ref={mapRef}
+          markers={markers} // Pass MapboxMarkerData[]
+          onMarkerClick={handleMarkerClick}
+          onMarkerAdd={handleMarkerAdd}
+          // Removed searchResult prop
+          // Removed apiKey prop
         />
-      )}
-    </div>
+
+        {isModalOpen && selectedModalData && (
+          <SimpleMapCardModal
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false)
+              setSelectedModalData(null)
+            }}
+            address={selectedModalData.address || "Loading address..."}
+            // Removed streetViewUrl 
+            currentStatus={selectedModalData.currentStatus === "New" || selectedModalData.currentStatus === "Search" ? undefined : selectedModalData.currentStatus}
+            availableStatuses={[
+              "No Answer",
+              "Not Interested",
+              "Follow up",
+              "Inspected",
+              "In Contract",
+            ]}
+            onStatusChange={handleStatusChange}
+            leadId={selectedModalData.leadId}
+          />
+        )}
+      </div>
+    </MapProvider>
   )
 }

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { Input } from "@/components/ui/input"
 import { X } from "lucide-react"
-import { Loader } from "@googlemaps/js-api-loader"
+import { loadGoogleMapsApi, isGoogleMapsLoaded } from "@/lib/google-maps-loader"
 
 interface AddressSearchProps {
   onAddressSelect: (result: {
@@ -24,21 +24,36 @@ export function AddressSearch({ onAddressSelect }: AddressSearchProps) {
   const geocoderService = useRef<google.maps.Geocoder | null>(null)
 
   useEffect(() => {
-    const loader = new Loader({
-      apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
-      version: "weekly",
-      libraries: ["places", "geocoding"],
-    })
-
-    loader.load().then((google) => {
-      autocompleteService.current = new google.maps.places.AutocompleteService()
-      const dummyDiv = document.createElement("div")
-      placesService.current = new google.maps.places.PlacesService(dummyDiv)
-      geocoderService.current = new google.maps.Geocoder()
-      console.log("Google Places and Geocoding Services initialized for AddressSearch")
-    }).catch(e => {
-      console.error("Failed to load Google Maps API for AddressSearch:", e)
-    })
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+    
+    // Check if Google Maps API is already loaded (may have been loaded by GoogleMap component)
+    if (isGoogleMapsLoaded() && window.google?.maps?.places) {
+      console.log("Google Maps already loaded, initializing services for AddressSearch");
+      initializeServices();
+      return;
+    }
+    
+    // Otherwise load it
+    loadGoogleMapsApi(apiKey)
+      .then(() => {
+        console.log("Google Maps loaded for AddressSearch");
+        initializeServices();
+      })
+      .catch(e => {
+        console.error("Failed to load Google Maps API for AddressSearch:", e);
+      });
+      
+    function initializeServices() {
+      if (window.google?.maps?.places) {
+        autocompleteService.current = new google.maps.places.AutocompleteService();
+        const dummyDiv = document.createElement("div");
+        placesService.current = new google.maps.places.PlacesService(dummyDiv);
+        geocoderService.current = new google.maps.Geocoder();
+        console.log("Google Places and Geocoding Services initialized for AddressSearch");
+      } else {
+        console.error("Google Maps places library not available");
+      }
+    }
   }, [])
 
   const fetchSuggestions = useCallback(() => {

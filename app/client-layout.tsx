@@ -15,19 +15,15 @@ export default function ClientLayout({
 
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-      <MessageProvider>
-        <div className="flex h-full w-full">
-          {/* Sidebar only shown on non-map pages */}
-          {!isMapPage && <AppSidebar />}
-          
-          {/* Main content area */}
-          <div className="flex flex-col flex-1 w-full h-full">
-            <main className="flex-1 w-full overflow-auto bg-gray-50 dark:bg-gray-900">{children}</main>
-          </div>
+      <div className="flex h-full w-full">
+        {/* Sidebar only shown on non-map pages */}
+        {!isMapPage && <AppSidebar />}
+        
+        {/* Main content area */}
+        <div className="flex flex-col flex-1 w-full h-full">
+          <main className="flex-1 w-full overflow-auto bg-gray-50 dark:bg-gray-900">{children}</main>
         </div>
-
-        <MessageWidget />
-      </MessageProvider>
+      </div>
     </ThemeProvider>
   )
 }

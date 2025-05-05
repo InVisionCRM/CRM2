@@ -13,7 +13,6 @@ import { Label } from "@/components/ui/label"
 import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
-import { SparklesCore } from "@/components/ui/sparkles"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -67,54 +66,8 @@ export default function LoginPage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.8, ease: "easeOut" }}
-      className="min-h-screen w-full bg-black flex flex-col items-center justify-center overflow-hidden p-4 relative"
+      className="min-h-screen w-full bg-background flex flex-col items-center justify-center overflow-hidden p-4 relative"
     >
-        <div className="absolute inset-0 w-full h-full">
-            <SparklesCore
-                id="login-sparkles"
-                background="transparent"
-                minSize={0.6}
-                maxSize={1.4}
-                particleDensity={1000}
-                className="w-full h-full"
-                particleColor="#84cc16"
-                options={{
-                  particles: {
-                    move: {
-                      enable: true,
-                      speed: 0.5,
-                      direction: "none",
-                      random: false,
-                      straight: false,
-                      outModes: {
-                        default: "out",
-                      },
-                      attract: {
-                        enable: false,
-                        rotateX: 600,
-                        rotateY: 1200,
-                      },
-                    },
-                    shape: {
-                      type: "circle",
-                    },
-                    size: {
-                      value: { min: 1, max: 3 },
-                    },
-                    opacity: {
-                      value: { min: 0.3, max: 0.8 },
-                    },
-                  },
-                  interactivity: {
-                    events: {
-                      onClick: { enable: false },
-                      onHover: { enable: false },
-                    },
-                  },
-                }}
-            />
-        </div>
-
         {!isLoginVisible && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}

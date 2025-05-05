@@ -26,7 +26,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarPicker } from "@/components/ui/calendar"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
-import { AppointmentPurpose, AppointmentPurposeEnum } from '@/types/appointments'
+import { AppointmentPurposeEnum } from '@/types/appointments'
 import type { CalendarAppointment } from "@/types/appointments"
 
 type CalendarView = "month" | "week" | "day"
@@ -137,17 +137,18 @@ export function Calendar({ appointments, onDateClick, onAppointmentClick, onSwit
   const getAppointmentColor = (purpose?: string) => {
     if (!purpose) return "bg-gray-500"
 
-    // Vibrant neon colors for each purpose
-    const purposeColors: Record<AppointmentPurpose, string> = {
-      [AppointmentPurposeEnum.INITIAL_CONSULTATION]: "bg-green-500 dark:bg-green-400",
-      [AppointmentPurposeEnum.ESTIMATE]: "bg-orange-500 dark:bg-orange-400",
-      [AppointmentPurposeEnum.FOLLOW_UP]: "bg-amber-500 dark:bg-amber-400",
+    // Use AppointmentPurposeEnum values
+    // Note: Added FILE_CLAIM and ADJUSTER, removed non-existent ones
+    const purposeColors: Record<string, string> = { // Changed type to Record<string, string>
       [AppointmentPurposeEnum.INSPECTION]: "bg-blue-500 dark:bg-blue-400",
-      [AppointmentPurposeEnum.CONTRACT_SIGNING]: "bg-purple-500 dark:bg-purple-400",
+      [AppointmentPurposeEnum.FILE_CLAIM]: "bg-cyan-500 dark:bg-cyan-400", // Added FILE_CLAIM color
+      [AppointmentPurposeEnum.FOLLOW_UP]: "bg-amber-500 dark:bg-amber-400",
+      [AppointmentPurposeEnum.ADJUSTER]: "bg-indigo-500 dark:bg-indigo-400", // Added ADJUSTER color
+      [AppointmentPurposeEnum.BUILD_DAY]: "bg-rose-500 dark:bg-rose-400", // Added BUILD_DAY color (example)
       [AppointmentPurposeEnum.OTHER]: "bg-gray-500 dark:bg-gray-400"
     }
 
-    return purposeColors[purpose as AppointmentPurpose] || "bg-purple-500 dark:bg-purple-400"
+    return purposeColors[purpose] || "bg-purple-500 dark:bg-purple-400" // Fallback color
   }
 
   // Navigation handlers
@@ -181,17 +182,30 @@ export function Calendar({ appointments, onDateClick, onAppointmentClick, onSwit
 
   // Legend items for appointment types
   const legendItems = useMemo(() => {
-    const purposeColors: Record<AppointmentPurpose, string> = {
-      [AppointmentPurposeEnum.INITIAL_CONSULTATION]: "bg-green-500 dark:bg-green-400",
-      [AppointmentPurposeEnum.ESTIMATE]: "bg-orange-500 dark:bg-orange-400",
-      [AppointmentPurposeEnum.FOLLOW_UP]: "bg-amber-500 dark:bg-amber-400",
+    // Use AppointmentPurposeEnum values
+    const purposeColors: Record<string, string> = { // Corrected type annotation
       [AppointmentPurposeEnum.INSPECTION]: "bg-blue-500 dark:bg-blue-400",
-      [AppointmentPurposeEnum.CONTRACT_SIGNING]: "bg-purple-500 dark:bg-purple-400",
+      [AppointmentPurposeEnum.FILE_CLAIM]: "bg-cyan-500 dark:bg-cyan-400",
+      [AppointmentPurposeEnum.FOLLOW_UP]: "bg-amber-500 dark:bg-amber-400",
+      [AppointmentPurposeEnum.ADJUSTER]: "bg-indigo-500 dark:bg-indigo-400",
+      [AppointmentPurposeEnum.BUILD_DAY]: "bg-rose-500 dark:bg-rose-400",
       [AppointmentPurposeEnum.OTHER]: "bg-gray-500 dark:bg-gray-400"
     }
 
-    return Object.entries(purposeColors).map(([purpose, color]) => ({
-      purpose: purpose.replace(/_/g, " "),
+    // Use PURPOSE_LABELS from types/appointments if available, otherwise format enum keys
+    const purposeLabels = {
+      [AppointmentPurposeEnum.INSPECTION]: "Inspection",
+      [AppointmentPurposeEnum.FILE_CLAIM]: "File Claim",
+      [AppointmentPurposeEnum.FOLLOW_UP]: "Follow Up",
+      [AppointmentPurposeEnum.ADJUSTER]: "Adjuster Meeting",
+      [AppointmentPurposeEnum.BUILD_DAY]: "Build Day",
+      [AppointmentPurposeEnum.OTHER]: "Other"
+    };
+
+
+    return Object.entries(purposeColors).map(([purposeKey, color]) => ({
+      // Use the label if found, otherwise format the enum key
+      purpose: purposeLabels[purposeKey as keyof typeof purposeLabels] || purposeKey.replace(/_/g, " ").toLowerCase(),
       color,
     }))
   }, [])

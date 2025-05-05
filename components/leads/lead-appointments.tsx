@@ -7,10 +7,9 @@ import { Calendar, Clock, Plus, Edit2, Trash2 } from "lucide-react"
 import { useLeadAppointments } from "@/hooks/use-lead-appointments"
 import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { AppointmentStatus } from '@prisma/client'
+import { AppointmentStatus, AppointmentPurpose } from '@prisma/client'
 import { format } from "date-fns"
 import { CalendarIcon } from "lucide-react"
-import type { AppointmentPurpose } from "@/types/lead"
 
 interface PrismaAppointment {
   id: string
@@ -26,14 +25,14 @@ interface LeadAppointmentsProps {
   leadId: string
 }
 
-// Local definition of labels as a fallback
-const LOCAL_PURPOSE_LABELS: Record<AppointmentPurpose, string> = {
-  INSPECTION: "Inspection",
-  FILE_CLAIM: "File Claim",
-  FOLLOW_UP: "Follow Up",
-  ADJUSTER: "Adjuster Meeting",
-  BUILD_DAY: "Build Day",
-  OTHER: "Other"
+// Define labels using string literals matching enum values
+const LOCAL_PURPOSE_LABELS: { [key: string]: string } = {
+  "INSPECTION": "Inspection",
+  "FILE_CLAIM": "File Claim",
+  "FOLLOW_UP": "Follow Up",
+  "ADJUSTER": "Adjuster Meeting",
+  "BUILD_DAY": "Build Day",
+  "OTHER": "Other"
 };
 
 // Helper to get background color based on status
@@ -48,9 +47,10 @@ const getStatusColor = (status: AppointmentStatus): string => {
   }
 }
 
-// Use local labels
+// Use Prisma enum in function signature, but lookup with string key
 const getPurposeLabel = (purpose: AppointmentPurpose): string => {
-  return LOCAL_PURPOSE_LABELS[purpose as keyof typeof LOCAL_PURPOSE_LABELS] || purpose; 
+  // Access the label using the enum value (which is a string)
+  return LOCAL_PURPOSE_LABELS[purpose] || purpose;
 }
 
 // Helper to format time from Date object
