@@ -7,7 +7,7 @@ import { AddressSearch } from "@/components/map/address-search"
 import type { MarkerData } from "@/components/map/mapbox-map"
 import { PropertyVisitStatus } from "@/components/map/types"
 import { DoorOpen } from 'lucide-react'; // Icon for counter
-import { SimpleMapCardModal } from "@/components/map/SimpleMapCardModal"
+import { SimpleMapCardModal } from "@/components/map/simple-map-card-modal"
 // Import function to get session client-side if needed, or assume session info is available
 // import { useSession } from "next-auth/react" 
 
