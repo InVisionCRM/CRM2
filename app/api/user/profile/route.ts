@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { writeFile } from "fs/promises"
-import { join } from "path"
-import { mkdir } from "fs/promises"
 
 // Enable more detailed logging for debugging
 const DEBUG = true;
@@ -21,15 +18,9 @@ const isValidImage = (contentType: string): boolean => {
 };
 
 // Validate file size
-const isValidFileSize = (size: number, maxSizeMB: number = 5): boolean => {
+const isValidFileSize = (size: number, maxSizeMB: number = 2): boolean => {
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
   return size <= maxSizeBytes;
-};
-
-// Generate a unique filename
-const generateUniqueFilename = (userId: string, originalFilename: string): string => {
-  const fileExt = originalFilename.split('.').pop() || 'jpg';
-  return `${userId}-${Date.now()}.${fileExt}`;
 };
 
 export async function POST(request: NextRequest) {
@@ -83,41 +74,23 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      if (!isValidFileSize(avatarFile.size, 5)) { // 5MB max
+      if (!isValidFileSize(avatarFile.size, 2)) { // 2MB max to keep base64 size reasonable
         return NextResponse.json(
-          { error: "Image file is too large. Maximum size is 5MB." },
+          { error: "Image file is too large. Maximum size is 2MB." },
           { status: 400 }
         )
       }
 
       try {
-        // Create uploads directory if it doesn't exist
-        const uploadsDir = join(process.cwd(), "public", "uploads", "avatars")
-        logDebug("Uploads directory", { uploadsDir });
+        // Convert the file to base64
+        const arrayBuffer = await avatarFile.arrayBuffer();
+        const base64 = Buffer.from(arrayBuffer).toString('base64');
+        const dataUrl = `data:${avatarFile.type};base64,${base64}`;
         
-        try {
-          await mkdir(uploadsDir, { recursive: true })
-          logDebug("Directory created or already exists");
-        } catch (error) {
-          console.error("Error creating directory:", error)
-          logDebug("Error creating directory", { error });
-        }
-
-        // Generate a unique filename
-        const filename = generateUniqueFilename(userId, avatarFile.name)
-        const filePath = join(uploadsDir, filename)
-        logDebug("File path prepared", { filename, filePath });
-
-        // Save the file
-        const arrayBuffer = await avatarFile.arrayBuffer()
-        const buffer = Buffer.from(arrayBuffer)
-        await writeFile(filePath, buffer)
-        logDebug("File written successfully");
-
-        // Update the image URL
-        const imageUrl = `/uploads/avatars/${filename}`
-        updateData.image = imageUrl
-        logDebug("Image URL added to update data", { imageUrl });
+        // Save the data URL to the user's image field
+        updateData.image = dataUrl;
+        
+        logDebug("Image converted to base64 data URL");
       } catch (fileError) {
         console.error("File handling error:", fileError);
         logDebug("File handling error", { error: fileError });
@@ -128,7 +101,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    logDebug("Updating user in database", { updateData });
+    logDebug("Updating user in database", { 
+      updateData: { 
+        ...updateData, 
+        image: updateData.image ? `[base64 image data - ${Math.round((updateData.image.length * 0.75) / 1024)} KB]` : undefined 
+      } 
+    });
     
     // Update the user record in the database
     try {
@@ -143,7 +121,10 @@ export async function POST(request: NextRequest) {
         },
       });
       
-      logDebug("User updated successfully", { updatedUser });
+      logDebug("User updated successfully", { 
+        ...updatedUser,
+        image: updatedUser.image ? `[base64 image data - truncated]` : null 
+      });
   
       // Return success response
       return NextResponse.json({

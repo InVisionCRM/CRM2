@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { isValidImage, isValidFileSize, createFilePreview } from "@/lib/upload-helper"
+import { isValidImage, isValidFileSize, createFilePreview, resizeImage } from "@/lib/upload-helper"
 
 export const Hero = () => {
   const logoRef = useRef<HTMLDivElement>(null)
@@ -150,20 +150,28 @@ export const Hero = () => {
       return
     }
     
-    if (!isValidFileSize(file, 5)) {
+    if (!isValidFileSize(file, 5)) { // Allow larger upload initially, we'll resize it
       setError("Image file is too large. Maximum size is 5MB")
       return
     }
     
     try {
       setError(null)
-      // Use the helper function to create preview
+      setIsUpdating(true)
+      
+      // Create a preview from the original image
       const preview = await createFilePreview(file)
-      setAvatarFile(file)
       setAvatarPreview(preview)
+      
+      // Resize the image to reduce file size before sending to server
+      const resizedFile = await resizeImage(file, 400, 400, 0.85)
+      setAvatarFile(resizedFile)
+      
+      setIsUpdating(false)
     } catch (err) {
-      console.error("Error creating file preview:", err)
-      setError("Failed to preview image")
+      console.error("Error processing image:", err)
+      setError("Failed to process image")
+      setIsUpdating(false)
     }
   }
 
