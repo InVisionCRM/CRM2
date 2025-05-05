@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+import { isValidImage, isValidFileSize, createFilePreview } from "@/lib/upload-helper"
 
 export const Hero = () => {
   const logoRef = useRef<HTMLDivElement>(null)
@@ -78,43 +79,6 @@ export const Hero = () => {
     return () => window.removeEventListener("mousemove", handleMouseMove)
   }, [])
 
-  const validateImageFile = (file: File): boolean => {
-    // Check file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-    if (!validTypes.includes(file.type)) {
-      setError("Please upload a valid image file (JPEG, PNG, GIF, WebP)")
-      return false
-    }
-
-    // Check file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024 // 5MB in bytes
-    if (file.size > maxSize) {
-      setError("Image file is too large. Maximum size is 5MB")
-      return false
-    }
-
-    setError(null)
-    return true
-  }
-
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      if (!validateImageFile(file)) return
-      
-      setAvatarFile(file)
-      const reader = new FileReader()
-      reader.onload = () => {
-        setAvatarPreview(reader.result as string)
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  const triggerFileInput = () => {
-    fileInputRef.current?.click()
-  }
-
   const handleProfileUpdate = async () => {
     if (!session?.user?.id) return
 
@@ -133,20 +97,24 @@ export const Hero = () => {
       formData.append("userId", session.user.id)
       
       if (avatarFile) {
+        // Use 'avatar' as the key, not 'file'
         formData.append("avatar", avatarFile)
       }
 
-      // Send the update to the API
+      // Send the update to the API with specific headers
       const response = await fetch("/api/user/profile", {
         method: "POST",
         body: formData,
+        // Don't set Content-Type header - browser will set it with boundary
       })
 
-      const data = await response.json()
-      
+      // Check for non-OK response before parsing JSON
       if (!response.ok) {
-        throw new Error(data.error || "Failed to update profile")
+        const errorData = await response.json().catch(() => ({ error: "Failed to upload" }));
+        throw new Error(errorData.error || `Server responded with ${response.status}`);
       }
+      
+      const data = await response.json()
       
       // Update the session with the new user data
       await update({
@@ -170,6 +138,37 @@ export const Hero = () => {
     } finally {
       setIsUpdating(false)
     }
+  }
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    // Client-side validation
+    if (!isValidImage(file)) {
+      setError("Please upload a valid image file (JPEG, PNG, GIF, WebP)")
+      return
+    }
+    
+    if (!isValidFileSize(file, 5)) {
+      setError("Image file is too large. Maximum size is 5MB")
+      return
+    }
+    
+    try {
+      setError(null)
+      // Use the helper function to create preview
+      const preview = await createFilePreview(file)
+      setAvatarFile(file)
+      setAvatarPreview(preview)
+    } catch (err) {
+      console.error("Error creating file preview:", err)
+      setError("Failed to preview image")
+    }
+  }
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click()
   }
 
   const closeModal = () => {
