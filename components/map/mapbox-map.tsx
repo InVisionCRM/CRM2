@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect, useRef, forwardRef, useImperativeHandle, memo } from "react"
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle, memo } from "react"
 import mapboxgl from "mapbox-gl"
 import "mapbox-gl/dist/mapbox-gl.css"
 import { useMapContext } from "./map-context"
 import { getMarkerColor } from "@/lib/utils"
-import { PropertyVisitStatus } from "@/components/map/MapInteractionDrawer"
+import { PropertyVisitStatus } from "@/components/map/types"
 
 // Simple address normalization helper
 function normalizeAddress(address: string): string {

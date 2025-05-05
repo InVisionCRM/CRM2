@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
-import { getSession } from "@/lib/auth-utils"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { getMarkerById, updateMarker, deleteMarker } from "@/lib/db/vision-markers"
 import { PrismaClient, KnockStatus } from "@prisma/client"
-import type { PropertyVisitStatus } from "@/components/map/MapInteractionDrawer"
+import type { PropertyVisitStatus } from "@/components/map/types"
 
 const prisma = new PrismaClient()
 
@@ -90,7 +91,7 @@ export async function PUT(
 
   try {
     const body = await request.json()
-    const session = await getSession()
+    const session = await getServerSession(authOptions)
 
     console.log("User session:", session?.user)
 

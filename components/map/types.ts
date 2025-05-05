@@ -43,3 +43,11 @@ export interface MapboxMapProps {
   onMarkerAdd: (position: [number, number], address: string) => void
   accessToken: string
 }
+
+// Define the specific status type
+export type PropertyVisitStatus =
+  | "No Answer"
+  | "Not Interested"
+  | "Follow up"
+  | "Inspected"
+  | "In Contract"

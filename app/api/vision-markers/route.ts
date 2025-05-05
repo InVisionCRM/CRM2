@@ -2,7 +2,7 @@ import { getSession } from "@/lib/auth-utils"
 import { NextResponse } from "next/server"
 import { getMarkers, createMarker } from "@/lib/db/vision-markers"
 import { KnockStatus } from "@prisma/client"
-import type { PropertyVisitStatus } from "@/components/map/MapInteractionDrawer" // Import frontend type for reference
+import type { PropertyVisitStatus } from "@/components/map/types" // Import frontend type for reference
 
 // Helper function to map frontend status string to KnockStatus enum
 const mapStringToKnockStatus = (statusString: PropertyVisitStatus | "New" | "Search" | string | undefined | null): KnockStatus => {

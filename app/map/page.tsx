@@ -4,10 +4,10 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import MapboxMap from "@/components/map/mapbox-map"
 import { AddressSearch } from "@/components/map/address-search"
-import { MapInteractionDrawer, PropertyVisitStatus } from "@/components/map/MapInteractionDrawer"
 import type { MarkerData } from "@/components/map/mapbox-map"
+import { PropertyVisitStatus } from "@/components/map/types"
 import { DoorOpen } from 'lucide-react'; // Icon for counter
-import { SimpleMapDrawer } from "@/components/map/SimpleMapDrawer"
+import { SimpleMapCardModal } from "@/components/map/SimpleMapCardModal"
 // Import function to get session client-side if needed, or assume session info is available
 // import { useSession } from "next-auth/react" 
 
@@ -25,8 +25,8 @@ function isValidStatus(status: any): status is PropertyVisitStatus | "New" | "Se
   return typeof status === 'string' && validStatuses.includes(status as any);
 }
 
-// Define a type for the data needed by the drawer
-interface DrawerData {
+// Define a type for the data needed by the modal
+interface ModalData {
   address: string
   position: [number, number]
   markerId?: string
@@ -37,9 +37,8 @@ interface DrawerData {
 
 export default function MapPage() {
   const [markers, setMarkers] = useState<MarkerData[]>([])
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-  const [selectedDrawerData, setSelectedDrawerData] = useState<DrawerData | null>(null)
-  const [isDrawerExpanded, setIsDrawerExpanded] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedModalData, setSelectedModalData] = useState<ModalData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [knockCount, setKnockCount] = useState<number | null>(null)
   const mapRef = useRef<any>(null)
@@ -136,7 +135,7 @@ export default function MapPage() {
     console.log("Marker clicked:", marker)
     const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${marker.position[0]},${marker.position[1]}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&return_error_codes=true` // Use env variable
 
-    setSelectedDrawerData({
+    setSelectedModalData({
       address: marker.address,
       position: marker.position,
       markerId: marker.id,
@@ -144,8 +143,7 @@ export default function MapPage() {
       streetViewUrl: streetViewUrl, // Add fetched/constructed URL
       leadId: marker.leadId // Include the leadId from the marker data
     })
-    setIsDrawerExpanded(false) // Start collapsed
-    setIsDrawerOpen(true)
+    setIsModalOpen(true)
   }, [])
 
   const handleMarkerAdd = useCallback((position: [number, number], address: string) => {
@@ -165,11 +163,10 @@ export default function MapPage() {
 
     setMarkers((prevMarkers) => [...prevMarkers, newMarker])
 
-    // Set up the drawer with the new marker details
-    // TODO: Implement logic to get Street View URL
+    // Set up the modal with the new marker details
     const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x300&location=${position[0]},${position[1]}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&return_error_codes=true` // Use env variable
 
-    setSelectedDrawerData({
+    setSelectedModalData({
       address: address,
       position: position,
       markerId: tempId, // Use the temporary ID
@@ -177,8 +174,7 @@ export default function MapPage() {
       streetViewUrl: streetViewUrl,
       leadId: tempId, // Use the temporary ID as leadId
     })
-    setIsDrawerExpanded(false) // Start collapsed
-    setIsDrawerOpen(true)
+    setIsModalOpen(true)
   }, [])
 
   // Function to handle address selection from search
@@ -219,16 +215,16 @@ export default function MapPage() {
 
   // Update status, persist marker, and record visit
   const handleStatusChange = useCallback(async (newStatus: PropertyVisitStatus) => {
-    if (!selectedDrawerData) return
+    if (!selectedModalData) return
 
-    const { markerId, address, position } = selectedDrawerData;
+    const { markerId, address, position } = selectedModalData;
 
     console.log(`Status change initiated for ${address} to: ${newStatus}`);
 
     // 1. Update local state immediately for UI feedback
     const optimisticUiId = markerId || `temp-${Date.now()}`; 
     
-    setSelectedDrawerData(prevData => prevData ? { ...prevData, currentStatus: newStatus } : null);
+    setSelectedModalData(prevData => prevData ? { ...prevData, currentStatus: newStatus } : null);
     setMarkers(prevMarkers => prevMarkers.map(m => 
       m.id === optimisticUiId ? { ...m, status: newStatus } : m
     ));
@@ -271,7 +267,7 @@ export default function MapPage() {
               : m 
           )
         );
-        setSelectedDrawerData(prevData => prevData ? { ...prevData, markerId: realMarkerId, currentStatus: newStatus } : null);
+        setSelectedModalData(prevData => prevData ? { ...prevData, markerId: realMarkerId, currentStatus: newStatus } : null);
 
       } else if (markerId) {
         console.log(`Updating existing marker ${markerId} status to ${newStatus}...`);
@@ -323,7 +319,7 @@ export default function MapPage() {
         description: markerError, 
         variant: "destructive" 
       });
-      // Don't close drawer if marker saving failed
+      // Don't close modal if marker saving failed
     } else {
       // Show success toast (even if visit recording had a minor error)
       toast({ 
@@ -332,13 +328,12 @@ export default function MapPage() {
             ? `Status set to ${newStatus}. Error recording visit: ${visitError}` 
             : `Status set to ${newStatus} and visit recorded.` 
       });
-      // Close the drawer after successful marker save
-      setIsDrawerOpen(false); 
-      setSelectedDrawerData(null); // Clear selected data as well
-      setIsDrawerExpanded(false); // Ensure it's not expanded next time
+      // Close the modal after successful marker save
+      setIsModalOpen(false); 
+      setSelectedModalData(null); // Clear selected data as well
     }
 
-  }, [selectedDrawerData, toast, setIsDrawerOpen, setSelectedDrawerData, setIsDrawerExpanded]); // Add state setters to dependency array
+  }, [selectedModalData, toast, setIsModalOpen, setSelectedModalData]); // Add state setters to dependency array
 
   return (
     <div className="fullscreen-map-container relative">
@@ -369,19 +364,18 @@ export default function MapPage() {
         accessToken={process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || ""}
       />
 
-      {isDrawerOpen && selectedDrawerData && (
-        <SimpleMapDrawer
-          isOpen={isDrawerOpen}
+      {isModalOpen && selectedModalData && (
+        <SimpleMapCardModal
+          isOpen={isModalOpen}
           onClose={() => {
-            setIsDrawerOpen(false)
-            setSelectedDrawerData(null)
-            setIsDrawerExpanded(false) // Ensure it collapses on close
+            setIsModalOpen(false)
+            setSelectedModalData(null)
           }}
-          // Pass individual props from selectedDrawerData
-          address={selectedDrawerData.address}
-          streetViewUrl={selectedDrawerData.streetViewUrl}
+          // Pass individual props from selectedModalData
+          address={selectedModalData.address}
+          streetViewUrl={selectedModalData.streetViewUrl}
           // Pass undefined if status is 'New' or 'Search', otherwise pass the status
-          currentStatus={selectedDrawerData.currentStatus === "New" || selectedDrawerData.currentStatus === "Search" ? undefined : selectedDrawerData.currentStatus}
+          currentStatus={selectedModalData.currentStatus === "New" || selectedModalData.currentStatus === "Search" ? undefined : selectedModalData.currentStatus}
           // Pass the CORRECT available statuses
           availableStatuses={[
             "No Answer",
@@ -391,11 +385,7 @@ export default function MapPage() {
             "In Contract",
           ]}
           onStatusChange={handleStatusChange}
-          // Expansion control props
-          isExpanded={isDrawerExpanded}
-          onExpand={() => setIsDrawerExpanded(true)}
-          onCollapse={() => setIsDrawerExpanded(false)} // Pass the collapse handler
-          leadId={selectedDrawerData.leadId}
+          leadId={selectedModalData.leadId}
         />
       )}
     </div>

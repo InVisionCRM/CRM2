@@ -8,7 +8,7 @@ import {
   deleteVisit 
 } from "@/lib/db/visits"
 import { KnockStatus } from "@prisma/client"
-import type { PropertyVisitStatus } from "@/components/map/MapInteractionDrawer"
+import type { PropertyVisitStatus } from "@/components/map/types"
 
 // Helper function to map frontend status string to KnockStatus enum
 const mapStringToKnockStatus = (statusString: PropertyVisitStatus | "New" | "Search" | string | undefined | null): KnockStatus => {
