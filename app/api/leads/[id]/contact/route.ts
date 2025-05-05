@@ -56,6 +56,19 @@ export async function PATCH(
 
     // Check if this is a temporary ID (new lead creation)
     if (id.startsWith('temp-')) {
+      // Verify the user exists before attempting to assign the lead
+      const assignedUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+      });
+
+      if (!assignedUser) {
+        console.error(`Attempted to assign lead to non-existent user ID: ${session.user.id}`);
+        return new NextResponse(
+          JSON.stringify({ message: 'Assigned user not found' }),
+          { status: 400 } // Or 500, depending on how you want to handle this internal inconsistency
+        );
+      }
+
       // Create a new lead with the contact information
       const newLead = await prisma.lead.create({
         data: {
