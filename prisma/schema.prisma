@@ -76,7 +76,7 @@ model Lead {
   email                     String?   @db.VarChar(255)
   phone                     String?   @db.VarChar(50)
   address                   String?   @db.VarChar(510)
-  status                    LeadStatus @default(NEW)
+  status                    LeadStatus @default(follow_ups)
   assignedToId              String?   @db.Uuid
   notes                     String?
   insuranceCompany          String?
@@ -224,14 +224,15 @@ enum UserRole {
 }
 
 enum LeadStatus {
-  NEW
-  CONTACTED
-  QUALIFIED
-  PROPOSAL
-  NEGOTIATION
-  WON
-  LOST
-  ON_HOLD
+  signed_contract
+  scheduled
+  colors
+  acv
+  job
+  completed_jobs
+  zero_balance
+  denied
+  follow_ups
 }
 
 enum AppointmentPurpose {
@@ -277,9 +278,6 @@ enum KnockStatus {
   FOLLOW_UP
   INSPECTED
   IN_CONTRACT    // Added
-  // NOT_VISITED     // Removed (using KNOCKED)
-  // INTERESTED      // Removed
-  // APPOINTMENT_SET // Removed
 }
 
 enum DamageType {

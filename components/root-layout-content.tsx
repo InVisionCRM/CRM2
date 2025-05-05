@@ -1,10 +1,8 @@
 "use client"
 
 import type React from "react"
-
 import { usePathname } from "next/navigation"
-import { MessageWidget } from "@/components/messages/message-widget"
-import FloatingDockIOS from "@/components/floating-dock-ios"
+import AppSidebar from "@/components/AppSidebar"
 
 export function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -12,12 +10,16 @@ export function RootLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <div className="flex flex-col h-full">
-        {/* main content grows to fill, and scrolls if needed */}
-        <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900 pb-20">{children}</main>
+      <div className="flex h-full w-full">
+        {/* Sidebar only shown on non-map pages */}
+        {!isMapPage && <AppSidebar />}
+        
+        {/* Main content area */}
+        <div className="flex flex-col flex-1 w-full h-full">
+          <main className="flex-1 w-full overflow-auto bg-gray-50 dark:bg-gray-900">{children}</main>
+        </div>
       </div>
 
-      {!isMapPage && <FloatingDockIOS />}
       <MessageWidget />
     </>
   )

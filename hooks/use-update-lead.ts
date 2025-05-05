@@ -1,77 +1,70 @@
 "use client"
 
-import { useState } from "react"
-import { updateLeadAction } from "@/app/actions/lead-actions"
-import type { Lead } from "@/types/lead"
+import { useState, useCallback } from "react"
+import { toast } from "sonner"
+import { Lead } from "@prisma/client"
 
-type UpdateLeadInput = Partial<{
-  fullName: string
-  email: string
-  phone: string
-  address: string
-  status: string
-}>
+// Define the type for the update data, allowing partial updates
+type UpdateLeadData = Partial<Omit<Lead, 'id' | 'createdAt' | 'updatedAt'> & { leadId?: string }>
 
-export function useUpdateLead() {
+// Removed the old status mapping, as the source of truth should be the prisma enum
+// const statusMapping: { [key: string]: string } = {
+//   new: "SIGNED_CONTRACT",
+//   contacted: "SCHEDULED",
+//   qualified: "COLORS",
+//   proposal: "ACV",
+//   negotiation: "JOB",
+//   closed_won: "COMPLETED_JOBS",
+//   closed_lost: "DENIED",
+// }
+
+interface UseUpdateLeadResult {
+  updateLead: (leadId: string, data: UpdateLeadData) => Promise<void>
+  isLoading: boolean
+  error: Error | null
+}
+
+export function useUpdateLead(): UseUpdateLeadResult {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
 
-  const updateLead = async (leadId: string, leadData: UpdateLeadInput): Promise<Lead> => {
+  const updateLead = useCallback(async (leadId: string, data: UpdateLeadData) => {
     setIsLoading(true)
     setError(null)
+    
+    // If status is being updated, ensure it uses the correct enum value (lowercase)
+    // No mapping needed if the input `data.status` already matches the enum.
+    // If mapping was intended for some other reason, it needs to be clarified.
 
     try {
-      // Process fullName if provided
-      let firstName: string | undefined
-      let lastName: string | undefined
-
-      if (leadData.fullName) {
-        const nameParts = leadData.fullName.trim().split(/\s+/)
-        firstName = nameParts[0] || ""
-        lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : ""
-      }
-
-      // Call server action
-      const result = await updateLeadAction(leadId, {
-        firstName,
-        lastName,
-        email: leadData.email,
-        phone: leadData.phone,
-        address: leadData.address,
-        status: leadData.status ? mapStatusToApiFormat(leadData.status) : undefined,
+      const response = await fetch(`/api/leads/${leadId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
       })
 
-      if (!result.success) {
+      if (!response.ok) {
+        let result
+        try {
+          result = await response.json()
+        } catch (e) {
+          // Handle cases where the response is not JSON
+          throw new Error(`Server error: ${response.status} ${response.statusText}`)
+        }
         throw new Error(result.message || "Failed to update lead")
       }
 
-      return result.lead
-    } catch (err) {
+      toast.success("Lead updated successfully")
+    } catch (err: unknown) {
+      console.error("Failed to update lead:", err)
       setError(err instanceof Error ? err : new Error("An unknown error occurred"))
-      throw err
+      toast.error("Failed to update lead")
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
-  return {
-    updateLead,
-    isLoading,
-    error,
-  }
-}
-
-// Helper function to map form status values to API status values
-function mapStatusToApiFormat(status: string): string {
-  const statusMap: Record<string, string> = {
-    new: "SIGNED_CONTRACT",
-    contacted: "SCHEDULED",
-    qualified: "COLORS",
-    proposal: "ACV",
-    negotiation: "JOB",
-    closed_won: "COMPLETED_JOBS",
-    closed_lost: "DENIED",
-  }
-
-  return statusMap[status] || "SIGNED_CONTRACT"
+  return { updateLead, isLoading, error }
 }

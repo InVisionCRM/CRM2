@@ -2,9 +2,7 @@
 
 import type React from "react"
 import { ThemeProvider } from "@/components/theme-provider"
-import { MessageProvider } from "@/contexts/message-context"
-import { MessageWidget } from "@/components/messages/message-widget"
-import FloatingDockIOS from "@/components/floating-dock-ios"
+import AppSidebar from "@/components/AppSidebar"
 import { usePathname } from "next/navigation"
 
 export default function ClientLayout({
@@ -18,12 +16,16 @@ export default function ClientLayout({
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <MessageProvider>
-        <div className="flex flex-col h-full">
-          {/* main content grows to fill, and scrolls if needed */}
-          <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900 pb-20">{children}</main>
+        <div className="flex h-full w-full">
+          {/* Sidebar only shown on non-map pages */}
+          {!isMapPage && <AppSidebar />}
+          
+          {/* Main content area */}
+          <div className="flex flex-col flex-1 w-full h-full">
+            <main className="flex-1 w-full overflow-auto bg-gray-50 dark:bg-gray-900">{children}</main>
+          </div>
         </div>
 
-        {!isMapPage && <FloatingDockIOS />}
         <MessageWidget />
       </MessageProvider>
     </ThemeProvider>

@@ -1,10 +1,8 @@
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
-import { PrismaClient } from "@prisma/client"
 import type { NextAuthOptions } from "next-auth"
-
-const prisma = new PrismaClient()
+import { prisma } from "@/lib/db"
 
 export const authOptions: NextAuthOptions = {
   debug: true, // Enable debug mode to see detailed logs

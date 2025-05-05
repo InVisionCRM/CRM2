@@ -7,18 +7,15 @@ import { LeadsDrawer } from "@/components/leads-drawer"
 import { AppointmentsDrawer } from "@/components/appointments/appointments-drawer"
 import { FilesSheet } from "@/components/files/files-sheet"
 import { SimpleCalculator } from "@/components/calculator/simple-calculator"
-import { WeatherWidget } from "@/components/weather/weather-widget"
 
 function ExpandedMenu({
   isOpen,
   onClose,
   setIsCalculatorOpen,
-  setIsWeatherOpen,
 }: {
   isOpen: boolean
   onClose: () => void
   setIsCalculatorOpen: (open: boolean) => void
-  setIsWeatherOpen: (open: boolean) => void
 }) {
   if (!isOpen) return null
 
@@ -36,7 +33,7 @@ function ExpandedMenu({
     {
       icon: <Cloud className="h-5 w-5" />,
       label: "Weather",
-      action: () => setIsWeatherOpen(true),
+      action: () => console.log("Weather clicked"),
     },
     {
       icon: <MessageCircle className="h-5 w-5" />,
@@ -82,14 +79,13 @@ export function MobileNavigation() {
   const [isAppointmentsDrawerOpen, setIsAppointmentsDrawerOpen] = useState(false)
   const [isFilesSheetOpen, setIsFilesSheetOpen] = useState(false)
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false)
-  const [isWeatherOpen, setIsWeatherOpen] = useState(false)
 
   // Close expanded menu when any drawer opens
   useEffect(() => {
-    if (isLeadsDrawerOpen || isAppointmentsDrawerOpen || isFilesSheetOpen || isCalculatorOpen || isWeatherOpen) {
+    if (isLeadsDrawerOpen || isAppointmentsDrawerOpen || isFilesSheetOpen || isCalculatorOpen) {
       setIsExpanded(false)
     }
-  }, [isLeadsDrawerOpen, isAppointmentsDrawerOpen, isFilesSheetOpen, isCalculatorOpen, isWeatherOpen])
+  }, [isLeadsDrawerOpen, isAppointmentsDrawerOpen, isFilesSheetOpen, isCalculatorOpen])
 
   const navItems = [
     { icon: Home, label: "Dashboard", action: () => {} },
@@ -109,7 +105,6 @@ export function MobileNavigation() {
         isOpen={isExpanded}
         onClose={() => setIsExpanded(false)}
         setIsCalculatorOpen={setIsCalculatorOpen}
-        setIsWeatherOpen={setIsWeatherOpen}
       />
       <LeadsDrawer isOpen={isLeadsDrawerOpen} onClose={() => setIsLeadsDrawerOpen(false)} />
       <AppointmentsDrawer isOpen={isAppointmentsDrawerOpen} onClose={() => setIsAppointmentsDrawerOpen(false)} />
@@ -120,7 +115,6 @@ export function MobileNavigation() {
         leadId="current"
       />
       {isCalculatorOpen && <SimpleCalculator onClose={() => setIsCalculatorOpen(false)} />}
-      {isWeatherOpen && <WeatherWidget onClose={() => setIsWeatherOpen(false)} />}
     </>
   )
 }
