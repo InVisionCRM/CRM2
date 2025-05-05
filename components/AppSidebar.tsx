@@ -2,7 +2,7 @@
 import { useState } from "react"
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar"
 import { IconArrowLeft, IconBrandTabler, IconSettings, IconUserBolt, IconHomeHeart, IconMap, IconCloud, IconUsers, IconActivity, IconCurrencyDollar, IconLink } from "@tabler/icons-react"
-import { motion } from "motion/react"
+import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { DockThemeToggle } from "@/components/theme-toggle"
 import { usePathname } from "next/navigation"
@@ -26,26 +26,6 @@ export default function AppSidebar() {
       label: "Map",
       href: "/map",
       icon: <IconMap className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />,
-    },
-    {
-      label: "Weather",
-      href: "/weather",
-      icon: <IconCloud className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />,
-    },
-    {
-      label: "Team",
-      href: "/team-performance",
-      icon: <IconUsers className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />,
-    },
-    {
-      label: "Activity",
-      href: "/recent-activity",
-      icon: <IconActivity className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />,
-    },
-    {
-      label: "Financial",
-      href: "/financial-health",
-      icon: <IconCurrencyDollar className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />,
     },
     {
       label: "Links",
