@@ -1,258 +1,219 @@
 "use client"
 
 import { DrawerClose } from "@/components/ui/drawer"
-
-import { useState } from "react"
-import { Plus, X } from "lucide-react"
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
+import { useState, useEffect } from "react"
+import { Plus, X, CalendarPlus } from "lucide-react"
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "./calendar" // Updated import
+import { Calendar } from "./calendar"
 import { AppointmentForm } from "./appointment-form"
 import { toast } from "@/components/ui/use-toast"
 import type { CalendarAppointment } from "@/types/appointments"
 import type { AppointmentFormValues } from "@/lib/schemas/appointment-schema"
+import { AppointmentPurposeEnum } from "@/types/appointments"
+import { AppointmentStatus } from "@prisma/client"
+import type { AppointmentPurpose } from "@/types/lead"
 
-// Mock data for demonstration
-const mockAppointments: CalendarAppointment[] = [
+interface QuickAppointment {
+  title: string
+  purpose: AppointmentPurpose
+  duration: number // Duration in minutes
+  color: string
+}
+
+const quickAppointments: QuickAppointment[] = [
   {
-    id: "1",
-    title: "Initial Roof Assessment",
-    date: new Date(2023, 6, 25, 10, 30),
-    startTime: "10:30 AM",
-    endTime: "11:30 AM",
-    purpose: "initial_assessment",
-    status: "scheduled",
-    clientId: "1",
-    clientName: "John Smith",
-    address: "123 Main St, Anytown",
-    notes: "Check for hail damage on north side of roof",
+    title: "Inspection",
+    purpose: AppointmentPurposeEnum.INSPECTION,
+    duration: 60,
+    color: "bg-blue-500",
   },
   {
-    id: "2",
-    title: "Measurement",
-    date: new Date(2023, 6, 25, 14, 0),
-    startTime: "2:00 PM",
-    endTime: "3:00 PM",
-    purpose: "measurement",
-    status: "scheduled",
-    clientId: "2",
-    clientName: "Sarah Johnson",
-    address: "456 Oak Ave, Somewhere",
+    title: "File Claim Assistance",
+    purpose: AppointmentPurposeEnum.FILE_CLAIM,
+    duration: 45,
+    color: "bg-indigo-500",
   },
   {
-    id: "3",
-    title: "Proposal Presentation",
-    date: new Date(2023, 6, 26, 9, 0),
-    startTime: "9:00 AM",
-    endTime: "10:00 AM",
-    purpose: "proposal_presentation",
-    status: "scheduled",
-    clientId: "3",
-    clientName: "Michael Brown",
-    address: "789 Pine Rd, Elsewhere",
+    title: "Follow Up Call",
+    purpose: AppointmentPurposeEnum.FOLLOW_UP,
+    duration: 30,
+    color: "bg-yellow-500",
   },
   {
-    id: "4",
-    title: "Contract Signing",
-    date: new Date(2023, 6, 27, 15, 0),
-    startTime: "3:00 PM",
-    endTime: "4:00 PM",
-    purpose: "contract_signing",
-    status: "scheduled",
-    clientId: "1",
-    clientName: "John Smith",
-    address: "123 Main St, Anytown",
+    title: "Adjuster Meeting",
+    purpose: AppointmentPurposeEnum.ADJUSTER,
+    duration: 90,
+    color: "bg-green-500",
   },
   {
-    id: "5",
-    title: "Follow-up Visit",
-    date: new Date(2023, 6, 28, 11, 0),
-    startTime: "11:00 AM",
-    endTime: "12:00 PM",
-    purpose: "follow_up",
-    status: "scheduled",
-    clientId: "2",
-    clientName: "Sarah Johnson",
-    address: "456 Oak Ave, Somewhere",
+    title: "Schedule Build Day",
+    purpose: AppointmentPurposeEnum.BUILD_DAY,
+    duration: 30,
+    color: "bg-amber-500",
   },
   {
-    id: "6",
-    title: "Installation",
-    date: new Date(2023, 6, 29, 8, 0),
-    startTime: "8:00 AM",
-    endTime: "5:00 PM",
-    purpose: "build day",
-    status: "scheduled",
-    clientId: "3",
-    clientName: "Michael Brown",
-    address: "789 Pine Rd, Elsewhere",
-  },
-  {
-    id: "7",
-    title: "Final Inspection",
-    date: new Date(2023, 6, 30, 14, 0),
-    startTime: "2:00 PM",
-    endTime: "3:00 PM",
-    purpose: "inspection",
-    status: "scheduled",
-    clientId: "1",
-    clientName: "John Smith",
-    address: "123 Main St, Anytown",
-  },
-  // Add more appointments for the current month to demonstrate stacking
-  {
-    id: "8",
-    title: "Initial Assessment",
-    date: new Date(2023, 6, 25, 13, 0),
-    startTime: "1:00 PM",
-    endTime: "2:00 PM",
-    purpose: "initial_assessment",
-    status: "scheduled",
-    clientId: "4",
-    clientName: "Emily Davis",
-    address: "101 Cedar Ln, Nowhere",
-  },
-  {
-    id: "9",
-    title: "Measurement",
-    date: new Date(2023, 6, 25, 16, 0),
-    startTime: "4:00 PM",
-    endTime: "5:00 PM",
-    purpose: "measurement",
-    status: "scheduled",
-    clientId: "5",
-    clientName: "Robert Wilson",
-    address: "202 Maple Dr, Anywhere",
-  },
-  {
-    id: "10",
-    title: "Follow-up",
-    date: new Date(2023, 6, 25, 17, 30),
-    startTime: "5:30 PM",
-    endTime: "6:30 PM",
-    purpose: "follow_up",
-    status: "scheduled",
-    clientId: "6",
-    clientName: "Jennifer Taylor",
-    address: "303 Elm St, Somewhere",
-  },
-  {
-    id: "11",
-    title: "Contract Signing",
-    date: new Date(2023, 6, 25, 9, 0),
-    startTime: "9:00 AM",
-    endTime: "10:00 AM",
-    purpose: "contract_signing",
-    status: "scheduled",
-    clientId: "7",
-    clientName: "David Anderson",
-    address: "404 Birch Rd, Anywhere",
-  },
-  {
-    id: "12",
-    title: "Installation",
-    date: new Date(2023, 6, 25, 8, 0),
-    startTime: "8:00 AM",
-    endTime: "5:00 PM",
-    purpose: "installation",
-    status: "scheduled",
-    clientId: "8",
-    clientName: "Lisa Martinez",
-    address: "505 Pine Ave, Nowhere",
-  },
+    title: "Other Appointment",
+    purpose: AppointmentPurposeEnum.OTHER,
+    duration: 60,
+    color: "bg-gray-500",
+  }
 ]
 
 interface AppointmentsDrawerProps {
   isOpen: boolean
   onClose: () => void
+  leadId?: string
+  userId: string
 }
 
 type DrawerView = "calendar" | "form" | "details"
 
-export function AppointmentsDrawer({ isOpen, onClose }: AppointmentsDrawerProps) {
-  const [appointments, setAppointments] = useState<CalendarAppointment[]>(mockAppointments)
+export function AppointmentsDrawer({ isOpen, onClose, leadId, userId }: AppointmentsDrawerProps) {
+  const [appointments, setAppointments] = useState<CalendarAppointment[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [selectedAppointment, setSelectedAppointment] = useState<CalendarAppointment | null>(null)
   const [currentView, setCurrentView] = useState<DrawerView>("calendar")
+  const [isFormOpen, setIsFormOpen] = useState(false)
+  const [selectedQuickAppointment, setSelectedQuickAppointment] = useState<QuickAppointment | null>(null)
 
-  const handleDateClick = (date: Date, time?: string) => {
+  useEffect(() => {
+    if (isOpen) {
+      const fetchAppointments = async () => {
+        setIsLoading(true)
+        setError(null)
+        try {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          setAppointments([]);
+        } catch (err) {
+          console.error("Error fetching appointments:", err)
+          setError(err instanceof Error ? err.message : "Failed to load appointments")
+        } finally {
+          setIsLoading(false)
+        }
+      }
+      fetchAppointments()
+    }
+  }, [isOpen, userId, leadId])
+
+  const handleDateClick = (date: Date, time?: string | null) => {
     setSelectedDate(date)
-    setSelectedTime(time) // We'll add this state variable
+    setSelectedTime(time ?? null)
     console.log("Date clicked:", date, "Time:", time)
   }
 
   const handleAppointmentClick = (appointment: CalendarAppointment) => {
     setSelectedAppointment(appointment)
     console.log("Appointment clicked:", appointment)
+    setIsFormOpen(true);
   }
 
-  const handleAddAppointment = (date?: Date, time?: string) => {
-    if (date) {
-      setSelectedDate(date)
-    }
-    if (time) {
-      setSelectedTime(time)
-    }
+  const handleAddAppointment = () => {
+    setSelectedQuickAppointment(null)
     setSelectedAppointment(null)
-    setCurrentView("form")
+    setIsFormOpen(true);
   }
+  
+  const handleFormSubmit = async (data: AppointmentFormValues) => {
+    console.log("Submitting form data:", data)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      toast({ 
+        title: selectedAppointment ? "Appointment updated" : "Appointment created",
+        description: `${data.title} has been ${selectedAppointment ? 'updated' : 'scheduled'}.`
+      });
+      
+      handleFormClose();
 
-  const handleFormSubmit = (data: AppointmentFormValues) => {
-    // In a real app, this would save to the database
-    if (selectedAppointment) {
-      // Update existing appointment
-      const updatedAppointments = appointments.map((appointment) =>
-        appointment.id === selectedAppointment.id
-          ? {
-              ...appointment,
-              ...data,
-              clientName:
-                data.clientId === appointment.clientId
-                  ? appointment.clientName
-                  : mockAppointments.find((a) => a.clientId === data.clientId)?.clientName || "Unknown",
-            }
-          : appointment,
-      )
-      setAppointments(updatedAppointments)
-      toast({
-        title: "Appointment updated",
-        description: `${data.title} has been updated.`,
-      })
-    } else {
-      // Create new appointment
-      const newAppointment: CalendarAppointment = {
-        id: `new-${Date.now()}`,
-        ...data,
-        clientName: mockAppointments.find((a) => a.clientId === data.clientId)?.clientName || "Unknown",
-      }
-      setAppointments([...appointments, newAppointment])
-      toast({
-        title: "Appointment created",
-        description: `${data.title} has been scheduled.`,
-      })
+    } catch (error) {
+      console.error("Error saving appointment:", error);
+      toast({ 
+        title: "Error", 
+        description: `Failed to save appointment: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive"
+      });
     }
-    setCurrentView("calendar")
   }
 
   const handleCancelForm = () => {
-    setCurrentView("calendar")
+    setIsFormOpen(false)
     setSelectedAppointment(null)
+    setSelectedQuickAppointment(null)
+  }
+
+  const handleQuickAppointmentClick = (appt: QuickAppointment) => {
+    setSelectedQuickAppointment(appt)
+    setSelectedAppointment(null)
+    setIsFormOpen(true)
+  }
+
+  const handleFormClose = () => {
+    setIsFormOpen(false)
+    setSelectedQuickAppointment(null)
+    setSelectedAppointment(null)
+  }
+
+  const getInitialFormValues = (): AppointmentFormValues => {
+    const now = new Date()
+    const startTime = new Date(now)
+    startTime.setMinutes(Math.ceil(now.getMinutes() / 15) * 15, 0, 0)
+    const endTime = new Date(startTime.getTime() + (selectedQuickAppointment?.duration || 60) * 60000)
+    
+    const defaultStatus: AppointmentStatus = AppointmentStatus.SCHEDULED;
+
+    if (selectedAppointment) {
+      return {
+        title: selectedAppointment.title || "",
+        leadId: selectedAppointment.leadId || leadId || "",
+        userId: userId,
+        date: selectedAppointment.date ? new Date(selectedAppointment.date) : now,
+        startTime: selectedAppointment.startTime || "",
+        endTime: selectedAppointment.endTime || "",
+        purpose: selectedAppointment.purpose || AppointmentPurposeEnum.OTHER,
+        status: selectedAppointment.status as AppointmentStatus || defaultStatus,
+        address: selectedAppointment.address || "",
+        notes: selectedAppointment.notes || "",
+      }
+    }
+    
+    return {
+      title: selectedQuickAppointment?.title || "",
+      leadId: leadId || "",
+      userId: userId, 
+      date: startTime,
+      startTime: startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      endTime: endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      purpose: selectedQuickAppointment?.purpose || AppointmentPurposeEnum.OTHER,
+      status: defaultStatus,
+      address: "",
+      notes: "",
+    }
   }
 
   return (
     <Drawer open={isOpen} onOpenChange={onClose}>
+      <DrawerTrigger asChild>
+        <Button variant="outline" size="icon" className="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg z-50">
+          <CalendarPlus className="h-6 w-6" />
+        </Button>
+      </DrawerTrigger>
       <DrawerContent className="max-h-[99vh]">
         <DrawerHeader className="border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <DrawerTitle>
-              {currentView === "calendar" && "Appointments"}
-              {currentView === "form" && (selectedAppointment ? "Edit Appointment" : "New Appointment")}
-              {currentView === "details" && "Appointment Details"}
+              {isFormOpen ? 
+                (selectedAppointment ? "Edit Appointment" : "New Appointment") : 
+                "Appointments"
+              }
             </DrawerTitle>
             <div className="flex items-center gap-2">
-              {currentView !== "calendar" && (
-                <Button variant="ghost" size="sm" onClick={() => setCurrentView("calendar")}>
+              {isFormOpen && (
+                <Button variant="ghost" size="sm" onClick={handleCancelForm}>
                   Back
                 </Button>
               )}
@@ -267,40 +228,70 @@ export function AppointmentsDrawer({ isOpen, onClose }: AppointmentsDrawerProps)
         </DrawerHeader>
 
         <div className="flex-1 flex flex-col h-[70vh]">
-          {currentView === "calendar" && (
-            <Calendar // Updated component name
-              appointments={appointments}
-              onDateClick={handleDateClick}
-              onAppointmentClick={handleAppointmentClick}
-              onSwitchToDay={(date, time) => {
-                // When coming from context menu's "Add Appointment", open the form
-                handleAddAppointment(date, time)
-              }}
-            />
-          )}
-
-          {currentView === "form" && (
+          {!isFormOpen ? (
+            isLoading ? (
+              <div className="flex items-center justify-center h-full"><p>Loading appointments...</p></div>
+            ) : error ? (
+              <div className="flex items-center justify-center h-full text-red-600"><p>Error: {error}</p></div>
+            ) : (
+              <Calendar 
+                appointments={appointments}
+                onDateClick={handleDateClick}
+                onAppointmentClick={handleAppointmentClick}
+                onSwitchToDay={(date, time) => {
+                  setSelectedDate(date);
+                  setSelectedTime(time ?? null);
+                  handleAddAppointment();
+                }}
+              />
+            )
+          ) : (
             <div className="p-4 overflow-y-auto">
-              <AppointmentForm
-                initialDate={selectedDate}
-                initialTime={selectedTime}
+              <AppointmentForm 
                 appointment={selectedAppointment || undefined}
-                onSubmit={handleFormSubmit}
+                initialDate={selectedDate || undefined}
+                initialTime={selectedTime}
+                defaultValues={getInitialFormValues()}
                 onCancel={handleCancelForm}
+                onSubmit={handleFormSubmit}
               />
             </div>
           )}
+          
+          {!isFormOpen && (
+             <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-4 border-t">
+                {quickAppointments.map((appt) => (
+                  <Button
+                    key={appt.purpose}
+                    variant="outline"
+                    className={`h-20 flex flex-col justify-center items-center p-2 text-center ${appt.color} text-white hover:opacity-90`}
+                    onClick={() => handleQuickAppointmentClick(appt)}
+                  >
+                    <span className="text-sm font-medium">{appt.title}</span>
+                    <span className="text-xs">({appt.duration} min)</span>
+                  </Button>
+                ))}
+                <Button
+                  variant="secondary"
+                  className="h-20 flex flex-col justify-center items-center p-2 text-center col-span-2 sm:col-span-1"
+                  onClick={handleAddAppointment}
+                >
+                  <span className="text-sm font-medium">Custom Appointment</span>
+                </Button>
+              </div>
+          )}
+          
+          {currentView === "details" && selectedAppointment && (
+            <div className="p-4 overflow-y-auto border-t">
+              <h3 className="font-semibold mb-2">{selectedAppointment.title}</h3>
+              <p>Date: {selectedAppointment.date?.toLocaleDateString()}</p>
+              <p>Time: {selectedAppointment.startTime} - {selectedAppointment.endTime}</p>
+              <p>Purpose: {selectedAppointment.purpose}</p>
+              <p>Status: {selectedAppointment.status}</p>
+              <p>Lead: {selectedAppointment.leadName}</p>
+            </div>
+          )}
         </div>
-
-        {/* Floating Action Button for adding new appointment */}
-        {currentView === "calendar" && (
-          <div className="absolute bottom-4 right-4">
-            <Button size="icon" className="h-12 w-12 rounded-full shadow-lg" onClick={handleAddAppointment}>
-              <Plus className="h-6 w-6" />
-              <span className="sr-only">Add appointment</span>
-            </Button>
-          </div>
-        )}
       </DrawerContent>
     </Drawer>
   )

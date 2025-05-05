@@ -109,7 +109,7 @@ export default function LeadsClient() {
     },
   ]
 
-  if (error) return <p className="text-red-600">Error: {error}</p>
+  if (error) return <p className="text-red-600">Error: {error.message}</p>
 
   const handleStatusClick = (status: LeadStatus | null) => {
     setSelectedStatus(status)

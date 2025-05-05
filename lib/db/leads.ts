@@ -1,5 +1,5 @@
 import { prisma } from './prisma'
-import { Lead, ActivityType, ActivityStatus } from '@prisma/client'
+import { Lead, ActivityType, ActivityStatus, LeadStatus } from '@prisma/client'
 import { nanoid } from "nanoid"
 import crypto from "crypto"
 
@@ -49,11 +49,7 @@ interface CreateLeadInput {
   email?: string | null
   phone?: string | null
   address?: string | null
-  streetAddress?: string | null
-  city?: string | null
-  state?: string | null
-  zipcode?: string | null
-  status: string
+  status: LeadStatus
   assignedToId?: string | null
   notes?: string | null
   userId: string // Required for activity creation
@@ -71,11 +67,7 @@ export async function createLead(data: CreateLeadInput): Promise<Lead> {
         email: data.email,
         phone: data.phone,
         address: data.address,
-        streetAddress: data.streetAddress,
-        city: data.city,
-        state: data.state,
-        zipcode: data.zipcode,
-        status: data.status as any, // We'll type this properly with LeadStatus
+        status: data.status,
         assignedToId: data.assignedToId,
         notes: data.notes
       }
@@ -107,11 +99,7 @@ interface UpdateLeadInput {
   email?: string | null
   phone?: string | null
   address?: string | null
-  streetAddress?: string | null
-  city?: string | null
-  state?: string | null
-  zipcode?: string | null
-  status?: string
+  status?: LeadStatus
   assignedToId?: string | null
   notes?: string | null
   userId: string // Required for activity creation
@@ -125,18 +113,14 @@ export async function updateLead(
     const lead = await prisma.lead.update({
       where: { id },
       data: {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        phone: data.phone,
-        address: data.address,
-        streetAddress: data.streetAddress,
-        city: data.city,
-        state: data.state,
-        zipcode: data.zipcode,
-        status: data.status as any, // We'll type this properly with LeadStatus
-        assignedToId: data.assignedToId,
-        notes: data.notes
+        ...(data.firstName && { firstName: data.firstName }),
+        ...(data.lastName && { lastName: data.lastName }),
+        ...(data.email !== undefined && { email: data.email }),
+        ...(data.phone !== undefined && { phone: data.phone }),
+        ...(data.address !== undefined && { address: data.address }),
+        ...(data.status && { status: data.status }),
+        ...(data.assignedToId !== undefined && { assignedToId: data.assignedToId }),
+        ...(data.notes !== undefined && { notes: data.notes })
       }
     })
 

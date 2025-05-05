@@ -9,10 +9,65 @@ import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AppointmentStatus } from '@prisma/client'
 import { format } from "date-fns"
-import { AppointmentPurpose, AppointmentPurposeEnum } from '@/types/appointments'
+import { CalendarIcon } from "lucide-react"
+import type { AppointmentPurpose } from "@/types/lead"
+
+interface PrismaAppointment {
+  id: string
+  title: string
+  startTime: Date // Prisma DateTime maps to JS Date
+  endTime: Date   // Prisma DateTime maps to JS Date
+  purpose: AppointmentPurpose
+  status: AppointmentStatus
+  // Include other fields from Prisma model if needed by the component
+}
 
 interface LeadAppointmentsProps {
   leadId: string
+}
+
+// Local definition of labels as a fallback
+const LOCAL_PURPOSE_LABELS: Record<AppointmentPurpose, string> = {
+  INSPECTION: "Inspection",
+  FILE_CLAIM: "File Claim",
+  FOLLOW_UP: "Follow Up",
+  ADJUSTER: "Adjuster Meeting",
+  BUILD_DAY: "Build Day",
+  OTHER: "Other"
+};
+
+// Helper to get background color based on status
+const getStatusColor = (status: AppointmentStatus): string => {
+  switch (status) {
+    case "COMPLETED": return "bg-green-100";
+    case "CANCELLED": return "bg-red-100";
+    case "RESCHEDULED": return "bg-yellow-100";
+    case "NO_SHOW": return "bg-gray-100";
+    case "SCHEDULED": 
+    default: return "bg-blue-100";
+  }
+}
+
+// Use local labels
+const getPurposeLabel = (purpose: AppointmentPurpose): string => {
+  return LOCAL_PURPOSE_LABELS[purpose as keyof typeof LOCAL_PURPOSE_LABELS] || purpose; 
+}
+
+// Helper to format time from Date object
+const formatTime = (date: Date): string => {
+  return format(date, "p"); // e.g., 10:30 AM
+}
+
+// Helper for status labels (assuming STATUS_LABELS from constants might have issues too)
+const getStatusLabel = (status: AppointmentStatus): string => {
+  const labels: Record<AppointmentStatus, string> = {
+    SCHEDULED: "Scheduled",
+    COMPLETED: "Completed",
+    CANCELLED: "Cancelled",
+    RESCHEDULED: "Rescheduled",
+    NO_SHOW: "No Show",
+  };
+  return labels[status] || status;
 }
 
 export function LeadAppointments({ leadId }: LeadAppointmentsProps) {
@@ -24,68 +79,6 @@ export function LeadAppointments({ leadId }: LeadAppointmentsProps) {
   const formatDate = (dateString: string | Date) => {
     const date = typeof dateString === "string" ? new Date(dateString) : dateString
     return format(date, "MMM d, yyyy")
-  }
-
-  const formatTime = (timeString: string) => {
-    // Assuming timeString is in HH:MM format
-    const [hours, minutes] = timeString.split(":")
-    const hour = Number.parseInt(hours, 10)
-    const ampm = hour >= 12 ? "PM" : "AM"
-    const hour12 = hour % 12 || 12
-    return `${hour12}:${minutes} ${ampm}`
-  }
-
-  const getPurposeLabel = (purpose: AppointmentPurpose) => {
-    switch (purpose) {
-      case AppointmentPurposeEnum.INITIAL_CONSULTATION:
-        return "Initial Consultation"
-      case AppointmentPurposeEnum.ESTIMATE:
-        return "Estimate"
-      case AppointmentPurposeEnum.FOLLOW_UP:
-        return "Follow Up"
-      case AppointmentPurposeEnum.INSPECTION:
-        return "Inspection"
-      case AppointmentPurposeEnum.CONTRACT_SIGNING:
-        return "Contract Signing"
-      case AppointmentPurposeEnum.OTHER:
-        return "Other"
-      default:
-        return purpose
-    }
-  }
-
-  const getStatusLabel = (status: AppointmentStatus) => {
-    switch (status) {
-      case AppointmentStatus.SCHEDULED:
-        return "Scheduled"
-      case AppointmentStatus.COMPLETED:
-        return "Completed"
-      case AppointmentStatus.CANCELLED:
-        return "Cancelled"
-      case AppointmentStatus.RESCHEDULED:
-        return "Rescheduled"
-      case AppointmentStatus.NO_SHOW:
-        return "No Show"
-      default:
-        return status
-    }
-  }
-
-  const getStatusColor = (status: AppointmentStatus) => {
-    switch (status) {
-      case AppointmentStatus.SCHEDULED:
-        return "bg-blue-100 text-blue-800"
-      case AppointmentStatus.COMPLETED:
-        return "bg-green-100 text-green-800"
-      case AppointmentStatus.CANCELLED:
-        return "bg-red-100 text-red-800"
-      case AppointmentStatus.RESCHEDULED:
-        return "bg-yellow-100 text-yellow-800"
-      case AppointmentStatus.NO_SHOW:
-        return "bg-gray-100 text-gray-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
   }
 
   if (isLoading) {
@@ -127,6 +120,19 @@ export function LeadAppointments({ leadId }: LeadAppointmentsProps) {
     )
   }
 
+  if (!appointments || appointments.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Appointments</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">No appointments scheduled.</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -152,60 +158,22 @@ export function LeadAppointments({ leadId }: LeadAppointmentsProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {appointments.length > 0 ? (
-          <div className="space-y-4">
-            {appointments.map((appointment) => (
-              <div key={appointment.id} className="border rounded-md p-3">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h4 className="font-medium">{appointment.purpose}</h4>
-                    <div className="flex items-center text-sm text-muted-foreground mt-1">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      <span>{formatDate(appointment.date)}</span>
-                      <Clock className="h-3 w-3 ml-3 mr-1" />
-                      <span>{`${formatTime(appointment.startTime)} - ${formatTime(appointment.endTime)}`}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(appointment.status)}`}>
-                      {getStatusLabel(appointment.status)}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => setSelectedAppointment(appointment.id)}
-                    >
-                      <Edit2 className="h-3 w-3" />
-                      <span className="sr-only">Edit appointment</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-red-500"
-                      onClick={() => {
-                        // Delete appointment logic will go here
-                        toast({
-                          title: "Not implemented",
-                          description: "Delete appointment functionality is not yet implemented",
-                        })
-                      }}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                      <span className="sr-only">Delete appointment</span>
-                    </Button>
-                  </div>
-                </div>
-                {appointment.notes && <p className="text-sm whitespace-pre-wrap mt-2">{appointment.notes}</p>}
-              </div>
-            ))}
+        {appointments.map((appointment) => (
+          <div key={appointment.id} className={`p-3 rounded-md border ${getStatusColor(appointment.status)}`}>
+            <h4 className="font-medium">{appointment.title}</h4>
+            <div className="flex items-center mb-1">
+              <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">
+                {format(appointment.startTime, "PPP")}
+                 @ {formatTime(appointment.startTime)} - {formatTime(appointment.endTime)}
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground">Purpose: {getPurposeLabel(appointment.purpose)}</p>
+            <p className={`text-sm font-medium px-2 py-0.5 rounded inline-block`}>
+              Status: {getStatusLabel(appointment.status)}
+            </p>
           </div>
-        ) : (
-          <div className="text-center py-6 text-muted-foreground">
-            <p>No appointments scheduled</p>
-            <p className="text-sm">Add an appointment to keep track of meetings with this lead</p>
-          </div>
-        )}
+        ))}
       </CardContent>
     </Card>
   )

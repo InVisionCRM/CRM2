@@ -1,14 +1,17 @@
-import type { AppointmentPurpose, AppointmentStatus } from "@/types/appointments"
+import { AppointmentStatus } from "@prisma/client"
+import type { AppointmentPurpose } from "@/types/lead" // Import the corrected type
 
-// Define purpose colors for appointments
+// Define purpose colors matching the NEW Prisma schema values
 export const PURPOSE_COLORS: Record<AppointmentPurpose, string> = {
-  ADJUSTER_APPOINTMENT: "bg-green-100 text-green-800",
-  PICK_UP_CHECK: "bg-orange-100 text-orange-800",
+  INSPECTION: "bg-blue-100 text-blue-800",
+  FILE_CLAIM: "bg-indigo-100 text-indigo-800",
+  FOLLOW_UP: "bg-yellow-100 text-yellow-800",
+  ADJUSTER: "bg-green-100 text-green-800",
   BUILD_DAY: "bg-amber-100 text-amber-800", // gold color
-  MEETING_WITH_CLIENT: "bg-blue-100 text-blue-800",
+  OTHER: "bg-gray-100 text-gray-800",
 }
 
-// Define status colors for appointments
+// Define status colors for appointments (Assuming these are correct)
 export const STATUS_COLORS: Record<AppointmentStatus, string> = {
   SCHEDULED: "bg-blue-100 text-blue-800",
   COMPLETED: "bg-green-100 text-green-800",
@@ -17,15 +20,9 @@ export const STATUS_COLORS: Record<AppointmentStatus, string> = {
   NO_SHOW: "bg-gray-100 text-gray-800",
 }
 
-// Define purpose labels for appointments
-export const PURPOSE_LABELS: Record<AppointmentPurpose, string> = {
-  ADJUSTER_APPOINTMENT: "Adjuster Appointment",
-  PICK_UP_CHECK: "Pick Up Check",
-  BUILD_DAY: "Build Day",
-  MEETING_WITH_CLIENT: "Meeting with Client",
-}
+// PURPOSE_LABELS is now defined in types/appointments.ts
 
-// Define status labels for appointments
+// Define status labels for appointments (Assuming these are correct)
 export const STATUS_LABELS: Record<AppointmentStatus, string> = {
   SCHEDULED: "Scheduled",
   COMPLETED: "Completed",

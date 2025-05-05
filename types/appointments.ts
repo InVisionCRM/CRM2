@@ -1,28 +1,27 @@
-import { Appointment, AppointmentPurpose, AppointmentStatus } from '@prisma/client'
+import { Appointment, AppointmentStatus } from '@prisma/client'
+import type { AppointmentPurpose } from './lead'
 
 export type { Appointment, AppointmentStatus }
 
 export const AppointmentPurposeEnum = {
-  INITIAL_CONSULTATION: AppointmentPurpose.INITIAL_CONSULTATION,
-  ESTIMATE: AppointmentPurpose.ESTIMATE,
-  FOLLOW_UP: AppointmentPurpose.FOLLOW_UP,
-  INSPECTION: AppointmentPurpose.INSPECTION,
-  CONTRACT_SIGNING: AppointmentPurpose.CONTRACT_SIGNING,
-  OTHER: AppointmentPurpose.OTHER
+  INSPECTION: "INSPECTION",
+  FILE_CLAIM: "FILE_CLAIM",
+  FOLLOW_UP: "FOLLOW_UP",
+  ADJUSTER: "ADJUSTER",
+  BUILD_DAY: "BUILD_DAY",
+  OTHER: "OTHER"
 } as const
-
-export type { AppointmentPurpose }
 
 export interface AppointmentWithRelations extends Appointment {
   lead: {
     id: string
-    name: string
-  }
+    firstName: string | null
+    lastName: string | null
+  } | null
   user: {
     id: string
-    name: string
-    email: string
-  }
+    name: string | null
+  } | null
 }
 
 export interface AppointmentFormData {
@@ -56,10 +55,32 @@ export interface AppointmentsByDate {
 }
 
 export const PURPOSE_LABELS: Record<AppointmentPurpose, string> = {
-  INITIAL_CONSULTATION: "Initial Consultation",
-  ESTIMATE: "Estimate",
-  FOLLOW_UP: "Follow Up",
   INSPECTION: "Inspection",
-  CONTRACT_SIGNING: "Contract Signing",
+  FILE_CLAIM: "File Claim",
+  FOLLOW_UP: "Follow Up",
+  ADJUSTER: "Adjuster Meeting",
+  BUILD_DAY: "Build Day",
   OTHER: "Other"
+}
+
+export interface CreateAppointmentInput {
+  title: string
+  startTime: Date
+  endTime: Date
+  purpose: AppointmentPurpose
+  status?: AppointmentStatus
+  address?: string | null
+  notes?: string | null
+  leadId: string
+  userId: string
+}
+
+export interface UpdateAppointmentInput {
+  title?: string
+  startTime?: Date
+  endTime?: Date
+  purpose?: AppointmentPurpose
+  status?: AppointmentStatus
+  address?: string | null
+  notes?: string | null
 }

@@ -1,41 +1,43 @@
-export type LeadStatus = "new" | "contacted" | "qualified" | "proposal" | "negotiation" | "closed_won" | "closed_lost"
-
-export type LeadSource = "website" | "referral" | "google" | "facebook" | "door_knocking" | "other"
+export type LeadStatus =
+  | "signed_contract"
+  | "scheduled"
+  | "colors"
+  | "acv"
+  | "job"
+  | "completed_jobs"
+  | "zero_balance"
+  | "denied"
+  | "follow_ups"
 
 export interface Lead {
   id: string
-  firstName: string
-  lastName: string
+  firstName: string | null
+  lastName: string | null
   email: string | null
   phone: string | null
   address: string | null
-  city: string | null
-  state: string | null
-  zipCode: string | null
-  status: string
-  source: LeadSource
-  createdAt: string
-  updatedAt: string
-  assignedTo: string | null
-  latitude?: number
-  longitude?: number
-  roofSquareFootage?: number
-  roofAge?: number
-  roofType?: string
+  status: LeadStatus
+  notes: string | null
+  assignedToId: string | null
   insuranceCompany: string | null
   insurancePolicyNumber: string | null
   insurancePhone: string | null
-  insuranceSecondaryPhone: string | null
   insuranceAdjusterName: string | null
   insuranceAdjusterPhone: string | null
   insuranceAdjusterEmail: string | null
-  insuranceDeductible: number | null
-  damageDate?: string
-  damageType?: string
-  contractSigned?: boolean
-  contractSignedDate?: string
-  proposalAmount?: number
-  notes: string | null
+  insuranceDeductible: string | null
+  insuranceSecondaryPhone: string | null
+  dateOfLoss: string | null
+  damageType: "HAIL" | "WIND" | "FIRE" | null
+  claimNumber: string | null
+  adjusterAppointmentDate: string | null
+  adjusterAppointmentTime: string | null
+  adjusterAppointmentNotes: string | null
+  googleEventId: string | null
+  latitude: number | null
+  longitude: number | null
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Note {
@@ -75,19 +77,17 @@ export interface PropertyDetails {
 }
 
 export type AppointmentPurpose =
-  | "initial_assessment"
-  | "measurement"
-  | "proposal_presentation"
-  | "contract_signing"
-  | "installation"
-  | "inspection"
-  | "follow_up"
+  | "INSPECTION"
+  | "FILE_CLAIM"
+  | "FOLLOW_UP"
+  | "ADJUSTER"
+  | "BUILD_DAY"
+  | "OTHER"
 
 export type AppointmentStatus = "scheduled" | "completed" | "cancelled" | "rescheduled"
 
 export interface LeadFilters {
   status?: LeadStatus[]
-  source?: LeadSource[]
   assignedTo?: string[]
   dateRange?: {
     start: Date
