@@ -1,5 +1,5 @@
 import { prisma } from './prisma'
-import { KnockStatus, type Prisma } from '@prisma/client'
+import { KnockStatus, Prisma } from '@prisma/client'
 
 interface ContactInfo {
   firstName?: string
@@ -112,27 +112,16 @@ export async function getMarkersByAddress(address: string): Promise<VisionMarker
  */
 export async function createMarker(data: CreateVisionMarkerInput): Promise<VisionMarker> {
   try {
-    // Add debugging to verify the enum value being passed
-    console.log("Creating marker with status:", {
-      providedStatus: data.status,
-      isEnumValue: typeof data.status === 'string' ? 'String (should be enum)' : 'Enum value (correct)',
-      validValues: Object.values(KnockStatus)
-    });
+    // Ensure status exists and defaults to KNOCKED if not provided
+    const statusToUse: KnockStatus = data.status ?? KnockStatus.KNOCKED;
 
-    // Ensure status is a valid KnockStatus enum value
-    const statusToUse = data.status || KnockStatus.KNOCKED;
-    
-    // Validate that status is a valid enum value
-    if (typeof statusToUse === 'string' && !Object.values(KnockStatus).includes(statusToUse as any)) {
-      console.warn(`Received string status '${statusToUse}' instead of enum. Valid values are:`, Object.values(KnockStatus));
-      // Try to convert if it's a string that matches an enum key
-      const matchingEnumKey = Object.keys(KnockStatus).find(key => 
-        key === statusToUse || key === statusToUse.toUpperCase().replace(' ', '_')
-      );
-      if (matchingEnumKey) {
-        console.log(`Converting string '${statusToUse}' to matching enum value: ${KnockStatus[matchingEnumKey as keyof typeof KnockStatus]}`);
-      }
+    // Basic runtime check to ensure it's a valid enum member (optional but safe)
+    if (!Object.values(KnockStatus).includes(statusToUse)) {
+       console.error(`Invalid KnockStatus value provided to createMarker: ${statusToUse}`);
+       throw new Error(`Invalid status value: ${statusToUse}`);
     }
+
+    console.log(`Attempting to create marker in DB with status enum: ${statusToUse}`);
 
     const marker = await prisma.visionMarker.create({
       data: {
@@ -140,7 +129,7 @@ export async function createMarker(data: CreateVisionMarkerInput): Promise<Visio
         longitude: data.longitude,
         address: data.address,
         notes: data.notes || null,
-        status: statusToUse,
+        status: statusToUse, // Directly use the (validated) enum value
         contactInfo: data.contactInfo ? (data.contactInfo as Prisma.InputJsonValue) : undefined,
         followUp: data.followUp ? (data.followUp as Prisma.InputJsonValue) : undefined,
         visits: data.visits ? (data.visits as unknown as Prisma.InputJsonValue) : undefined,
@@ -148,15 +137,21 @@ export async function createMarker(data: CreateVisionMarkerInput): Promise<Visio
         leadId: data.leadId
       },
       include: {
-        lead: true
+        lead: true // Include related lead if needed in the response
       }
     })
 
-    console.log("Vision marker created successfully:", marker)
+    console.log("DB: Vision marker created successfully with ID:", marker.id);
     return marker
   } catch (error) {
-    console.error("Error creating vision marker:", error)
-    throw new Error(`Failed to create marker: ${error instanceof Error ? error.message : "Unknown error"}`)
+    // Log the specific error for better debugging
+    console.error("Prisma Error creating vision marker:", error);
+    // Re-throw a more specific error or handle it as needed
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // Log specific Prisma error codes if helpful
+      console.error(`Prisma Error Code: ${error.code}`);
+    }
+    throw new Error(`Database error: Failed to create marker. ${error instanceof Error ? error.message : "Unknown DB error"}`);
   }
 }
 
