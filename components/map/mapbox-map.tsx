@@ -52,10 +52,10 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>((
         markersData,
         onMarkerClick,
         onMapClick,
-        initialCenter = [-98.5795, 39.8283], // Default center (USA)
-        initialZoom = 4,
-        accessToken,
-        mapStyle = "mapbox://styles/mapbox/streets-v12",
+        initialCenter = [42.700710, -82.959023], // Default center (USA)
+        initialZoom = 7,
+        accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN,
+        mapStyle = "mapbox://styles/invisionpjm/cm966bqbg00br01qugzbw7vef",
         searchResultMarker,
         showUserLocation = true, // Default to showing user location
     },
