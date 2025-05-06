@@ -6,8 +6,7 @@ import { useToast } from "@/components/ui/use-toast"
 import MapboxMap, { MapboxMarkerData, MapboxMapRef } from "@/components/map/mapbox-map"
 // Remove GoogleMap import
 // import GoogleMap from "@/components/map/google-map" 
-// Remove AddressSearch import (for now)
-// import { AddressSearch } from "@/components/map/address-search"
+import { AddressSearch } from "@/components/map/address-search"
 // Remove Google-specific MarkerData import
 // import type { MarkerData } from "@/components/map/google-map" 
 import { PropertyVisitStatus } from "@/components/map/types"
@@ -36,7 +35,7 @@ interface ModalData {
   markerId?: string
   currentStatus?: PropertyVisitStatus | "New" | "Search"
   leadId?: string
-  // Removed streetViewUrl as it was Google-specific
+  streetViewUrl?: string // Add streetViewUrl back
 }
 
 export default function MapPage() {
@@ -51,6 +50,8 @@ export default function MapPage() {
   // Use MapboxMapRef type for the ref
   const mapRef = useRef<MapboxMapRef>(null) 
   const { toast } = useToast()
+
+  const mapboxAccessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || "";
 
   // Log when markers state changes
   useEffect(() => {
@@ -154,66 +155,91 @@ export default function MapPage() {
     }
   };
 
+  // Function to generate Street View URL
+  const getStreetViewUrl = (lat: number, lng: number): string => {
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      console.error("Google Maps API Key is missing!");
+      // Return the placeholder if the key is missing
+      return "https://placehold.co/600x300/cccccc/969696/png?text=API+Key+Missing";
+    }
+    const size = "600x300"; // Adjusted size for better modal fit
+    const heading = "0";
+    const pitch = "0";
+    const fov = "90";
+    return `https://maps.googleapis.com/maps/api/streetview?size=${size}&location=${lat},${lng}&heading=${heading}&pitch=${pitch}&fov=${fov}&key=${apiKey}`;
+  };
+
   // handleMarkerClick - receives MapboxMarkerData
   const handleMarkerClick = useCallback((marker: MapboxMarkerData) => {
-    console.log("Marker clicked (Mapbox):", marker)
+    console.log("Marker clicked (Mapbox):", marker);
+    console.log("Marker address:", marker.properties.address);
 
-    // Cast coordinates to [number, number] for ModalData
     const position = marker.geometry.coordinates as [number, number];
+    const [lng, lat] = position; // Destructure coordinates
 
-    setSelectedModalData({
+    const modalData: ModalData = {
       address: marker.properties.address,
-      position: position, // Use the casted position
+      position: position,
       markerId: marker.id,
       currentStatus: marker.properties.status === "New" || marker.properties.status === "Search" ? undefined : marker.properties.status,
-      leadId: marker.properties.leadId
-    })
-    setIsModalOpen(true)
-  }, []) // Empty dependency array: assumes it doesn't depend on other state/props
+      leadId: marker.properties.leadId,
+      streetViewUrl: getStreetViewUrl(lat, lng), // Generate Street View URL using lat, lng
+    };
+    console.log("Setting modal data for existing marker with address:", modalData.address);
+    console.log("Street View URL:", modalData.streetViewUrl); // Log the generated URL
 
-  // handleMarkerAdd - now triggered by onMapClick, receives [lng, lat]
+    setSelectedModalData(modalData);
+    setIsModalOpen(true);
+  }, []); // Dependencies are empty as getStreetViewUrl is stable
+
+  // handleMapClick - now triggered by onMapClick, receives [lng, lat]
   const handleMapClick = useCallback((position: [number, number], address?: string) => {
     console.log("Map clicked at position (Mapbox):", position, "address:", address);
+    const [lng, lat] = position; // Destructure coordinates
 
     const tempId = `temp-${Date.now()}`;
-    // Create marker in GeoJSON format
+    console.log("Generated temporary ID:", tempId);
+
     const newMarker: MapboxMarkerData = {
       type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: position // [lng, lat]
-      },
+      geometry: { type: 'Point', coordinates: position },
       properties: {
-        address: address || "Unknown Address", // Use placeholder if address not yet geocoded
+        address: address || "Unknown Address",
         status: "New",
-        leadId: tempId, // Link temporary marker to potential lead creation
+        leadId: tempId,
       },
       id: tempId,
     };
 
-
+    console.log("Created new marker with address:", newMarker.properties.address);
     setMarkers((prevMarkers) => [...prevMarkers, newMarker]);
 
-    // Prepare data for the modal (still uses simple position for now)
-    setSelectedModalData({
+    const modalData: ModalData = {
       address: newMarker.properties.address,
-      position: position, // Keep [lng, lat] for modal state
+      position: position,
       markerId: tempId,
-      currentStatus: undefined, // New marker starts with no set status in modal
+      currentStatus: undefined,
       leadId: tempId,
-    });
-    setIsModalOpen(true);
-  }, []); // Empty dependency array
+      streetViewUrl: getStreetViewUrl(lat, lng), // Generate Street View URL using lat, lng
+    };
+    console.log("Setting modal data with address:", modalData.address);
+    console.log("Street View URL:", modalData.streetViewUrl); // Log the generated URL
 
-  // handleAddressSelect - Commented out as AddressSearch is removed
-  // const handleAddressSelect = useCallback((result: { /* Mapbox geocoding result type */ }) => {
-  //   console.log("Address selected (Mapbox - TODO):", result)
-  //   // TODO: Implement using Mapbox Geocoding API
-  //   // 1. Get coordinates [lng, lat] from result
-  //   // 2. Create temporary search marker (MapboxMarkerData)
-  //   // 3. Update markers state
-  //   // 4. Call mapRef.current.flyTo(position)
-  // }, [])
+    setSelectedModalData(modalData);
+    setIsModalOpen(true);
+  }, []); // Dependencies are empty
+
+  const handleAddressSelect = useCallback((result: { place_name: string; center: { lat: number; lng: number } }) => {
+    console.log("Address selected (Mapbox Geocoder):", result);
+    const { lat, lng } = result.center;
+    // Fly map to the selected location
+    if (mapRef.current) {
+      mapRef.current.flyTo([lng, lat], 15); // Zoom level 15
+    }
+    // Optional: Create a temporary marker for the search result
+    // handleMapClick([lng, lat], result.place_name);
+  }, []); // Add dependencies if needed
 
   // handleStatusChange - uses [lng, lat] but sends lat/lng separately to API
   const handleStatusChange = useCallback(async (newStatus: PropertyVisitStatus) => {
@@ -346,10 +372,12 @@ export default function MapPage() {
     <MapProvider> 
       <div className="fullscreen-map-container relative" style={{ height: "100vh", width: "100%", position: "relative", overflow: "hidden" }}>
         {/* Search bar - Commented out for now */}
-        {/* <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 w-full max-w-md px-4"> */}
-          {/* TODO: Replace with Mapbox Geocoder component */}
-          {/* <AddressSearch onAddressSelect={handleAddressSelect} /> */}
-        {/* </div> */}
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 w-full max-w-md px-4">
+          <AddressSearch
+             accessToken={mapboxAccessToken}
+             onAddressSelect={handleAddressSelect}
+          />
+        </div>
 
         {/* Knock Counter Display (remains the same) */}
         {knockCount !== null && (
@@ -386,7 +414,7 @@ export default function MapPage() {
               setSelectedModalData(null)
             }}
             address={selectedModalData.address || "Loading address..."}
-            // Removed streetViewUrl 
+            streetViewUrl={selectedModalData.streetViewUrl} // Pass the fetched URL
             currentStatus={selectedModalData.currentStatus === "New" || selectedModalData.currentStatus === "Search" ? undefined : selectedModalData.currentStatus}
             availableStatuses={[
               "No Answer",
@@ -397,6 +425,8 @@ export default function MapPage() {
             ]}
             onStatusChange={handleStatusChange}
             leadId={selectedModalData.leadId}
+            // Pass other relevant props from selectedModalData if needed
+            // e.g., firstName={selectedModalData.firstName}
           />
         )}
       </div>
