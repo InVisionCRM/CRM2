@@ -270,7 +270,12 @@ export default function MapPage() {
     let markerError: string | undefined = undefined;
     try {
       if (markerId && markerId.startsWith('temp-')) {
-        console.log("Saving new marker to DB...");
+        console.log("Saving new marker to DB with payload:", JSON.stringify({ // Log payload
+            lat: latitude,
+            lng: longitude,
+            address: address || "Unknown Address",
+            status: newStatus,
+          }));
         const response = await fetch("/api/vision-markers", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -281,10 +286,15 @@ export default function MapPage() {
             status: newStatus,
           }),
         });
-        if (!response.ok) throw new Error("Failed to create marker");
+        if (!response.ok) {
+            const errorBody = await response.text(); // Read error body
+            console.error(`Failed to create marker: ${response.status} ${response.statusText}`, errorBody); // Log status and body
+            throw new Error(`Failed to create marker: ${response.status} ${response.statusText} - ${errorBody}`);
+        }
         const createdMarker = await response.json();
 
         if (typeof createdMarker.id !== 'string') {
+            console.error("Invalid marker data received from API:", createdMarker); // Log invalid data
             throw new Error("Invalid marker ID received from API");
         }
         const realMarkerId = createdMarker.id;
@@ -294,8 +304,8 @@ export default function MapPage() {
         // Update local state with the real ID and status (in GeoJSON structure)
         setMarkers(prevMarkers =>
           prevMarkers.map(m =>
-            m.id === markerId
-              ? { ...m, id: realMarkerId, properties: { ...m.properties, status: newStatus } }
+            m.id === markerId // markerId is the temp ID
+              ? { ...m, id: realMarkerId, properties: { ...m.properties, status: newStatus } } // Create new object with real ID
               : m
           )
         );
@@ -308,20 +318,27 @@ export default function MapPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: newStatus }),
         });
-        if (!response.ok) throw new Error("Failed to update marker status");
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error(`Failed to update marker: ${response.status} ${response.statusText}`, errorBody);
+            throw new Error(`Failed to update marker status: ${response.status} ${response.statusText} - ${errorBody}`);
+        }
         console.log(`Marker ${markerId} status updated.`);
       } else {
         console.error("Cannot update status, markerId is missing.");
-        // Optional: Show error toast if needed
-        return; // Exit if no markerId
+        markerError = "Cannot update status, marker information is missing."; // Set user-facing error
+        // return; // Maybe don't exit here, let the toast show the error
       }
     } catch (error) {
-      console.error("Error saving marker:", error);
+      console.error("Error saving marker during API call:", error); // Log the caught error object
       markerError = error instanceof Error ? error.message : "Failed to save marker changes.";
       // Revert optimistic UI update on marker save error (in GeoJSON structure)
-      setMarkers(prevMarkers => prevMarkers.map(m =>
-        m.id === optimisticUiId ? { ...m, properties: { ...m.properties, status: selectedModalData.currentStatus || 'New' } } : m
-      ));
+      // Important: Ensure selectedModalData still exists for reverting
+      if(selectedModalData) { 
+        setMarkers(prevMarkers => prevMarkers.map(m =>
+          m.id === optimisticUiId ? { ...m, properties: { ...m.properties, status: selectedModalData.currentStatus || 'New' } } : m
+        ));
+      }
     }
 
     // 3. Record the visit (API expects lat, lng)
@@ -339,12 +356,16 @@ export default function MapPage() {
                     status: newStatus,
                 }),
             });
-             if (!visitResponse.ok) throw new Error("Failed to record visit");
+             if (!visitResponse.ok) {
+                 const errorBody = await visitResponse.text();
+                 console.error(`Failed to record visit: ${visitResponse.status} ${visitResponse.statusText}`, errorBody);
+                 throw new Error("Failed to record visit"); // Keep error concise for toast
+             }
             console.log("Visit recorded successfully.");
             // Fetch knock count again after successful visit recording
-            fetchKnockCount(); 
+            fetchKnockCount();
         } catch (error) {
-            console.error("Error recording visit:", error);
+            console.error("Error recording visit:", error); // Log the caught error object
             visitError = error instanceof Error ? error.message : "Failed to record visit activity.";
         }
     }
@@ -399,9 +420,6 @@ export default function MapPage() {
             markersData={markers} 
             onMarkerClick={handleMarkerClick}
             onMapClick={handleMapClick} 
-            initialCenter={[-122.4194, 37.7749]}
-            initialZoom={10}
-            mapStyle="mapbox://styles/mapbox/streets-v12"
           />
         </div>
 

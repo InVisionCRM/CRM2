@@ -52,8 +52,8 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>((
         markersData,
         onMarkerClick,
         onMapClick,
-        initialCenter = [42.700710, -82.959023], // Default center (USA)
-        initialZoom = 7,
+        initialCenter = [-83.333, 42.266], // Default center (USA)
+        initialZoom = 10,
         accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN,
         mapStyle = "mapbox://styles/invisionpjm/cm966bqbg00br01qugzbw7vef",
         searchResultMarker,
@@ -61,6 +61,8 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>((
     },
     ref
 ) => {
+    console.log("[MapboxMap] Received props:", { initialCenter, initialZoom, mapStyle });
+
     const mapContainer = useRef<HTMLDivElement>(null);
     const mapRef = useRef<Map | null>(null);
     const markersRef = useRef<{ [key: string]: Marker }>({});
@@ -147,11 +149,37 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>((
 
             // Handle Map Clicks (if handler provided)
             if (onMapClick) {
-                map.on("click", (e) => {
-                    console.log("[MapboxMap] Map clicked", e.lngLat);
-                    // Basic reverse geocode (consider a more robust service for production)
-                    // Note: Mapbox Geocoding requires separate API calls usually
-                    onMapClick([e.lngLat.lng, e.lngLat.lat]);
+                map.on("click", async (e) => { // Make handler async
+                    const coords: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+                    console.log("[MapboxMap] Map clicked at coords:", coords);
+
+                    let fetchedAddress: string | undefined = undefined;
+                    if (!accessToken) {
+                        console.error("[MapboxMap] Mapbox access token is missing, cannot perform reverse geocoding.");
+                    } else {
+                        try {
+                            // Call Mapbox Reverse Geocoding API
+                            const geocodeUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${coords[0]},${coords[1]}.json?access_token=${accessToken}&types=address&limit=1`;
+                            console.log("[MapboxMap] Fetching address from:", geocodeUrl); // Log URL
+                            const response = await fetch(geocodeUrl);
+                            if (!response.ok) {
+                                const errorText = await response.text();
+                                throw new Error(`Geocoding failed: ${response.status} ${response.statusText} - ${errorText}`);
+                            }
+                            const data = await response.json();
+                            if (data.features && data.features.length > 0) {
+                                fetchedAddress = data.features[0].place_name; // Get the address string
+                                console.log("[MapboxMap] Reverse geocoded address:", fetchedAddress);
+                            } else {
+                                console.warn("[MapboxMap] Reverse geocoding returned no features for coords:", coords);
+                            }
+                        } catch (error) {
+                            console.error("[MapboxMap] Reverse geocoding fetch error:", error);
+                            // Keep fetchedAddress as undefined, the parent will handle the fallback
+                        }
+                    }
+                    // Call the prop with coordinates AND the fetched address (or undefined)
+                    onMapClick(coords, fetchedAddress);
                 });
             }
 
@@ -170,7 +198,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>((
             markersRef.current = {}; // Clear marker references
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [accessToken, mapStyle, initialCenter.toString(), initialZoom, showUserLocation]); // Dependencies for re-initialization
+    }, [accessToken, mapStyle, initialCenter.toString(), initialZoom, showUserLocation, onMapClick]); // Added onMapClick dependency
 
 
     // --- Marker Management Effect ---
