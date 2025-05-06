@@ -2,46 +2,74 @@
 
 import { forwardRef, useImperativeHandle, useRef } from "react"
 import { MapProvider } from "./map-context"
-import MapboxMap from "./mapbox-map"
-import type { MarkerData } from "./mapbox-map"
+import MapboxMap, { MapboxMarkerData, MapboxMapRef } from "./mapbox-map"
+import mapboxgl from "mapbox-gl"
 
 interface MapboxWrapperProps {
-  markers: MarkerData[]
-  onMarkerClick: (marker: MarkerData) => void
-  onMarkerAdd: (position: [number, number], address: string) => void
+  markersData: MapboxMarkerData[]
+  onMarkerClick: (marker: MapboxMarkerData) => void
+  onMapClick: (position: [number, number], address?: string) => void
   accessToken: string
-  searchResult?: { position: [number, number]; address: string } | null
+  initialCenter?: [number, number]
+  initialZoom?: number
+  mapStyle?: string
+  searchResultMarker?: MapboxMarkerData | null
+  showUserLocation?: boolean
 }
 
 // This wrapper component ensures the map doesn't re-render unnecessarily
-const MapboxWrapper = forwardRef<any, MapboxWrapperProps>(
-  ({ markers, onMarkerClick, onMarkerAdd, accessToken, searchResult }, ref) => {
-    const mapRef = useRef<any>(null)
+const MapboxWrapper = forwardRef<MapboxMapRef, MapboxWrapperProps>(
+  ({ markersData, onMarkerClick, onMapClick, accessToken, searchResultMarker, initialCenter, initialZoom, mapStyle, showUserLocation }, ref) => {
+    const mapRef = useRef<MapboxMapRef>(null)
 
     // Forward methods from the inner MapboxMap component
     useImperativeHandle(ref, () => ({
-      flyTo: (position: [number, number], zoom = 15) => {
+      flyTo: (position: mapboxgl.LngLatLike, zoom = 15) => {
         if (mapRef.current && mapRef.current.flyTo) {
           mapRef.current.flyTo(position, zoom)
         }
       },
-      getMap: () => {
-        if (mapRef.current && mapRef.current.getMap) {
-          return mapRef.current.getMap()
+      getMapInstance: () => {
+        if (mapRef.current && mapRef.current.getMapInstance) {
+          return mapRef.current.getMapInstance()
         }
         return null
       },
+      fitBounds: (bounds: mapboxgl.LngLatBoundsLike, options?: mapboxgl.FitBoundsOptions) => {
+        if (mapRef.current && mapRef.current.fitBounds) {
+          mapRef.current.fitBounds(bounds, options)
+        }
+      },
+      addMarker: (markerData: MapboxMarkerData) => {
+        if (mapRef.current && mapRef.current.addMarker) {
+          mapRef.current.addMarker(markerData)
+        }
+      },
+      removeMarker: (markerId: string) => {
+        if (mapRef.current && mapRef.current.removeMarker) {
+          mapRef.current.removeMarker(markerId)
+        }
+      },
+      updateMarker: (markerData: MapboxMarkerData) => {
+        if (mapRef.current && mapRef.current.updateMarker) {
+          mapRef.current.updateMarker(markerData)
+        }
+      }
     }))
 
     return (
       <MapProvider>
         <MapboxMap
           ref={mapRef}
-          markers={markers}
+          markersData={markersData}
           onMarkerClick={onMarkerClick}
-          onMarkerAdd={onMarkerAdd}
+          onMapClick={onMapClick}
           accessToken={accessToken}
-          searchResult={searchResult}
+          initialCenter={initialCenter}
+          initialZoom={initialZoom}
+          mapStyle={mapStyle}
+          searchResultMarker={searchResultMarker}
+          showUserLocation={showUserLocation}
         />
       </MapProvider>
     )
