@@ -8,7 +8,7 @@ export async function uploadFileAction(leadId: string, file: File, category?: st
   try {
     console.log(`Uploading file for lead ${leadId}:`, file.name)
 
-    // Upload file to Vercel Blob
+    // Upload file to Google Cloud Storage
     const uploadedFile = await uploadToBlob(file, leadId)
     console.log("File uploaded to blob:", uploadedFile)
 

@@ -1,17 +1,33 @@
 import { Storage } from "@google-cloud/storage";
 import { nanoid } from "nanoid";
 
-// Initialize GCS client
-// Assumes GOOGLE_APPLICATION_CREDENTIALS is set in the environment,
-// or GCS_PROJECT_ID, GCS_CLIENT_EMAIL, and GCS_PRIVATE_KEY are set.
-const storage = new Storage();
+// Initialize GCS client using individual credentials
+const projectId = process.env.GCLOUD_PROJECT_ID;
+const clientEmail = process.env.GCLOUD_CLIENT_EMAIL;
+const privateKey = process.env.GCLOUD_PRIVATE_KEY;
 const bucketName = process.env.GCS_BUCKET_NAME;
+
+// Validate required environment variables
+if (!projectId || !clientEmail || !privateKey) {
+  throw new Error(
+    "Google Cloud Storage credentials not properly configured. Please set GCLOUD_PROJECT_ID, GCLOUD_CLIENT_EMAIL, and GCLOUD_PRIVATE_KEY."
+  );
+}
 
 if (!bucketName) {
   throw new Error(
-    "GCS_BUCKET_NAME environment variable is not set. Please configure it in your Vercel environment.",
+    "GCS_BUCKET_NAME environment variable is not set. Please configure it."
   );
 }
+
+// Initialize storage with credentials
+const storage = new Storage({
+  projectId,
+  credentials: {
+    client_email: clientEmail,
+    private_key: privateKey
+  }
+});
 
 const bucket = storage.bucket(bucketName);
 
