@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, CSSProperties } from "react"
 import { PropertyVisitStatus } from "./types"
-import { ChevronDown, ChevronUp, User, FileText, Clipboard, MessageSquare, MapPin, Sliders, Loader2, Save, ExternalLink, X, Maximize2, Minimize2 } from "lucide-react"
+import { ChevronDown, ChevronUp, User, FileText, Clipboard, MessageSquare, MapPin, Sliders, Loader2, Save, ExternalLink, X, Maximize2, Minimize2, UserPlus } from "lucide-react"
 import { ContactForm } from "@/components/forms/ContactForm"
 import { InsuranceForm } from "@/components/forms/InsuranceForm"
 import { AdjusterForm } from "@/components/forms/AdjusterForm"
@@ -232,6 +232,10 @@ export function SimpleMapCardModal({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
   
+  // Add state for real lead ID
+  const [realLeadId, setRealLeadId] = useState<string | undefined>(leadId);
+  const [isContactSaved, setIsContactSaved] = useState(false);
+  
   // Don't render anything if not open
   if (!isOpen) {
     return null;
@@ -279,6 +283,20 @@ export function SimpleMapCardModal({
                 <CardTitle className="text-xl">{address}</CardTitle>
               </div>
               <div className="flex items-center gap-2">
+                {/* Update Lead Link Button to use realLeadId */}
+                {realLeadId && isContactSaved && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    asChild
+                    className="text-lime-500 hover:text-lime-400 hover:bg-zinc-800 rounded-full"
+                    aria-label="View Lead Details"
+                  >
+                    <Link href={`/lead/${realLeadId}`}>
+                      <UserPlus className="h-5 w-5" />
+                    </Link>
+                  </Button>
+                )}
                 <Button 
                   variant="ghost" 
                   size="icon" 
@@ -420,8 +438,9 @@ export function SimpleMapCardModal({
                               phone: phone || "",
                               address: address || "",
                             }}
-                            onSuccess={() => {
-                              // Handle success
+                            onSuccess={(newLeadId) => {
+                              setRealLeadId(newLeadId);
+                              setIsContactSaved(true);
                             }}
                           />
                         ) : (

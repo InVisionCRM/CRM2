@@ -39,27 +39,27 @@ export default function AppSidebar() {
     {
       label: "Dashboard",
       href: "/",
-      icon: <IconHomeHeart className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />,
+      icon: <IconHomeHeart className="h-5 w-5 shrink-0 text-[#59ff00]" />,
     },
     {
       label: "Leads",
       href: "/leads",
-      icon: <IconUserBolt className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />,
+      icon: <IconUserBolt className="h-5 w-5 shrink-0 text-[#59ff00]" />,
     },
     {
       label: "Map",
       href: "/map",
-      icon: <IconMap className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />,
+      icon: <IconMap className="h-5 w-5 shrink-0 text-[#59ff00]" />,
     },
     {
       label: "Links",
       href: "/quick-links",
-      icon: <IconLink className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />,
+      icon: <IconLink className="h-5 w-5 shrink-0 text-[#59ff00]" />,
     },
     {
       label: "Settings",
       href: "/settings",
-      icon: <IconSettings className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />,
+      icon: <IconSettings className="h-5 w-5 shrink-0 text-[#59ff00]" />,
     },
   ]
 
@@ -69,57 +69,49 @@ export default function AppSidebar() {
       {isMobile && !open && (
         <button 
           onClick={() => setOpen(true)}
-          className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-background border border-input"
+          className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-black backdrop-blur-lg border border-white/20"
           aria-label="Open menu"
         >
-          <IconMenu2 className="h-5 w-5" />
+          <IconMenu2 className="h-5 w-5 text-[#59ff00]" />
         </button>
       )}
       
       <div
         className={cn(
           "flex h-full flex-col overflow-hidden",
-          "border-r border-neutral-200 dark:border-neutral-700",
           "shrink-0",
-          // Hide by default on mobile, show when open
+          "bg-black/25 backdrop-blur-lg",
           isMobile && !open ? "hidden" : "block",
-          // On mobile when open, position as overlay
-          isMobile && open ? "fixed inset-y-0 left-0 z-50 w-3/4 bg-background" : ""
+          isMobile && open ? "fixed inset-y-0 left-0 z-50 w-3/4" : ""
         )}
       >
         <Sidebar open={open} setOpen={setOpen}>
           <SidebarBody className="justify-between gap-10">
             <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pr-2">
                 {open ? <Logo /> : <LogoIcon />}
-                {/* Close button - only visible on mobile when open */}
-                {isMobile && open && (
-                  <button 
-                    onClick={() => setOpen(false)}
-                    className="p-2 rounded-md hover:bg-accent"
-                    aria-label="Close menu"
-                  >
-                    <IconArrowLeft className="h-5 w-5" />
-                  </button>
-                )}
               </div>
               <div className="mt-8 flex flex-col gap-2">
                 {links.map((link, idx) => (
                   <SidebarLink 
                     key={idx} 
                     link={link} 
-                    className={pathname === link.href ? "bg-primary/10 rounded-md px-2" : "px-2"}
+                    className={cn(
+                      pathname === link.href ? "bg-white/10 dark:bg-white/5 rounded-md" : "",
+                      "px-2 text-[#59ff00]"
+                    )}
                   />
                 ))}
               </div>
             </div>
-            <div className="flex flex-col gap-4">
+            {/* <div className="flex flex-col gap-4">
               <SidebarLink
                 link={{
                   label: "Theme",
                   href: "#",
                   icon: <DockThemeToggle />,
                 }}
+                className="px-2 text-[#59ff00]"
               />
               <SidebarLink
                 link={{
@@ -135,8 +127,9 @@ export default function AppSidebar() {
                     </div>
                   ),
                 }}
+                className="px-2 text-[#59ff00]"
               />
-            </div>
+            </div> */}
           </SidebarBody>
         </Sidebar>
       </div>
@@ -146,14 +139,16 @@ export default function AppSidebar() {
 
 export const Logo = () => {
   return (
-    <a href="/" className="relative z-20 flex items-center space-x-2 py-3 text-sm font-normal text-black">
-      <div className="h-6 w-7 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" />
+    <a href="/" className="relative z-20 flex items-center space-x-1 py-1 text-sm font-normal">
+      <div className="h-16 w-16 flex items-center justify-center">
+        <span className="text-5xl font-bold text-[#59ff00]"></span>
+      </div>
       <motion.span
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="font-medium whitespace-pre text-black dark:text-white"
+        className="font-medium whitespace-pre text-[#59ff00]"
       >
-        CRM 55
+        PURLIN-VISION
       </motion.span>
     </a>
   )
@@ -161,8 +156,10 @@ export const Logo = () => {
 
 export const LogoIcon = () => {
   return (
-    <a href="/" className="relative z-20 flex items-center space-x-2 py-3 text-sm font-normal text-black">
-      <div className="h-6 w-7 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" />
+    <a href="/" className="relative z-20 flex items-center space-x-1 py-1 text-sm font-normal">
+      <div className="h-16 w-16 flex items-center justify-center">
+        <span className="text-5xl font-bold text-[#59ff00]"></span>
+      </div>
     </a>
   )
 } 

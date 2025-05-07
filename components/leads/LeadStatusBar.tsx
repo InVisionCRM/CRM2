@@ -20,43 +20,43 @@ interface LeadStatusBarProps {
 
 // Helper function for glow properties (similar to StatusGrid)
 const getStatusButtonGlowStyle = (status: LeadStatus): React.CSSProperties => {
-  let glowColor = "rgba(107, 114, 128, 0.6)"; // Default glow (grayish, if no status matches)
+  let glowColor = "rgba(107, 114, 128, 0.9)"; // Default glow (grayish, if no status matches)
 
   // Using the base color logic from getStatusColor in lib/utils.ts
   // This mapping needs to be maintained or derived more directly if possible
   switch (status) {
     case LeadStatus.signed_contract:
-      glowColor = "rgba(59, 130, 246, 0.7)"; // Blue-500
+      glowColor = "rgba(59, 130, 246, 0.9)"; // Blue-500
       break;
     case LeadStatus.scheduled:
     case LeadStatus.colors: // Assuming colors and scheduled share a similar base (purple in utils)
-      glowColor = "rgba(139, 92, 246, 0.7)"; // Purple-500 
+      glowColor = "rgba(139, 92, 246, 0.9)"; // Purple-500 
       break;
     case LeadStatus.acv:
-      glowColor = "rgba(234, 179, 8, 0.7)"; // Yellow-500
+      glowColor = "rgba(234, 179, 8, 0.9)"; // Yellow-500
       break;
     case LeadStatus.job:
-      glowColor = "rgba(99, 102, 241, 0.7)"; // Indigo-500
+      glowColor = "rgba(99, 102, 241, 0.9)"; // Indigo-500
       break;
     case LeadStatus.completed_jobs:
-      glowColor = "rgba(34, 197, 94, 0.7)"; // Green-500
+      glowColor = "rgba(34, 197, 94, 0.9)"; // Green-500
       break;
     case LeadStatus.zero_balance:
-      glowColor = "rgba(107, 114, 128, 0.7)"; // Gray-500 (from utils)
+      glowColor = "rgba(107, 114, 128, 0.9)"; // Gray-500 (from utils)
       break;
     case LeadStatus.denied:
-      glowColor = "rgba(239, 68, 68, 0.7)"; // Red-500
+      glowColor = "rgba(239, 68, 68, 0.9)"; // Red-500
       break;
     case LeadStatus.follow_ups:
-      glowColor = "rgba(249, 115, 22, 0.7)"; // Orange-800 from utils is dark, using a lighter orange for glow
+      glowColor = "rgba(249, 115, 22, 0.9)"; // Orange-800 from utils is dark, using a lighter orange for glow
       break;
     default:
       // Fallback if a status is somehow not covered, though LeadStatus enum should be exhaustive
-      glowColor = "rgba(107, 114, 128, 0.6)"; 
+      glowColor = "rgba(107, 114, 128, 0.9)"; 
       break;
   }
   return {
-    boxShadow: `inset 0 0 15px 5px ${glowColor}`, // Adjusted spread and blur for buttons
+    boxShadow: `inset 0 0 5px 5px ${glowColor}`, // Adjusted spread and blur for buttons
   };
 };
 

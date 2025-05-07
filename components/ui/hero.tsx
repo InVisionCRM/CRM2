@@ -199,14 +199,14 @@ export const Hero = () => {
       animate={{ opacity: 1, y: 0 }}
       style={{ opacity }}
       transition={{ duration: 0.8, ease: "easeOut" }}
-      className="h-[50rem] w-full bg-transparent flex flex-col items-center justify-center overflow-hidden rounded-md relative"
+      className="h-[30rem] w-full bg-transparent flex flex-col items-center justify-center overflow-hidden rounded-md relative"
     >
       {/* User Avatar in top left */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.8, delay: 0.3 }}
-        className="absolute top-8 left-8 z-50"
+        className="absolute top-8 right-8 z-50"
       >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -349,7 +349,7 @@ export const Hero = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.1 }}
-        className="absolute top-8 w-full max-w-xl px-4 z-50"
+        className="absolute top-6 left-1/4 transform -translate-x-1/2 w-full max-w-xl px-4 z-50"
       >
         <SearchBar placeholder="Search Names..." />
       </motion.div>
@@ -368,7 +368,7 @@ export const Hero = () => {
           WebkitMaskImage: "radial-gradient(circle at var(--x, 50%) var(--y, 50%), black 10%, transparent 65%)",
         }}
       >
-        <div className="relative w-[350px] h-[200px] transform scale-100">
+        <div className="relative w-[280px] h-[160px] transform scale-120">
           <Image
             src="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/in-vision-logo-UJNZxvzrwPs8WsZrFbI7Z86L8TWcc5.png"
             alt="Purlin Logo"
@@ -387,7 +387,7 @@ export const Hero = () => {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-        className="text-6xl md:text-7xl lg:text-9xl font-bold text-center relative z-20"
+        className="text-5xl md:text-6xl lg:text-8xl font-bold text-center relative z-20"
       >
         <span className="text-white">PURL</span>
         <span style={{ color: "#59ff00" }} className="drop-shadow-[0_0_8px_rgba(89,255,0,0.8)]">
@@ -399,7 +399,7 @@ export const Hero = () => {
         whileInView={{ opacity: 1, scale: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 1, delay: 0.6, ease: "easeOut" }}
-        className="w-[40rem] lg:h-40 h-60 relative"
+        className="w-[40rem] lg:h-32 h-40 relative"
       >
         {/* Gradients */}
         <motion.div 
@@ -436,13 +436,13 @@ export const Hero = () => {
           background="transparent"
           minSize={0.4}
           maxSize={1}
-          particleDensity={1200}
+          particleDensity={1000}
           className="w-full h-full"
           particleColor="#59ff00"
         />
 
         {/* Radial Gradient to prevent sharp edges */}
-        <div className="absolute inset-0 w-full h-full bg-transparent [mask-image:radial-gradient(350px_200px_at_top,transparent_20%,white)]"></div>
+        <div className="absolute inset-0 w-full h-full bg-transparent [mask-image:radial-gradient(280px_160px_at_top,transparent_20%,white)]"></div>
       </motion.div>
     </motion.div>
   )

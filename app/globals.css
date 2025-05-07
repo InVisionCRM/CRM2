@@ -97,7 +97,7 @@ body { /* Added from styles/globals.css */
   html { /* Simplified selector */
     position: relative;
     overflow-x: hidden; /* Prevent horizontal scroll from blobs */
-    background: linear-gradient(to bottom, black 0%, rgb(4, 15, 22) 93%, #225c03 100%) !important;
+    background: linear-gradient(to bottom, black 40%, rgba(28, 23, 18, 0.961) 75%, #5eff00 100%) !important;
     min-height: 100vh; /* Ensure gradient covers full viewport height */
   }
 
@@ -111,17 +111,17 @@ body { /* Added from styles/globals.css */
     height: 50vmax;
     border-radius: 99%;
     z-index: -1; /* Behind content */
-    mix-blend-mode: luminosity; /* Or lighten, experiment for desired effect */
+    mix-blend-mode: hard-light; /* Or lighten, experiment for desired effect */
     filter: blur(200px); /* Soft edges */
   }
 
   html::before {
-    background-color: rgb(38, 88, 11); /* First blob color */
+    background-color: rgb(3, 174, 74); /* First blob color */
     animation: moveBlob1 25s infinite alternate ease-in-out;
   }
 
   html::after {
-    background-color: #ffffff; /* Second blob color */
+    background-color: #000000; /* Second blob color */
     animation: moveBlob2 30s infinite alternate ease-in-out -5s; /* Offset animation */
   }
 

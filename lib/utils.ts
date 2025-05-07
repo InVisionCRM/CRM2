@@ -30,7 +30,7 @@ export function getStatusColor(status: LeadStatus | string): string {
     case LeadStatus.zero_balance:
       return "bg-gray-500 text-white-800 dark:bg-gray-700 dark:text-gray-100"
     case LeadStatus.denied:
-      return "bg-red-500 text-white-800 dark:bg-red-800 dark:text-black"
+      return "bg-red-500 text-white-800 dark:bg-red-800 dark:text-white"
     case LeadStatus.follow_ups:
       return "bg-white text-black dark:bg-orange-800 dark:text-orange-100"
     default:

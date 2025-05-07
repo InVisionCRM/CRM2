@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams } from "next/navigation" // Use next/navigation for App Router
+import { useParams, useSearchParams } from "next/navigation" // Use next/navigation for App Router
 import { LeadStatus, type Lead } from "@prisma/client"
 import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon } from "lucide-react" // Updated icons
 import { LeadStatusBar } from "@/components/leads/LeadStatusBar" // Corrected path
@@ -53,16 +53,32 @@ const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, ic
 
 export default function LeadDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams(); // Get search params
   const id = typeof params.id === 'string' ? params.id : undefined;
   
   const { lead, isLoading: isLeadLoading, error, mutate } = useLead(id) // useLead hook handles undefined id
-  const [activeTab, setActiveTab] = useState<string>("overview")
+  
+  // Determine initial tab: from URL query or default to "overview"
+  const initialTab = searchParams.get("tab") === "files" ? "files" : "overview";
+  const [activeTab, setActiveTab] = useState<string>(initialTab)
+
   const { toast } = useToast()
 
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
   const [statusBeingUpdated, setStatusBeingUpdated] = useState<LeadStatus | null>(null);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const { width, height } = useWindowSize(); // For confetti
+
+  // Effect to update activeTab if query parameter changes after initial load (optional, but good practice)
+  useEffect(() => {
+    const tabFromQuery = searchParams.get("tab");
+    if (tabFromQuery === "files" && activeTab !== "files") {
+      setActiveTab("files");
+    } else if (!tabFromQuery && activeTab !== "overview" && !searchParams.has("tab")) {
+      // If no tab query param and current tab is not overview, reset to overview (or keep current based on preference)
+      // For now, let's be explicit: if 'files' is in query, switch to it. Otherwise, initialTab handles default.
+    }
+  }, [searchParams, activeTab]);
 
   const handleStatusChange = async (newStatus: LeadStatus) => {
     if (!id) {

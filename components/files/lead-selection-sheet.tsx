@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,6 +19,7 @@ export function LeadSelectionSheet({ isOpen, onClose, onLeadSelect }: LeadSelect
   const [searchQuery, setSearchQuery] = useState("")
   const { leads, isLoading, error } = useLeads({})
   const [filteredLeads, setFilteredLeads] = useState<LeadSummary[]>([])
+  const router = useRouter()
 
   // Filter leads based on search query
   useEffect(() => {
@@ -40,7 +42,7 @@ export function LeadSelectionSheet({ isOpen, onClose, onLeadSelect }: LeadSelect
   }, [searchQuery, leads])
 
   const handleLeadSelect = (lead: LeadSummary) => {
-    onLeadSelect(lead)
+    router.push(`/leads/${lead.id}?tab=files`)
     onClose()
   }
 

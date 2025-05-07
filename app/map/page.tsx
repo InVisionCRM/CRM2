@@ -10,11 +10,12 @@ import { AddressSearch } from "@/components/map/address-search"
 // Remove Google-specific MarkerData import
 // import type { MarkerData } from "@/components/map/google-map" 
 import { PropertyVisitStatus } from "@/components/map/types"
-import { DoorOpen } from 'lucide-react'; // Icon for counter
+import { DoorOpen, Home } from 'lucide-react'; // Icon for counter
 import { SimpleMapCardModal } from "@/components/map/SimpleMapCardModal"
 import { MapProvider } from "@/components/map/map-context" 
 import { Button } from "@/components/ui/button"; // Import Button
 import { cn } from "@/lib/utils"; // Import cn if needed for styling
+import Link from "next/link"
 // import KnockCounter from "@/components/map/knock-counter"; // Removed import
 
 // Helper function to validate status from API
@@ -401,8 +402,17 @@ export default function MapPage() {
     <MapProvider>
       <div className="relative h-screen w-screen overflow-hidden">
         
-        {/* AddressSearch - Uncommented */}
-        <div className="absolute top-4 left-4-translate-x-1/2 z-20 w-full max-w-md px-4">
+        {/* AddressSearch with Home Button */}
+        <div className="absolute top-4 left-4-translate-x-1/2 z-20 w-full max-w-md px-4 flex gap-[75px] items-center">
+          <Link href="/dashboard" className="shrink-0">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 sm:h-12 w-10 sm:w-12 rounded-full bg-black/50 backdrop-blur-sm border-[#59ff00] hover:bg-[#59ff00]/10 hover:border-[#59ff00]/80"
+            >
+              <Home className="h-5 w-5 text-white/50" />
+            </Button>
+          </Link>
           <AddressSearch 
             onAddressSelect={handleAddressSelect} 
             accessToken={mapboxAccessToken}

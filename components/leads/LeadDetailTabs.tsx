@@ -111,7 +111,7 @@ export function LeadDetailTabs({ lead, activeTab, onTabChange }: LeadDetailTabsP
             <TabsTrigger 
               key={tab.value} 
               value={tab.value} 
-              className="text-xs sm:text-sm flex justify-center items-center border-b-2 border-transparent hover:border-border data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-sm py-2.5"
+              className="text-xs sm:text-sm flex justify-center items-center border-b-2 border-transparent hover:border-border data-[state=active]:border-white data-[state=active]:text-primary data-[state=active]:shadow-sm py-2.5"
             >
               {tab.label}
             </TabsTrigger>

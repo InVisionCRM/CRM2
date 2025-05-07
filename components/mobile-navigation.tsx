@@ -1,13 +1,12 @@
 "use client"
 
-import { Home, UserPlus, Calendar, FolderOpen, MessageSquare, Calculator, Cloud, MessageCircle } from "lucide-react"
+import { Home, UserPlus, Calendar, FolderOpen, MessageSquare, Calculator, Cloud, MessageCircle, Search, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { LeadsDrawer } from "@/components/leads-drawer"
 import { AppointmentsDrawer } from "@/components/appointments/appointments-drawer"
-import { FilesSheet } from "@/components/files/files-sheet"
+import { LeadSelectionSheet } from "@/components/files/lead-selection-sheet"
 import { SimpleCalculator } from "@/components/calculator/simple-calculator"
-import type { LeadFile } from "@/types/documents"
 import { useSession } from "next-auth/react"
 
 function ExpandedMenu({
@@ -48,7 +47,13 @@ function ExpandedMenu({
     <>
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} aria-hidden="true" />
       <div className="fixed bottom-16 left-0 right-0 bg-white dark:bg-gray-800 rounded-t-xl shadow-lg z-50 pb-safe">
-        <div className="p-4">
+        <div className="flex justify-end p-2">
+          <button onClick={onClose} className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+            <X className="h-5 w-5" />
+            <span className="sr-only">Close menu</span>
+          </button>
+        </div>
+        <div className="p-4 pt-0">
           <div className="grid grid-cols-2 gap-4">
             {menuItems.map((item, index) => (
               <button
@@ -82,26 +87,63 @@ export function MobileNavigation() {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLeadsDrawerOpen, setIsLeadsDrawerOpen] = useState(false)
   const [isAppointmentsDrawerOpen, setIsAppointmentsDrawerOpen] = useState(false)
-  const [isFilesSheetOpen, setIsFilesSheetOpen] = useState(false)
+  const [isLeadSelectionSheetOpen, setIsLeadSelectionSheetOpen] = useState(false)
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false)
 
   useEffect(() => {
-    if (isLeadsDrawerOpen || isAppointmentsDrawerOpen || isFilesSheetOpen || isCalculatorOpen) {
+    if (isLeadsDrawerOpen || isAppointmentsDrawerOpen || isLeadSelectionSheetOpen || isCalculatorOpen) {
       setIsExpanded(false)
     }
-  }, [isLeadsDrawerOpen, isAppointmentsDrawerOpen, isFilesSheetOpen, isCalculatorOpen])
+  }, [isLeadsDrawerOpen, isAppointmentsDrawerOpen, isLeadSelectionSheetOpen, isCalculatorOpen])
 
   const navItems = [
     { icon: Home, label: "Dashboard", action: () => {} },
     { icon: UserPlus, label: "Leads", action: () => setIsLeadsDrawerOpen(true) },
     { icon: Calendar, label: "Appointments", action: () => userId && setIsAppointmentsDrawerOpen(true), disabled: !userId },
-    { icon: FolderOpen, label: "Files", action: () => setIsFilesSheetOpen(true) },
+    { icon: FolderOpen, label: "Files", action: () => setIsLeadSelectionSheetOpen(true) },
   ]
-
-  const mockFiles: LeadFile[] = []
 
   return (
     <>
+      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-t-lg z-50 pb-safe">
+        <div className="max-w-md mx-auto px-2">
+          <div className="flex justify-around items-center h-16">
+            {navItems.map((item, index) => (
+              <button
+                key={item.label}
+                onClick={item.action}
+                disabled={item.disabled}
+                className={cn(
+                  "flex flex-col items-center justify-center w-1/4 h-full transition-colors duration-150 ease-in-out",
+                  "text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed",
+                  (item.label === "Leads" && isLeadsDrawerOpen) ||
+                  (item.label === "Appointments" && isAppointmentsDrawerOpen) ||
+                  (item.label === "Files" && isLeadSelectionSheetOpen)
+                    ? "text-primary dark:text-primary"
+                    : "",
+                )}
+                aria-label={item.label}
+              >
+                <item.icon className="h-6 w-6" />
+                <span className="text-xs mt-1">{item.label}</span>
+              </button>
+            ))}
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className={cn(
+                "flex flex-col items-center justify-center w-1/4 h-full transition-colors duration-150 ease-in-out",
+                "text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary focus:outline-none",
+                isExpanded && "text-primary dark:text-primary"
+              )}
+              aria-label={isExpanded ? "Close more options" : "Open more options"}
+            >
+              {isExpanded ? <X className="h-6 w-6" /> : <Search className="h-6 w-6" />}
+              <span className="text-xs mt-1">{isExpanded ? "Close" : "More"}</span>
+            </button>
+          </div>
+        </div>
+      </nav>
+
       <ExpandedMenu
         isOpen={isExpanded}
         onClose={() => setIsExpanded(false)}
@@ -115,11 +157,12 @@ export function MobileNavigation() {
           userId={userId}
         />
       )}
-      <FilesSheet
-        isOpen={isFilesSheetOpen}
-        onClose={() => setIsFilesSheetOpen(false)}
-        files={mockFiles}
-        leadId="current"
+      <LeadSelectionSheet 
+        isOpen={isLeadSelectionSheetOpen} 
+        onClose={() => setIsLeadSelectionSheetOpen(false)} 
+        onLeadSelect={(lead) => {
+          setIsLeadSelectionSheetOpen(false);
+        }}
       />
       {isCalculatorOpen && <SimpleCalculator onClose={() => setIsCalculatorOpen(false)} />}
     </>

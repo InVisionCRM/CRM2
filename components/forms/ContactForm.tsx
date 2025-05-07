@@ -25,7 +25,7 @@ type ContactFormValues = z.infer<typeof contactFormSchema>
 interface ContactFormProps {
   leadId: string
   initialData?: Partial<ContactFormValues>
-  onSuccess?: () => void
+  onSuccess?: (leadId: string) => void
   isReadOnly?: boolean
 }
 
@@ -170,7 +170,7 @@ export function ContactForm({
       sessionStorage.removeItem(storageKey); // Clear draft on successful save
       setIsDirty(false); // Reset dirty state
       reset(data); // Update form state to reflect saved data
-      onSuccess?.();
+      onSuccess?.(result.leadId || leadId);
     } catch (err) {
       console.error("Error saving contact:", err);
       setError(err instanceof Error ? err.message : "An unexpected error occurred");

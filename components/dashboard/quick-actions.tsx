@@ -18,7 +18,6 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { FileCheck, Plus, Trash, FileUp, FileText, ClipboardList } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { FilesSheet } from "@/components/files/files-sheet"
 import { LeadSelectionSheet } from "@/components/files/lead-selection-sheet"
 import type { Lead } from "@/types/lead"
 
@@ -393,15 +392,6 @@ export function QuickActions() {
         isOpen={leadSelectionOpen}
         onClose={() => setLeadSelectionOpen(false)}
         onLeadSelect={handleLeadSelect}
-      />
-
-      {/* Files Sheet */}
-      <FilesSheet
-        isOpen={filesSheetOpen}
-        onClose={handleFilesSheetClose}
-        files={[]}
-        leadId="dashboard"
-        selectedLead={selectedLead}
       />
     </>
   )
