@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback } from "react"
 import { SearchBar } from "@/components/ui/search-bar"
-import debounce from 'lodash.debounce'
+import debounce from 'lodash/debounce'
 
 interface AddressSearchProps {
   onAddressSelect: (result: {
@@ -70,15 +70,14 @@ export function AddressSearch({ onAddressSelect, accessToken }: AddressSearchPro
       
       {/* Results dropdown */}
       {searchResults.length > 0 && (
-        <div className="absolute w-full mt-1 bg-black/90 border border-[#59ff00]/30 rounded-lg overflow-hidden z-50 backdrop-blur-md shadow-lg shadow-[#59ff00]/10">
+        <div className="absolute w-full mt-1 bg-black/90 border border-[#59ff00]/20 rounded-lg overflow-hidden z-50 backdrop-blur-md">
           {searchResults.map((result, index) => (
             <button
               key={index}
-              className="w-full px-4 py-2.5 text-left text-white hover:bg-[#59ff00]/10 transition-colors border-b border-[#59ff00]/10 last:border-b-0 flex items-center"
+              className="w-full px-4 py-2 text-left text-white hover:bg-[#59ff00]/10 transition-colors"
               onClick={() => handleResultSelect(result)}
             >
-              <span className="text-[#59ff00] mr-2 text-lg">•</span>
-              <span className="truncate">{result.place_name}</span>
+              {result.place_name}
             </button>
           ))}
         </div>
