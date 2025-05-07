@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react"
-import { Search } from "lucide-react"
+import { Search, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { motion, AnimatePresence } from "framer-motion"
@@ -58,14 +58,18 @@ export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
           />
           <AnimatePresence>
             {isExpanded && (
-              <motion.span
+              <motion.button
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-white/50"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsExpanded(false);
+                }}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-white/50 hover:text-white/80 transition-colors rounded-full hover:bg-white/10"
               >
-                ESC to collapse
-              </motion.span>
+                <X className="h-4 w-4" />
+              </motion.button>
             )}
           </AnimatePresence>
         </div>

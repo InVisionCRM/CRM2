@@ -13,6 +13,9 @@ import { PropertyVisitStatus } from "@/components/map/types"
 import { DoorOpen } from 'lucide-react'; // Icon for counter
 import { SimpleMapCardModal } from "@/components/map/SimpleMapCardModal"
 import { MapProvider } from "@/components/map/map-context" 
+import { Button } from "@/components/ui/button"; // Import Button
+import { cn } from "@/lib/utils"; // Import cn if needed for styling
+// import KnockCounter from "@/components/map/knock-counter"; // Removed import
 
 // Helper function to validate status from API
 function isValidStatus(status: any): status is PropertyVisitStatus | "New" | "Search" {
@@ -387,29 +390,63 @@ export default function MapPage() {
 
   }, [selectedModalData, toast, setIsModalOpen, setSelectedModalData, fetchKnockCount]);
 
+  // Function to handle zoom changes
+  const handleZoomChange = useCallback((zoomLevel: number) => {
+    mapRef.current?.getMapInstance()?.zoomTo(zoomLevel, { duration: 500 });
+  }, []); // No dependencies needed as mapRef is stable
+
   console.log("MapPage: Passing markers to MapboxMap:", markers); // Log markers prop
 
   return (
-    <MapProvider> 
-      <div className="fullscreen-map-container relative" style={{ height: "100vh", width: "100%", position: "relative", overflow: "hidden" }}>
-        {/* Search bar - Commented out for now */}
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 w-full max-w-md px-4">
-          <AddressSearch
-             accessToken={mapboxAccessToken}
-             onAddressSelect={handleAddressSelect}
+    <MapProvider>
+      <div className="relative h-screen w-screen overflow-hidden">
+        
+        {/* AddressSearch - Uncommented */}
+        <div className="absolute top-4 left-4-translate-x-1/2 z-20 w-full max-w-md px-4">
+          <AddressSearch 
+            onAddressSelect={handleAddressSelect} 
+            accessToken={mapboxAccessToken}
           />
         </div>
 
-        {/* Knock Counter Display (remains the same) */}
+        {/* Knock Counter Display - top left */}
         {knockCount !== null && (
-          <div className="absolute top-4 right-4 z-10 bg-base-100/80 backdrop-blur-sm shadow-md rounded-lg p-2 flex items-center space-x-2 border border-base-300/50">
-            <DoorOpen className="h-5 w-5 text-primary" />
+          <div className="absolute top-4 left-1/2 z-10 bg-green-800/40 backdrop-blur-sm shadow-md rounded-lg p-2 flex items-center space-x-2 border border-lime-400/90">
+            <DoorOpen className="h-8 w-8 text-white" />
             <span className="font-semibold text-base-content">
               {knockCount}
             </span>
-            <span className="text-xs text-base-content/70">Knocks (12h)</span>
+            <span className="text-xs text-base-content/70">Doors</span>
           </div>
         )}
+
+        {/* Zoom Control Buttons - Top Left Below Counter */}
+        <div className="absolute top-[80px] left-4 z-10 flex flex-col gap-2">
+          <Button 
+            className="btn text-xs h-8 w-16" // Added .btn for glass, adjusted size/text
+            onClick={() => handleZoomChange(20)} 
+            variant="secondary"
+            size="sm"
+          >
+            Close
+          </Button>
+          <Button 
+            className="btn text-xs h-8 w-16" // Added .btn for glass, adjusted size/text
+            onClick={() => handleZoomChange(15)} 
+            variant="secondary"
+            size="sm"
+          >
+            Medium
+          </Button>
+          <Button 
+            className="btn text-xs h-8 w-16" // Added .btn for glass, adjusted size/text
+            onClick={() => handleZoomChange(10)} 
+            variant="secondary"
+            size="sm"
+          >
+            Far
+          </Button>
+        </div>
 
         {/* Map Container with fixed styling */}
         <div className="absolute inset-0" style={{ zIndex: 0 }}>
@@ -420,6 +457,7 @@ export default function MapPage() {
             markersData={markers} 
             onMarkerClick={handleMarkerClick}
             onMapClick={handleMapClick} 
+            showUserLocation={true}
           />
         </div>
 
@@ -432,7 +470,7 @@ export default function MapPage() {
               setSelectedModalData(null)
             }}
             address={selectedModalData.address || "Loading address..."}
-            streetViewUrl={selectedModalData.streetViewUrl} // Pass the fetched URL
+            streetViewUrl={selectedModalData.streetViewUrl}
             currentStatus={selectedModalData.currentStatus === "New" || selectedModalData.currentStatus === "Search" ? undefined : selectedModalData.currentStatus}
             availableStatuses={[
               "No Answer",
@@ -443,8 +481,6 @@ export default function MapPage() {
             ]}
             onStatusChange={handleStatusChange}
             leadId={selectedModalData.leadId}
-            // Pass other relevant props from selectedModalData if needed
-            // e.g., firstName={selectedModalData.firstName}
           />
         )}
       </div>
