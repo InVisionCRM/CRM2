@@ -253,9 +253,9 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
                     <Button variant="ghost" size="icon" className="h-7 w-7 ml-2 shrink-0" onClick={() => setFilesToUpload(prev => prev.filter((f, i) => i !== index))} >
                       <XIcon className="h-4 w-4 text-destructive" />
                     </Button>
-                  </div>
-                ))}
-              </div>
+          </div>
+        ))}
+      </div>
             </ScrollArea>
           )}
         </div>

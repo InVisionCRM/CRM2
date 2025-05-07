@@ -42,7 +42,7 @@ export function LeadOverviewTab({ lead }: LeadOverviewTabProps) {
     // Adjust gap and padding for smaller screens.
     <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 md:gap-6">
       {/* Lead Summary Card */}
-      <Card className="shadow-sm border-l-4 border-blue-500 dark:border-blue-400">
+      <Card className="shadow-sm border-l-4 border-lime-500 dark:border-lime-400">
         <CardHeader className="pb-3 pt-4 px-4 sm:px-6">
           <CardTitle className="text-md sm:text-lg">Lead Summary</CardTitle>
         </CardHeader>
@@ -77,7 +77,7 @@ export function LeadOverviewTab({ lead }: LeadOverviewTabProps) {
       </Card>
       
       {/* Contact Information Card */}
-      <Card className="shadow-sm border-l-4 border-green-500 dark:border-green-400">
+      <Card className="shadow-sm border-l-4 border-lime-500 dark:border-lime-400">
         <CardHeader className="pb-3 pt-4 px-4 sm:px-6">
           <CardTitle className="text-md sm:text-lg">Contact Information</CardTitle>
         </CardHeader>
@@ -102,7 +102,7 @@ export function LeadOverviewTab({ lead }: LeadOverviewTabProps) {
       </Card>
       
       {/* Insurance Information Card */}
-      <Card className="shadow-sm border-l-4 border-yellow-500 dark:border-yellow-400">
+      <Card className="shadow-sm border-l-4 border-lime-500 dark:border-lime-400">
         <CardHeader className="pb-3 pt-4 px-4 sm:px-6">
           <CardTitle className="text-md sm:text-lg">Insurance Details</CardTitle>
         </CardHeader>
@@ -129,7 +129,7 @@ export function LeadOverviewTab({ lead }: LeadOverviewTabProps) {
       </Card>
       
       {/* Adjuster Information Card */}
-      <Card className="shadow-sm border-l-4 border-purple-500 dark:border-purple-400">
+      <Card className="shadow-sm border-l-4 border-lime-500 dark:border-lime-400">
         <CardHeader className="pb-3 pt-4 px-4 sm:px-6">
           <CardTitle className="text-md sm:text-lg">Adjuster Details</CardTitle>
         </CardHeader>

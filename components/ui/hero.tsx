@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { isValidImage, isValidFileSize, createFilePreview, resizeImage } from "@/lib/upload-helper"
+import { SearchBar } from "@/components/ui/search-bar"
 
 export const Hero = () => {
   const logoRef = useRef<HTMLDivElement>(null)
@@ -350,14 +351,7 @@ export const Hero = () => {
         transition={{ duration: 0.8, delay: 0.2 }}
         className="absolute top-8 w-full max-w-xl px-4 z-50"
       >
-        <div className="relative w-full">
-          <Input
-            type="search"
-            placeholder="Search..."
-            className="w-full pl-10 pr-4 py-2 h-12 bg-black/50 border-white/20 text-white placeholder-white/50 rounded-full backdrop-blur-sm focus:border-white/50 focus:ring-0 font-extralight"
-          />
-          <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50" />
-        </div>
+        <SearchBar placeholder="Search Names..." />
       </motion.div>
 
       {/* Logo in the background with shadow play effect */}
@@ -374,9 +368,9 @@ export const Hero = () => {
           WebkitMaskImage: "radial-gradient(circle at var(--x, 50%) var(--y, 50%), black 10%, transparent 65%)",
         }}
       >
-        <div className="relative w-[500px] h-[300px] transform scale-150">
+        <div className="relative w-[350px] h-[200px] transform scale-100">
           <Image
-            src="/logo.png"
+            src="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/in-vision-logo-UJNZxvzrwPs8WsZrFbI7Z86L8TWcc5.png"
             alt="Purlin Logo"
             fill
             className="object-contain"

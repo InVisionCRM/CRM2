@@ -10,7 +10,10 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Roofing Mobile CRM",
   description: "Mobile-first CRM for roofing contractors",
-    generator: 'v0.dev'
+  generator: 'v0.dev',
+  icons: {
+    icon: "https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Purlin_Logo-QGECcCeMQoHVp3aZWHJv36rKSvRq2z.png",
+  },
 }
 
 export default function RootLayout({

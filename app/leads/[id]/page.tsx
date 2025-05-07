@@ -10,7 +10,7 @@ import { ActivityFeed } from "@/components/leads/ActivityFeed" // Corrected path
 import { Button } from "@/components/ui/button"
 import { useLead } from "@/hooks/use-lead" // Corrected path
 import { Skeleton } from "@/components/ui/skeleton"
-import { updateLeadStatus as updateLeadStatusAction } from "@/app/actions/lead-actions" // Alias import
+import { updateLeadAction } from "@/app/actions/lead-actions" // Changed import
 import { useToast } from "@/components/ui/use-toast" // Assuming useToast is in ui dir
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import ReactConfetti from 'react-confetti';
@@ -76,7 +76,7 @@ export default function LeadDetailPage() {
     setShowSuccessMessage(false); // Hide previous success message if any
 
     try {
-      const result = await updateLeadStatusAction(id, newStatus)
+      const result = await updateLeadAction(id, { status: newStatus }) 
       
       if (result.success) {
         // toast({ // Can replace toast with the success card

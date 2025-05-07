@@ -1,7 +1,6 @@
-import { Appointment, AppointmentStatus } from '@prisma/client'
-import type { AppointmentPurpose } from './lead'
+import { Appointment, AppointmentStatus, AppointmentPurpose } from '@prisma/client'
 
-export type { Appointment, AppointmentStatus }
+export type { Appointment, AppointmentStatus, AppointmentPurpose }
 
 export const AppointmentPurposeEnum = {
   INSPECTION: "INSPECTION",

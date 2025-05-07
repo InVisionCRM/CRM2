@@ -5,34 +5,6 @@ import { cn } from "@/lib/utils"
 import type { AppointmentStatus, AppointmentSummary } from "@/types/dashboard"
 import Link from "next/link"
 
-// Mock data for demonstration
-const mockAppointments: AppointmentSummary[] = [
-  {
-    id: "1",
-    clientName: "John Smith",
-    address: "123 Main St, Anytown",
-    date: new Date(2023, 6, 25, 10, 30),
-    status: "scheduled",
-    leadId: "1", // Add leadId
-  },
-  {
-    id: "2",
-    clientName: "Sarah Johnson",
-    address: "456 Oak Ave, Somewhere",
-    date: new Date(2023, 6, 25, 14, 0),
-    status: "rescheduled",
-    leadId: "2", // Add leadId
-  },
-  {
-    id: "3",
-    clientName: "Michael Brown",
-    address: "789 Pine Rd, Elsewhere",
-    date: new Date(2023, 6, 26, 9, 0),
-    status: "scheduled",
-    leadId: "3", // Add leadId
-  },
-]
-
 const getStatusColor = (status: AppointmentStatus) => {
   const statusColors = {
     scheduled: "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100",
@@ -44,7 +16,11 @@ const getStatusColor = (status: AppointmentStatus) => {
   return statusColors[status] || ""
 }
 
-export function AppointmentsList() {
+interface AppointmentsListProps {
+  appointments: AppointmentSummary[];
+}
+
+export function AppointmentsList({ appointments }: AppointmentsListProps) {
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("en-US", {
       month: "short",
@@ -63,7 +39,7 @@ export function AppointmentsList() {
 
   return (
     <div className="space-y-3">
-      {mockAppointments.map((appointment) => (
+      {appointments.map((appointment) => (
         <Link href={`/leads/${appointment.leadId}`} key={appointment.id} className="block">
           <Card className="overflow-hidden hover:shadow-md transition-shadow">
             <div className="p-4">

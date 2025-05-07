@@ -1,8 +1,8 @@
 "use client"
 
-import { useRef, useEffect, useCallback } from "react"
-import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
-import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
+import { useRef, useEffect, useState, useCallback } from "react"
+import { SearchBar } from "@/components/ui/search-bar"
+import debounce from 'lodash.debounce'
 
 interface AddressSearchProps {
   onAddressSelect: (result: {
@@ -12,66 +12,77 @@ interface AddressSearchProps {
   accessToken: string;
 }
 
+interface GeocodingResult {
+  place_name: string;
+  center: [number, number];
+}
+
 export function AddressSearch({ onAddressSelect, accessToken }: AddressSearchProps) {
-  const geocoderContainerRef = useRef<HTMLDivElement>(null);
-  const geocoderInitialized = useRef(false);
+  const [searchResults, setSearchResults] = useState<GeocodingResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
 
-  useEffect(() => {
-    if (geocoderContainerRef.current && !geocoderInitialized.current && accessToken) {
-      const geocoder = new MapboxGeocoder({
-        accessToken: accessToken,
-        types: 'address,postcode,place',
-        countries: 'us',
-      });
-
-      geocoder.addTo(geocoderContainerRef.current);
-
-      geocoder.on('result', (e) => {
-        const result = e.result;
-        console.log('Mapbox Geocoder Result:', result);
-
-        if (result?.center && result?.place_name) {
-          const [lng, lat] = result.center;
-          onAddressSelect({
-            place_name: result.place_name,
-            center: { lat, lng },
-          });
-        }
-      });
+  const searchAddress = useCallback(
+    debounce(async (query: string) => {
+      if (!query.trim() || query.length < 3) return;
       
-      geocoderInitialized.current = true; 
+      setIsSearching(true);
+      try {
+        const response = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?` + 
+          `access_token=${accessToken}&` +
+          'types=address,postcode,place&' +
+          'country=us'
+        );
+        
+        const data = await response.json();
+        setSearchResults(data.features || []);
+      } catch (error) {
+        console.error('Geocoding error:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300),
+    [accessToken]
+  );
 
-      return () => {
-         if (geocoderContainerRef.current) {
-            geocoderContainerRef.current.innerHTML = ''; 
-         }
-         geocoderInitialized.current = false;
-      };
-    }
-  }, [accessToken, onAddressSelect]);
+  const handleResultSelect = (result: GeocodingResult) => {
+    setSearchValue(result.place_name);
+    setSearchResults([]);
+    onAddressSelect({
+      place_name: result.place_name,
+      center: { lat: result.center[1], lng: result.center[0] },
+    });
+  };
 
   return (
-    <div ref={geocoderContainerRef} className="mapbox-geocoder-container w-full max-w-md">
-       <style jsx global>{`
-        .mapboxgl-ctrl-geocoder {
-          width: 100%;
-          max-width: none;
-          font-size: 1rem;
-          box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-           border-radius: 0.375rem;
-        }
-         .mapboxgl-ctrl-geocoder input[type='text'] {
-           padding: 0.5rem 0.75rem;
-           border-radius: 0.375rem;
-           background-color: rgba(255, 255, 255, 0.9);
-         }
-         .mapboxgl-ctrl-geocoder .suggestions {
-            background-color: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(4px);
-            border-radius: 0.375rem;
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-         }
-       `}</style>
+    <div className="relative w-full max-w-md">
+      <SearchBar
+        value={searchValue}
+        onChange={(e) => {
+          const value = e.target.value;
+          setSearchValue(value);
+          searchAddress(value);
+        }}
+        placeholder="Search address..."
+        className="w-full"
+      />
+      
+      {/* Results dropdown */}
+      {searchResults.length > 0 && (
+        <div className="absolute w-full mt-1 bg-black/90 border border-[#59ff00]/30 rounded-lg overflow-hidden z-50 backdrop-blur-md shadow-lg shadow-[#59ff00]/10">
+          {searchResults.map((result, index) => (
+            <button
+              key={index}
+              className="w-full px-4 py-2.5 text-left text-white hover:bg-[#59ff00]/10 transition-colors border-b border-[#59ff00]/10 last:border-b-0 flex items-center"
+              onClick={() => handleResultSelect(result)}
+            >
+              <span className="text-[#59ff00] mr-2 text-lg">•</span>
+              <span className="truncate">{result.place_name}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

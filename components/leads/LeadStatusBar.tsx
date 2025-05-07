@@ -18,6 +18,22 @@ interface LeadStatusBarProps {
 // Or, if getStatusColor directly returns full Tailwind classes, this might not be strictly necessary here.
 // For this example, I'm assuming getStatusColor returns a string like "bg-blue-500 text-white"
 
+// Helper to extract the light theme background class
+const getButtonBgClass = (statusClasses: string): string => {
+  // Matches bg-color-shade, ensuring it's not preceded by dark:
+  const lightBgMatch = statusClasses.match(/(?<!dark:)bg-([a-z]+)-(\d+)/);
+  if (lightBgMatch) return `bg-${lightBgMatch[1]}-${lightBgMatch[2]}`;
+  return 'bg-gray-100'; // Default fallback
+};
+
+// Helper to extract the light theme text class
+const getButtonTextClass = (statusClasses: string): string => {
+  // Matches text-color-shade, ensuring it's not preceded by dark:
+  const lightTextMatch = statusClasses.match(/(?<!dark:)text-([a-z]+)-(\d+)/);
+  if (lightTextMatch) return `text-${lightTextMatch[1]}-${lightTextMatch[2]}`;
+  return 'text-gray-800'; // Default fallback
+};
+
 export function LeadStatusBar({ currentStatus, onStatusChange, isLoading, loadingStatus }: LeadStatusBarProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   
@@ -34,29 +50,6 @@ export function LeadStatusBar({ currentStatus, onStatusChange, isLoading, loadin
     }
   }, [currentStatus])
 
-  // Helper to extract the most relevant "solid" background color class
-  const getSolidBgClass = (statusClasses: string): string => {
-    const darkBgMatch = statusClasses.match(/dark:bg-([a-z]+)-(\d+)/);
-    if (darkBgMatch) return darkBgMatch[0]; // Prefer dark mode solid bg if present
-    const lightBgMatch = statusClasses.match(/bg-([a-z]+)-(\d+)/);
-    if (lightBgMatch && parseInt(lightBgMatch[2]) >= 500) return lightBgMatch[0]; // Prefer 500+ shades for light mode
-    if (lightBgMatch) return lightBgMatch[0]; // Fallback to any light bg
-    return 'bg-gray-500'; // Default fallback
-  }
-  
-  // Helper to determine text color based on assumed background (simplified)
-  // This assumes dark backgrounds will typically have light text defined in getStatusColor or defaults to white
-  const getSolidTextColorClass = (statusClasses: string): string => {
-    const darkTextMatch = statusClasses.match(/dark:text-([a-z]+)-(\d+)/);
-    if (darkTextMatch) return darkTextMatch[0];
-    const lightTextMatch = statusClasses.match(/text-([a-z]+)-(\d+)/);
-    // If the light text is dark (e.g. text-blue-800), we might want white text for a solid bg
-    // This heuristic might need adjustment based on your actual color palette from getStatusColor
-    if (lightTextMatch && parseInt(lightTextMatch[2]) > 500) return 'text-white';
-    if (lightTextMatch) return lightTextMatch[0]; 
-    return 'text-white'; // Default to white for solid backgrounds
-  }
-
   return (
     <div className="bg-background border border-border rounded-lg p-3 sm:p-4 shadow-sm">
       <h2 className="text-sm font-medium text-muted-foreground mb-3">Lead Status:</h2>
@@ -72,32 +65,11 @@ export function LeadStatusBar({ currentStatus, onStatusChange, isLoading, loadin
           const isActive = currentStatus === statusKey;
           
           const fullColorString = getStatusColor(statusKey);
-          const solidBg = getSolidBgClass(fullColorString);
-          // For full color buttons, text is usually white or black based on contrast with solidBg
-          // The getStatusColor provides text-xxx-100 for dark BGs and text-xxx-800 for light BGs
-          // We should aim for high contrast, typically white text on a dark solid background.
-          let solidTextColor = 'text-white'; // Default for dark solid backgrounds
-          // If your getStatusColor provides specific contrasting text for its solid version, parse it.
-          // Example: if getStatusColor had "bg-blue-500 text-white", we'd use text-white.
-          // This part is tricky without knowing the exact output of getStatusColor for *solid* variants.
-          // We can make a simple assumption: if the solidBg is a dark shade (e.g., 500+), use white text.
-          const bgColorShadeMatch = solidBg.match(/bg-[a-z]+-(\d+)/);
-          if (bgColorShadeMatch && parseInt(bgColorShadeMatch[2]) < 500) {
-             // If the solid background is a light shade (unlikely given getSolidBgClass logic but as a fallback)
-             solidTextColor = 'text-black dark:text-white'; // or a dark gray
-          }
-          // Override with dark mode text color if available and suitable for a solid dark bg
-          const darkTextMatch = fullColorString.match(/dark:text-([a-z]+)-(\d+)/);
-          if (darkTextMatch && parseInt(darkTextMatch[2]) < 300) { // e.g. dark:text-blue-100
-            solidTextColor = darkTextMatch[0];
-          } 
-          // Ring color for active state (based on the primary hue of the button)
-          let ringBase = 'primary'; // default ring
-          const ringColorMatch = solidBg.match(/bg-([a-z]+)-/); //e.g. bg-blue-
-          if (ringColorMatch && ringColorMatch[1]) {
-            ringBase = ringColorMatch[1]; // e.g. blue
-          }
-          const activeRingClasses = `ring-${ringBase}-500 dark:ring-${ringBase}-400`;
+          const buttonBgClass = getButtonBgClass(fullColorString);
+          const buttonTextClass = getButtonTextClass(fullColorString);
+          
+          // Ring color for active state - changed to static bright neon green
+          const activeRingClasses = "ring-lime-500 dark:ring-lime-400";
 
           const isButtonLoading = isLoading && loadingStatus === statusKey;
 
@@ -115,8 +87,8 @@ export function LeadStatusBar({ currentStatus, onStatusChange, isLoading, loadin
                 "relative flex items-center justify-center rounded-md border-2 transition-all",
                 "min-h-[48px] min-w-[calc(20%-8px)] xs:min-w-[calc(20%-8px)] sm:min-w-[4.5rem] flex-grow xs:flex-grow-0", 
                 "p-1 text-center", 
-                solidBg, 
-                solidTextColor, 
+                buttonBgClass, 
+                buttonTextClass, 
                 isActive ? `ring-2 ring-offset-2 ring-offset-background ${activeRingClasses} scale-105 shadow-lg` : `border-transparent hover:opacity-90 shadow-md`,
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring",
                 isLoading ? "cursor-not-allowed opacity-70" : "", // Style for loading state

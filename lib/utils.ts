@@ -16,25 +16,25 @@ export function getStatusColor(status: LeadStatus | string): string {
   const statusEnum = Object.values(LeadStatus).find(val => val === status) ?? status;
   switch (statusEnum) {
     case LeadStatus.signed_contract:
-      return "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100"
+      return "bg-blue-500 text-white-800 dark:bg-blue-800 dark:text-blue-100"
     case LeadStatus.scheduled:
-      return "bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100"
+      return "bg-purple-500 text-white-800 dark:bg-purple-800 dark:text-purple-100"
     case LeadStatus.colors:
-      return "bg-pink-100 text-pink-800 dark:bg-pink-800 dark:text-pink-100"
+      return "bg-purple-500 text-white-800 dark:bg-purple-800 dark:text-purple-100"
     case LeadStatus.acv:
-      return "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100"
+      return "bg-yellow-500 text-white-800 dark:bg-yellow-800 dark:text-yellow-100"
     case LeadStatus.job:
-      return "bg-indigo-100 text-indigo-800 dark:bg-indigo-800 dark:text-indigo-100"
+      return "bg-indigo-500 text-white-800 dark:bg-indigo-800 dark:text-indigo-100"
     case LeadStatus.completed_jobs:
-      return "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100"
+      return "bg-green-500 text-white-800 dark:bg-green-800 dark:text-green-100"
     case LeadStatus.zero_balance:
-      return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100"
+      return "bg-gray-500 text-white-800 dark:bg-gray-700 dark:text-gray-100"
     case LeadStatus.denied:
-      return "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100"
+      return "bg-red-500 text-white-800 dark:bg-red-800 dark:text-black"
     case LeadStatus.follow_ups:
-      return "bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100"
+      return "bg-white text-black dark:bg-orange-800 dark:text-orange-100"
     default:
-      return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100" // Default fallback
+      return "bg-gray-500 text-white-800 dark:bg-gray-700 dark:text-gray-100" // Default fallback
   }
 }
 
