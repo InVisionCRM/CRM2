@@ -70,6 +70,7 @@
     "jspdf": "latest",
     "knex": "latest",
     "kysely": "latest",
+    "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.454.0",
     "mapbox-gl": "^3.11.1",
     "nanoid": "latest",

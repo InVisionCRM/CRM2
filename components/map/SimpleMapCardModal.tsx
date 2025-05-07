@@ -30,10 +30,6 @@ interface SimpleMapCardModalProps {
   lastName?: string
   email?: string
   phone?: string
-  streetAddress?: string
-  city?: string
-  state?: string
-  zipcode?: string
   insuranceCompany?: string
   insurancePolicyNumber?: string
   insurancePhone?: string
@@ -95,10 +91,6 @@ export function SimpleMapCardModal({
   lastName,
   email,
   phone,
-  streetAddress,
-  city,
-  state,
-  zipcode,
   insuranceCompany,
   insurancePolicyNumber,
   insurancePhone,
