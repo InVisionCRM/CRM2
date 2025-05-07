@@ -11,10 +11,7 @@ export default function LeadsPage() {
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Active Leads</h1>
-          <p className="text-muted-foreground">Manage and track all your active leads</p>
-        </div>
+      
         <Button size="sm">
           <Plus className="mr-2 h-4 w-4" />
           Create Lead

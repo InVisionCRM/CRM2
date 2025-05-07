@@ -199,7 +199,7 @@ export const Hero = () => {
       animate={{ opacity: 1, y: 0 }}
       style={{ opacity }}
       transition={{ duration: 0.8, ease: "easeOut" }}
-      className="h-[50rem] w-full bg-black flex flex-col items-center justify-center overflow-hidden rounded-md relative"
+      className="h-[50rem] w-full bg-transparent flex flex-col items-center justify-center overflow-hidden rounded-md relative"
     >
       {/* User Avatar in top left */}
       <motion.div
@@ -348,7 +348,7 @@ export const Hero = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 0.2 }}
+        transition={{ duration: 0.8, delay: 0.1 }}
         className="absolute top-8 w-full max-w-xl px-4 z-50"
       >
         <SearchBar placeholder="Search Names..." />
@@ -442,7 +442,7 @@ export const Hero = () => {
         />
 
         {/* Radial Gradient to prevent sharp edges */}
-        <div className="absolute inset-0 w-full h-full bg-black [mask-image:radial-gradient(350px_200px_at_top,transparent_20%,white)]"></div>
+        <div className="absolute inset-0 w-full h-full bg-transparent [mask-image:radial-gradient(350px_200px_at_top,transparent_20%,white)]"></div>
       </motion.div>
     </motion.div>
   )

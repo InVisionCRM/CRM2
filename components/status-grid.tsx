@@ -21,75 +21,58 @@ interface StatusGridProps {
   statusCounts: StatusCount[]
 }
 
+const getStatusGlowCssProperties = (status: LeadStatus | null): React.CSSProperties => {
+  let glowColor = "rgba(107, 114, 128, 0.6)"; 
+  switch (status) {
+    case LeadStatus.signed_contract: glowColor = "rgba(59, 130, 246, 0.7)"; break;
+    case LeadStatus.scheduled: case LeadStatus.colors: glowColor = "rgba(139, 92, 246, 0.7)"; break;
+    case LeadStatus.acv: glowColor = "rgba(234, 179, 8, 0.7)"; break;
+    case LeadStatus.job: glowColor = "rgba(99, 102, 241, 0.7)"; break;
+    case LeadStatus.completed_jobs: glowColor = "rgba(34, 197, 94, 0.7)"; break;
+    case LeadStatus.zero_balance: glowColor = "rgba(107, 114, 128, 0.7)"; break;
+    case LeadStatus.denied: glowColor = "rgba(239, 68, 68, 0.7)"; break;
+    case LeadStatus.follow_ups: glowColor = "rgba(249, 115, 22, 0.7)"; break;
+  }
+  return { boxShadow: `inset 0 0 18px 6px ${glowColor}` };
+};
+
 export function StatusGrid({ onStatusClick, activeStatus, statusCounts }: StatusGridProps) {
-  // Calculate total leads
   const totalLeads = statusCounts.reduce((sum, status) => sum + status.count, 0)
 
-  // Get icon based on status
   const getStatusIcon = (status: LeadStatus) => {
     switch (status) {
-      case "signed_contract":
-        return <FileSignature className="w-8 h-8" />
-      case "scheduled":
-        return <Calendar className="w-8 h-8" />
-      case "colors":
-        return <Palette className="w-8 h-8" />
-      case "acv":
-        return <FileText className="w-8 h-8" />
-      case "job":
-        return <Briefcase className="w-8 h-8" />
-      case "completed_jobs":
-        return <CheckCircle className="w-8 h-8" />
-      case "zero_balance":
-        return <DollarSign className="w-8 h-8" />
-      case "denied":
-        return <XCircle className="w-8 h-8" />
-      case "follow_ups":
-        return <PhoneCall className="w-8 h-8" />
-      default:
-        return <Users className="w-8 h-8" />
+      case LeadStatus.signed_contract: return <FileSignature className="w-8 h-8" />;
+      case LeadStatus.scheduled: return <Calendar className="w-8 h-8" />;
+      case LeadStatus.colors: return <Palette className="w-8 h-8" />;
+      case LeadStatus.acv: return <FileText className="w-8 h-8" />;
+      case LeadStatus.job: return <Briefcase className="w-8 h-8" />;
+      case LeadStatus.completed_jobs: return <CheckCircle className="w-8 h-8" />;
+      case LeadStatus.zero_balance: return <DollarSign className="w-8 h-8" />;
+      case LeadStatus.denied: return <XCircle className="w-8 h-8" />;
+      case LeadStatus.follow_ups: return <PhoneCall className="w-8 h-8" />;
+      default: return <Users className="w-8 h-8" />;
     }
   }
 
-  // Extract background color class from the full color string
-  const getBgColorClass = (status: LeadStatus) => {
-    const fullColorClass = getStatusColor(status)
-    // Extract just the background color part (bg-color-100)
-    const bgColorMatch = fullColorClass.match(/bg-[a-z]+-\d+/)
-    return bgColorMatch ? bgColorMatch[0] : "bg-gray-100"
-  }
-
-  // Extract text color class from the full color string
   const getTextColorClass = (status: LeadStatus) => {
     const fullColorClass = getStatusColor(status)
-    // Extract just the text color part (text-color-800)
     const textColorMatch = fullColorClass.match(/text-[a-z]+-\d+/)
     return textColorMatch ? textColorMatch[0] : "text-gray-800"
   }
 
-  // Get dark mode background color
-  const getDarkBgColorClass = (status: LeadStatus) => {
-    const fullColorClass = getStatusColor(status)
-    // Extract just the dark background color part (dark:bg-color-800)
-    const darkBgColorMatch = fullColorClass.match(/dark:bg-[a-z]+-\d+/)
-    return darkBgColorMatch ? darkBgColorMatch[0] : "dark:bg-gray-800"
-  }
-
-  // Get dark mode text color
   const getDarkTextColorClass = (status: LeadStatus) => {
     const fullColorClass = getStatusColor(status)
-    // Extract just the dark text color part (dark:text-color-100)
     const darkTextColorMatch = fullColorClass.match(/dark:text-[a-z]+-\d+/)
     return darkTextColorMatch ? darkTextColorMatch[0] : "dark:text-gray-100"
   }
 
   return (
     <div className="grid grid-cols-5 md:grid-cols-5 lg:grid-cols-5 gap-1 md:gap-2 auto-rows-fr">
-      {/* Total Leads Card */}
       <div
-        className={`relative rounded-xl overflow-hidden cursor-pointer transition-all aspect-square p-3 md:p-4 bg-gray-100 dark:bg-gray-800 ${
+        className={`card relative rounded-xl overflow-hidden cursor-pointer transition-all aspect-square p-3 md:p-4 ${
           activeStatus === null ? "ring-2 ring-blue-500 scale-105" : ""
         }`}
+        style={getStatusGlowCssProperties(null)}
         onClick={() => onStatusClick(null)}
         role="button"
         aria-label="All Leads"
@@ -103,22 +86,18 @@ export function StatusGrid({ onStatusClick, activeStatus, statusCounts }: Status
         </div>
       </div>
 
-      {/* Status Cards */}
       {statusCounts.map((statusItem) => {
-        const bgColorClass = getBgColorClass(statusItem.status as LeadStatus)
         const textColorClass = getTextColorClass(statusItem.status as LeadStatus)
-        const darkBgColorClass = getDarkBgColorClass(statusItem.status as LeadStatus)
         const darkTextColorClass = getDarkTextColorClass(statusItem.status as LeadStatus)
-
-        // Get icon for this status
         const statusIcon = getStatusIcon(statusItem.status as LeadStatus)
 
         return (
           <div
             key={statusItem.status}
-            className={`relative rounded-xl overflow-hidden cursor-pointer transition-all aspect-square p-3 md:p-4 ${bgColorClass} ${darkBgColorClass} ${
+            className={`card relative rounded-xl overflow-hidden cursor-pointer transition-all aspect-square p-3 md:p-4 ${
               activeStatus === statusItem.status ? "ring-2 ring-blue-500 scale-105" : ""
             }`}
+            style={getStatusGlowCssProperties(statusItem.status as LeadStatus)}
             onClick={() => onStatusClick(statusItem.status)}
             role="button"
             aria-label={formatStatusLabel(statusItem.status)}

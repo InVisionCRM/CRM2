@@ -241,65 +241,48 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>((
             markersData.forEach(markerData => {
                 const { id, geometry, properties } = markerData;
                 
-                // Skip invalid markers
                 if (!geometry?.coordinates || geometry.coordinates.length !== 2) {
-                    console.warn(`[MapboxMap] Skipping marker with invalid coordinates:`, markerData);
                     return;
                 }
                 
-                const position = geometry.coordinates as [number, number]; // LngLat
+                const position = geometry.coordinates as [number, number];
                 const color = getMarkerColor(properties.status);
 
                 if (markersRef.current[id]) {
-                    // Marker exists, check if update needed (e.g., position or color)
+                    // Marker exists, update if needed
                     const existingMarker = markersRef.current[id];
                     const existingLngLat = existingMarker.getLngLat();
-                    const existingColor = (existingMarker.getElement().firstChild as HTMLElement)?.style.color;
-
-                    let needsUpdate = false;
+                    const markerElement = existingMarker.getElement();
+                    
                     if (existingLngLat.lng !== position[0] || existingLngLat.lat !== position[1]) {
-                        console.log(`[MapboxMap] Updating marker position: ${id}`);
                         existingMarker.setLngLat(position);
-                        needsUpdate = true;
                     }
-                    // Simple color check - might need refinement based on how getMarkerColor works
-                    if (existingColor !== color) {
-                         console.log(`[MapboxMap] Updating marker color: ${id}`);
-                        const markerElement = existingMarker.getElement();
-                        const svgElement = markerElement.querySelector('svg');
-                        if (svgElement) {
-                           svgElement.style.fill = color;
-                           svgElement.style.stroke = 'white'; // Optional: maintain stroke
-                           svgElement.style.strokeWidth = '2px'; // Optional: maintain stroke width
-                        }
-                        needsUpdate = true;
+                    // Update color by changing the background of the div
+                    if (markerElement.style.backgroundColor !== color) {
+                        markerElement.style.backgroundColor = color;
                     }
-                    if (needsUpdate) {
-                        // Update popup content if necessary (example)
-                         existingMarker.getPopup()?.setHTML(`
-                            <div>
-                                <strong>${properties.address || 'Address N/A'}</strong><br>
-                                Status: ${properties.status}<br>
-                                ID: ${id}
-                            </div>
-                        `);
-                    }
-
+                    // Update popup
+                    existingMarker.getPopup()?.setHTML(`
+                        <div>
+                            <strong>${properties.address || 'Address N/A'}</strong><br>
+                            Status: ${properties.status}<br>
+                            ID: ${id}
+                        </div>
+                    `);
                 } else {
-                    // Marker doesn't exist, create and add it
-                     console.log(`[MapboxMap] Adding marker: ${id}`);
-                     const markerElement = document.createElement('div');
-                     markerElement.innerHTML = `
-                        <svg viewBox="0 0 24 24" width="32" height="32" fill="${color}" stroke="white" stroke-width="1.5" style="cursor: pointer; filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.5));">
-                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
-                        </svg>
-                     `;
-                     markerElement.style.width = '32px';
-                     markerElement.style.height = '32px';
+                    // Marker doesn't exist, create and add it as a simple circle
+                    const markerElement = document.createElement('div');
+                    markerElement.style.width = '12px'; // Circle diameter
+                    markerElement.style.height = '12px';
+                    markerElement.style.backgroundColor = color;
+                    markerElement.style.borderRadius = '50%';
+                    markerElement.style.border = '2px solid white'; // White border for visibility
+                    markerElement.style.boxShadow = '0 0 5px rgba(0,0,0,0.5)'; // Optional shadow
+                    markerElement.style.cursor = 'pointer';
 
                     const marker = new Marker({ element: markerElement })
                         .setLngLat(position)
-                        .setPopup(new mapboxgl.Popup({ offset: 25, closeButton: false }).setHTML(`
+                        .setPopup(new mapboxgl.Popup({ offset: 15, closeButton: false }).setHTML(`
                             <div>
                                 <strong>${properties.address || 'Address N/A'}</strong><br>
                                 Status: ${properties.status}<br>
@@ -308,15 +291,11 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>((
                         `))
                         .addTo(map);
 
-                    // Add click listener
                     marker.getElement().addEventListener('click', (e) => {
-                        e.stopPropagation(); // Prevent map click event
-                        console.log(`[MapboxMap] Marker clicked: ${id}`);
+                        e.stopPropagation();
                         onMarkerClick(markerData);
-                         // Optional: Fly to marker on click
                         mapRef.current?.flyTo({ center: position, zoom: Math.max(mapRef.current.getZoom(), 15) });
                     });
-
                     markersRef.current[id] = marker;
                 }
             });
@@ -368,38 +347,35 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>((
             mapRef.current?.fitBounds(bounds, options);
         },
         addMarker: (markerData) => {
-            // This might be redundant if parent manages markersData prop,
-            // but can be useful for temporary additions
             if (!mapRef.current || !mapLoaded || markersRef.current[markerData.id]) return;
-            console.log(`[MapboxMap] Imperatively adding marker: ${markerData.id}`);
 
             const position = markerData.geometry.coordinates as [number, number];
             const color = getMarkerColor(markerData.properties.status);
+            
             const markerElement = document.createElement('div');
-                 markerElement.innerHTML = `
-                    <svg viewBox="0 0 24 24" width="32" height="32" fill="${color}" stroke="white" stroke-width="1.5" style="cursor: pointer; filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.5));">
-                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
-                    </svg>
-                 `;
-                 markerElement.style.width = '32px';
-                 markerElement.style.height = '32px';
+            markerElement.style.width = '12px';
+            markerElement.style.height = '12px';
+            markerElement.style.backgroundColor = color;
+            markerElement.style.borderRadius = '50%';
+            markerElement.style.border = '2px solid white';
+            markerElement.style.boxShadow = '0 0 5px rgba(0,0,0,0.5)';
+            markerElement.style.cursor = 'pointer';
 
             const marker = new Marker({ element: markerElement })
                 .setLngLat(position)
-                .setPopup(new mapboxgl.Popup({ offset: 25, closeButton: false }).setHTML(`
+                .setPopup(new mapboxgl.Popup({ offset: 15, closeButton: false }).setHTML(`
                     <div>
                         <strong>${markerData.properties.address || 'Address N/A'}</strong><br>
                         Status: ${markerData.properties.status}<br>
                         ID: ${markerData.id}
                     </div>
-                 `))
+                `))
                 .addTo(mapRef.current);
 
             marker.getElement().addEventListener('click', (e) => {
                 e.stopPropagation();
                 onMarkerClick(markerData);
             });
-
             markersRef.current[markerData.id] = marker;
         },
         removeMarker: (markerId) => {
@@ -409,29 +385,23 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>((
             delete markersRef.current[markerId];
         },
         updateMarker: (markerData) => {
-             if (!mapRef.current || !mapLoaded || !markersRef.current[markerData.id]) return;
-            console.log(`[MapboxMap] Imperatively updating marker: ${markerData.id}`);
-             const marker = markersRef.current[markerData.id];
-             const position = markerData.geometry.coordinates as [number, number];
-             const color = getMarkerColor(markerData.properties.status);
+            if (!mapRef.current || !mapLoaded || !markersRef.current[markerData.id]) return;
+            const marker = markersRef.current[markerData.id];
+            const position = markerData.geometry.coordinates as [number, number];
+            const color = getMarkerColor(markerData.properties.status);
 
-             marker.setLngLat(position);
-
-             // Update color via SVG fill
-             const markerElement = marker.getElement();
-             const svgElement = markerElement.querySelector('svg');
-             if (svgElement) {
-                 svgElement.style.fill = color;
-             }
-
-             // Update popup
-             marker.getPopup()?.setHTML(`
+            marker.setLngLat(position);
+            // Update color of the div marker
+            const markerElement = marker.getElement();
+            markerElement.style.backgroundColor = color;
+            
+            marker.getPopup()?.setHTML(`
                 <div>
                     <strong>${markerData.properties.address || 'Address N/A'}</strong><br>
                     Status: ${markerData.properties.status}<br>
                     ID: ${markerData.id}
                 </div>
-             `);
+            `);
         },
     }));
 

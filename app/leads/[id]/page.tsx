@@ -28,7 +28,7 @@ interface QuickActionButtonProps {
 
 const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, icon, label, disabled }) => {
   const commonProps = {
-    className: "flex flex-col items-center justify-center gap-1.5 p-3 sm:p-4 rounded-lg bg-card hover:bg-muted/80 border border-border shadow-sm transition-all h-full text-sm",
+    className: "btn flex flex-col items-center justify-center gap-1.5 p-3 sm:p-4 rounded-lg hover:bg-muted/80 shadow-sm transition-all h-full text-sm",
     disabled: disabled,
   };
 
@@ -199,31 +199,31 @@ export default function LeadDetailPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <QuickActionButton 
           href={leadPhone ? `tel:${leadPhone}` : undefined}
-          icon={<Phone className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />}
+          icon={<Phone className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#59FF00' }} />}
           label="Call"
           disabled={!leadPhone}
         />
         <QuickActionButton 
           href={leadEmail ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(leadEmail)}` : undefined}
-          icon={<Mail className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />}
+          icon={<Mail className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#59FF00' }} />}
           label="Email"
           disabled={!leadEmail}
         />
         <QuickActionButton 
           onClick={handleScheduleAppointment}
-          icon={<CalendarPlus className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />}
+          icon={<CalendarPlus className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#59FF00' }} />}
           label="Schedule"
         />
         <QuickActionButton 
           href={leadAddress ? `https://maps.google.com/?q=${encodeURIComponent(leadAddress)}` : undefined}
-          icon={<MapPin className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />}
+          icon={<MapPin className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#59FF00' }} />}
           label="Map"
           disabled={!leadAddress}
         />
       </div>
       
       <LeadDetailTabs 
-        lead={lead} // Pass the lead object, not null
+        lead={lead}
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />

@@ -2,35 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 0 0% 0%; /* Black */
-    --foreground: 0 0% 100%; /* White for better contrast on black background */
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 210 90% 50%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 210 90% 50%;
-    --radius: 0.5rem;
-  }
+body { /* Added from styles/globals.css */
+  font-family: Arial, Helvetica, sans-serif;
+}
 
-  .dark {
+@layer base {
+  :root { /* Consolidated dark theme variables here */
     --background: 0 0% 0%;
     --foreground: 0 0% 100%;
-    --card: 0 0% 0%;
+    
+    /* Card variables based on app/globals.css dark theme */
+    --card-h: 0;
+    --card-s: 0%;
+    --card-l: 0%; /* From --card: 0 0% 0%; */
     --card-foreground: 0 0% 100%;
+    
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
     --primary: 210 90% 50%;
@@ -43,9 +29,63 @@
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
+    
+    /* Border variables based on app/globals.css dark theme */
+    --border-h: 217.2;
+    --border-s: 32.6%;
+    --border-l: 17.5%; /* From --border: 217.2 32.6% 17.5%; */
+
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+    --radius: 0.5rem;
+
+    /* Sidebar variables from styles/globals.css */
+    --sidebar-background: 203 69% 5%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@keyframes moveBlob1 {
+  0%, 100% {
+    transform: translate(-10%, -10%) scale(1);
+    opacity: 0.7;
+  }
+  25% {
+    transform: translate(30%, -20%) scale(1.1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translate(20%, 30%) scale(0.9);
+    opacity: 0.8;
+  }
+  75% {
+    transform: translate(-20%, 20%) scale(1.2);
+    opacity: 0.5;
+  }
+}
+
+@keyframes moveBlob2 {
+  0%, 100% {
+    transform: translate(10%, 10%) scale(1);
+    opacity: 0.7;
+  }
+  25% {
+    transform: translate(-30%, 20%) scale(1.2);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(-20%, -30%) scale(0.8);
+    opacity: 0.8;
+  }
+  75% {
+    transform: translate(20%, -20%) scale(1.1);
+    opacity: 0.6;
   }
 }
 
@@ -53,8 +93,55 @@
   * {
     @apply border-border;
   }
+
+  html { /* Simplified selector */
+    position: relative;
+    overflow-x: hidden; /* Prevent horizontal scroll from blobs */
+    background: linear-gradient(to bottom, black 0%, rgb(4, 15, 22) 93%, #225c03 100%) !important;
+    min-height: 100vh; /* Ensure gradient covers full viewport height */
+  }
+
+  html::before,
+  html::after {
+    content: "";
+    position: fixed;
+    left: 60%;
+    top: 50%;
+    width: 50vmax; /* Large blobs */
+    height: 50vmax;
+    border-radius: 99%;
+    z-index: -1; /* Behind content */
+    mix-blend-mode: luminosity; /* Or lighten, experiment for desired effect */
+    filter: blur(200px); /* Soft edges */
+  }
+
+  html::before {
+    background-color: rgb(38, 88, 11); /* First blob color */
+    animation: moveBlob1 25s infinite alternate ease-in-out;
+  }
+
+  html::after {
+    background-color: #ffffff; /* Second blob color */
+    animation: moveBlob2 30s infinite alternate ease-in-out -5s; /* Offset animation */
+  }
+
   body {
-    @apply bg-background text-foreground !important;
+    @apply bg-transparent text-foreground !important; /* Make body background transparent */
+    min-height: 100vh;
+    position: relative; /* Ensure body content is above pseudo-elements */
+    z-index: 1;
+  }
+
+  /* Glassmorphism styles for specified elements */
+  .card,
+  .modal-box,
+  .container,
+  .styled-container,
+  .btn {
+    background-color: hsla(var(--card-h), var(--card-s), var(--card-l), 0.5) !important; /* 50% transparent card background */
+    -webkit-backdrop-filter: blur(8px); /* Safari support, user changed blur to 8px in app/globals.css previously */
+    backdrop-filter: blur(8px); /* User changed blur to 8px in app/globals.css previously */
+    border: 1px solid hsla(var(--border-h), var(--border-s), 10%, 0.6) !important; /* Darker, more opaque border */
   }
 }
 
@@ -63,6 +150,9 @@
 }
 
 @layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }

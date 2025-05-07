@@ -1,6 +1,6 @@
 "use client"
 
-import { SummaryCards } from "@/components/dashboard/summary-cards"
+// import { SummaryCards } from "@/components/dashboard/summary-cards"
 import { QuickActions } from "@/components/dashboard/quick-actions"
 import { DynamicHero } from "@/components/dynamic-components"
 
@@ -16,8 +16,8 @@ export function DashboardContent() {
           <h2 className="text-2xl font-bold">Welcome back</h2>
         </div>
 
-        {/* Summary Cards */}
-        <SummaryCards />
+        {/* Summary Cards removed */}
+        {/* <SummaryCards /> */}
 
         {/* Quick Actions */}
         <QuickActions />

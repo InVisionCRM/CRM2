@@ -25,12 +25,12 @@ export function LeadDetailTabs({ lead }: LeadDetailTabsProps) {
   return (
     <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid grid-cols-6 mb-4">
-        <TabsTrigger value="details">Details</TabsTrigger>
-        <TabsTrigger value="appointments">Appointments</TabsTrigger>
-        <TabsTrigger value="files">Files</TabsTrigger>
-        <TabsTrigger value="scope">Scope of Work</TabsTrigger>
-        <TabsTrigger value="contract">Contract</TabsTrigger>
-        <TabsTrigger value="history">History</TabsTrigger>
+        <TabsTrigger value="details" style={{ color: 'yellow' }}>Details</TabsTrigger>
+        <TabsTrigger value="appointments" style={{ color: 'yellow' }}>Appointments</TabsTrigger>
+        <TabsTrigger value="files" style={{ color: 'yellow' }}>Files</TabsTrigger>
+        <TabsTrigger value="scope" style={{ color: 'yellow' }}>Scope of Work</TabsTrigger>
+        <TabsTrigger value="contract" style={{ color: 'yellow' }}>Contract</TabsTrigger>
+        <TabsTrigger value="history" style={{ color: 'yellow' }}>History</TabsTrigger>
       </TabsList>
 
       <TabsContent value="details" className="space-y-4">
