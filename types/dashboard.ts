@@ -1,3 +1,5 @@
+import type { LeadStatus } from "@prisma/client"
+
 export interface LeadSummary {
   id: string
   name: string
@@ -18,17 +20,6 @@ export interface AppointmentSummary {
   status: AppointmentStatus
   leadId: string
 }
-
-export type LeadStatus =
-  | "signed_contract"
-  | "scheduled"
-  | "colors"
-  | "acv"
-  | "job"
-  | "completed_jobs"
-  | "zero_balance"
-  | "denied"
-  | "follow_ups"
 
 export type AppointmentStatus = "scheduled" | "completed" | "cancelled" | "rescheduled"
 

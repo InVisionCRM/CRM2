@@ -14,7 +14,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { useCreateLead } from "@/hooks/use-create-lead"
-import type { LeadStatus } from "@/types/dashboard"
+import { formatDistanceToNow } from "date-fns"
+import type { Lead } from "@prisma/client"
+import { LeadStatus } from "@prisma/client"
 
 const leadFormSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),

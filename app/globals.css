@@ -214,3 +214,12 @@ body {
   z-index: 9999;
   font-size: 12px;
 }
+
+/* Custom utility to hide scrollbar but keep scrollability */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

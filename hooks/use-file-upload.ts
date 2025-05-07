@@ -2,7 +2,7 @@ import { useState } from "react"
 import { uploadFileAction } from "@/app/actions/file-actions"
 
 interface UseFileUploadReturn {
-  uploadFile: (file: File, leadId: string, category: string) => Promise<{
+  uploadFile: (file: File, leadId: string, category?: string) => Promise<{
     success: boolean
     message?: string
   }>
@@ -14,7 +14,7 @@ export function useFileUpload(): UseFileUploadReturn {
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
 
-  const uploadFile = async (file: File, leadId: string, category: string) => {
+  const uploadFile = async (file: File, leadId: string, category?: string) => {
     setIsUploading(true)
     setError(null)
 

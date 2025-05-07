@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import type { LeadStatus } from "@/types/dashboard"
+import { LeadStatus } from "@prisma/client"
 
 /**
  * Merges class names with Tailwind CSS classes and resolves conflicts
@@ -11,30 +11,60 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function getStatusColor(status: LeadStatus | string) {
-  const statusColors = {
-    signed_contract: "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100",
-    scheduled: "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100",
-    colors: "bg-indigo-100 text-indigo-800 dark:bg-indigo-800 dark:text-indigo-100",
-    acv: "bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100",
-    job: "bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100",
-    completed_jobs: "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100",
-    zero_balance: "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100",
-    denied: "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100",
-    follow_ups: "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100",
-  } as const
-
-  return statusColors[status as keyof typeof statusColors] || ""
+export function getStatusColor(status: LeadStatus | string): string {
+  // Handle potential string input if necessary, but primarily use enum
+  const statusEnum = Object.values(LeadStatus).find(val => val === status) ?? status;
+  switch (statusEnum) {
+    case LeadStatus.signed_contract:
+      return "bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100"
+    case LeadStatus.scheduled:
+      return "bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100"
+    case LeadStatus.colors:
+      return "bg-pink-100 text-pink-800 dark:bg-pink-800 dark:text-pink-100"
+    case LeadStatus.acv:
+      return "bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100"
+    case LeadStatus.job:
+      return "bg-indigo-100 text-indigo-800 dark:bg-indigo-800 dark:text-indigo-100"
+    case LeadStatus.completed_jobs:
+      return "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100"
+    case LeadStatus.zero_balance:
+      return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100"
+    case LeadStatus.denied:
+      return "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100"
+    case LeadStatus.follow_ups:
+      return "bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100"
+    default:
+      return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100" // Default fallback
+  }
 }
 
-export function formatStatusLabel(status: string | LeadStatus): string {
+export function formatStatusLabel(status: LeadStatus | string): string {
   if (!status) return "Unknown"
-  return status
-    .replace(/_/g, " ") // Replace underscores with spaces
-    .toLowerCase() // Convert to lowercase
-    .split(" ") // Split into words
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize first letter
-    .join(" ") // Join back together
+  // Handle potential string input if necessary, but primarily use enum
+  const statusEnum = Object.values(LeadStatus).find(val => val === status) ?? status;
+  switch (statusEnum) {
+    case LeadStatus.signed_contract:
+      return "Signed Contract"
+    case LeadStatus.scheduled:
+      return "Scheduled"
+    case LeadStatus.colors:
+      return "Colors"
+    case LeadStatus.acv:
+      return "ACV"
+    case LeadStatus.job:
+      return "Job"
+    case LeadStatus.completed_jobs:
+      return "Completed Jobs"
+    case LeadStatus.zero_balance:
+      return "Zero Balance"
+    case LeadStatus.denied:
+      return "Denied"
+    case LeadStatus.follow_ups:
+      return "Follow Ups"
+    default:
+      // Fallback for potentially unconverted string or unknown enum value
+      return typeof status === 'string' ? status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : "Unknown Status";
+  }
 }
 
 // --- New Function ---

@@ -1,13 +1,4 @@
-export type LeadStatus =
-  | "signed_contract"
-  | "scheduled"
-  | "colors"
-  | "acv"
-  | "job"
-  | "completed_jobs"
-  | "zero_balance"
-  | "denied"
-  | "follow_ups"
+import type { DamageType, AppointmentPurpose, AppointmentStatus, LeadStatus } from "@prisma/client"
 
 export interface Lead {
   id: string
@@ -28,7 +19,7 @@ export interface Lead {
   insuranceDeductible: string | null
   insuranceSecondaryPhone: string | null
   dateOfLoss: string | null
-  damageType: "HAIL" | "WIND" | "FIRE" | null
+  damageType: DamageType | null
   claimNumber: string | null
   adjusterAppointmentDate: string | null
   adjusterAppointmentTime: string | null
@@ -63,28 +54,6 @@ export interface File {
   size: number
   uploadedAt: Date
 }
-
-export interface PropertyDetails {
-  roofType: string
-  roofAge?: number
-  squareFootage?: number
-  stories: number
-  hasExistingDamage: boolean
-  damageType?: string
-  insuranceClaim: boolean
-  insuranceCompany?: string
-  claimNumber?: string
-}
-
-export type AppointmentPurpose =
-  | "INSPECTION"
-  | "FILE_CLAIM"
-  | "FOLLOW_UP"
-  | "ADJUSTER"
-  | "BUILD_DAY"
-  | "OTHER"
-
-export type AppointmentStatus = "scheduled" | "completed" | "cancelled" | "rescheduled"
 
 export interface LeadFilters {
   status?: LeadStatus[]

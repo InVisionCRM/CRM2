@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from "react"
 import type { LeadSummary } from "@/types/dashboard"
-import type { LeadStatus } from "@/types/dashboard"
+import { LeadStatus } from "@prisma/client"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { getLeads, createLead, updateLead } from "@/lib/api/leads"
+import type { Lead } from "@prisma/client"
 
 interface UseLeadsOptions {
   status?: LeadStatus | null

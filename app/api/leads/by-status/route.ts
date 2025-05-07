@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client"
 import { NextResponse } from "next/server"
 import type { Lead } from "@/types/lead"
+import { LeadStatus } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -13,9 +14,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Status parameter is required" }, { status: 400 })
     }
 
+    if (!Object.values(LeadStatus).includes(status as LeadStatus)) {
+      return NextResponse.json({ error: "Invalid status parameter" }, { status: 400 })
+    }
+
     const leads = await prisma.lead.findMany({
       where: {
-        status: status as any, // We'll validate the status against the LeadStatus enum
+        status: status as LeadStatus,
       },
       select: {
         id: true,

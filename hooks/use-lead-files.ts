@@ -1,14 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import type { LeadFile } from "@/types/documents"
+import { deleteFileAction } from "@/app/actions/file-actions"
+import { useFileUpload } from "./use-file-upload"
 
 export function useLeadFiles(leadId: string) {
   const [files, setFiles] = useState<LeadFile[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
+  const { uploadFile: performUpload, isUploading: isCurrentlyUploading, error: uploadError } = useFileUpload()
 
-  const fetchFiles = async () => {
+  const fetchFiles = useCallback(async () => {
     if (!leadId) return
 
     setIsLoading(true)
@@ -30,28 +33,23 @@ export function useLeadFiles(leadId: string) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [leadId])
 
   useEffect(() => {
     if (leadId) {
       fetchFiles()
     }
-  }, [leadId])
+  }, [leadId, fetchFiles])
 
   const deleteFile = async (fileId: string) => {
     try {
-      const response = await fetch(`/api/leads/${leadId}/files/${fileId}`, {
-        method: "DELETE",
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to delete file")
+      const result = await deleteFileAction(fileId)
+      if (result.success) {
+        setFiles((prevFiles) => prevFiles.filter((file) => file.id !== fileId))
+        return { success: true }
+      } else {
+        throw new Error(result.message || "Failed to delete file")
       }
-
-      // Remove the deleted file from the state
-      setFiles((prevFiles) => prevFiles.filter((file) => file.id !== fileId))
-      return { success: true }
     } catch (err) {
       console.error("Error deleting file:", err)
       return {
@@ -61,11 +59,35 @@ export function useLeadFiles(leadId: string) {
     }
   }
 
+  const uploadFile = async (originalFile: File, desiredName: string) => {
+    let fileToUpload = originalFile;
+    if (desiredName && originalFile.name !== desiredName) {
+      fileToUpload = new File([originalFile], desiredName, { type: originalFile.type });
+    }
+
+    try {
+      const result = await performUpload(fileToUpload, leadId, undefined);
+      if (result.success) {
+        await fetchFiles();
+      }
+      return result;
+    } catch (err) {
+      console.error("Error in useLeadFiles during upload:", err);
+      return {
+        success: false,
+        message: err instanceof Error ? err.message : "Upload failed in useLeadFiles",
+      };
+    }
+  }
+
   return {
     files,
     isLoading,
     error,
     refreshFiles: fetchFiles,
     deleteFile,
+    uploadFile,
+    isUploading: isCurrentlyUploading,
+    uploadError,
   }
 }

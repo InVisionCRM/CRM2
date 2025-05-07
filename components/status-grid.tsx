@@ -1,5 +1,6 @@
 "use client"
-import type { LeadStatus, StatusCount } from "@/types/dashboard"
+import type { StatusCount } from "@/types/dashboard"
+import { LeadStatus } from "@prisma/client"
 import {
   Users,
   FileSignature,

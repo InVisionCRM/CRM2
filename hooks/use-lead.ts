@@ -1,49 +1,40 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import type { Lead } from "@/types/lead"
+import useSWR from "swr"
+import type { Lead } from "@prisma/client"
 
 interface UseLeadResult {
   lead: Lead | null
   isLoading: boolean
   error: Error | null
-  refetch: () => void
+  mutate: () => void
 }
 
-export function useLead(id: string): UseLeadResult {
-  const [lead, setLead] = useState<Lead | null>(null)
-  const [isLoading, setIsLoading] = useState<boolean>(true)
-  const [error, setError] = useState<Error | null>(null)
-  const [refreshKey, setRefreshKey] = useState<number>(0)
+const fetcher = async (url: string): Promise<Lead> => {
+  const response = await fetch(url)
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.message || `Failed to fetch lead (${response.status})`)
+  }
+  
+  return response.json()
+}
 
-  useEffect(() => {
-    const fetchLead = async () => {
-      if (!id) return
-
-      setIsLoading(true)
-      setError(null)
-
-      try {
-        const response = await fetch(`/api/leads/${id}`)
-
-        if (!response.ok) {
-          throw new Error(`Error fetching lead: ${response.statusText}`)
-        }
-
-        const data = await response.json()
-        setLead(data)
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error("An unknown error occurred"))
-        console.error("Error fetching lead:", err)
-      } finally {
-        setIsLoading(false)
-      }
+export function useLead(id: string | undefined): UseLeadResult {
+  const { data, error, mutate, isLoading } = useSWR<Lead>(
+    id ? `/api/leads/${id}` : null,
+    fetcher, 
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 5000,
     }
-
-    fetchLead()
-  }, [id, refreshKey])
-
-  const refetch = () => setRefreshKey((prev) => prev + 1)
-
-  return { lead, isLoading, error, refetch }
+  )
+  
+  return {
+    lead: data || null,
+    isLoading,
+    error: error || null,
+    mutate,
+  }
 }
