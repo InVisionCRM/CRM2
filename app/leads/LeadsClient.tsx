@@ -10,7 +10,6 @@ import { StatusGrid } from "@/components/status-grid"
 import { LeadStatus } from "@prisma/client"
 import { Button } from "@/components/ui/button"
 import { LeadsDrawer } from "@/components/leads-drawer"
-
 const mockUsers: UserOption[] = [
   { id: "user1", name: "John Smith" },
   { id: "user2", name: "Jane Doe" },

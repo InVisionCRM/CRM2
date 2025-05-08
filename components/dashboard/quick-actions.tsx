@@ -46,9 +46,9 @@ function QuickAction({
 
   const handleClick = () => {
     setIsClicked(true)
+    onClick()
     setTimeout(() => {
       setIsClicked(false)
-      onClick()
     }, 300) // Match this with the animation duration
   }
 
@@ -98,46 +98,6 @@ function QuickAction({
         )}
       </div>
     </Button>
-  )
-}
-
-function ContractTypeSelector({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const router = useRouter()
-
-  const handleContractTypeSelect = (type: string) => {
-    onClose()
-    if (type === "general") {
-      router.push("/contracts/general") // Changed back to the correct path
-    } else if (type === "scope") {
-      router.push("/contracts/scope-of-work")
-    }
-  }
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Select Contract Type</DialogTitle>
-          <DialogDescription>Choose the type of contract you want to create</DialogDescription>
-        </DialogHeader>
-        <div className="grid grid-cols-1 gap-4 py-4">
-          <Button
-            onClick={() => handleContractTypeSelect("general")}
-            className="h-24 flex flex-col items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
-          >
-            <FileText className="h-8 w-8" />
-            <span className="text-lg font-medium">General Contract</span>
-          </Button>
-          <Button
-            onClick={() => handleContractTypeSelect("scope")}
-            className="h-24 flex flex-col items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
-          >
-            <ClipboardList className="h-8 w-8" />
-            <span className="text-lg font-medium">Scope of Work</span>
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
   )
 }
 
@@ -275,7 +235,6 @@ export function QuickActions() {
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false)
   const [filesSheetOpen, setFilesSheetOpen] = useState(false)
   const [leadSelectionOpen, setLeadSelectionOpen] = useState(false)
-  const [contractSelectorOpen, setContractSelectorOpen] = useState(false)
   const [selectedLead, setSelectedLead] = useState<Lead | undefined>(undefined)
   const router = useRouter()
 
@@ -293,9 +252,6 @@ export function QuickActions() {
     } else if (action === "file-upload") {
       // Open the lead selection sheet first
       setLeadSelectionOpen(true)
-    } else if (action === "contract") {
-      // Open the contract type selector
-      setContractSelectorOpen(true)
     }
   }
 
@@ -356,7 +312,7 @@ export function QuickActions() {
               icon={<FileCheck className="h-5 w-5" />}
               label="Contract"
               description="Generate contract"
-              onClick={() => handleAction("contract")}
+              onClick={() => window.open('https://contracts.purlin.pro', '_blank')}
               imageUrl="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/dashboard-images/contracts.png"
               blurAmount="sm"
               className="col-span-2 md:col-span-2 border-2 border-lime-500"
@@ -383,9 +339,6 @@ export function QuickActions() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Contract Type Selector */}
-      <ContractTypeSelector isOpen={contractSelectorOpen} onClose={() => setContractSelectorOpen(false)} />
 
       {/* Lead Selection Sheet */}
       <LeadSelectionSheet
