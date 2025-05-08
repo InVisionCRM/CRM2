@@ -5,6 +5,15 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { LeadStatus } from '@prisma/client'
 
+// Configure body parser size limit
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '100mb'
+    }
+  }
+}
+
 // Schema for validation
 const contactUpdateSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -65,21 +74,24 @@ export async function PATCH(
         console.error(`Attempted to assign lead to non-existent user ID: ${session.user.id}`);
         return new NextResponse(
           JSON.stringify({ message: 'Assigned user not found' }),
-          { status: 400 } // Or 500, depending on how you want to handle this internal inconsistency
+          { status: 400 }
         );
       }
+
+      // Generate a new UUID for the lead
+      const newLeadId = crypto.randomUUID();
 
       // Create a new lead with the contact information
       const newLead = await prisma.lead.create({
         data: {
-          id: id, // Use the temporary ID so the frontend can track it
+          id: newLeadId, // Use a proper UUID instead of temporary ID
           firstName: data.firstName,
           lastName: data.lastName,
           email: data.email,
           phone: data.phone,
           address: data.address,
           status: LeadStatus.follow_ups,
-          assignedToId: session.user.id, // Assign to the current user
+          assignedToId: session.user.id,
         }
       })
 
@@ -90,7 +102,7 @@ export async function PATCH(
           title: 'Lead created',
           description: `New lead created for ${data.firstName} ${data.lastName}`,
           userId: session.user.id,
-          leadId: id,
+          leadId: newLeadId, // Use the new UUID here
           status: 'COMPLETED'
         }
       })

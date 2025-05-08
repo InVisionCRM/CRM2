@@ -2,9 +2,13 @@ import { NextResponse } from "next/server"
 import { getFilesByLeadId } from "@/lib/db/files"
 import type { LeadFile } from "@/types/documents"
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  request: Request,
+  { params }: { params: { id: Promise<string> | string } }
+) {
   try {
-    const leadId = params.id
+    // Always await params.id
+    const leadId = await params.id
     console.log("Fetching files for lead:", leadId)
 
     const files = await getFilesByLeadId(leadId)

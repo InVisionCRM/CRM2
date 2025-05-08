@@ -13,6 +13,11 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '100mb'
+    }
+  },
   async headers() {
     return [
       {
@@ -24,7 +29,7 @@ const nextConfig = {
           },
           {
             key: 'Access-Control-Allow-Methods',
-            value: 'GET,OPTIONS'
+            value: 'GET,OPTIONS,POST,PUT,DELETE,PATCH'
           },
           {
             key: 'Access-Control-Allow-Headers',
@@ -33,6 +38,23 @@ const nextConfig = {
         ]
       }
     ]
+  },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/api/:path*',
+          has: [
+            {
+              type: 'header',
+              key: 'content-type',
+              value: '(.*)'
+            }
+          ],
+          destination: '/api/:path*'
+        }
+      ]
+    }
   }
 }
 

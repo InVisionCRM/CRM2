@@ -6,6 +6,7 @@ import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { DockThemeToggle } from "@/components/theme-toggle"
 import { usePathname } from "next/navigation"
+import { LogoutButton } from "@/components/ui/LogoutButton"
 
 export default function AppSidebar() {
   const [open, setOpen] = useState(false)
@@ -69,7 +70,7 @@ export default function AppSidebar() {
       {isMobile && !open && (
         <button 
           onClick={() => setOpen(true)}
-          className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-black backdrop-blur-lg border border-white/20"
+          className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-black/25 backdrop-blur-lg border border-white/20"
           aria-label="Open menu"
         >
           <IconMenu2 className="h-5 w-5 text-[#59ff00]" />
@@ -104,32 +105,12 @@ export default function AppSidebar() {
                 ))}
               </div>
             </div>
-            {/* <div className="flex flex-col gap-4">
-              <SidebarLink
-                link={{
-                  label: "Theme",
-                  href: "#",
-                  icon: <DockThemeToggle />,
-                }}
-                className="px-2 text-[#59ff00]"
-              />
-              <SidebarLink
-                link={{
-                  label: "Profile",
-                  href: "/profile",
-                  icon: (
-                    <div className="h-5 w-5 shrink-0 rounded-full bg-primary/10 overflow-hidden">
-                      <img
-                        src="https://assets.aceternity.com/manu.png"
-                        className="h-full w-full object-cover"
-                        alt="Avatar"
-                      />
-                    </div>
-                  ),
-                }}
-                className="px-2 text-[#59ff00]"
-              />
-            </div> */}
+
+            {/* Logout Button and Theme Toggle at the bottom */} 
+            <div className="mt-auto flex flex-col gap-2 p-4">
+              <LogoutButton className="px-2" />
+              <DockThemeToggle />
+            </div>
           </SidebarBody>
         </Sidebar>
       </div>
