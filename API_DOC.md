@@ -42,8 +42,10 @@ This document provides comprehensive documentation for all API endpoints in the 
    - [Get Vision Marker by ID](#get-vision-marker-by-id)
    - [Update Vision Marker](#update-vision-marker)
    - [Delete Vision Marker](#delete-vision-marker)
-9. [Utility Functions](#utility-functions)
-   - [lib/db-markers.ts](#libdb-markersts)
+9. [User Tracking](#user-tracking)
+   - [Record Route Points](#record-route-points)
+10. [Utility Functions](#utility-functions)
+    - [lib/db-markers.ts](#libdb-markersts)
 
 ## Leads
 
@@ -1107,6 +1109,113 @@ Array<{
   "id": "marker-id"
 }
 \`\`\`
+
+## User Tracking
+
+### Record Route Points
+
+**Route**: `POST /api/tracking/points`
+
+**Purpose**: Records a batch of GPS coordinates for a user's route during a "door knock" session.
+
+**Consumed By**: `components/map/RouteTracker.tsx` (via `useRouteTracker` hook)
+
+**Authentication**: Requires active JWT + cookie session.
+
+**Request Payload**:
+```typescript
+{
+  points: Array<{
+    lat: number;      // Latitude, range: -90 to 90
+    lng: number;      // Longitude, range: -180 to 180
+    timestamp?: string; // Optional: ISO 8601 datetime string, defaults to now() on server
+  }>;
+}
+```
+
+**Response Payload (Success - 201)**:
+```typescript
+{
+  message: string; // e.g., "Route points recorded"
+  count: number;   // Number of points successfully recorded
+}
+```
+
+**Response Payload (Error - 400 Bad Request)**:
+```typescript
+{
+  error: string;   // e.g., "Invalid input"
+  details?: any;   // Zod error formatting object
+}
+```
+
+**Response Payload (Error - 401 Unauthorized)**:
+```typescript
+{
+  error: string;   // e.g., "Unauthorized" or "Authentication failed"
+}
+```
+
+**Response Payload (Error - 500 Internal Server Error)**:
+```typescript
+{
+  error: string;   // e.g., "Internal Server Error"
+}
+```
+
+### Get Route Points
+
+**Route**: `GET /api/tracking/points`
+
+**Purpose**: Retrieves an array of `RoutePoint` objects for the currently authenticated user, recorded since a specified timestamp.
+
+**Consumed By**: `components/map/RouteVisualizer.tsx`
+
+**Authentication**: Requires active JWT + cookie session.
+
+**Query Parameters**:
+```typescript
+{
+  since: string; // Required. ISO 8601 datetime string (e.g., "2023-05-10T14:00:00.000Z").
+                 // Points with a timestamp greater than or equal to this value will be returned.
+}
+```
+
+**Response Payload (Success - 200)**:
+```typescript
+// Array of RoutePoint objects
+[
+  {
+    id: string;        // Unique ID of the point
+    userId: string;      // ID of the user
+    timestamp: string;   // ISO 8601 datetime string of when the point was recorded
+    lat: number;         // Latitude
+    lng: number;         // Longitude
+  },
+  // ... more points
+]
+```
+
+**Response Payload (Error - 400 Bad Request)**:
+```typescript
+{
+  error: string;   // e.g., "`since` query parameter is required" or "`since` query parameter must be a valid ISO date string"
+}
+```
+
+**Response Payload (Error - 401 Unauthorized)**:
+```typescript
+{
+  error: string;   // e.g., "Unauthorized" or "Authentication failed"
+}
+```
+
+**Response Payload (Error - 500 Internal Server Error)**:
+```typescript
+{
+  error: string;   // e.g., "Internal Server Error"
+}
+```
 
 ## Utility Functions
 

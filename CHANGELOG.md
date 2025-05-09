@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Added
+- Added route visualization overlay component and GET endpoint for retrieving GPS trails.
+- Added GPS-based route tracking for "door knock" sessions (RoutePoint model, API, lib, and UI component).
 - Fixed lead creation functionality with proper database integration
 - Updated lead detail page to fetch from database instead of mock data
 - Improved error handling in database operations

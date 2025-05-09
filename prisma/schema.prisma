@@ -64,6 +64,7 @@ model User {
   activities    Activity[]
   visionMarkers VisionMarker[]
   visits        Visit[]
+  routePoints   RoutePoint[]
 
   createdAt     DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt     DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
@@ -322,4 +323,17 @@ model Contract {
   lead          Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
+}
+
+model RoutePoint {
+  id        String   @id @default(cuid())
+  userId    String   @db.Uuid
+  timestamp DateTime @default(now())
+  lat       Float
+  lng       Float
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([timestamp])
 }
