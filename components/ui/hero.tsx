@@ -444,6 +444,27 @@ export const Hero = () => {
         {/* Radial Gradient to prevent sharp edges */}
         <div className="absolute inset-0 w-full h-full bg-transparent [mask-image:radial-gradient(280px_160px_at_top,transparent_20%,white)]"></div>
       </motion.div>
+
+      {/* Action Buttons */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 1.2 }}
+        className="flex gap-4 mt-8 z-20"
+      >
+        <Button
+          className="px-6 py-2 bg-black/30 backdrop-blur-sm border border-[#59ff00] text-white hover:bg-black/50 hover:border-[#59ff00]/80 transition-all duration-300"
+          onClick={() => window.location.href = '/leads/new'}
+        >
+          Create New Lead
+        </Button>
+        <Button
+          className="px-6 py-2 bg-black/30 backdrop-blur-sm border border-[#59ff00] text-white hover:bg-black/50 hover:border-[#59ff00]/80 transition-all duration-300"
+          onClick={() => window.location.href = '/leads'}
+        >
+          View All Leads
+        </Button>
+      </motion.div>
     </motion.div>
   )
 } 

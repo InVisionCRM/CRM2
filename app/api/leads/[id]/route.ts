@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server"
 import { getLeadById, updateLead, deleteLead } from "@/lib/db/leads"
+import type { UpdateLeadInput } from "@/lib/db/leads"
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  request: Request,
+  { params: paramsPromise }: { params: Promise<{ id: string }> }
+) {
   try {
+    const params = await paramsPromise
     const id = params.id
     const lead = await getLeadById(id)
 
@@ -17,35 +22,44 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(
+  request: Request,
+  { params: paramsPromise }: { params: Promise<{ id: string }> }
+) {
   try {
+    const params = await paramsPromise
     const id = params.id
     const body = await request.json()
 
+    // TODO: Get userId from session/authentication
+    const userId = "placeholder-user-id" // Placeholder - replace with actual user ID from session
+
     // Transform the incoming data to match our function parameters
-    const updateData = {
+    const updateData: Partial<UpdateLeadInput> = {
       firstName: body.first_name,
       lastName: body.last_name,
       email: body.email,
       phone: body.phone,
-      address: body.address,
-      streetAddress: body.street_address,
-      city: body.city,
-      state: body.state,
-      zipcode: body.zipcode,
+      address: body.address || `${body.street_address || ''} ${body.city || ''} ${body.state || ''} ${body.zipcode || ''}`.trim(),
       status: body.status,
-      assignedTo: body.assigned_to,
+      assignedToId: body.assigned_to,
       notes: body.notes,
+      userId: userId,
     }
 
     // Clean undefined values
-    Object.keys(updateData).forEach((key) => {
+    Object.keys(updateData).forEach((keyStr) => {
+      const key = keyStr as keyof typeof updateData;
       if (updateData[key] === undefined) {
         delete updateData[key]
       }
     })
 
-    const updatedLead = await updateLead(id, updateData)
+    // Ensure all required fields for UpdateLeadInput are present after cleaning, or handle appropriately.
+    // For example, if userId was optional in the input but required by updateLead, ensure it's set.
+    const finalUpdateData = { ...updateData, userId: userId } // Ensure userId is definitely there
+
+    const updatedLead = await updateLead(id, finalUpdateData as UpdateLeadInput)
 
     if (!updatedLead) {
       return NextResponse.json({ error: "Lead not found" }, { status: 404 })
@@ -58,8 +72,12 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: Request,
+  { params: paramsPromise }: { params: Promise<{ id: string }> }
+) {
   try {
+    const params = await paramsPromise
     const id = params.id
     const success = await deleteLead(id)
 

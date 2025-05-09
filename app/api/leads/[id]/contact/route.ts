@@ -4,31 +4,24 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { LeadStatus } from '@prisma/client'
-
-// Configure body parser size limit
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '100mb'
-    }
-  }
-}
+import crypto from 'crypto'; // Added for UUID generation
 
 // Schema for validation
 const contactUpdateSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address").optional().or(z.literal("")),
-  phone: z.string().optional().or(z.literal("")),
-  address: z.string().optional().or(z.literal("")),
+  lastName:  z.string().min(1, "Last name is required"),
+  email:     z.string().email("Invalid email address").optional().or(z.literal("")),
+  phone:     z.string().optional().or(z.literal("")),
+  address:   z.string().optional().or(z.literal("")),
 })
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: Promise<string> | string } }
+  // Tell Next.js this is a Promise you must await
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Verify authentication
+    // 1. Auth check
     const session = await getServerSession(authOptions)
     if (!session) {
       return new NextResponse(
@@ -37,9 +30,8 @@ export async function PATCH(
       )
     }
 
-    // Get the lead ID from params - properly await it
-    const id = typeof params.id === 'string' ? params.id : await params.id
-    
+    // 2. Extract and validate ID
+    const { id } = await params
     if (!id) {
       return new NextResponse(
         JSON.stringify({ message: 'Lead ID is required' }),
@@ -47,127 +39,118 @@ export async function PATCH(
       )
     }
 
-    // Parse and validate the request body
+    // 3. Parse & validate body
     const body = await request.json()
-    const validationResult = contactUpdateSchema.safeParse(body)
-    
-    if (!validationResult.success) {
+    const result = contactUpdateSchema.safeParse(body)
+    if (!result.success) {
       return new NextResponse(
-        JSON.stringify({ 
-          message: 'Invalid data', 
-          errors: validationResult.error.errors 
+        JSON.stringify({
+          message: 'Invalid data',
+          errors:  result.error.errors
         }),
         { status: 400 }
       )
     }
+    const data = result.data
 
-    const data = validationResult.data
-
-    // Check if this is a temporary ID (new lead creation)
+    // 4. Handle new‑lead (temp‑ID) vs existing
     if (id.startsWith('temp-')) {
-      // Verify the user exists before attempting to assign the lead
-      const assignedUser = await prisma.user.findUnique({
-        where: { id: session.user.id },
-      });
-
-      if (!assignedUser) {
-        console.error(`Attempted to assign lead to non-existent user ID: ${session.user.id}`);
+      // ensure user exists
+      const user = await prisma.user.findUnique({ where: { id: session.user.id } })
+      if (!user) {
+        console.error(`No user for ID ${session.user.id}`)
         return new NextResponse(
           JSON.stringify({ message: 'Assigned user not found' }),
           { status: 400 }
-        );
+        )
       }
 
-      // Generate a new UUID for the lead
-      const newLeadId = crypto.randomUUID();
+      const permanentLeadId = crypto.randomUUID(); // Generate permanent ID
 
-      // Create a new lead with the contact information
       const newLead = await prisma.lead.create({
         data: {
-          id: newLeadId, // Use a proper UUID instead of temporary ID
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email,
-          phone: data.phone,
-          address: data.address,
-          status: LeadStatus.follow_ups,
+          id: permanentLeadId, // Use permanent ID for creation
+          firstName:    data.firstName,
+          lastName:     data.lastName,
+          email:        data.email,
+          phone:        data.phone,
+          address:      data.address,
+          status:       LeadStatus.follow_ups,
           assignedToId: session.user.id,
         }
       })
 
-      // Create activity log for this creation
       await prisma.activity.create({
         data: {
-          type: 'LEAD_CREATED',
-          title: 'Lead created',
-          description: `New lead created for ${data.firstName} ${data.lastName}`,
-          userId: session.user.id,
-          leadId: newLeadId, // Use the new UUID here
-          status: 'COMPLETED'
+          type:        'LEAD_CREATED',
+          title:       'Lead created',
+          description: `New lead for ${data.firstName} ${data.lastName}`,
+          userId:      session.user.id,
+          leadId:      permanentLeadId, // Use permanent ID for activity log
+          status:      'COMPLETED'
         }
       })
 
-      return NextResponse.json({ 
-        message: 'Lead created successfully',
-        lead: {
-          id: newLead.id,
-          firstName: newLead.firstName,
-          lastName: newLead.lastName,
-          email: newLead.email,
-          phone: newLead.phone,
-          address: newLead.address
-        }
-      }, { status: 201 })
+      return new NextResponse(
+        JSON.stringify({
+          message: 'Lead created successfully',
+          lead: {
+            id:        permanentLeadId, // Return permanent ID
+            firstName: newLead.firstName,
+            lastName:  newLead.lastName,
+            email:     newLead.email,
+            phone:     newLead.phone,
+            address:   newLead.address
+          }
+        }),
+        { status: 201 }
+      )
     }
 
-    // For existing leads, check if lead exists
-    const existingLead = await prisma.lead.findUnique({
-      where: { id }
-    })
-
-    if (!existingLead) {
+    // 5. Update existing
+    const existing = await prisma.lead.findUnique({ where: { id } })
+    if (!existing) {
       return new NextResponse(
         JSON.stringify({ message: 'Lead not found' }),
         { status: 404 }
       )
     }
 
-    // Update the lead contact information
-    const updatedLead = await prisma.lead.update({
+    const updated = await prisma.lead.update({
       where: { id },
       data: {
         firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        phone: data.phone,
-        address: data.address,
-        updatedAt: new Date()
+        lastName:  data.lastName,
+        email:     data.email,
+        phone:     data.phone,
+        address:   data.address,
+        updatedAt: new Date(),
       }
     })
 
-    // Create activity log for this update
     await prisma.activity.create({
       data: {
-        type: 'LEAD_UPDATED',
-        title: 'Contact information updated',
-        description: `Contact information updated for ${data.firstName} ${data.lastName}`,
-        userId: session.user.id,
-        leadId: id,
-        status: 'COMPLETED'
+        type:        'LEAD_UPDATED',
+        title:       'Contact information updated',
+        description: `Updated contact for ${data.firstName} ${data.lastName}`,
+        userId:      session.user.id,
+        leadId:      id,
+        status:      'COMPLETED'
       }
     })
 
-    return NextResponse.json({ 
-      message: 'Contact information updated successfully',
+    return NextResponse.json({
+      message: 'Contact updated successfully',
       lead: {
-        id: updatedLead.id,
-        firstName: updatedLead.firstName,
-        lastName: updatedLead.lastName,
-        email: updatedLead.email,
-        phone: updatedLead.phone,
-        address: updatedLead.address
+        id:        updated.id,
+        firstName: updated.firstName,
+        lastName:  updated.lastName,
+        email:     updated.email,
+        phone:     updated.phone,
+        address:   updated.address
       }
     })
+
   } catch (error) {
     console.error('Error updating lead contact information:', error)
     return new NextResponse(

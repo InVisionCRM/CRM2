@@ -282,43 +282,20 @@ export function SimpleMapCardModal({
                 <MapPin className="h-5 w-5 text-lime-500" />
                 <CardTitle className="text-xl">{address}</CardTitle>
               </div>
-              <div className="flex items-center gap-2">
-                {/* Update Lead Link Button to use realLeadId */}
+              <div className="flex items-center">
                 {realLeadId && isContactSaved && (
                   <Button
-                    variant="ghost"
-                    size="icon"
+                    variant="default"
                     asChild
-                    className="text-lime-500 hover:text-lime-400 hover:bg-zinc-800 rounded-full"
+                    className="bg-lime-500 hover:bg-lime-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
                     aria-label="View Lead Details"
                   >
-                    <Link href={`/lead/${realLeadId}`}>
+                    <Link href={`/leads/${realLeadId}`}>
                       <UserPlus className="h-5 w-5" />
+                      <span>View Lead</span>
                     </Link>
                   </Button>
                 )}
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={toggleExpandedView}
-                  className="text-white hover:bg-zinc-800 rounded-full"
-                  aria-label={isExpandedView ? "Collapse modal" : "Expand modal"}
-                >
-                  {isExpandedView ? (
-                    <Minimize2 className="h-5 w-5" />
-                  ) : (
-                    <Maximize2 className="h-5 w-5" />
-                  )}
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={onClose} 
-                  className="text-white hover:bg-zinc-800 rounded-full"
-                  aria-label="Close"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
               </div>
             </CardHeader>
             
@@ -474,7 +451,7 @@ export function SimpleMapCardModal({
                     {expandedSection === "insurance" && (
                       <CardContent className="p-4 pt-4">
                         <InsuranceForm 
-                          leadId={leadId || ""}
+                          leadId={realLeadId || ""}
                           initialData={{
                             insuranceCompany: insuranceCompany || "",
                             insurancePolicyNumber: insurancePolicyNumber || "",
@@ -515,7 +492,7 @@ export function SimpleMapCardModal({
                     {expandedSection === "adjuster" && (
                       <CardContent className="p-4 pt-4">
                         <AdjusterForm 
-                          leadId={leadId || ""}
+                          leadId={realLeadId || ""}
                           initialData={{
                             insuranceAdjusterName: insuranceAdjusterName || "",
                             insuranceAdjusterPhone: insuranceAdjusterPhone || "",

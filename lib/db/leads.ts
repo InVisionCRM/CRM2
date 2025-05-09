@@ -93,7 +93,7 @@ export async function createLead(data: CreateLeadInput): Promise<Lead> {
   }
 }
 
-interface UpdateLeadInput {
+export interface UpdateLeadInput {
   firstName?: string
   lastName?: string
   email?: string | null

@@ -26,7 +26,7 @@ export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
     return (
       <motion.div 
         className={cn("relative w-full", containerClassName)}
-        animate={{ width: isExpanded ? "100%" : "10%" }}
+        animate={{ width: isExpanded ? "100%" : "40%" }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
       >
         <div className="relative w-full" onClick={() => setIsExpanded(true)}>

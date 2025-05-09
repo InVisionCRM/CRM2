@@ -64,7 +64,7 @@ export function AddressSearch({ onAddressSelect, accessToken }: AddressSearchPro
           setSearchValue(value);
           searchAddress(value);
         }}
-        placeholder="Search address..."
+        placeholder=""
         className="w-full"
       />
       

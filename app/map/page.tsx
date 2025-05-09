@@ -404,7 +404,7 @@ export default function MapPage() {
         
         {/* AddressSearch with Home Button */}
         <div className="absolute top-4 left-4-translate-x-1/2 z-20 w-full max-w-md px-4 flex gap-[75px] items-center">
-          <Link href="/dashboard" className="shrink-0">
+          <Link href="/" className="shrink-0">
             <Button
               variant="outline"
               size="icon"

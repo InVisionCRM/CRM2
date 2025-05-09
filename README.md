@@ -118,7 +118,7 @@ This CRM is designed to work great on mobile devices:
 roofing-mobile-crm/
 ├── app/                    # Next.js App Router
 │   ├── api/                # API routes
-│   ��── (protected)/        # Protected routes
+│   ├── (protected)/        # Protected routes
 │   ├── login/              # Login page
 │   ├── register/           # Registration page
 │   ├── leads/              # Leads pages
@@ -126,7 +126,7 @@ roofing-mobile-crm/
 │   ├── team-performance/   # Team pages
 │   ├── quick-links/        # Quick links pages
 │   ├── recent-activity/    # Activity pages
-���   └── layout.tsx          # Root layout
+│   └── layout.tsx          # Root layout
 ├── components/             # React components
 │   ├── appointments/       # Appointment components
 │   ├── calculator/         # Calculator components
@@ -152,3 +152,23 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 
 ## 📝 License
 [MIT](https://choosealicense.com/licenses/mit/)
+
+## Installation
+
+This project uses npm as the package manager.
+
+```bash
+# Install dependencies
+npm install
+
+# Run development server
+npm run dev
+```
+
+## Contributing
+
+Please use npm for package management:
+
+- Use `npm install <package>` to add dependencies
+- Commit the updated package-lock.json file
+- Do not use yarn or generate yarn.lock files
