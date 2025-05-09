@@ -26,24 +26,42 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarPicker } from "@/components/ui/calendar"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
-import { AppointmentPurposeEnum } from '@/types/appointments'
+import { AppointmentPurposeEnum, type AppointmentPurpose } from '@/types/appointments'
 import type { CalendarAppointment } from "@/types/appointments"
+import { useGoogleCalendar } from "@/lib/hooks/useGoogleCalendar"
 
 type CalendarView = "month" | "week" | "day"
 
 interface CalendarProps {
-  appointments: CalendarAppointment[]
-  onDateClick: (date: Date) => void
-  onAppointmentClick: (appointment: CalendarAppointment) => void
-  onSwitchToDay: (date: Date, time?: string) => void
+  credentials: {
+    accessToken: string;
+    refreshToken?: string;
+  };
+  onDateClick: (date: Date) => void;
+  onAppointmentClick: (appointment: CalendarAppointment) => void;
+  onSwitchToDay: (date: Date, time?: string) => void;
 }
 
-export function Calendar({ appointments, onDateClick, onAppointmentClick, onSwitchToDay }: CalendarProps) {
+export function Calendar({ credentials, onDateClick, onAppointmentClick, onSwitchToDay }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<CalendarView>("month")
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [zoomingDay, setZoomingDay] = useState<Date | null>(null)
   const calendarContentRef = useRef<HTMLDivElement>(null)
+
+  // Use our new Google Calendar hook
+  const {
+    appointments,
+    isLoading,
+    error,
+    createAppointment,
+    updateAppointment,
+    deleteAppointment,
+  } = useGoogleCalendar({
+    view,
+    currentDate,
+    credentials,
+  });
 
   // Add this useEffect to inject the CSS animation
   useEffect(() => {
@@ -117,12 +135,12 @@ export function Calendar({ appointments, onDateClick, onAppointmentClick, onSwit
 
   // Get appointments for a specific day
   const getAppointmentsForDay = (day: Date) => {
-    return appointments.filter((appointment) => appointment.date && isSameDay(new Date(appointment.date), day))
+    return appointments.filter((appointment: CalendarAppointment) => appointment.date && isSameDay(new Date(appointment.date), day))
   }
 
   // Get appointments for a specific time slot
   const getAppointmentsForTimeSlot = (day: Date, hour: number) => {
-    return appointments.filter((appointment) => {
+    return appointments.filter((appointment: CalendarAppointment) => {
       if (!appointment.date || !appointment.startTime) return false
 
       const appointmentDate = new Date(appointment.date)
@@ -134,21 +152,19 @@ export function Calendar({ appointments, onDateClick, onAppointmentClick, onSwit
   }
 
   // Get color for appointment purpose
-  const getAppointmentColor = (purpose?: string) => {
-    if (!purpose) return "bg-gray-500"
+  const getAppointmentColor = (purpose?: AppointmentPurpose) => {
+    if (!purpose) return "bg-gray-500 dark:bg-gray-400";
 
-    // Use AppointmentPurposeEnum values
-    // Note: Added FILE_CLAIM and ADJUSTER, removed non-existent ones
-    const purposeColors: Record<string, string> = { // Changed type to Record<string, string>
+    const purposeColors: Record<AppointmentPurpose, string> = {
       [AppointmentPurposeEnum.INSPECTION]: "bg-blue-500 dark:bg-blue-400",
-      [AppointmentPurposeEnum.FILE_CLAIM]: "bg-cyan-500 dark:bg-cyan-400", // Added FILE_CLAIM color
+      [AppointmentPurposeEnum.FILE_CLAIM]: "bg-cyan-500 dark:bg-cyan-400",
       [AppointmentPurposeEnum.FOLLOW_UP]: "bg-amber-500 dark:bg-amber-400",
-      [AppointmentPurposeEnum.ADJUSTER]: "bg-indigo-500 dark:bg-indigo-400", // Added ADJUSTER color
-      [AppointmentPurposeEnum.BUILD_DAY]: "bg-rose-500 dark:bg-rose-400", // Added BUILD_DAY color (example)
+      [AppointmentPurposeEnum.ADJUSTER]: "bg-indigo-500 dark:bg-indigo-400",
+      [AppointmentPurposeEnum.BUILD_DAY]: "bg-rose-500 dark:bg-rose-400",
       [AppointmentPurposeEnum.OTHER]: "bg-gray-500 dark:bg-gray-400"
-    }
+    };
 
-    return purposeColors[purpose] || "bg-purple-500 dark:bg-purple-400" // Fallback color
+    return purposeColors[purpose] || "bg-gray-500 dark:bg-gray-400";
   }
 
   // Navigation handlers
@@ -293,6 +309,22 @@ export function Calendar({ appointments, onDateClick, onAppointmentClick, onSwit
 
   // Month view
   const renderMonthView = () => {
+    if (error) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-red-500">Error loading calendar: {error.message}</div>
+        </div>
+      );
+    }
+
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col h-full">
         {/* Calendar header */}
@@ -330,7 +362,7 @@ export function Calendar({ appointments, onDateClick, onAppointmentClick, onSwit
 
                     {/* Appointment dots instead of text */}
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {dayAppointments.slice(0, 5).map((appointment) => (
+                      {dayAppointments.slice(0, 5).map((appointment: CalendarAppointment) => (
                         <div
                           key={appointment.id}
                           className={cn("w-2 h-2 rounded-full", getAppointmentColor(appointment.purpose))}
@@ -362,6 +394,22 @@ export function Calendar({ appointments, onDateClick, onAppointmentClick, onSwit
 
   // Week view
   const renderWeekView = () => {
+    if (error) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-red-500">Error loading calendar: {error.message}</div>
+        </div>
+      );
+    }
+
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
+      );
+    }
+
     const hours = Array.from({ length: 12 }, (_, i) => i + 7) // 7 AM to 6 PM
 
     return (
@@ -408,7 +456,7 @@ export function Calendar({ appointments, onDateClick, onAppointmentClick, onSwit
                         onSwitchToDay(selectedDate, formattedTime)
                       }}
                     >
-                      {timeSlotAppointments.map((appointment) => (
+                      {timeSlotAppointments.map((appointment: CalendarAppointment) => (
                         <div
                           key={appointment.id}
                           className={cn(
@@ -436,6 +484,22 @@ export function Calendar({ appointments, onDateClick, onAppointmentClick, onSwit
 
   // Day view
   const renderDayView = () => {
+    if (error) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-red-500">Error loading calendar: {error.message}</div>
+        </div>
+      );
+    }
+
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
+      );
+    }
+
     const hours = Array.from({ length: 14 }, (_, i) => i + 7) // 7 AM to 8 PM
 
     return (
@@ -467,7 +531,7 @@ export function Calendar({ appointments, onDateClick, onAppointmentClick, onSwit
                     onSwitchToDay(selectedDate, formattedTime)
                   }}
                 >
-                  {timeSlotAppointments.map((appointment) => (
+                  {timeSlotAppointments.map((appointment: CalendarAppointment) => (
                     <div
                       key={appointment.id}
                       className={cn(

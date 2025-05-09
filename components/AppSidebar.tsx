@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar"
-import { IconArrowLeft, IconBrandTabler, IconSettings, IconUserBolt, IconHomeHeart, IconMap, IconCloud, IconUsers, IconActivity, IconCurrencyDollar, IconLink, IconMenu2 } from "@tabler/icons-react"
+import { IconArrowLeft, IconBrandTabler, IconSettings, IconUserBolt, IconHomeHeart, IconMap, IconCloud, IconUsers, IconActivity, IconCurrencyDollar, IconLink, IconMenu2, IconCalendar } from "@tabler/icons-react"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { DockThemeToggle } from "@/components/theme-toggle"
@@ -46,6 +46,11 @@ export default function AppSidebar() {
       label: "Leads",
       href: "/leads",
       icon: <IconUserBolt className="h-5 w-5 shrink-0 text-[#59ff00]" />,
+    },
+    {
+      label: "Calendar",
+      href: "/calendar",
+      icon: <IconCalendar className="h-5 w-5 shrink-0 text-[#59ff00]" />,
     },
     {
       label: "Map",
