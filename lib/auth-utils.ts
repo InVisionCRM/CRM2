@@ -1,5 +1,5 @@
 // Simple authentication utility functions
-import { getServerSession } from "next-auth"
+import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
 export type SessionUser = {
@@ -35,4 +35,17 @@ export async function getSession(): Promise<Session | null> {
 export async function isAuthenticated(): Promise<boolean> {
   const session = await getSession()
   return session !== null
+}
+
+export async function getCurrentUser() {
+  const session = await getServerSession(authOptions)
+  
+  if (!session?.user) {
+    return null
+  }
+
+  return {
+    ...session.user,
+    id: session.user.id || session.user.email // Fallback to email if id not available
+  }
 }
