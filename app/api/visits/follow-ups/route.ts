@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db/prisma"
 import { getSession } from "@/lib/auth-utils"
-import { startOfDay, endOfDay, addDays, subDays } from "date-fns"
+import { startOfDay, endOfDay } from "date-fns"
 import { Prisma, KnockStatus } from "@prisma/client"
 
 export async function GET(request: Request) {
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
             gte: tomorrow,
           },
           status: {
-            not: KnockStatus.APPOINTMENT_SET,
+            not: KnockStatus.IN_CONTRACT,
           },
         }
         break
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
             lte: tomorrow,
           },
           status: {
-            not: KnockStatus.APPOINTMENT_SET,
+            not: KnockStatus.IN_CONTRACT,
           },
         }
         break
@@ -76,7 +76,7 @@ export async function GET(request: Request) {
             lt: today,
           },
           status: {
-            not: KnockStatus.APPOINTMENT_SET,
+            not: KnockStatus.IN_CONTRACT,
           },
         }
         break
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
         baseQuery.where = {
           userId: session.user.id,
           followUpDate: { not: null },
-          status: KnockStatus.APPOINTMENT_SET,
+          status: KnockStatus.IN_CONTRACT,
         }
         break
     }

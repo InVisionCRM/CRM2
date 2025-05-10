@@ -1,4 +1,4 @@
-import { ContractForm } from "@/components/contracts/contract-form"
+// import { ContractForm } from "@/components/contracts/contract-form"
 import { getLeadById } from "@/lib/db/leads"
 import { notFound } from "next/navigation"
 
@@ -22,7 +22,8 @@ export default async function ScopeOfWorkPage({ searchParams }: ScopeOfWorkPageP
 
   return (
     <div className="container mx-auto py-8">
-      <ContractForm lead={lead} />
+      {/* <ContractForm lead={lead} /> */}
+      <p>Contract form is temporarily unavailable.</p> 
     </div>
   )
 }

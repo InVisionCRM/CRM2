@@ -4,11 +4,11 @@ import { Contract, Prisma } from '@prisma/client'
 interface CreateContractInput {
   leadId: string
   contractType: string
-  signatures: Record<string, any>
-  dates: Record<string, any>
-  names: Record<string, any>
-  addresses: Record<string, any>
-  contactInfo: Record<string, any>
+  signatures: Prisma.JsonObject
+  dates: Prisma.JsonObject
+  names: Prisma.JsonObject
+  addresses: Prisma.JsonObject
+  contactInfo: Prisma.JsonObject
   pdfUrl?: string | null
 }
 
@@ -63,11 +63,11 @@ export async function upsertContract(leadId: string, contractType: string, data:
       const contract = await prisma.contract.update({
         where: { id: existingContract.id },
         data: {
-          signatures: data.signatures as Prisma.JsonValue,
-          dates: data.dates as Prisma.JsonValue,
-          names: data.names as Prisma.JsonValue,
-          addresses: data.addresses as Prisma.JsonValue,
-          contactInfo: data.contactInfo as Prisma.JsonValue,
+          signatures: data.signatures,
+          dates: data.dates,
+          names: data.names,
+          addresses: data.addresses,
+          contactInfo: data.contactInfo,
           pdfUrl: data.pdfUrl
         }
       })
@@ -78,11 +78,11 @@ export async function upsertContract(leadId: string, contractType: string, data:
         data: {
           leadId,
           contractType,
-          signatures: data.signatures as Prisma.JsonValue,
-          dates: data.dates as Prisma.JsonValue,
-          names: data.names as Prisma.JsonValue,
-          addresses: data.addresses as Prisma.JsonValue,
-          contactInfo: data.contactInfo as Prisma.JsonValue,
+          signatures: data.signatures,
+          dates: data.dates,
+          names: data.names,
+          addresses: data.addresses,
+          contactInfo: data.contactInfo,
           pdfUrl: data.pdfUrl
         }
       })

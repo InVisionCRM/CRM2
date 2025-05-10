@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Map, GeoJSONSource } from 'mapbox-gl';
 import { Feature, LineString } from 'geojson';
-import { useMapContext } from './map-context'; // Assuming this context might provide the map instance or related state
+// Assuming this context might provide the map instance or related state
 
 // This should match the structure returned by your API and prisma schema for RoutePoint
 interface RoutePoint {

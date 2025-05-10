@@ -2,7 +2,6 @@ import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth-utils"
 import { 
   createVisit,
-  getVisits,
   getVisitsByAddress,
   updateVisit,
   deleteVisit 

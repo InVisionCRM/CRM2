@@ -1,7 +1,6 @@
 import { z } from "zod"
 import { AppointmentPurposeEnum } from "@/types/appointments"
 import { AppointmentStatus } from "@prisma/client"
-import type { AppointmentPurpose } from "@/types/lead"
 
 // Helper function to validate HH:MM format
 const timeFormatRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/

@@ -4,6 +4,7 @@ import type { CalendarAppointment } from "@/types/appointments"
 // Access the storedAppointments from the parent API handlers
 // This is a hack for our demo - in a real app, you'd use a database
 declare global {
+  // eslint-disable-next-line no-var
   var storedAppointments: CalendarAppointment[];
 }
 

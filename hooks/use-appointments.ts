@@ -65,8 +65,10 @@ export function useAppointments(options: UseAppointmentsOptions = {}) {
       const data = await response.json()
       setAppointments(Array.isArray(data) ? data : [])
     } catch (err) {
-      if (err.name === "AbortError") {
-        setError(new Error("Request timed out. Please try again."))
+      // Check if the error is an AbortError (fetch was cancelled)
+      if (err instanceof Error && err.name === "AbortError") {
+        console.log("Fetch aborted");
+        // Don't set error state if fetch was aborted
       } else {
         setError(err instanceof Error ? err : new Error("An unknown error occurred"))
       }

@@ -1,6 +1,6 @@
 // Simple authentication utility functions
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 
 export type SessionUser = {
   id: string
@@ -46,6 +46,6 @@ export async function getCurrentUser() {
 
   return {
     ...session.user,
-    id: session.user.id || session.user.email // Fallback to email if id not available
+    id: session.user.id
   }
 }

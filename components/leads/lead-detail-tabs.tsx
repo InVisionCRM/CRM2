@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { useSession } from "next-auth/react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { LeadPropertyDetails } from "./lead-property-details"
+// import { LeadPropertyDetails } from "./lead-property-details"
 import { LeadNotes } from "./lead-notes"
 import { LeadFiles } from "./lead-files"
 import { LeadAppointments } from "./lead-appointments"
@@ -19,8 +20,11 @@ interface LeadDetailTabsProps {
 }
 
 export function LeadDetailTabs({ lead }: LeadDetailTabsProps) {
+  const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState("details")
   const [isAppointmentDrawerOpen, setIsAppointmentDrawerOpen] = useState(false)
+
+  const currentUserId = (session?.user as any)?.id
 
   return (
     <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -34,18 +38,26 @@ export function LeadDetailTabs({ lead }: LeadDetailTabsProps) {
       </TabsList>
 
       <TabsContent value="details" className="space-y-4">
-        <LeadPropertyDetails lead={lead} />
+        {/* <LeadPropertyDetails lead={lead} /> */}
+        <div>Lead Property Details (temporarily unavailable)</div>
       </TabsContent>
 
       <TabsContent value="appointments" className="space-y-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">Appointments</h2>
-          <Button onClick={() => setIsAppointmentDrawerOpen(true)} size="sm">
+          <Button onClick={() => setIsAppointmentDrawerOpen(true)} size="sm" disabled={!currentUserId}>
             <Plus className="h-4 w-4 mr-1" /> Add Appointment
           </Button>
         </div>
         <LeadAppointments leadId={lead.id} />
-        <AppointmentsDrawer isOpen={isAppointmentDrawerOpen} onClose={() => setIsAppointmentDrawerOpen(false)} />
+        {currentUserId && 
+          <AppointmentsDrawer 
+            isOpen={isAppointmentDrawerOpen} 
+            onClose={() => setIsAppointmentDrawerOpen(false)} 
+            leadId={lead.id} 
+            userId={currentUserId} 
+          />
+        }
       </TabsContent>
 
       <TabsContent value="files" className="space-y-4">

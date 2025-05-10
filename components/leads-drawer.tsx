@@ -14,8 +14,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { useCreateLead } from "@/hooks/use-create-lead"
-import { formatDistanceToNow } from "date-fns"
-import type { Lead } from "@prisma/client"
 import { LeadStatus } from "@prisma/client"
 
 const leadFormSchema = z.object({
@@ -51,7 +49,7 @@ export function LeadsDrawer({ isOpen, onClose }: LeadsDrawerProps) {
     },
   })
 
-  const handleStatusClick = (status: LeadStatus) => {
+  const handleStatusClick = (status: LeadStatus | null) => {
     setSelectedStatus(status)
     setShowLeadsList(true)
     setShowCreateForm(false)
@@ -209,9 +207,9 @@ export function LeadsDrawer({ isOpen, onClose }: LeadsDrawerProps) {
               </form>
             </Form>
           ) : showLeadsList ? (
-            <LeadsList status={selectedStatus} />
+            <LeadsList leads={[]} assignedTo={null} />
           ) : (
-            <StatusGrid onStatusClick={handleStatusClick} />
+            <StatusGrid onStatusClick={handleStatusClick} activeStatus={selectedStatus} statusCounts={[]} />
           )}
         </div>
       </DrawerContent>

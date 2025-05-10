@@ -3,6 +3,7 @@ import type { CalendarAppointment } from "@/types/appointments"
 
 // Access the storedAppointments from the parent API handlers
 declare global {
+  // eslint-disable-next-line no-var
   var storedAppointments: CalendarAppointment[];
 }
 

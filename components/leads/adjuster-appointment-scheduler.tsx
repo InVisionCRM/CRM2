@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { format, addDays, parseISO } from "date-fns"
+import { format, addDays } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { 
   CheckCircle2, 
@@ -18,7 +18,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -43,7 +42,7 @@ import { useUpdateAppointment } from "@/hooks/use-update-appointment"
 import { useDeleteAppointment } from "@/hooks/use-delete-appointment"
 import type { AppointmentFormData } from "@/types/appointments"
 import { Badge } from "@/components/ui/badge"
-import { AppointmentPurpose, AppointmentPurposeEnum } from '@/types/appointments'
+import { AppointmentPurposeEnum } from '@/types/appointments'
 import { AppointmentStatus } from '@prisma/client'
 
 // Generate time slots from 8:00 AM to 7:30 PM in 30-minute increments

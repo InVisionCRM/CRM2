@@ -14,7 +14,7 @@ import { DoorOpen, Home } from 'lucide-react'; // Icon for counter
 import { SimpleMapCardModal } from "@/components/map/SimpleMapCardModal"
 import { MapProvider } from "@/components/map/map-context" 
 import { Button } from "@/components/ui/button"; // Import Button
-import { cn } from "@/lib/utils"; // Import cn if needed for styling
+// Import cn if needed for styling
 import Link from "next/link"
 // import KnockCounter from "@/components/map/knock-counter"; // Removed import
 

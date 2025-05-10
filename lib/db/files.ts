@@ -1,6 +1,5 @@
 import { prisma } from './prisma'
 import { File } from '@prisma/client'
-import { nanoid } from "nanoid"
 
 interface CreateFileInput {
   leadId: string

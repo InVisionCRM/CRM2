@@ -1,9 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { X } from "lucide-react"
-import { cn } from "@/lib/utils"
+import React from "react"
 
 // Define the specific status type
 export type PropertyVisitStatus =

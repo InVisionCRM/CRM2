@@ -7,13 +7,12 @@ import * as z from "zod"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Loader2, ChevronDown, ChevronUp, Check, Calendar as CalendarIcon, X, Trash2 } from "lucide-react"
+import { Loader2, ChevronDown, ChevronUp, Check, Calendar as CalendarIcon, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
-import Link from "next/link"
 import { createPortal } from "react-dom"
 import { Calendar } from "@/components/appointments/calendar"
-import type { CalendarAppointment } from "@/types/appointments"
+import type { CalendarAppointment, RawGCalEvent } from "@/types/appointments"
 import { AppointmentPurposeEnum } from '@/types/appointments'
 import debounce from 'lodash.debounce'
 
@@ -22,22 +21,23 @@ const mockAppointments: CalendarAppointment[] = [
   {
     id: "1",
     title: "Initial Consultation with Lead 123",
-    startTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now
-    endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString(), // 1 hour duration
-    purpose: AppointmentPurposeEnum.OTHER, // Changed from INITIAL_CONSULTATION
+    date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // Two days from now
+    startTime: "10:00", // Example HH:mm
+    endTime: "11:00",   // Example HH:mm
+    purpose: AppointmentPurposeEnum.OTHER, 
     address: "123 Main St, Anytown, USA",
     leadId: "lead123",
-    status: "SCHEDULED", // Example status, use appropriate enum/type if available
-    leadName: "Lead 123 Name" // Example name
+    status: "SCHEDULED", 
+    leadName: "Lead 123 Name"
   },
   {
     id: "2",
     title: "Adjuster Meeting",
     date: new Date(),  // Today
-    startTime: "2:00 PM",
-    endTime: "3:00 PM",
+    startTime: "14:00", // Was "2:00 PM"
+    endTime: "15:00",   // Was "3:00 PM"
     purpose: AppointmentPurposeEnum.OTHER,
-    status: "scheduled",
+    status: "SCHEDULED", // Was "scheduled"
     leadId: "2",
     leadName: "Sarah Johnson",
     address: "456 Oak Ave, Somewhere",
@@ -684,6 +684,44 @@ interface AdjusterFormProps {
   isReadOnly?: boolean
 }
 
+// Helper to transform CalendarAppointment to RawGCalEvent for the Calendar component
+function calendarAppointmentToRawGCalEvent(appointment: CalendarAppointment): RawGCalEvent {
+  const startDateTime = appointment.date ? new Date(appointment.date) : new Date();
+  if (appointment.startTime) {
+    const [hours, minutes] = appointment.startTime.split(':').map(Number);
+    startDateTime.setHours(hours, minutes, 0, 0);
+  }
+
+  let endDateTime: Date | undefined = undefined;
+  if (appointment.endTime && appointment.date) {
+    endDateTime = new Date(appointment.date);
+    const [endHours, endMinutes] = appointment.endTime.split(':').map(Number);
+    endDateTime.setHours(endHours, endMinutes, 0, 0);
+    if (endDateTime < startDateTime) {
+        endDateTime.setDate(endDateTime.getDate() + 1);
+    }
+  } else {
+    endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000);
+  }
+
+  return {
+    id: appointment.id,
+    summary: appointment.title,
+    start: { dateTime: startDateTime.toISOString() },
+    end: { dateTime: endDateTime.toISOString() },
+    extendedProperties: {
+      private: {
+        leadId: appointment.leadId,
+        leadName: appointment.leadName,
+        purpose: appointment.purpose as string, // Cast to string if your RawGCalEvent expects string here
+        status: appointment.status as string, // Cast to string if your RawGCalEvent expects string here
+      },
+    },
+    location: appointment.address,
+    description: appointment.notes,
+  };
+}
+
 export function AdjusterForm({
   leadId,
   initialData = {},
@@ -697,8 +735,10 @@ export function AdjusterForm({
   const [showCalendar, setShowCalendar] = useState(false)
   const [calendarView, setCalendarView] = useState<"month" | "day">("month")
   const [selectedDayDate, setSelectedDayDate] = useState<Date | null>(null)
-  // Get appointments for the current month
+  const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false)
   const [appointments, setAppointments] = useState<CalendarAppointment[]>(mockAppointments)
+  const [calendarLoading, setCalendarLoading] = useState(false)
+  const [calendarError, setCalendarError] = useState<Error | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
   const storageKey = `draft-lead-adjuster-${leadId}`
@@ -928,7 +968,10 @@ export function AdjusterForm({
   };
 
   const handleSwitchToDay = (date: Date, time?: string) => {
-    console.log("Switch to day:", date, "time:", time);
+    console.log("Switch to day view for:", date, "at time:", time);
+    // Potentially close modal and open a form for this specific day/time
+    // setIsCalendarModalOpen(false);
+    // set some state to open appointment form with this date/time
   };
 
   // --- Discard Draft ---
@@ -1106,120 +1149,27 @@ export function AdjusterForm({
       />
 
       {/* Fullscreen Calendar Modal */}
-      <FullscreenCalendarModal
-        isOpen={showCalendar}
-        onClose={() => setShowCalendar(false)}
-      >
-        <div className="h-full overflow-y-auto">
-          <div className="p-4 bg-zinc-800">
-            <h2 className="text-lg sm:text-2xl font-bold text-white mb-1">
-              {calendarView === "month" ? "Appointments Calendar" : (
-                selectedDayDate ? format(selectedDayDate, "EEEE, MMMM d, yyyy") : "Daily Schedule"
-              )}
-            </h2>
-            <p className="text-sm sm:text-base text-gray-300 mb-4">
-              {calendarView === "month" 
-                ? "Click on a day to view appointments" 
-                : "Click on an available time slot to select it"}
-            </p>
-            
-            {calendarView === "month" ? (
-              <Calendar 
-                appointments={appointments}
-                onDateClick={handleDateClick}
-                onAppointmentClick={handleAppointmentClick}
-                onSwitchToDay={handleSwitchToDay}
-              />
-            ) : (
-              <div>
-                <button
-                  onClick={() => setCalendarView("month")}
-                  className="mb-4 px-3 py-2 bg-zinc-700 text-white rounded-md text-sm flex items-center"
-                >
-                  <ChevronUp className="mr-2 h-4 w-4" />
-                  Back to Calendar
-                </button>
-                
-                <div className="bg-zinc-900 rounded-lg p-3 sm:p-4 mb-6">
-                  <h3 className="font-medium text-base sm:text-lg text-white mb-2">Appointments on this day:</h3>
-                  {appointments.filter(apt => 
-                    selectedDayDate && 
-                    apt.date?.getDate() === selectedDayDate.getDate() &&
-                    apt.date?.getMonth() === selectedDayDate.getMonth() &&
-                    apt.date?.getFullYear() === selectedDayDate.getFullYear()
-                  ).length > 0 ? (
-                    <div className="space-y-2">
-                      {appointments.filter(apt => 
-                        selectedDayDate && 
-                        apt.date?.getDate() === selectedDayDate.getDate() &&
-                        apt.date?.getMonth() === selectedDayDate.getMonth() &&
-                        apt.date?.getFullYear() === selectedDayDate.getFullYear()
-                      ).map(apt => (
-                        <div 
-                          key={apt.id} 
-                          className="bg-zinc-800 p-3 rounded-md border border-zinc-700"
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-medium text-white">{apt.title}</p>
-                              <p className="text-sm text-gray-300">{apt.startTime} - {apt.endTime}</p>
-                            </div>
-                            <div className="px-2 py-1 bg-blue-900 text-blue-200 rounded-md text-xs">
-                              {apt.purpose}
-                            </div>
-                          </div>
-                          {apt.notes && (
-                            <p className="text-sm text-gray-400 mt-2">{apt.notes}</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-400 text-sm">No appointments scheduled</p>
-                  )}
-                </div>
-                
-                <div className="bg-zinc-900 rounded-lg p-3 sm:p-4">
-                  <h3 className="font-medium text-base sm:text-lg text-white mb-3">Available Time Slots:</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {["9:00 AM", "10:00 AM", "11:00 AM", "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM"].map(time => {
-                      // Check if this time slot is already booked
-                      const isBooked = Boolean(selectedDayDate && appointments.some(apt => 
-                        apt.date?.getDate() === selectedDayDate.getDate() &&
-                        apt.date?.getMonth() === selectedDayDate.getMonth() &&
-                        apt.date?.getFullYear() === selectedDayDate.getFullYear() &&
-                        apt.startTime === time
-                      ));
-                      
-                      return (
-                        <button
-                          key={time}
-                          onClick={() => {
-                            if (!isBooked && selectedDayDate) {
-                              setValue("adjusterAppointmentDate", format(selectedDayDate, 'yyyy-MM-dd'));
-                              setValue("adjusterAppointmentTime", time);
-                              setShowCalendar(false);
-                            }
-                          }}
-                          className={cn(
-                            "py-2 px-3 rounded-md text-white text-sm sm:text-base text-center",
-                            isBooked 
-                              ? "bg-zinc-700 text-zinc-400 cursor-not-allowed" 
-                              : "bg-zinc-800 hover:bg-lime-900 active:bg-lime-800 cursor-pointer"
-                          )}
-                          disabled={isBooked as boolean}
-                        >
-                          {time}
-                          {isBooked && <span className="block text-xs text-red-400">Booked</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+      <FullscreenCalendarModal isOpen={isCalendarModalOpen} onClose={() => setIsCalendarModalOpen(false)}>
+        <Calendar
+          appointmentsData={{
+            appointments: appointments.map(calendarAppointmentToRawGCalEvent),
+            isLoading: calendarLoading,
+            error: calendarError,
+          }}
+          onDateClick={handleDateClick}
+          onAppointmentClick={(rawEvent: RawGCalEvent) => {
+            // If handleAppointmentClick needs CalendarAppointment, we need to find the original or transform back
+            // For now, let's find the original CalendarAppointment from our state
+            const originalAppointment = appointments.find(app => app.id === rawEvent.id);
+            if (originalAppointment) {
+              handleAppointmentClick(originalAppointment);
+            } else {
+              console.warn("Could not find original appointment for raw event:", rawEvent);
+              // Potentially create a new CalendarAppointment from RawGCalEvent if needed for the form
+            }
+          }}
+          onSwitchToDay={handleSwitchToDay}
+        />
       </FullscreenCalendarModal>
     </div>
   );

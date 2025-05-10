@@ -19,6 +19,7 @@ import { useDeleteLead } from "@/hooks/use-delete-lead"
 import { useRouter } from "next/navigation"
 import { Loader2, Trash, Edit, CheckCircle, XCircle } from "lucide-react"
 import type { Lead } from "@/types/lead"
+import { LeadStatus } from "@prisma/client"
 
 interface LeadActionsProps {
   lead: Lead
@@ -31,7 +32,7 @@ export function LeadActions({ lead }: LeadActionsProps) {
   const { deleteLead, isLoading: isDeleting } = useDeleteLead()
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
-  const handleStatusUpdate = async (status: string) => {
+  const handleStatusUpdate = async (status: LeadStatus) => {
     try {
       await updateLead(lead.id, { status })
       toast({
@@ -69,29 +70,29 @@ export function LeadActions({ lead }: LeadActionsProps) {
 
   return (
     <div className="flex flex-wrap gap-2 items-center">
-      {lead.status !== "closed_won" && (
+      {lead.status !== LeadStatus.signed_contract && lead.status !== LeadStatus.completed_jobs && lead.status !== LeadStatus.zero_balance && (
         <Button
           variant="outline"
           size="sm"
           className="text-green-600 border-green-600 hover:bg-green-50 dark:hover:bg-green-950"
-          onClick={() => handleStatusUpdate("closed_won")}
+          onClick={() => handleStatusUpdate(LeadStatus.signed_contract)}
           disabled={isUpdating}
         >
           {isUpdating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1" />}
-          Mark Won
+          Mark Won (Sign Contract)
         </Button>
       )}
 
-      {lead.status !== "closed_lost" && (
+      {lead.status !== LeadStatus.denied && (
         <Button
           variant="outline"
           size="sm"
           className="text-red-600 border-red-600 hover:bg-red-50 dark:hover:bg-red-950"
-          onClick={() => handleStatusUpdate("closed_lost")}
+          onClick={() => handleStatusUpdate(LeadStatus.denied)}
           disabled={isUpdating}
         >
           {isUpdating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <XCircle className="h-4 w-4 mr-1" />}
-          Mark Lost
+          Mark Lost (Denied)
         </Button>
       )}
 

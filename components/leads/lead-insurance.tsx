@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Building2, Phone, Mail, DollarSign } from "lucide-react"
+import { Building2, Phone, Mail, DollarSign, Calendar, Hammer, FileText } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { z } from "zod"
@@ -43,9 +43,9 @@ export function LeadInsurance({ lead }: LeadInsuranceProps) {
     insurancePhone: lead.insurancePhone || "",
     insuranceSecondaryPhone: lead.insuranceSecondaryPhone || "",
     insuranceDeductible: lead.insuranceDeductible ? lead.insuranceDeductible.toString() : "",
-    dateOfLoss: lead.damageDate || "",
+    dateOfLoss: lead.dateOfLoss ? new Date(lead.dateOfLoss).toISOString().split('T')[0] : "",
     damageType: lead.damageType || "",
-    claimNumber: lead.insurancePolicyNumber || ""
+    claimNumber: lead.claimNumber || ""
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -124,6 +124,19 @@ export function LeadInsurance({ lead }: LeadInsuranceProps) {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  function renderDetail(label: string, value: string | number | null | undefined, Icon?: React.ElementType) {
+    if (!value) return null
+    return (
+      <div className="space-y-1">
+        <h3 className="text-xs font-medium text-muted-foreground flex items-center">
+          {Icon && <Icon className="h-3 w-3 mr-2" />}
+          {label}
+        </h3>
+        <p className="text-sm">{typeof value === 'number' ? `$${value}` : value}</p>
+      </div>
+    )
   }
 
   if (isEditing) {
@@ -276,89 +289,25 @@ export function LeadInsurance({ lead }: LeadInsuranceProps) {
 
   return (
     <Card>
-      <CardContent className="p-4 space-y-4">
-        <div className="flex justify-between items-center">
-          <h3 className="text-sm font-medium text-muted-foreground">Insurance Company</h3>
-          <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-            Edit
-          </Button>
-        </div>
-        <div className="grid gap-2">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-            <span>{lead.insuranceCompany || "Not provided"}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-            <span>Policy #: {lead.insurancePolicyNumber || "Not provided"}</span>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium text-muted-foreground">Insurance Contact</h3>
-          <div className="grid gap-2">
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <span>{lead.insurancePhone || "No phone provided"}</span>
-            </div>
-            {lead.insuranceSecondaryPhone && (
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span>Secondary: {lead.insuranceSecondaryPhone}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium text-muted-foreground">Adjuster Information</h3>
-          <div className="grid gap-2">
-            <div className="flex items-center gap-2">
-              <span className="font-medium">Name:</span>
-              <span>{lead.insuranceAdjusterName || "Not assigned"}</span>
-            </div>
-            {lead.insuranceAdjusterPhone && (
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span>{lead.insuranceAdjusterPhone}</span>
-              </div>
-            )}
-            {lead.insuranceAdjusterEmail && (
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <span>{lead.insuranceAdjusterEmail}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {lead.insuranceDeductible && (
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium text-muted-foreground">Deductible</h3>
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <span>${lead.insuranceDeductible.toLocaleString()}</span>
-            </div>
-          </div>
+      <div className="flex justify-between items-center p-4 border-b">
+        <h2 className="text-lg font-semibold">Insurance Information</h2>
+        <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+          Edit
+        </Button>
+      </div>
+      <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+        {renderDetail("Company", lead.insuranceCompany, Building2)}
+        {renderDetail("Policy #", lead.insurancePolicyNumber, DollarSign)}
+        {renderDetail("Primary Phone", lead.insurancePhone, Phone)}
+        {renderDetail("Secondary Phone", lead.insuranceSecondaryPhone, Phone)}
+        {renderDetail("Deductible", lead.insuranceDeductible, DollarSign)}
+        {renderDetail(
+          "Date of Loss", 
+          lead.dateOfLoss ? new Date(lead.dateOfLoss).toLocaleDateString() : null, 
+          Calendar
         )}
-        
-        {lead.damageDate && (
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium text-muted-foreground">Date of Loss</h3>
-            <div className="flex items-center gap-2">
-              <span>{new Date(lead.damageDate).toLocaleDateString()}</span>
-            </div>
-          </div>
-        )}
-        
-        {lead.damageType && (
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium text-muted-foreground">Damage Type</h3>
-            <div className="flex items-center gap-2">
-              <span>{lead.damageType}</span>
-            </div>
-          </div>
-        )}
+        {renderDetail("Damage Type", lead.damageType, Hammer)}
+        {renderDetail("Claim #", lead.claimNumber, FileText)}
       </CardContent>
     </Card>
   )

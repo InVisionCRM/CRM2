@@ -8,10 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useLeadFiles } from "@/hooks/use-lead-files"
 import { useToast } from "@/components/ui/use-toast"
 import { Upload, Eye, Camera, Trash2, Share2, XIcon, Loader2, FileIcon as LucideFileIcon } from "lucide-react"
-import type { LeadFile } from "@/types/documents"
 import ReactConfetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
-import { cn } from "@/lib/utils";
 // We will need react-camera-pro if we proceed with its implementation
 // import { Camera as ReactCameraPro } from "react-camera-pro";
 

@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import { LeadsDrawer } from "@/components/leads-drawer"
 import { AppointmentsDrawer } from "@/components/appointments/appointments-drawer"
-import { LeadSelectionSheet } from "@/components/files/lead-selection-sheet"
 import { SimpleCalculator } from "@/components/calculator/simple-calculator"
 import { useSession } from "next-auth/react"
 
@@ -87,20 +86,19 @@ export function MobileNavigation() {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLeadsDrawerOpen, setIsLeadsDrawerOpen] = useState(false)
   const [isAppointmentsDrawerOpen, setIsAppointmentsDrawerOpen] = useState(false)
-  const [isLeadSelectionSheetOpen, setIsLeadSelectionSheetOpen] = useState(false)
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false)
 
   useEffect(() => {
-    if (isLeadsDrawerOpen || isAppointmentsDrawerOpen || isLeadSelectionSheetOpen || isCalculatorOpen) {
+    if (isLeadsDrawerOpen || isAppointmentsDrawerOpen || isCalculatorOpen) {
       setIsExpanded(false)
     }
-  }, [isLeadsDrawerOpen, isAppointmentsDrawerOpen, isLeadSelectionSheetOpen, isCalculatorOpen])
+  }, [isLeadsDrawerOpen, isAppointmentsDrawerOpen, isCalculatorOpen])
 
   const navItems = [
     { icon: Home, label: "Dashboard", action: () => {} },
     { icon: UserPlus, label: "Leads", action: () => setIsLeadsDrawerOpen(true) },
     { icon: Calendar, label: "Appointments", action: () => userId && setIsAppointmentsDrawerOpen(true), disabled: !userId },
-    { icon: FolderOpen, label: "Files", action: () => setIsLeadSelectionSheetOpen(true) },
+    { icon: FolderOpen, label: "Files", action: () => { alert('Files functionality is temporarily unavailable.'); console.log("Files action clicked, but LeadSelectionSheet is removed.") } },
   ]
 
   return (
@@ -118,7 +116,7 @@ export function MobileNavigation() {
                   "text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed",
                   (item.label === "Leads" && isLeadsDrawerOpen) ||
                   (item.label === "Appointments" && isAppointmentsDrawerOpen) ||
-                  (item.label === "Files" && isLeadSelectionSheetOpen)
+                  (item.label === "Files" && false)
                     ? "text-primary dark:text-primary"
                     : "",
                 )}
@@ -157,13 +155,6 @@ export function MobileNavigation() {
           userId={userId}
         />
       )}
-      <LeadSelectionSheet 
-        isOpen={isLeadSelectionSheetOpen} 
-        onClose={() => setIsLeadSelectionSheetOpen(false)} 
-        onLeadSelect={(lead) => {
-          setIsLeadSelectionSheetOpen(false);
-        }}
-      />
       {isCalculatorOpen && <SimpleCalculator onClose={() => setIsCalculatorOpen(false)} />}
     </>
   )

@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { format } from "date-fns"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { useForm, type ControllerRenderProps, type SubmitHandler } from "react-hook-form"
 import { CalendarIcon, Clock } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -19,8 +19,10 @@ import {
   type AppointmentFormValues,
   defaultAppointmentValues,
 } from "@/lib/schemas/appointment-schema"
-import { PURPOSE_LABELS } from "@/types/appointments"
+import { PURPOSE_LABELS, type AppointmentPurpose, type AppointmentStatus as AppointmentStatusType } from "@/types/appointments"
 import type { CalendarAppointment } from "@/types/appointments"
+import { AppointmentPurposeEnum } from "@/types/appointments"
+import { AppointmentStatus as AppointmentStatusEnum } from "@prisma/client"
 
 // Generate time slots from 7:00 AM to 8:00 PM in 30-minute increments
 const TIME_SLOTS = Array.from({ length: 26 }, (_, i) => {
@@ -35,6 +37,7 @@ const TIME_SLOTS = Array.from({ length: 26 }, (_, i) => {
 })
 
 // Mock clients for demonstration
+/*
 const MOCK_CLIENTS = [
   { id: "1", name: "John Smith", address: "123 Main St, Anytown" },
   { id: "2", name: "Sarah Johnson", address: "456 Oak Ave, Somewhere" },
@@ -42,12 +45,13 @@ const MOCK_CLIENTS = [
   { id: "4", name: "Emily Davis", address: "101 Cedar Ln, Nowhere" },
   { id: "5", name: "Robert Wilson", address: "202 Maple Dr, Anywhere" },
 ]
+*/
 
 interface AppointmentFormProps {
   initialDate?: Date
   initialTime?: string | null
   appointment?: CalendarAppointment
-  onSubmit: (data: AppointmentFormValues) => void
+  onSubmit: (values: AppointmentFormValues) => Promise<void>
   onCancel: () => void
 }
 
@@ -59,8 +63,24 @@ export function AppointmentForm({ initialDate, initialTime, appointment, onSubmi
     resolver: zodResolver(appointmentSchema),
     defaultValues: appointment
       ? {
-          ...appointment,
-          clientId: appointment.clientId,
+          // Ensure all fields from appointment are correctly mapped to AppointmentFormValues
+          title: appointment.title || defaultAppointmentValues.title,
+          // Ensure date is a Date object; if appointment.date is undefined, use initialDate or new Date()
+          date: appointment.date ? new Date(appointment.date) : (initialDate || new Date()), 
+          startTime: appointment.startTime || defaultAppointmentValues.startTime,
+          endTime: appointment.endTime || defaultAppointmentValues.endTime,
+          // Cast purpose to AppointmentPurpose, defaulting if it's not a valid enum member or undefined
+          purpose: Object.values(AppointmentPurposeEnum).includes(appointment.purpose as AppointmentPurpose) 
+                    ? appointment.purpose as AppointmentPurpose 
+                    : defaultAppointmentValues.purpose,
+          // Cast status, defaulting if not valid or undefined
+          status: Object.values(AppointmentStatusEnum).includes(appointment.status as AppointmentStatusType) 
+                    ? appointment.status as AppointmentStatusType 
+                    : defaultAppointmentValues.status, 
+          leadId: appointment.leadId || defaultAppointmentValues.leadId,
+          userId: appointment.userId || defaultAppointmentValues.userId, // Assuming defaultAppointmentValues has userId
+          address: appointment.address || defaultAppointmentValues.address,
+          notes: appointment.notes || defaultAppointmentValues.notes,
         }
       : {
           ...defaultAppointmentValues,
@@ -70,8 +90,9 @@ export function AppointmentForm({ initialDate, initialTime, appointment, onSubmi
   })
 
   // Auto-fill address when client changes
-  const watchClientId = form.watch("clientId")
+  // const watchClientId = form.watch("clientId") // Removed
 
+  /* // Removed useEffect for watchClientId
   useEffect(() => {
     if (watchClientId && !appointment) {
       const selectedClient = MOCK_CLIENTS.find((client) => client.id === watchClientId)
@@ -80,18 +101,17 @@ export function AppointmentForm({ initialDate, initialTime, appointment, onSubmi
       }
     }
   }, [watchClientId, form, appointment])
+  */
 
-  // Handle form submission
-  const handleSubmit = async (data: AppointmentFormValues) => {
+  // Handle form submission - Renamed to handleFormSubmit
+  const handleFormSubmit: SubmitHandler<AppointmentFormValues> = async (data) => {
+    // console.log("Form submitted:", data)
     try {
       setIsSubmitting(true)
-
-      // In a real app, this would save to the database
-      await new Promise((resolve) => setTimeout(resolve, 1000)) // Simulate API call
-
-      onSubmit(data)
+      await onSubmit(data) // Call the prop onSubmit
     } catch (error) {
-      console.error("Error submitting appointment:", error)
+      console.error("Failed to submit appointment:", error)
+      // Optionally, show a toast message or other error feedback to the user
     } finally {
       setIsSubmitting(false)
     }
@@ -99,13 +119,13 @@ export function AppointmentForm({ initialDate, initialTime, appointment, onSubmi
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 pb-10">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6 pb-10">
         <div className="space-y-4">
           {/* Title */}
           <FormField
             control={form.control}
             name="title"
-            render={({ field }) => (
+            render={({ field }: { field: ControllerRenderProps<AppointmentFormValues, "title"> }) => (
               <FormItem>
                 <FormLabel>Title</FormLabel>
                 <FormControl>
@@ -120,7 +140,7 @@ export function AppointmentForm({ initialDate, initialTime, appointment, onSubmi
           <FormField
             control={form.control}
             name="date"
-            render={({ field }) => (
+            render={({ field }: { field: ControllerRenderProps<AppointmentFormValues, "date"> }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Date</FormLabel>
                 <Popover>
@@ -155,7 +175,7 @@ export function AppointmentForm({ initialDate, initialTime, appointment, onSubmi
             <FormField
               control={form.control}
               name="startTime"
-              render={({ field }) => (
+              render={({ field }: { field: ControllerRenderProps<AppointmentFormValues, "startTime"> }) => (
                 <FormItem>
                   <FormLabel>Start Time</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value || initialTime || undefined}>
@@ -188,7 +208,7 @@ export function AppointmentForm({ initialDate, initialTime, appointment, onSubmi
             <FormField
               control={form.control}
               name="endTime"
-              render={({ field }) => (
+              render={({ field }: { field: ControllerRenderProps<AppointmentFormValues, "endTime"> }) => (
                 <FormItem>
                   <FormLabel>End Time</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -224,7 +244,7 @@ export function AppointmentForm({ initialDate, initialTime, appointment, onSubmi
           <FormField
             control={form.control}
             name="purpose"
-            render={({ field }) => (
+            render={({ field }: { field: ControllerRenderProps<AppointmentFormValues, "purpose"> }) => (
               <FormItem>
                 <FormLabel>Purpose</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -246,37 +266,11 @@ export function AppointmentForm({ initialDate, initialTime, appointment, onSubmi
             )}
           />
 
-          {/* Client */}
-          <FormField
-            control={form.control}
-            name="clientId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Client</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select client" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {MOCK_CLIENTS.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
           {/* Address */}
           <FormField
             control={form.control}
             name="address"
-            render={({ field }) => (
+            render={({ field }: { field: ControllerRenderProps<AppointmentFormValues, "address"> }) => (
               <FormItem>
                 <FormLabel>Address</FormLabel>
                 <FormControl>
@@ -292,7 +286,7 @@ export function AppointmentForm({ initialDate, initialTime, appointment, onSubmi
           <FormField
             control={form.control}
             name="notes"
-            render={({ field }) => (
+            render={({ field }: { field: ControllerRenderProps<AppointmentFormValues, "notes"> }) => (
               <FormItem>
                 <FormLabel>Notes</FormLabel>
                 <FormControl>

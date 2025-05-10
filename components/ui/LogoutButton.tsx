@@ -2,7 +2,7 @@
 
 import { signOut } from 'next-auth/react'
 import { LogOut } from 'lucide-react' // Or use a Tabler icon like IconLogout
-import { Button } from '@/components/ui/button' // Assuming you have a general Button component
+// Assuming you have a general Button component
 import { cn } from '@/lib/utils'
 
 export function LogoutButton({

@@ -1,8 +1,8 @@
 "use client"
 
-import React, { useEffect, useRef, useState, CSSProperties } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { PropertyVisitStatus } from "./types"
-import { ChevronDown, ChevronUp, User, FileText, Clipboard, MessageSquare, MapPin, Sliders, Loader2, Save, ExternalLink, X, Maximize2, Minimize2, UserPlus } from "lucide-react"
+import { ChevronDown, ChevronUp, MapPin, Loader2, Save, ExternalLink, Maximize2, Minimize2, UserPlus } from "lucide-react"
 import { ContactForm } from "@/components/forms/ContactForm"
 import { InsuranceForm } from "@/components/forms/InsuranceForm"
 import { AdjusterForm } from "@/components/forms/AdjusterForm"
@@ -12,8 +12,8 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogOverlay, DialogPortal, DialogTitle } from "@/components/ui/dialog"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
 

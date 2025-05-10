@@ -16,10 +16,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { FileCheck, Plus, Trash, FileUp, FileText, ClipboardList } from "lucide-react"
+import { FileCheck, Plus, Trash, FileUp } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { LeadSelectionSheet } from "@/components/files/lead-selection-sheet"
-import type { Lead } from "@/types/lead"
+import type { LeadSummary } from "@/types/dashboard"
 
 interface QuickActionProps {
   icon: React.ReactNode | null
@@ -233,9 +232,6 @@ function InvoiceForm() {
 
 export function QuickActions() {
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false)
-  const [filesSheetOpen, setFilesSheetOpen] = useState(false)
-  const [leadSelectionOpen, setLeadSelectionOpen] = useState(false)
-  const [selectedLead, setSelectedLead] = useState<Lead | undefined>(undefined)
   const router = useRouter()
 
   const handleAction = (action: string) => {
@@ -251,20 +247,11 @@ export function QuickActions() {
       router.push("/map")
     } else if (action === "file-upload") {
       // Open the lead selection sheet first
-      setLeadSelectionOpen(true)
+      // setLeadSelectionOpen(true)
+      // TODO: Implement file upload functionality or show a message
+      console.log("File upload functionality is currently being reworked.")
+      alert("File upload functionality is temporarily unavailable.")
     }
-  }
-
-  const handleLeadSelect = (lead: Lead) => {
-    setSelectedLead(lead)
-    setLeadSelectionOpen(false)
-    setFilesSheetOpen(true)
-  }
-
-  const handleFilesSheetClose = () => {
-    setFilesSheetOpen(false)
-    // Reset selected lead when files sheet is closed
-    setSelectedLead(undefined)
   }
 
   return (
@@ -340,12 +327,13 @@ export function QuickActions() {
         </DialogContent>
       </Dialog>
 
-      {/* Lead Selection Sheet */}
+      {/* Lead Selection Sheet Commented out / To be removed if not needed elsewhere 
       <LeadSelectionSheet
         isOpen={leadSelectionOpen}
         onClose={() => setLeadSelectionOpen(false)}
         onLeadSelect={handleLeadSelect}
       />
+      */}
     </>
   )
 }

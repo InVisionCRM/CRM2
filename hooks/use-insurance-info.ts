@@ -1,8 +1,11 @@
 // hooks/use‑insurance-info.ts
 "use client"
 
-import { useState, useEffect } from "react"
-import type { InsuranceInfo } from "@/components/leads/insurance-info-card"
+import { useState, useEffect, useCallback } from "react"
+import { z } from "zod"
+import { toast } from "sonner"
+import type { Lead } from "@/types/lead"
+import type { InsuranceInfoCardProps as InsuranceInfo } from "@/components/leads/insurance-info-card"
 
 interface UseInsuranceInfoResult {
   insuranceInfo: InsuranceInfo | null

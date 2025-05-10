@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Loader2 } from "lucide-react"
 import type { PropertyDetails } from "@/types/lead"
+import { FormItem, FormLabel, FormDescription, FormControl } from "@/components/ui/form"
 
 interface PropertyDetailsFormProps {
   isOpen: boolean
@@ -63,7 +64,10 @@ export function PropertyDetailsForm({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="roofType">Roof Type</Label>
-              <Select value={formData.roofType} onValueChange={(value) => handleChange("roofType", value)}>
+              <Select
+                value={formData.roofType ?? ''}
+                onValueChange={(value) => handleChange("roofType", value)}
+              >
                 <SelectTrigger id="roofType">
                   <SelectValue placeholder="Select roof type" />
                 </SelectTrigger>
@@ -119,16 +123,20 @@ export function PropertyDetailsForm({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="hasExistingDamage">Has Existing Damage</Label>
-              <Switch
-                id="hasExistingDamage"
-                checked={formData.hasExistingDamage}
-                onCheckedChange={(checked) => handleChange("hasExistingDamage", checked)}
-              />
+          <FormItem className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+            <div className="space-y-0.5">
+              <FormLabel>Existing Damage?</FormLabel>
+              <FormDescription>
+                Does the property have pre-existing damage?
+              </FormDescription>
             </div>
-          </div>
+            <FormControl>
+              <Switch
+                checked={!!formData.hasExistingDamage}
+                onCheckedChange={(value) => handleChange("hasExistingDamage", value)}
+              />
+            </FormControl>
+          </FormItem>
 
           {formData.hasExistingDamage && (
             <div className="space-y-2">
@@ -149,16 +157,20 @@ export function PropertyDetailsForm({
             </div>
           )}
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="insuranceClaim">Insurance Claim</Label>
-              <Switch
-                id="insuranceClaim"
-                checked={formData.insuranceClaim}
-                onCheckedChange={(checked) => handleChange("insuranceClaim", checked)}
-              />
+          <FormItem className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+            <div className="space-y-0.5">
+              <FormLabel>Insurance Claim?</FormLabel>
+              <FormDescription>
+                Is there an active insurance claim for this property?
+              </FormDescription>
             </div>
-          </div>
+            <FormControl>
+              <Switch
+                checked={!!formData.insuranceClaim}
+                onCheckedChange={(value) => handleChange("insuranceClaim", value)}
+              />
+            </FormControl>
+          </FormItem>
 
           {formData.insuranceClaim && (
             <div className="grid grid-cols-2 gap-4">

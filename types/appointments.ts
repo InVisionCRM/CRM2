@@ -35,18 +35,67 @@ export interface AppointmentFormData {
 }
 
 export interface CalendarAppointment {
-  id: string
+  id?: string
   title: string
-  date?: Date
+  date: Date | undefined
   startTime: string
   endTime: string
-  status: string
-  leadId: string
-  leadName: string
-  address?: string
-  notes?: string
-  type?: string
-  purpose?: AppointmentPurpose
+  status?: AppointmentStatus | string
+  leadId?: string
+  leadName?: string
+  address?: string | undefined
+  notes?: string | undefined
+  purpose?: AppointmentPurpose | string
+  userId?: string
+  recurrenceRule?: string
+  isRecurring?: boolean
+}
+
+export type CalendarEvent = CalendarAppointment
+
+export interface RawGCalEvent {
+  id?: string;
+  summary?: string;
+  description?: string;
+  location?: string;
+  start?: { date?: string; dateTime?: string; timeZone?: string };
+  end?: { date?: string; dateTime?: string; timeZone?: string };
+  colorId?: string;
+  recurringEventId?: string;
+  originalStartTime?: { date?: string; dateTime?: string; timeZone?: string };
+  extendedProperties?: {
+    private?: Record<string, any>;
+    shared?: Record<string, any>;
+  };
+  attendees?: Array<{
+    id?: string;
+    email?: string;
+    displayName?: string;
+    organizer?: boolean;
+    self?: boolean;
+    resource?: boolean;
+    optional?: boolean;
+    responseStatus?: string;
+    comment?: string;
+    additionalGuests?: number;
+  }>;
+  organizer?: {
+    id?: string;
+    email?: string;
+    displayName?: string;
+    self?: boolean;
+  };
+  creator?: {
+    id?: string;
+    email?: string;
+    displayName?: string;
+    self?: boolean;
+  };
+  status?: string;
+  htmlLink?: string;
+  created?: string;
+  updated?: string;
+  recurrence?: string[];
 }
 
 export interface AppointmentsByDate {

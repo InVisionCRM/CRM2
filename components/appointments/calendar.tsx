@@ -27,41 +27,41 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarPicker } from "@/components/ui/calendar"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
 import { AppointmentPurposeEnum, type AppointmentPurpose } from '@/types/appointments'
-import type { CalendarAppointment } from "@/types/appointments"
+import type { CalendarAppointment, RawGCalEvent } from "@/types/appointments"
 import { useGoogleCalendar } from "@/lib/hooks/useGoogleCalendar"
+import type { GoogleCalendarCredentials } from "@/lib/services/googleCalendar"
 
 type CalendarView = "month" | "week" | "day"
 
 interface CalendarProps {
-  credentials: {
-    accessToken: string;
-    refreshToken?: string;
+  credentials?: GoogleCalendarCredentials | null;
+  appointmentsData?: {
+    appointments: RawGCalEvent[];
+    isLoading: boolean;
+    error: Error | null;
   };
   onDateClick: (date: Date) => void;
-  onAppointmentClick: (appointment: CalendarAppointment) => void;
+  onAppointmentClick: (appointment: RawGCalEvent) => void;
   onSwitchToDay: (date: Date, time?: string) => void;
 }
 
-export function Calendar({ credentials, onDateClick, onAppointmentClick, onSwitchToDay }: CalendarProps) {
+export function Calendar({ credentials, appointmentsData, onDateClick, onAppointmentClick, onSwitchToDay }: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState<CalendarView>("month")
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [zoomingDay, setZoomingDay] = useState<Date | null>(null)
   const calendarContentRef = useRef<HTMLDivElement>(null)
 
-  // Use our new Google Calendar hook
-  const {
-    appointments,
-    isLoading,
-    error,
-    createAppointment,
-    updateAppointment,
-    deleteAppointment,
-  } = useGoogleCalendar({
+  // Use our new Google Calendar hook OR provided data
+  const hookData = useGoogleCalendar({
     view,
     currentDate,
     credentials,
   });
+
+  const finalAppointments = appointmentsData ? appointmentsData.appointments : hookData.appointments;
+  const finalIsLoading = appointmentsData ? appointmentsData.isLoading : hookData.isLoading;
+  const finalError = appointmentsData ? appointmentsData.error : hookData.error;
 
   // Add this useEffect to inject the CSS animation
   useEffect(() => {
@@ -135,24 +135,32 @@ export function Calendar({ credentials, onDateClick, onAppointmentClick, onSwitc
 
   // Get appointments for a specific day
   const getAppointmentsForDay = (day: Date) => {
-    return appointments.filter((appointment: CalendarAppointment) => appointment.date && isSameDay(new Date(appointment.date), day))
+    return finalAppointments.filter((event: RawGCalEvent) => {
+      if (!event.start) return false;
+      const eventDateStr = event.start.date || event.start.dateTime;
+      if (!eventDateStr) return false;
+      return isSameDay(new Date(eventDateStr), day);
+    });
   }
 
   // Get appointments for a specific time slot
   const getAppointmentsForTimeSlot = (day: Date, hour: number) => {
-    return appointments.filter((appointment: CalendarAppointment) => {
-      if (!appointment.date || !appointment.startTime) return false
+    return finalAppointments.filter((event: RawGCalEvent) => {
+      if (!event.start) return false;
+      const eventDateStr = event.start.date || event.start.dateTime;
+      if (!eventDateStr) return false;
 
-      const appointmentDate = new Date(appointment.date)
+      const appointmentDate = new Date(eventDateStr)
       if (!isSameDay(appointmentDate, day)) return false
 
-      const [startHour] = appointment.startTime.split(":").map(Number)
+      const startHour = new Date(eventDateStr).getHours();
       return startHour === hour
     })
   }
 
   // Get color for appointment purpose
-  const getAppointmentColor = (purpose?: AppointmentPurpose) => {
+  const getAppointmentColor = (event?: RawGCalEvent) => {
+    const purpose = event?.extendedProperties?.private?.purpose as AppointmentPurpose | undefined;
     if (!purpose) return "bg-gray-500 dark:bg-gray-400";
 
     const purposeColors: Record<AppointmentPurpose, string> = {
@@ -309,15 +317,15 @@ export function Calendar({ credentials, onDateClick, onAppointmentClick, onSwitc
 
   // Month view
   const renderMonthView = () => {
-    if (error) {
+    if (finalError) {
       return (
         <div className="flex items-center justify-center h-full">
-          <div className="text-red-500">Error loading calendar: {error.message}</div>
+          <div className="text-red-500">Error loading calendar: {finalError.message}</div>
         </div>
       );
     }
 
-    if (isLoading) {
+    if (finalIsLoading) {
       return (
         <div className="flex items-center justify-center h-full">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -362,10 +370,10 @@ export function Calendar({ credentials, onDateClick, onAppointmentClick, onSwitc
 
                     {/* Appointment dots instead of text */}
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {dayAppointments.slice(0, 5).map((appointment: CalendarAppointment) => (
+                      {dayAppointments.slice(0, 5).map((appointment: RawGCalEvent) => (
                         <div
                           key={appointment.id}
-                          className={cn("w-2 h-2 rounded-full", getAppointmentColor(appointment.purpose))}
+                          className={cn("w-2 h-2 rounded-full", getAppointmentColor(appointment))}
                           onClick={(e) => {
                             e.stopPropagation()
                             onAppointmentClick(appointment)
@@ -394,15 +402,15 @@ export function Calendar({ credentials, onDateClick, onAppointmentClick, onSwitc
 
   // Week view
   const renderWeekView = () => {
-    if (error) {
+    if (finalError) {
       return (
         <div className="flex items-center justify-center h-full">
-          <div className="text-red-500">Error loading calendar: {error.message}</div>
+          <div className="text-red-500">Error loading calendar: {finalError.message}</div>
         </div>
       );
     }
 
-    if (isLoading) {
+    if (finalIsLoading) {
       return (
         <div className="flex items-center justify-center h-full">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -456,19 +464,19 @@ export function Calendar({ credentials, onDateClick, onAppointmentClick, onSwitc
                         onSwitchToDay(selectedDate, formattedTime)
                       }}
                     >
-                      {timeSlotAppointments.map((appointment: CalendarAppointment) => (
+                      {timeSlotAppointments.map((appointment: RawGCalEvent) => (
                         <div
                           key={appointment.id}
                           className={cn(
                             "text-xs px-1 py-0.5 rounded truncate cursor-pointer mb-1 text-white",
-                            getAppointmentColor(appointment.purpose),
+                            getAppointmentColor(appointment),
                           )}
                           onClick={(e) => {
                             e.stopPropagation()
                             onAppointmentClick(appointment)
                           }}
                         >
-                          {appointment.title}
+                          {appointment.summary || "(No title)"}
                         </div>
                       ))}
                     </div>
@@ -484,15 +492,15 @@ export function Calendar({ credentials, onDateClick, onAppointmentClick, onSwitc
 
   // Day view
   const renderDayView = () => {
-    if (error) {
+    if (finalError) {
       return (
         <div className="flex items-center justify-center h-full">
-          <div className="text-red-500">Error loading calendar: {error.message}</div>
+          <div className="text-red-500">Error loading calendar: {finalError.message}</div>
         </div>
       );
     }
 
-    if (isLoading) {
+    if (finalIsLoading) {
       return (
         <div className="flex items-center justify-center h-full">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
@@ -531,22 +539,20 @@ export function Calendar({ credentials, onDateClick, onAppointmentClick, onSwitc
                     onSwitchToDay(selectedDate, formattedTime)
                   }}
                 >
-                  {timeSlotAppointments.map((appointment: CalendarAppointment) => (
+                  {timeSlotAppointments.map((appointment: RawGCalEvent) => (
                     <div
                       key={appointment.id}
                       className={cn(
                         "text-sm px-2 py-1 rounded cursor-pointer mb-1 text-white",
-                        getAppointmentColor(appointment.purpose),
+                        getAppointmentColor(appointment),
                       )}
                       onClick={(e) => {
                         e.stopPropagation()
                         onAppointmentClick(appointment)
                       }}
                     >
-                      <div className="font-medium">{appointment.title}</div>
-                      <div className="text-xs">
-                        {appointment.startTime} - {appointment.endTime || "TBD"}
-                      </div>
+                      <div className="font-medium">{appointment.summary || "(No title)"}</div>
+                      {appointment.start?.dateTime && <div className="text-xs">({format(new Date(appointment.start.dateTime), "h:mma")})</div>}
                     </div>
                   ))}
                 </div>

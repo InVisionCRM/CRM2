@@ -1,0 +1,24 @@
+{
+  "extends": [
+    "next/core-web-vitals",
+    "next/typescript"
+  ],
+  "plugins": ["unused-imports"],
+  "rules": {
+    /* turn the core rules off so we don't double-report */
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": "off",
+
+    /* plugin rules */
+    "unused-imports/no-unused-imports": "error",
+    "unused-imports/no-unused-vars": [
+      "warn",
+      {
+        "vars": "all",
+        "varsIgnorePattern": "^_",
+        "args": "after-used",
+        "argsIgnorePattern": "^_"
+      }
+    ]
+  }
+}

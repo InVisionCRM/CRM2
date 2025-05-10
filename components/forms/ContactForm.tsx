@@ -1,13 +1,13 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
-import { useForm, Controller } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Loader2, Mail, Trash2 } from "lucide-react"
+import { Loader2, Trash2 } from "lucide-react"
 import debounce from 'lodash.debounce'; // Import debounce
 
 // Form schema based on Prisma Lead model fields

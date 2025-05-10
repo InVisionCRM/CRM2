@@ -1,19 +1,20 @@
 "use client"
 
 import { useState } from "react"
-import type { Lead } from "@/types/lead"
+import type { LeadWithAssignedUser } from "@/types/lead"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Mail, Phone, MapPin, User2, Calendar } from "lucide-react"
+import { Mail, Phone, MapPin } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { z } from "zod"
+import { formatStatusLabel } from "@/lib/utils"
 
 interface LeadInfoProps {
-  lead: Lead
+  lead: LeadWithAssignedUser
 }
 
 const contactSchema = z.object({
@@ -29,8 +30,8 @@ export function LeadInfo({ lead }: LeadInfoProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
-    firstName: lead.firstName,
-    lastName: lead.lastName,
+    firstName: lead.firstName || "",
+    lastName: lead.lastName || "",
     email: lead.email || "",
     phone: lead.phone || "",
     address: lead.address || "",
@@ -231,11 +232,6 @@ export function LeadInfo({ lead }: LeadInfoProps) {
             <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
             <div>
               <p>{lead.address || "No address provided"}</p>
-              {(lead.city || lead.state || lead.zipCode) && (
-                <p>
-                  {[lead.city, lead.state, lead.zipCode].filter(Boolean).join(", ")}
-                </p>
-              )}
             </div>
           </div>
         </div>
@@ -245,19 +241,27 @@ export function LeadInfo({ lead }: LeadInfoProps) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Status</p>
-              <p className="font-medium">{lead.status}</p>
+              <p className="font-medium">{formatStatusLabel(lead.status)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Date of Loss</p>
+              <p className="font-medium">
+                {lead.dateOfLoss ? format(new Date(lead.dateOfLoss), "MM/dd/yyyy") : "N/A"}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Assigned To</p>
-              <p className="font-medium">{lead.assignedTo || "Unassigned"}</p>
+              <p className="font-medium">{lead.assignedTo?.name || "Unassigned"}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Source</p>
-              <p className="font-medium">{lead.source}</p>
+              <p className="text-sm text-muted-foreground">Damage Type</p>
+              <p className="font-medium">{lead.damageType || "N/A"}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Created</p>
-              <p className="font-medium">{format(new Date(lead.createdAt), "MMM d, yyyy")}</p>
+              <p className="text-sm text-muted-foreground">Created At</p>
+              <p className="font-medium">
+                {format(new Date(lead.createdAt), "MM/dd/yyyy, p")}
+              </p>
             </div>
           </div>
         </div>

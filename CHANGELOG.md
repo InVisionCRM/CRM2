@@ -36,3 +36,6 @@
 - Initial project setup
 - Basic lead management functionality
 - Mobile-first UI components
+
+### Removed
+- chore: remove deprecated GeneralContract component and related assets (GeneralContract, ContractForm)

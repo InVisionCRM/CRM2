@@ -58,7 +58,7 @@ interface InsuranceInfo {
   deductible: string
 }
 
-interface InsuranceInfoCardProps {
+export interface InsuranceInfoCardProps {
   leadId: string
   initialInsuranceInfo?: InsuranceInfo
   appointmentDate?: Date | null

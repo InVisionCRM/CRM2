@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
 
-export async function middleware(req) {
+export async function middleware(req: NextRequest) {
   try {
     // Get the token from the request
     const token = await getToken({
@@ -14,15 +14,19 @@ export async function middleware(req) {
     // Get the pathname from the URL
     const { pathname } = req.nextUrl
 
-    // Allow public routes
-    const publicRoutes = ["/login", "/register", "/forgot-password"]
-    if (publicRoutes.some((route) => pathname.startsWith(route)) || pathname.startsWith("/api/auth")) {
+    // The matcher in `config` should ideally handle these exclusions.
+    // This check is an additional safeguard.
+    if (pathname.startsWith("/auth/signin") || 
+        pathname.startsWith("/api/auth") || 
+        pathname.startsWith("/_next/") ||
+        pathname.includes(".") // Generally ignore paths with extensions (assets)
+       ) {
       return NextResponse.next()
     }
 
     // If the user is not authenticated and trying to access protected routes
     if (!token) {
-      console.log("No token, redirecting to login")
+      console.log("No token, redirecting to sign-in page")
 
       // For API routes, return 401
       if (pathname.startsWith("/api/")) {
@@ -32,15 +36,17 @@ export async function middleware(req) {
         })
       }
 
-      // For page routes, redirect to login
-      const url = new URL("/login", req.url)
-      url.searchParams.set("callbackUrl", pathname)
-      return NextResponse.redirect(url)
+      // For page routes, redirect to the custom sign-in page defined in authOptions
+      // Ensure this path matches what's in your NextAuth config (pages.signIn)
+      const signInUrl = new URL("/auth/signin", req.url) 
+      signInUrl.searchParams.set("callbackUrl", pathname)
+      return NextResponse.redirect(signInUrl)
     }
 
     return NextResponse.next()
   } catch (error) {
     console.error("Middleware error:", error)
+    // Avoid redirect loops on error, consider an error page or just pass through
     return NextResponse.next()
   }
 }
@@ -48,13 +54,12 @@ export async function middleware(req) {
 // Specify which routes should be protected
 export const config = {
   matcher: [
-    "/api/:path*",
-    "/leads/:path*",
-    "/map/:path*",
-    "/financial-health/:path*",
-    "/team-performance/:path*",
-    "/contracts/:path*",
-    "/weather/:path*",
-    "/quick-links/:path*",
+    // Match all paths except for:
+    // - /api/auth routes (NextAuth specific)
+    // - /auth/signin (our sign-in page)
+    // - _next/static (static files)
+    // - _next/image (image optimization files)
+    // - files with extensions (e.g., .ico, .png, .svg)
+    "/((?!api/auth|auth/signin|_next/static|_next/image|.*\..*).*)",
   ],
 }

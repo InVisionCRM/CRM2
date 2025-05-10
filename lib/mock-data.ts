@@ -1,4 +1,5 @@
 import type { Lead } from "@/types/lead"
+import { Prisma } from "@prisma/client"
 
 // Mock data for demonstration
 export const mockLeads: Lead[] = [
@@ -11,8 +12,8 @@ export const mockLeads: Lead[] = [
     address: "123 Oak St, Anytown USA",
     status: "follow_ups", 
     assignedToId: "user-123",
-    createdAt: new Date(2023, 6, 25).toISOString(),
-    updatedAt: new Date(2023, 6, 25).toISOString(),
+    createdAt: new Date(2023, 6, 25),
+    updatedAt: new Date(2023, 6, 25),
     notes: "Initial inquiry about hail damage.",
     insuranceCompany: null,
     insurancePolicyNumber: null,
@@ -41,8 +42,8 @@ export const mockLeads: Lead[] = [
     address: "456 Pine St, Anytown USA",
     status: "scheduled",
     assignedToId: "user-456",
-    createdAt: new Date(2023, 6, 24).toISOString(),
-    updatedAt: new Date(2023, 6, 27).toISOString(),
+    createdAt: new Date(2023, 6, 24),
+    updatedAt: new Date(2023, 6, 27),
     notes: "Scheduled roof inspection.",
     insuranceCompany: "AllState",
     insurancePolicyNumber: "AS12345",
@@ -52,15 +53,15 @@ export const mockLeads: Lead[] = [
     insuranceAdjusterEmail: null,
     insuranceDeductible: "1000",
     insuranceSecondaryPhone: null,
-    dateOfLoss: new Date(2023, 5, 15).toISOString(),
+    dateOfLoss: new Date(2023, 5, 15),
     damageType: "HAIL",
     claimNumber: "CLM9876",
     adjusterAppointmentDate: null,
     adjusterAppointmentTime: null,
     adjusterAppointmentNotes: null,
     googleEventId: null,
-    latitude: 35.123,
-    longitude: -80.456,
+    latitude: new Prisma.Decimal("35.123"),
+    longitude: new Prisma.Decimal("-80.456"),
   },
 ]
 

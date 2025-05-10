@@ -2,13 +2,13 @@
 
 import { DrawerClose } from "@/components/ui/drawer"
 import { useState, useEffect } from "react"
-import { Plus, X, CalendarPlus } from "lucide-react"
+import { X, CalendarPlus } from "lucide-react"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "./calendar"
 import { AppointmentForm } from "./appointment-form"
 import { toast } from "@/components/ui/use-toast"
-import type { CalendarAppointment } from "@/types/appointments"
+import type { CalendarAppointment, RawGCalEvent } from "@/types/appointments"
 import type { AppointmentFormValues } from "@/lib/schemas/appointment-schema"
 import { AppointmentPurposeEnum } from "@/types/appointments"
 import { AppointmentStatus } from "@prisma/client"
@@ -174,7 +174,7 @@ export function AppointmentsDrawer({ isOpen, onClose, leadId, userId }: Appointm
         date: selectedAppointment.date ? new Date(selectedAppointment.date) : now,
         startTime: selectedAppointment.startTime || "",
         endTime: selectedAppointment.endTime || "",
-        purpose: selectedAppointment.purpose || AppointmentPurposeEnum.OTHER,
+        purpose: (selectedAppointment.purpose as AppointmentPurpose) || AppointmentPurposeEnum.OTHER,
         status: selectedAppointment.status as AppointmentStatus || defaultStatus,
         address: selectedAppointment.address || "",
         notes: selectedAppointment.notes || "",
@@ -229,29 +229,28 @@ export function AppointmentsDrawer({ isOpen, onClose, leadId, userId }: Appointm
 
         <div className="flex-1 flex flex-col h-[70vh]">
           {!isFormOpen ? (
-            isLoading ? (
-              <div className="flex items-center justify-center h-full"><p>Loading appointments...</p></div>
-            ) : error ? (
-              <div className="flex items-center justify-center h-full text-red-600"><p>Error: {error}</p></div>
-            ) : (
-              <Calendar 
-                appointments={appointments}
-                onDateClick={handleDateClick}
-                onAppointmentClick={handleAppointmentClick}
-                onSwitchToDay={(date, time) => {
-                  setSelectedDate(date);
-                  setSelectedTime(time ?? null);
-                  handleAddAppointment();
-                }}
-              />
-            )
+            <Calendar 
+              appointmentsData={{
+                appointments: appointments as unknown as RawGCalEvent[],
+                isLoading: isLoading,
+                error: error ? new Error(error) : null
+              }}
+              onDateClick={handleDateClick}
+              onAppointmentClick={(event: RawGCalEvent) => {
+                console.log("RawGCalEvent clicked:", event);
+              }}
+              onSwitchToDay={(date, time) => {
+                setSelectedDate(date);
+                setSelectedTime(time ?? null);
+                handleAddAppointment();
+              }}
+            />
           ) : (
             <div className="p-4 overflow-y-auto">
               <AppointmentForm 
                 appointment={selectedAppointment || undefined}
                 initialDate={selectedDate || undefined}
                 initialTime={selectedTime}
-                defaultValues={getInitialFormValues()}
                 onCancel={handleCancelForm}
                 onSubmit={handleFormSubmit}
               />

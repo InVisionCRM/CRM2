@@ -22,7 +22,7 @@ export const AnimatedBackground = () => {
     window.addEventListener("resize", setCanvasSize)
 
     // Create gradient points
-    let gradientPoints: { x: number; y: number; vx: number; vy: number; color: string }[] = []
+    const gradientPoints: { x: number; y: number; vx: number; vy: number; color: string }[] = []
     const colors = ["#59ff0022", "#00ff8822", "#59ff0011"]
     
     for (let i = 0; i < 5; i++) {

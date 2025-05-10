@@ -24,7 +24,10 @@ export function LeadDetailHeader({ lead, adjusterAppointmentDate, adjusterAppoin
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
   const { toast } = useToast()
 
-  const handleStatusChange = async (status: LeadStatus) => {
+  const handleStatusChange = async (status: LeadStatus | null) => {
+    if (status === null) {
+      return;
+    }
     try {
       const result = await updateLeadStatus(lead.id, status)
 
@@ -37,7 +40,7 @@ export function LeadDetailHeader({ lead, adjusterAppointmentDate, adjusterAppoin
       } else {
         toast({
           title: "Error",
-          description: result.message || "Failed to update status",
+          description: result.error || "Failed to update status",
           variant: "destructive",
         })
       }
@@ -60,7 +63,7 @@ export function LeadDetailHeader({ lead, adjusterAppointmentDate, adjusterAppoin
               <span className="sr-only">Back to Dashboard</span>
             </Button>
           </Link>
-          <h1 className="text-lg font-semibold truncate">{lead.name}</h1>
+          <h1 className="text-lg font-semibold truncate">{`${lead.firstName || ''} ${lead.lastName || ''}`.trim() || "N/A"}</h1>
           <Badge className={cn("ml-3 px-3 py-1 text-sm font-medium", getStatusColor(lead.status))}>
             {formatStatusLabel(lead.status)}
           </Badge>
@@ -91,7 +94,11 @@ export function LeadDetailHeader({ lead, adjusterAppointmentDate, adjusterAppoin
                 <DialogTitle>Change Lead Status</DialogTitle>
               </DialogHeader>
               <div className="py-4">
-                <StatusGrid onStatusClick={handleStatusChange} />
+                <StatusGrid 
+                  onStatusClick={handleStatusChange} 
+                  activeStatus={lead.status}
+                  statusCounts={[]}
+                />
               </div>
             </DialogContent>
           </Dialog>

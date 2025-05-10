@@ -26,16 +26,32 @@ interface LeadNotesProps {
   leadId: string
 }
 
+// Define interfaces for Note structure
+interface NoteImage {
+  url: string;
+  name: string;
+  stage: PhotoStage;
+}
+
+interface NoteWithImages {
+  id: string;
+  leadId: string;
+  content: string;
+  createdAt: Date; // Store as Date object
+  createdBy: string;
+  images: NoteImage[];
+}
+
 export function LeadNotes({ leadId }: LeadNotesProps) {
   // For now, let's use mock data directly in the component
   // This bypasses any API calls that might be causing validation errors
-  const [notes, setNotes] = useState([
+  const [notes, setNotes] = useState<NoteWithImages[]>([ // Use NoteWithImages type
     {
       id: "1",
       leadId,
       content:
         "Initial contact made with customer. They're interested in a roof inspection following recent storm damage.",
-      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Store as Date
       createdBy: "John Doe",
       images: [],
     },
@@ -44,7 +60,7 @@ export function LeadNotes({ leadId }: LeadNotesProps) {
       leadId,
       content:
         "Scheduled an initial assessment for next week. Customer mentioned they've already filed an insurance claim.",
-      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // Store as Date
       createdBy: "Jane Smith",
       images: [],
     },
@@ -55,29 +71,23 @@ export function LeadNotes({ leadId }: LeadNotesProps) {
   const [isAddNoteOpen, setIsAddNoteOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [noteToDelete, setNoteToDelete] = useState<string | null>(null)
-  const [selectedImage, setSelectedImage] = useState<{
-    url: string
-    name: string
-    stage: PhotoStage
-    noteId: string
-    index: number
-  } | null>(null)
+  const [selectedImage, setSelectedImage] = useState< NoteImage & { noteId: string; index: number } | null>(null) // Adjusted type for selectedImage
   const [editingImageName, setEditingImageName] = useState("")
 
   const addNoteWithImages = async (
     content: string,
-    images: Array<{ url: string; name: string; stage: PhotoStage }>,
+    images: NoteImage[], // Use NoteImage type
   ) => {
     setIsSubmitting(true)
     try {
       console.log("Adding note with images:", images)
       // Create a new note with mock data
-      const newNote = {
+      const newNote: NoteWithImages = { // Use NoteWithImages type
         id: Date.now().toString(),
         leadId,
         content,
-        createdAt: new Date().toISOString(),
-        createdBy: "Current User",
+        createdAt: new Date(), // Store as Date
+        createdBy: "Current User", // TODO: Replace with actual session user if available
         images,
       }
 
@@ -103,7 +113,7 @@ export function LeadNotes({ leadId }: LeadNotesProps) {
     }
   }
 
-  const handleAddNote = async (content: string, images: Array<{ url: string; name: string; stage: PhotoStage }>) => {
+  const handleAddNote = async (content: string, images: NoteImage[]) => {
     try {
       await addNoteWithImages(content, images)
     } catch (error) {
@@ -122,11 +132,9 @@ export function LeadNotes({ leadId }: LeadNotesProps) {
     }
   }
 
-  const handleImageClick = (image: { url: string; name: string; stage: PhotoStage }, noteId: string, index: number) => {
+  const handleImageClick = (image: NoteImage, noteId: string, index: number) => { // Use NoteImage type
     setSelectedImage({
-      url: image.url,
-      name: image.name,
-      stage: image.stage,
+      ...image, // Spread image properties
       noteId,
       index,
     })
@@ -211,7 +219,7 @@ export function LeadNotes({ leadId }: LeadNotesProps) {
               <div key={note.id} className="border rounded-lg p-3">
                 <div className="flex justify-between items-start mb-2">
                   <div className="text-sm text-muted-foreground">
-                    {note.createdBy} • {formatDistanceToNow(new Date(note.createdAt), { addSuffix: true })}
+                    {note.createdBy} • {formatDistanceToNow(note.createdAt, { addSuffix: true })}{/* Use note.createdAt directly */}
                   </div>
                   <Button
                     variant="ghost"
@@ -230,7 +238,7 @@ export function LeadNotes({ leadId }: LeadNotesProps) {
                       <div
                         key={index}
                         className="relative cursor-pointer rounded-md overflow-hidden border aspect-[4/3]"
-                        onClick={() => handleImageClick(img, note.id, index)}
+                        onClick={() => handleImageClick(img, note.id, index)} // img should be NoteImage
                       >
                         <img
                           src={img.url || "/placeholder.svg"}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState } from "react"
 import { useLeads } from "@/hooks/use-leads"
 import { LeadsList } from "@/components/leads-list"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -8,8 +8,6 @@ import type { StatusCount } from "@/types/dashboard"
 import { UserFilter, type UserOption } from "@/components/user-filter"
 import { StatusGrid } from "@/components/status-grid"
 import { LeadStatus } from "@prisma/client"
-import { Button } from "@/components/ui/button"
-import { LeadsDrawer } from "@/components/leads-drawer"
 const mockUsers: UserOption[] = [
   { id: "user1", name: "John Smith" },
   { id: "user2", name: "Jane Doe" },

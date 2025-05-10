@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { createLead, updateLead, deleteLead, getLeadById } from "@/lib/db/leads"
+import { deleteLead } from "@/lib/db/leads"
 import { uploadToBlob } from "@/lib/blob"
 import { createFile, deleteFile } from "@/lib/db/files"
 import { prisma } from "@/lib/db/prisma"

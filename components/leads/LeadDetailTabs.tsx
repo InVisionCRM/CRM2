@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Lead } from "@prisma/client"
 import { ContactForm } from "@/components/forms/ContactForm"
 import { InsuranceForm } from "@/components/forms/InsuranceForm"
@@ -12,7 +12,6 @@ import { LeadFilesTab } from "./tabs/LeadFilesTab"
 import { LeadContractsTab } from "./tabs/LeadContractsTab"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronDown } from "lucide-react";
 
 interface LeadDetailTabsProps {
   lead: Lead | null;

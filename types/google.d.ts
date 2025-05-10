@@ -37,7 +37,7 @@ declare namespace google.maps {
     position: LatLng | LatLngLiteral;
     map?: Map;
     title?: string;
-    icon?: Symbol;
+    icon?: symbol;
   }
 
   interface Symbol {

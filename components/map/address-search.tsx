@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useEffect, useState, useCallback } from "react"
+import { useState, useCallback } from "react"
 import { SearchBar } from "@/components/ui/search-bar"
 import debounce from 'lodash.debounce'
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useSearchParams } from "next/navigation" // Use next/navigation for App Router
-import { LeadStatus, type Lead } from "@prisma/client"
+import { LeadStatus } from "@prisma/client"
 import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon } from "lucide-react" // Updated icons
 import { LeadStatusBar } from "@/components/leads/LeadStatusBar" // Corrected path
 import { LeadDetailTabs } from "@/components/leads/LeadDetailTabs" // Corrected path
@@ -124,8 +124,15 @@ export default function LeadDetailPage() {
   }
 
   const handleScheduleAppointment = () => {
-    // Placeholder for scheduling logic - e.g., open a modal
-    toast({ title: "Schedule Appointment", description: "This feature will be connected later." });
+    if (!lead || !id) return;
+    
+    // Create a URL-safe version of the lead name
+    const leadName = lead.firstName && lead.lastName 
+      ? `${lead.firstName} ${lead.lastName}` 
+      : lead.email || 'Unknown Lead';
+    
+    // Route to calendar with lead info
+    window.location.href = `/calendar?leadId=${id}&leadName=${encodeURIComponent(leadName)}&returnUrl=${encodeURIComponent(`/leads/${id}`)}`;
   };
 
   // Construct address string safely

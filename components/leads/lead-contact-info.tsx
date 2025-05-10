@@ -10,7 +10,8 @@ interface LeadContactInfoProps {
 }
 
 export function LeadContactInfo({ lead }: LeadContactInfoProps) {
-  const fullAddress = `${lead.address}, ${lead.city}, ${lead.state} ${lead.zip}`
+  const displayName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || "N/A";
+  const googleMapsQuery = lead.address ? encodeURIComponent(lead.address) : '';
 
   return (
     <Card className="h-full">
@@ -24,7 +25,7 @@ export function LeadContactInfo({ lead }: LeadContactInfoProps) {
 
         <dl className="grid grid-cols-2 gap-x-2 gap-y-3">
           <dt className="text-sm text-muted-foreground">Name</dt>
-          <dd className="text-sm font-medium">{lead.name}</dd>
+          <dd className="text-sm font-medium">{displayName}</dd>
 
           <dt className="text-sm text-muted-foreground">Phone</dt>
           <dd className="text-sm font-medium">
@@ -45,20 +46,19 @@ export function LeadContactInfo({ lead }: LeadContactInfoProps) {
           <dt className="text-sm text-muted-foreground">Address</dt>
           <dd className="text-sm font-medium">
             <div>
-              <div>{lead.address}</div>
-              <div>
-                {lead.city}, {lead.state} {lead.zip}
-              </div>
-              <a
-                href={`https://maps.google.com/?q=${encodeURIComponent(fullAddress)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center text-primary mt-1 text-xs hover:underline"
-              >
-                <MapPin className="h-3 w-3 mr-1" />
-                <span>View on Maps</span>
-                <ExternalLink className="h-2 w-2 ml-1" />
-              </a>
+              <div>{lead.address || "N/A"}</div>
+              {lead.address && (
+                <a
+                  href={`https://maps.google.com/?q=${googleMapsQuery}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center text-primary mt-1 text-xs hover:underline"
+                >
+                  <MapPin className="h-3 w-3 mr-1" />
+                  <span>View on Maps</span>
+                  <ExternalLink className="h-2 w-2 ml-1" />
+                </a>
+              )}
             </div>
           </dd>
         </dl>

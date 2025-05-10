@@ -2,7 +2,9 @@
 
 import { useState } from "react"
 import { createLeadAction } from "@/app/actions/lead-actions"
-import type { Lead } from "@/types/lead"
+import type { Lead } from "@prisma/client"
+import { useRouter } from "next/navigation"
+import { useSWRConfig } from "swr"
 
 type CreateLeadInput = {
   fullName: string
@@ -13,8 +15,10 @@ type CreateLeadInput = {
 }
 
 export function useCreateLead() {
+  const { mutate } = useSWRConfig()
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<Error | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const createLead = async (leadData: CreateLeadInput): Promise<Lead> => {
     setIsLoading(true)
@@ -36,14 +40,27 @@ export function useCreateLead() {
         status: mapStatusToApiFormat(leadData.status),
       })
 
+      // Check for success explicitly and use result.message for error
       if (!result.success) {
-        throw new Error(result.message || "Failed to create lead")
+        throw new Error(result.message || "Failed to create lead.")
       }
 
+      // If success is true, lead should be present as per createLeadAction's success return type
+      if (!result.lead) {
+        // This case should ideally not be reached if success is true and action is correct
+        throw new Error("Lead creation was successful but did not return a lead object.")
+      }
+
+      // Assuming SWR is used, mutate relevant keys
+      mutate("/api/leads") // Example SWR key
+      router.push(`/leads/${result.lead.id}`)
       return result.lead
     } catch (err) {
-      setError(err instanceof Error ? err : new Error("An unknown error occurred"))
-      throw err
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred"
+      setError(errorMessage)
+      // Re-throw the error if you want calling code to also be able to catch it
+      // Or handle it here (e.g., show a toast notification)
+      throw new Error(errorMessage) // Re-throw to ensure Promise<Lead> is not violated on error
     } finally {
       setIsLoading(false)
     }

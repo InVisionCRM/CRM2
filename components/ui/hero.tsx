@@ -2,9 +2,8 @@
 
 import React, { useEffect, useRef, useState } from "react"
 import { motion } from "framer-motion"
-import { cn } from "@/lib/utils"
 import { SparklesCore } from "@/components/ui/sparkles"
-import { Camera, LogIn, LogOut, Search, User, X } from "lucide-react"
+import { Camera, LogIn, LogOut, User, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import Image from "next/image"
 import { useSession, signIn, signOut } from "next-auth/react"
@@ -349,9 +348,9 @@ export const Hero = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.1 }}
-        className="absolute top-6 left-1/4 transform -translate-x-1/2 w-full max-w-xl px-4 z-50"
+        className="absolute top-60 left-60 transform -translate-x-1/2 w-full max-w-xl px-4 z-50"
       >
-        <SearchBar placeholder="Search Names..." />
+        <SearchBar placeholder="" />
       </motion.div>
 
       {/* Logo in the background with shadow play effect */}
@@ -375,7 +374,7 @@ export const Hero = () => {
             fill
             className="object-contain"
             style={{
-              filter: "drop-shadow(0 0 15px rgba(190, 242, 100, 0.5))",
+              filter: "drop-shadow(0 0 30px rgba(136, 214, 1, 0.97))",
             }}
           />
         </div>

@@ -18,10 +18,12 @@ export const DynamicSignatureCanvas = dynamic(
   { ssr: false }
 )
 
+/*
 export const DynamicGeneralContract = dynamic(
   () => import('@/components/contracts/general-contract').then((mod) => mod.GeneralContract),
   { ssr: false }
 )
+*/
 
 // Dynamically import the MapboxMap component
 export const DynamicMapboxMap = dynamic(

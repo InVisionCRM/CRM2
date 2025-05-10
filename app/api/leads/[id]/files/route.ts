@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { getFilesByLeadId } from "@/lib/db/files"
-import type { LeadFile } from "@/types/documents"
 
 export async function GET(
   request: Request,

@@ -9,8 +9,16 @@ interface PerformanceSummaryCardProps {
   data: TeamPerformance
 }
 
+// Define a type for the keys of TeamPerformance that hold time-framed data
+type TimeFramedMetricKey = Extract<keyof TeamPerformance, 
+  | "totalDoorsKnocked"
+  | "totalConversions"
+  | "totalRoofsInspected"
+  | "totalContractsSigned"
+>;
+
 export function PerformanceSummaryCard({ data }: PerformanceSummaryCardProps) {
-  const [timeFrame, setTimeFrame] = useState<TimeFrame>("daily")
+  const [timeFrame, setTimeFrame] = useState<"daily" | "weekly" | "monthly">("daily")
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -20,11 +28,11 @@ export function PerformanceSummaryCard({ data }: PerformanceSummaryCardProps) {
     }).format(amount)
   }
 
-  const getTimeFrameData = (metric: keyof typeof data.totalDoorsKnocked) => {
-    return data[`total${metric.charAt(0).toUpperCase() + metric.slice(1)}` as keyof TeamPerformance][
-      timeFrame as keyof typeof data.totalDoorsKnocked
-    ]
-  }
+  const getTimeFrameData = (metricKey: TimeFramedMetricKey): number => {
+    const metricObject = data[metricKey]; // Type is { daily: number; weekly: number; monthly: number; }
+    // timeFrame is "daily" | "weekly" | "monthly", which are keys of metricObject
+    return metricObject[timeFrame]; 
+  };
 
   const metrics = [
     {
@@ -39,22 +47,22 @@ export function PerformanceSummaryCard({ data }: PerformanceSummaryCardProps) {
     },
     {
       title: "Doors Knocked",
-      value: getTimeFrameData("doorsKnocked"),
+      value: getTimeFrameData("totalDoorsKnocked"), // Use the new function with correct key
       icon: "🚪",
     },
     {
       title: "Conversions",
-      value: getTimeFrameData("conversions"),
+      value: getTimeFrameData("totalConversions"), // Use the new function with correct key
       icon: "✅",
     },
     {
       title: "Roofs Inspected",
-      value: getTimeFrameData("roofsInspected"),
+      value: getTimeFrameData("totalRoofsInspected"), // Use the new function with correct key
       icon: "🔍",
     },
     {
       title: "Contracts Signed",
-      value: getTimeFrameData("contractsSigned"),
+      value: getTimeFrameData("totalContractsSigned"), // Use the new function with correct key
       icon: "📝",
     },
   ]
@@ -63,7 +71,7 @@ export function PerformanceSummaryCard({ data }: PerformanceSummaryCardProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-lg">Team Performance Summary</CardTitle>
-        <Tabs value={timeFrame} onValueChange={(value) => setTimeFrame(value as TimeFrame)}>
+        <Tabs value={timeFrame} onValueChange={(value) => setTimeFrame(value as "daily" | "weekly" | "monthly")}>
           <TabsList className="grid grid-cols-3 h-8">
             <TabsTrigger value="daily" className="text-xs">
               Daily
