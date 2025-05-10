@@ -10,21 +10,28 @@ import { LockKeyhole, Sparkles } from "lucide-react"
  */
 export function WelcomeSecureLeadAnimation() {
   const [show, setShow] = useState(true)
+  const [isExiting, setIsExiting] = useState(false)
 
   useEffect(() => {
-    const timer = setTimeout(() => setShow(false), 2500)
+    const timer = setTimeout(() => {
+      setIsExiting(true)
+    }, 2500)
     return () => clearTimeout(timer)
   }, [])
 
   return (
-    <AnimatePresence>
+    <AnimatePresence onExitComplete={() => setShow(false)}>
       {show && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black"
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black ${isExiting ? 'pointer-events-none' : ''}`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4 }}
+          onAnimationComplete={() => {
+            if (isExiting) {
+            }
+          }}
         >
           {/* pulsing backdrop glow */}
           <motion.div
