@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getLeadById, updateLead, deleteLead } from "@/lib/db/leads"
+import { prisma } from "@/lib/prisma"
 import type { UpdateLeadInput } from "@/lib/db/leads"
 
 export async function GET(
@@ -9,7 +10,16 @@ export async function GET(
   try {
     const params = await paramsPromise
     const id = params.id
-    const lead = await getLeadById(id)
+    const lead = await prisma.lead.findUnique({
+      where: { id },
+      include: {
+        assignedTo: {
+          select: {
+            name: true
+          }
+        }
+      }
+    });
 
     if (!lead) {
       return NextResponse.json({ error: "Lead not found" }, { status: 404 })

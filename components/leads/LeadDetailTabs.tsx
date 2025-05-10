@@ -19,11 +19,11 @@ interface LeadDetailTabsProps {
   onTabChange: (value: string) => void;
 }
 
+// Define type for the section being edited
+type EditableSection = 'contact' | 'insurance' | 'adjuster';
+
 const TABS_CONFIG = [
   { value: "overview", label: "Overview", Component: LeadOverviewTab },
-  { value: "contact", label: "Contact", Component: ContactForm },
-  { value: "insurance", label: "Insurance", Component: InsuranceForm },
-  { value: "adjuster", label: "Adjuster", Component: AdjusterForm },
   { value: "notes", label: "Notes", Component: LeadNotesTab },
   { value: "files", label: "Files", Component: LeadFilesTab },
   { value: "contracts", label: "Contract", Component: LeadContractsTab },
@@ -31,6 +31,7 @@ const TABS_CONFIG = [
 
 export function LeadDetailTabs({ lead, activeTab, onTabChange }: LeadDetailTabsProps) {
   const [isMobile, setIsMobile] = useState(false);
+  const [formToEdit, setFormToEdit] = useState<EditableSection | null>(null); // Added state for form editing
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768); // md breakpoint
@@ -38,6 +39,11 @@ export function LeadDetailTabs({ lead, activeTab, onTabChange }: LeadDetailTabsP
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  const handleActualTabChange = (value: string) => {
+    setFormToEdit(null); // Clear any open form when changing main tabs
+    onTabChange(value);
+  };
 
   if (!lead) {
     return (
@@ -50,10 +56,10 @@ export function LeadDetailTabs({ lead, activeTab, onTabChange }: LeadDetailTabsP
     );
   }
 
-  const CurrentComponent = TABS_CONFIG.find(tab => tab.value === activeTab)?.Component;
+  const ActiveTabComponent = TABS_CONFIG.find(tab => tab.value === activeTab)?.Component;
 
-  const getInitialDataForForm = (tabValue: string) => {
-    switch (tabValue) {
+  const getInitialDataForForm = (formType: EditableSection) => {
+    switch (formType) {
       case 'contact':
         return {
           firstName: lead.firstName || "", lastName: lead.lastName || "",
@@ -87,11 +93,22 @@ export function LeadDetailTabs({ lead, activeTab, onTabChange }: LeadDetailTabsP
     }
   };
 
+  const handleFormSuccess = (formType: EditableSection) => {
+    console.log(`${formType} form submitted successfully`);
+    setFormToEdit(null);
+    // Potentially add lead data refetching logic here
+    // e.g. router.refresh() or a custom callback from parent
+  };
+
+  const handleFormCancel = () => {
+    setFormToEdit(null);
+  };
+
   return (
-    <Tabs value={activeTab} onValueChange={onTabChange} className="w-full" activationMode="manual">
+    <Tabs value={activeTab} onValueChange={handleActualTabChange} className="w-full" activationMode="manual">
       {isMobile ? (
         <div className="mb-4">
-          <Select value={activeTab} onValueChange={onTabChange}>
+          <Select value={activeTab} onValueChange={handleActualTabChange}>
             <SelectTrigger className="w-full text-base py-3 flex justify-center items-center">
               <SelectValue placeholder="Select a section" />
             </SelectTrigger>
@@ -105,7 +122,7 @@ export function LeadDetailTabs({ lead, activeTab, onTabChange }: LeadDetailTabsP
           </Select>
         </div>
       ) : (
-        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-4 md:grid-cols-7 mb-4 bg-muted/50 p-1 rounded-lg">
+        <TabsList className="grid w-full grid-cols-4 mb-4 bg-muted/50 p-1 rounded-lg">
           {TABS_CONFIG.map((tab) => (
             <TabsTrigger 
               key={tab.value} 
@@ -120,16 +137,37 @@ export function LeadDetailTabs({ lead, activeTab, onTabChange }: LeadDetailTabsP
       
       <Card className="border shadow-sm">
         <CardContent className="p-4 sm:p-6 min-h-[400px]">
-          {/* Render only the active tab's content directly */} 
-          {CurrentComponent && (
-            <CurrentComponent 
-              lead={lead} // Pass lead for overview and specific tabs
-              leadId={lead.id} // Pass leadId for forms and specific tabs
-              initialData={getInitialDataForForm(activeTab)} // Pass initialData for forms
-              onSuccess={() => {
-                // console.log(`${TABS_CONFIG.find(t=>t.value===activeTab)?.label} form submitted successfully`);
-              }}
+          {formToEdit === 'contact' ? (
+            <ContactForm
+              leadId={lead.id}
+              initialData={getInitialDataForForm('contact')}
+              onSuccess={() => handleFormSuccess('contact')}
+              onCancel={handleFormCancel}
             />
+          ) : formToEdit === 'insurance' ? (
+            <InsuranceForm
+              leadId={lead.id}
+              initialData={getInitialDataForForm('insurance')}
+              onSuccess={() => handleFormSuccess('insurance')}
+              onCancel={handleFormCancel}
+            />
+          ) : formToEdit === 'adjuster' ? (
+            <AdjusterForm
+              leadId={lead.id}
+              initialData={getInitialDataForForm('adjuster')}
+              onSuccess={() => handleFormSuccess('adjuster')}
+              onCancel={handleFormCancel}
+            />
+          ) : ActiveTabComponent ? (
+            <ActiveTabComponent 
+              lead={lead} 
+              leadId={lead.id}
+              {...(ActiveTabComponent === LeadOverviewTab && {
+                onEditRequest: (section: EditableSection) => setFormToEdit(section),
+              })}
+            />
+          ) : (
+            <p>Something went wrong. Tab content cannot be displayed.</p>
           )}
         </CardContent>
       </Card>

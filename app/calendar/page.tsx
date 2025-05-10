@@ -7,6 +7,8 @@ import { WelcomeAnimationWrapper } from "@/components/welcome-animation-wrapper"
 import { DateDebug } from "@/components/date-debug"
 import { BackgroundGradientAnimation } from "@/components/ui/background-gradient-animation"
 
+export const dynamic = 'force-dynamic';
+
 export default async function CalendarPage({
   searchParams,
 }: {

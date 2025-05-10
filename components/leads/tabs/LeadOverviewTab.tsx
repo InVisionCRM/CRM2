@@ -3,15 +3,18 @@
 import { formatDistanceToNow, format, isValid } from "date-fns"
 import type { Lead } from "@prisma/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Pencil } from "lucide-react"
 import { formatStatusLabel } from "@/lib/utils"
 // import { Avatar, AvatarFallback } from "@/components/ui/avatar" // Avatar removed
 import { Badge } from "@/components/ui/badge"
 
 interface LeadOverviewTabProps {
-  lead: Lead | null
+  lead: (Lead & { assignedTo?: { name?: string | null } | null }) | null;
+  onEditRequest?: (section: 'contact' | 'insurance' | 'adjuster') => void;
 }
 
-export function LeadOverviewTab({ lead }: LeadOverviewTabProps) {
+export function LeadOverviewTab({ lead, onEditRequest }: LeadOverviewTabProps) {
   if (!lead) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-2 gap-6">
@@ -47,8 +50,7 @@ export function LeadOverviewTab({ lead }: LeadOverviewTabProps) {
           <CardTitle className="text-md sm:text-lg">Lead Summary</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 px-4 pb-4 sm:px-6 sm:pb-5">
-          {/* Each item will now effectively be on its own row due to stacking or single column grid */}
-          <div className="space-y-2"> {/* Changed from grid-cols-2 */}
+          <div className="space-y-2">
             <div className="space-y-0.5">
               <p className="text-xs sm:text-sm font-medium text-muted-foreground">Status</p>
               <Badge variant={lead.status as any} className="text-xs px-1.5 py-0.5 sm:text-sm sm:px-2 sm:py-1">{formatStatusLabel(lead.status)}</Badge>
@@ -65,12 +67,8 @@ export function LeadOverviewTab({ lead }: LeadOverviewTabProps) {
               ) : <p className="text-xs sm:text-sm text-muted-foreground">Invalid date</p>}
             </div>
             <div className="space-y-0.5">
-              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Damage Type</p>
-              <p className="text-xs sm:text-sm">{lead.damageType || "N/A"}</p>
-            </div>
-            <div className="space-y-0.5">
-              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Claim Number</p>
-              <p className="text-xs sm:text-sm">{lead.claimNumber || "N/A"}</p>
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground">SalesPerson</p>
+              <p className="text-xs sm:text-sm">{lead?.assignedTo?.name || lead?.assignedToId || "N/A"}</p>
             </div>
           </div>
         </CardContent>
@@ -78,8 +76,14 @@ export function LeadOverviewTab({ lead }: LeadOverviewTabProps) {
       
       {/* Contact Information Card */}
       <Card className="shadow-sm card">
-        <CardHeader className="pb-3 pt-4 px-4 sm:px-6">
+        <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-6">
           <CardTitle className="text-md sm:text-lg">Contact Information</CardTitle>
+          {onEditRequest && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7" onClick={() => onEditRequest('contact')}>
+              <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+              <span className="sr-only">Edit Contact Information</span>
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-3 px-4 pb-4 sm:px-6 sm:pb-5">
           {/* Avatar removed */}
@@ -103,8 +107,14 @@ export function LeadOverviewTab({ lead }: LeadOverviewTabProps) {
       
       {/* Insurance Information Card */}
       <Card className="shadow-sm card">
-        <CardHeader className="pb-3 pt-4 px-4 sm:px-6">
+        <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-6">
           <CardTitle className="text-md sm:text-lg">Insurance Details</CardTitle>
+          {onEditRequest && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7" onClick={() => onEditRequest('insurance')}>
+              <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+              <span className="sr-only">Edit Insurance Details</span>
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-3 px-4 pb-4 sm:px-6 sm:pb-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-2">
@@ -124,14 +134,28 @@ export function LeadOverviewTab({ lead }: LeadOverviewTabProps) {
               <p className="text-xs sm:text-sm font-medium text-muted-foreground">Deductible</p>
               <p className="text-xs sm:text-sm">{lead.insuranceDeductible || "N/A"}</p>
             </div>
+            <div className="space-y-0.5">
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Damage Type</p>
+              <p className="text-xs sm:text-sm">{lead.damageType || "N/A"}</p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Claim Number</p>
+              <p className="text-xs sm:text-sm">{lead.claimNumber || "N/A"}</p>
+            </div>
           </div>
         </CardContent>
       </Card>
       
       {/* Adjuster Information Card */}
       <Card className="shadow-sm card">
-        <CardHeader className="pb-3 pt-4 px-4 sm:px-6">
+        <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-6">
           <CardTitle className="text-md sm:text-lg">Adjuster Details</CardTitle>
+          {onEditRequest && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7" onClick={() => onEditRequest('adjuster')}>
+              <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+              <span className="sr-only">Edit Adjuster Details</span>
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-3 px-4 pb-4 sm:px-6 sm:pb-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-2">

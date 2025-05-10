@@ -398,6 +398,13 @@ export default function MapPage() {
 
   console.log("MapPage: Passing markers to MapboxMap:", markers); // Log markers prop
 
+  // THIS IS AN INFERRED LOCATION FOR THE MODAL RENDERING
+  // Ensure this console.log is placed immediately before <SimpleMapCardModal /> is rendered
+  if (isModalOpen && selectedModalData) {
+    console.log("[MapPage] Rendering SimpleMapCardModal. selectedModalData:", JSON.stringify(selectedModalData));
+    console.log("[MapPage] selectedModalData.leadId being passed:", selectedModalData.leadId);
+  }
+
   return (
     <MapProvider>
       <div className="relative h-screen w-screen overflow-hidden">
@@ -480,17 +487,7 @@ export default function MapPage() {
               setSelectedModalData(null)
             }}
             address={selectedModalData.address || "Loading address..."}
-            streetViewUrl={selectedModalData.streetViewUrl}
-            currentStatus={selectedModalData.currentStatus === "New" || selectedModalData.currentStatus === "Search" ? undefined : selectedModalData.currentStatus}
-            availableStatuses={[
-              "No Answer",
-              "Not Interested",
-              "Follow up",
-              "Inspected",
-              "In Contract",
-            ]}
-            onStatusChange={handleStatusChange}
-            leadId={selectedModalData.leadId}
+            initialLeadId={selectedModalData.leadId}
           />
         )}
       </div>

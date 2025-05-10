@@ -108,15 +108,36 @@ export class GoogleCalendarService {
 
   private appointmentToGoogleEvent(appointment: CalendarAppointment) {
     const startDateTime = appointment.date ? new Date(appointment.date) : new Date();
-    const [startHours, startMinutes] = appointment.startTime.split(':').map(Number);
-    startDateTime.setHours(startHours, startMinutes);
+    
+    // Default start time to noon if not provided or invalid
+    let startHours = 12, startMinutes = 0;
+    if (typeof appointment.startTime === 'string' && appointment.startTime.includes(':')) {
+      const parts = appointment.startTime.split(':').map(Number);
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        startHours = parts[0];
+        startMinutes = parts[1];
+      }
+    }
+    startDateTime.setHours(startHours, startMinutes, 0, 0); // Added seconds and milliseconds reset
 
     const endDateTime = new Date(startDateTime);
-    if (appointment.endTime) {
-      const [endHours, endMinutes] = appointment.endTime.split(':').map(Number);
-      endDateTime.setHours(endHours, endMinutes);
+    if (typeof appointment.endTime === 'string' && appointment.endTime.includes(':')) {
+      const parts = appointment.endTime.split(':').map(Number);
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        endDateTime.setHours(parts[0], parts[1], 0, 0); // Added seconds and milliseconds reset
+      } else {
+        // If endTime is invalid, default to one hour after startTime
+        endDateTime.setHours(startDateTime.getHours() + 1, startDateTime.getMinutes(), 0, 0);
+      }
     } else {
-      endDateTime.setHours(startDateTime.getHours() + 1);
+      // If endTime is not provided, default to one hour after startTime
+      endDateTime.setHours(startDateTime.getHours() + 1, startDateTime.getMinutes(), 0, 0);
+    }
+
+    // Ensure endDateTime is after startDateTime
+    if (endDateTime <= startDateTime) {
+        endDateTime.setDate(startDateTime.getDate()); // Reset date part just in case
+        endDateTime.setHours(startDateTime.getHours() + 1, startDateTime.getMinutes(), 0, 0);
     }
 
     let colorIdValue: string | undefined = undefined;

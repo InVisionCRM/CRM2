@@ -253,6 +253,7 @@ interface InsuranceFormProps {
   leadId: string
   initialData?: Partial<InsuranceFormValues>
   onSuccess?: () => void
+  onCancel?: () => void
   isReadOnly?: boolean
 }
 
@@ -260,6 +261,7 @@ export function InsuranceForm({
   leadId,
   initialData = {},
   onSuccess,
+  onCancel,
   isReadOnly = false
 }: InsuranceFormProps) {
   const [isLoading, setIsLoading] = useState(false)
@@ -557,7 +559,20 @@ export function InsuranceForm({
   )
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4 w-full">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full relative p-1">
+      {onCancel && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onCancel}
+          className="absolute top-0 right-0 text-white hover:text-gray-300 h-8 w-8 mt-1 mr-1"
+        >
+          <X className="h-5 w-5" />
+          <span className="sr-only">Close</span>
+        </Button>
+      )}
+
       <style jsx global>{`
         input[type="date"]::-webkit-calendar-picker-indicator {
           transform: scale(1.5);

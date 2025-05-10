@@ -7,7 +7,7 @@ import * as z from "zod"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Loader2, Trash2 } from "lucide-react"
+import { Loader2, Trash2, X } from "lucide-react"
 import debounce from 'lodash.debounce'; // Import debounce
 
 // Form schema based on Prisma Lead model fields
@@ -26,6 +26,7 @@ interface ContactFormProps {
   leadId: string
   initialData?: Partial<ContactFormValues>
   onSuccess?: (leadId: string) => void
+  onCancel?: () => void
   isReadOnly?: boolean
 }
 
@@ -33,6 +34,7 @@ export function ContactForm({
   leadId,
   initialData = {},
   onSuccess,
+  onCancel,
   isReadOnly = false
 }: ContactFormProps) {
   const [isLoading, setIsLoading] = useState(false)
@@ -170,7 +172,7 @@ export function ContactForm({
       sessionStorage.removeItem(storageKey); // Clear draft on successful save
       setIsDirty(false); // Reset dirty state
       reset(data); // Update form state to reflect saved data
-      onSuccess?.(result.leadId || leadId);
+      onSuccess?.(result.lead?.id || leadId);
     } catch (err) {
       console.error("Error saving contact:", err);
       setError(err instanceof Error ? err.message : "An unexpected error occurred");
@@ -191,12 +193,12 @@ export function ContactForm({
 
   const emailDomainButtonStyle = {
     backgroundColor: "#000000",
-    color: "#84cc16", // lime-600
+    color: "#ffffff", // lime-600
     border: "none",
     height: "100%",
     padding: "0 10px",
     fontWeight: "bold",
-    fontSize: "0.9rem",
+    fontSize: "1.6rem",
     cursor: "pointer",
     display: "inline-flex",
     alignItems: "center",
@@ -204,7 +206,19 @@ export function ContactForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full relative p-1">
+      {onCancel && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onCancel}
+          className="absolute top-0 right-0 text-white hover:text-gray-300 h-8 w-8 mt-1 mr-1"
+        >
+          <X className="h-5 w-5" />
+          <span className="sr-only">Close</span>
+        </Button>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label htmlFor="firstName" className="text-white text-opacity-90">

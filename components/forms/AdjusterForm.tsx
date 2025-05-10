@@ -681,6 +681,7 @@ interface AdjusterFormProps {
   leadId: string
   initialData?: Partial<AdjusterFormValues>
   onSuccess?: () => void
+  onCancel?: () => void
   isReadOnly?: boolean
 }
 
@@ -726,6 +727,7 @@ export function AdjusterForm({
   leadId,
   initialData = {},
   onSuccess,
+  onCancel,
   isReadOnly = false
 }: AdjusterFormProps) {
   const [isLoading, setIsLoading] = useState(false)
@@ -985,7 +987,20 @@ export function AdjusterForm({
   };
 
   return (
-    <div className="space-y-3 sm:space-y-4 w-full">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 w-full relative p-1">
+      {onCancel && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onCancel}
+          className="absolute top-0 right-0 text-white hover:text-gray-300 h-8 w-8 mt-1 mr-1 z-10"
+        >
+          <X className="h-5 w-5" />
+          <span className="sr-only">Close</span>
+        </Button>
+      )}
+
       <div className="space-y-1 sm:space-y-2">
         <Label htmlFor="insuranceAdjusterName" className="text-white text-opacity-90 text-sm sm:text-base">
           Adjuster Name
@@ -1171,6 +1186,6 @@ export function AdjusterForm({
           onSwitchToDay={handleSwitchToDay}
         />
       </FullscreenCalendarModal>
-    </div>
+    </form>
   );
 } 
