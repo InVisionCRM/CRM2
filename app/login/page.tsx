@@ -13,6 +13,19 @@ import { Label } from "@/components/ui/label"
 import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
+import { Metadata, Viewport } from 'next'
+import LoginForm from '@/components/login-form'
+
+export const metadata: Metadata = {
+  title: 'Login - CRM',
+  description: 'Login to your CRM account',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 
 export default function LoginPage() {
   const router = useRouter()

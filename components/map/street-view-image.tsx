@@ -11,6 +11,7 @@ interface StreetViewImageProps {
   status?: string
   onStatusChange?: (status: string) => void
   showStatus?: boolean
+  heading?: number
 }
 
 const statusOptions = [
@@ -27,7 +28,8 @@ export function StreetViewImage({
   className,
   status,
   onStatusChange,
-  showStatus = false
+  showStatus = false,
+  heading = 0
 }: StreetViewImageProps) {
   const [imageUrl, setImageUrl] = useState<string>("")
   const [isLoading, setIsLoading] = useState(true)
@@ -45,11 +47,11 @@ export function StreetViewImage({
         console.log('Street View position:', { lat, lng }) // Debug log
         
         const size = "600x600" // Square size for better scaling
-        const heading = "0" // 0 degrees (facing north)
+        const finalHeading = heading.toString() // Use the prop
         const pitch = "0" // Level view
-        const fov = "90" // Field of view
+        const fov = "160" // Field of view
         
-        const url = `https://maps.googleapis.com/maps/api/streetview?size=${size}&location=${lat},${lng}&heading=${heading}&pitch=${pitch}&fov=${fov}&key=${apiKey}`
+        const url = `https://maps.googleapis.com/maps/api/streetview?size=${size}&location=${lat},${lng}&heading=${finalHeading}&pitch=${pitch}&fov=${fov}&key=${apiKey}`
         console.log('Street View URL:', url) // Debug log
         
         setImageUrl(url)
@@ -64,7 +66,7 @@ export function StreetViewImage({
     if (position && position[0] !== 0 && position[1] !== 0) {
       fetchStreetView()
     }
-  }, [position])
+  }, [position, heading])
 
   if (error) {
     return (
