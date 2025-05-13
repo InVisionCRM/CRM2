@@ -1,6 +1,6 @@
 'use client';
 
-import React, { ReactNode, useState, useEffect, TouchEvent } from 'react';
+import React, { ReactNode, useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import AppSidebar from '@/components/AppSidebar';
 import { motion } from "framer-motion";
@@ -18,14 +18,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
   const pathname = usePathname();
   const isMapPage = pathname === "/map";
   const [isMobile, setIsMobile] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  
-  // Touch gesture tracking state
-  const [touchStartX, setTouchStartX] = useState(0);
-  const [touchEndX, setTouchEndX] = useState(0);
-  
-  // Swipe threshold (distance in pixels)
-  const swipeThreshold = 50;
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default to closed
 
   // Effect for determining if the view is mobile
   useEffect(() => {
@@ -33,8 +26,11 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
 
     const checkAndUpdateMobileState = () => {
       const currentWidth = window.innerWidth;
-      // console.log(`Path: ${pathname}, Width: ${currentWidth}, New isMobile: ${currentWidth < 768}`);
       setIsMobile(currentWidth < 768);
+      // Auto-close sidebar when switching to mobile
+      if (currentWidth < 768) {
+        setIsSidebarOpen(false);
+      }
     };
 
     const debouncedCheck = () => {
@@ -67,48 +63,72 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
     return () => window.removeEventListener('resize', handleResizeForSidebar);
   }, [isSidebarOpen]);
 
-  // Effect to handle global swipe gestures on mobile
+  // Touch handling for mobile swipe
   useEffect(() => {
-    if (!isMobile || isMapPage) return;
-
-    const handleTouchStart = (e: TouchEvent | any) => {
-      setTouchStartX(e.touches[0].clientX);
-      setTouchEndX(e.touches[0].clientX);
+    if (!isMobile) return;
+    
+    let touchStartX = 0;
+    let touchEndX = 0;
+    const swipeThreshold = 30; // Lower threshold for easier swiping
+    
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX = e.touches[0].clientX;
+      touchEndX = touchStartX;
     };
-
-    const handleTouchMove = (e: TouchEvent | any) => {
-      setTouchEndX(e.touches[0].clientX);
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      touchEndX = e.touches[0].clientX;
+      
+      // Calculate current swipe distance
+      const currentSwipe = touchEndX - touchStartX;
+      
+      // If significant right swipe detected and near the left edge of screen
+      if (currentSwipe > 50 && touchStartX < 30 && !isSidebarOpen) {
+        setIsSidebarOpen(true);
+      }
     };
-
+    
     const handleTouchEnd = () => {
       const swipeDistance = touchEndX - touchStartX;
       
-      // Right swipe to open sidebar
-      if (swipeDistance > swipeThreshold && !isSidebarOpen) {
+      // Right swipe to open - from left edge or general swipe
+      if ((swipeDistance > swipeThreshold && touchStartX < 50) || 
+          (swipeDistance > 100)) {
         setIsSidebarOpen(true);
       } 
-      // Left swipe to close sidebar
+      // Left swipe to close
       else if (swipeDistance < -swipeThreshold && isSidebarOpen) {
         setIsSidebarOpen(false);
       }
-      
-      // Reset touch coordinates
-      setTouchStartX(0);
-      setTouchEndX(0);
     };
-
-    // Add event listeners
+    
+    // Add a toggle button for easier sidebar access
+    const toggleButton = document.createElement('button');
+    toggleButton.innerHTML = '☰';
+    toggleButton.style.position = 'fixed';
+    toggleButton.style.top = '10px';
+    toggleButton.style.left = '10px';
+    toggleButton.style.zIndex = '50';
+    toggleButton.style.background = 'rgba(0,0,0,0.3)';
+    toggleButton.style.color = '#59ff00';
+    toggleButton.style.border = 'none';
+    toggleButton.style.borderRadius = '5px';
+    toggleButton.style.padding = '8px 12px';
+    toggleButton.style.fontSize = '20px';
+    toggleButton.onclick = () => setIsSidebarOpen(prev => !prev);
+    document.body.appendChild(toggleButton);
+    
     document.addEventListener('touchstart', handleTouchStart);
     document.addEventListener('touchmove', handleTouchMove);
     document.addEventListener('touchend', handleTouchEnd);
-
-    // Clean up event listeners
+    
     return () => {
       document.removeEventListener('touchstart', handleTouchStart);
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
+      document.body.removeChild(toggleButton);
     };
-  }, [isMobile, isSidebarOpen, touchStartX, touchEndX, isMapPage]);
+  }, [isMobile, isSidebarOpen]);
 
   return (
     <div className="flex h-screen">
@@ -123,8 +143,9 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
           {/* Backdrop when sidebar is open */}
           <motion.div
             className="fixed inset-0 bg-black/20 z-30"
-            initial={{ opacity: 1 }}
+            initial={{ opacity: 0 }}
             animate={{ opacity: isSidebarOpen ? 1 : 0 }}
+            transition={{ duration: 0.2 }}
             onClick={() => setIsSidebarOpen(false)}
             style={{ pointerEvents: isSidebarOpen ? 'auto' : 'none' }}
           />
@@ -132,15 +153,15 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
           {/* Mobile sidebar */}
           <motion.div
             className="fixed inset-y-0 left-0 z-40 shadow-lg"
-            initial={{ x: 10 }}
+            initial={{ x: "-100%" }}
             animate={{ x: isSidebarOpen ? 0 : "-100%" }}
             transition={{ 
-              type: "spring", 
-              stiffness: 100, 
-              damping: 40 
+              type: "tween", 
+              ease: "easeOut",
+              duration: 0.25
             }}
             style={{ 
-              width: '100px'
+              width: '80px'  // Match collapsed width from AppSidebar
             }}
           >
             <AppSidebar initialCollapsed={true} />
