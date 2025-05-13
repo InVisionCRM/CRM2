@@ -1,9 +1,9 @@
 'use client';
 
-import React, { ReactNode, useState, useEffect } from 'react';
+import React, { ReactNode, useState, useEffect, TouchEvent } from 'react';
 import { usePathname } from 'next/navigation';
 import AppSidebar from '@/components/AppSidebar';
-import { motion, useDragControls, PanInfo } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface LayoutClientWrapperProps {
   children: ReactNode;
@@ -19,7 +19,13 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
   const isMapPage = pathname === "/map";
   const [isMobile, setIsMobile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const dragControls = useDragControls();
+  
+  // Touch gesture tracking state
+  const [touchStartX, setTouchStartX] = useState(0);
+  const [touchEndX, setTouchEndX] = useState(0);
+  
+  // Swipe threshold (distance in pixels)
+  const swipeThreshold = 50;
 
   // Effect for determining if the view is mobile
   useEffect(() => {
@@ -61,25 +67,57 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
     return () => window.removeEventListener('resize', handleResizeForSidebar);
   }, [isSidebarOpen]);
 
-  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const { velocity } = info;
-    
-    // Simple left/right swipe detection
-    if (velocity.x < -100) {
-      setIsSidebarOpen(false); // Close on left swipe
-    } else if (velocity.x > 100) {
-      setIsSidebarOpen(true);  // Open on right swipe
-    }
-  };
+  // Effect to handle global swipe gestures on mobile
+  useEffect(() => {
+    if (!isMobile || isMapPage) return;
+
+    const handleTouchStart = (e: TouchEvent | any) => {
+      setTouchStartX(e.touches[0].clientX);
+      setTouchEndX(e.touches[0].clientX);
+    };
+
+    const handleTouchMove = (e: TouchEvent | any) => {
+      setTouchEndX(e.touches[0].clientX);
+    };
+
+    const handleTouchEnd = () => {
+      const swipeDistance = touchEndX - touchStartX;
+      
+      // Right swipe to open sidebar
+      if (swipeDistance > swipeThreshold && !isSidebarOpen) {
+        setIsSidebarOpen(true);
+      } 
+      // Left swipe to close sidebar
+      else if (swipeDistance < -swipeThreshold && isSidebarOpen) {
+        setIsSidebarOpen(false);
+      }
+      
+      // Reset touch coordinates
+      setTouchStartX(0);
+      setTouchEndX(0);
+    };
+
+    // Add event listeners
+    document.addEventListener('touchstart', handleTouchStart);
+    document.addEventListener('touchmove', handleTouchMove);
+    document.addEventListener('touchend', handleTouchEnd);
+
+    // Clean up event listeners
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isMobile, isSidebarOpen, touchStartX, touchEndX, isMapPage]);
 
   return (
     <div className="flex h-screen">
       {/* Render AppSidebar for non-map pages based on screen size */}
       {!isMapPage && !isMobile && (
-        <AppSidebar initialCollapsed={false} />
+        <AppSidebar initialCollapsed={true} />
       )}
       
-      {/* Mobile sidebar with swipe controls */}
+      {/* Mobile sidebar */}
       {!isMapPage && isMobile && (
         <>
           {/* Backdrop when sidebar is open */}
@@ -93,25 +131,19 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
           
           {/* Mobile sidebar */}
           <motion.div
-            className="fixed inset-y-0 left-0 z-40 shadow-lg touch-pan-y"
-            initial={{ x: 0 }}
+            className="fixed inset-y-0 left-0 z-40 shadow-lg"
+            initial={{ x: 10 }}
             animate={{ x: isSidebarOpen ? 0 : "-100%" }}
             transition={{ 
               type: "spring", 
-              stiffness: 400, 
+              stiffness: 100, 
               damping: 40 
             }}
-            drag="x"
-            dragConstraints={{ left: -300, right: 0 }}
-            dragElastic={0.1}
-            dragMomentum={false}
-            onDragEnd={handleDragEnd}
             style={{ 
-              width: '300px',
-              touchAction: "pan-y"
+              width: '100px'
             }}
           >
-            <AppSidebar initialCollapsed={false} />
+            <AppSidebar initialCollapsed={true} />
           </motion.div>
         </>
       )}
