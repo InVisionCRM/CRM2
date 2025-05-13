@@ -7,9 +7,6 @@ import { ContactForm } from "@/components/forms/ContactForm"
 import { InsuranceForm } from "@/components/forms/InsuranceForm"
 import { AdjusterForm } from "@/components/forms/AdjusterForm"
 import { LeadOverviewTab } from "./tabs/LeadOverviewTab"
-import { LeadNotesTab } from "./tabs/LeadNotesTab"
-import { LeadFilesTab } from "./tabs/LeadFilesTab"
-import { LeadContractsTab } from "./tabs/LeadContractsTab"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useSWRConfig } from "swr"
@@ -25,9 +22,6 @@ type EditableSection = 'contact' | 'insurance' | 'adjuster' | null;
 
 const TABS_CONFIG = [
   { value: "overview", label: "Overview", Component: LeadOverviewTab },
-  { value: "notes", label: "Notes", Component: LeadNotesTab },
-  { value: "files", label: "Files", Component: LeadFilesTab },
-  { value: "contracts", label: "Contract", Component: LeadContractsTab },
 ];
 
 export function LeadDetailTabs({ lead, activeTab, onTabChange }: LeadDetailTabsProps) {
@@ -129,7 +123,7 @@ export function LeadDetailTabs({ lead, activeTab, onTabChange }: LeadDetailTabsP
           </Select>
         </div>
       ) : (
-        <TabsList className="grid w-full grid-cols-4 mb-4 bg-muted/50 p-1 rounded-lg">
+        <TabsList className="grid w-full grid-cols-1 mb-4 bg-muted/50 p-1 rounded-lg">
           {TABS_CONFIG.map((tab) => (
             <TabsTrigger 
               key={tab.value} 

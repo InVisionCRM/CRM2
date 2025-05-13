@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useSearchParams } from "next/navigation" // Use next/navigation for App Router
 import { LeadStatus } from "@prisma/client"
-import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon } from "lucide-react" // Updated icons
+import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive } from "lucide-react" // Updated icons
 import { LeadStatusBar } from "@/components/leads/LeadStatusBar" // Corrected path
 import { LeadDetailTabs } from "@/components/leads/LeadDetailTabs" // Corrected path
 import { ActivityFeed } from "@/components/leads/ActivityFeed" // Corrected path
@@ -17,6 +17,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import ReactConfetti from 'react-confetti';
 import { useWindowSize } from 'react-use'; // For confetti dimensions
 import { formatStatusLabel } from "@/lib/utils"; // Import formatStatusLabel
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { LeadFiles } from "@/components/leads/lead-files";
+import { LeadContractsTab } from "@/components/leads/tabs/LeadContractsTab";
 
 // Quick Actions Button component
 interface QuickActionButtonProps {
@@ -151,6 +154,14 @@ export default function LeadDetailPage() {
     ? lead.address || "Address not available" // Use the single address field, provide fallback for null
     : "Loading address...";
 
+  const [filesDialogOpen, setFilesDialogOpen] = useState(false);
+  const [contractsDialogOpen, setContractsDialogOpen] = useState(false);
+
+  const handleOpenFilesDialog = () => setFilesDialogOpen(true);
+  const handleCloseFilesDialog = () => setFilesDialogOpen(false);
+  const handleOpenContractsDialog = () => setContractsDialogOpen(true);
+  const handleCloseContractsDialog = () => setContractsDialogOpen(false);
+
   if (isLeadLoading && !lead) { // Show skeleton only on initial load
     return <LeadDetailSkeleton />
   }
@@ -197,7 +208,7 @@ export default function LeadDetailPage() {
             <ReactConfetti width={width} height={height} numberOfPieces={200} recycle={false} />
           </div>
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" onClick={() => setShowSuccessMessage(false)}></div>
-          <Card className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-11/12 max-w-md p-6 shadow-2xl bg-card">
+          <Card className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-11/12 max-w-md p-6 shadow-2xl bg-card animate-in fade-in duration-300 scale-in-center">
             <CardHeader className="p-0 mb-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-2xl text-green-600 dark:text-green-500">
@@ -210,7 +221,7 @@ export default function LeadDetailPage() {
             </CardHeader>
             <CardContent className="p-0 text-center">
               <p className="text-lg mb-1">Lead status successfully updated to</p>
-              <p className="text-xl font-semibold text-primary mb-4">{lead.status ? formatStatusLabel(lead.status) : "the new status"}!</p>
+              <p className="text-xl font-semibold text-black mb-4">{lead.status ? formatStatusLabel(lead.status) : "the new status"}!</p>
               <Button onClick={() => setShowSuccessMessage(false)} className="w-full sm:w-auto">Close</Button>
             </CardContent>
           </Card>
@@ -230,7 +241,7 @@ export default function LeadDetailPage() {
         loadingStatus={statusBeingUpdated}
       />
       
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4">
         <QuickActionButton 
           href={leadPhone ? `tel:${leadPhone}` : undefined}
           icon={<Phone className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#59FF00' }} />}
@@ -254,6 +265,16 @@ export default function LeadDetailPage() {
           label="Map"
           disabled={!leadAddress}
         />
+        <QuickActionButton 
+          onClick={handleOpenFilesDialog}
+          icon={<FileText className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#59FF00' }} />}
+          label="Files"
+        />
+        <QuickActionButton 
+          onClick={handleOpenContractsDialog}
+          icon={<FileArchive className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#59FF00' }} />}
+          label="Contracts"
+        />
       </div>
       
       <LeadDetailTabs 
@@ -271,6 +292,26 @@ export default function LeadDetailPage() {
           <ActivityFeed leadId={lead.id} key={refreshActivities} />
         </div>
       </div>
+
+      {/* Files Dialog */}
+      <Dialog open={filesDialogOpen} onOpenChange={setFilesDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Files</DialogTitle>
+          </DialogHeader>
+          <LeadFiles leadId={lead.id} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Contracts Dialog */}
+      <Dialog open={contractsDialogOpen} onOpenChange={setContractsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Contracts</DialogTitle>
+          </DialogHeader>
+          <LeadContractsTab leadId={lead.id} />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useLeadFiles } from "@/hooks/use-lead-files"
 import { useToast } from "@/components/ui/use-toast"
-import { Upload, Eye, Camera, Trash2, Share2, XIcon, Loader2, FileIcon as LucideFileIcon, FolderOpen, FolderPlus } from "lucide-react"
+import { Upload, Eye, Camera, Trash2, Share2, XIcon, Loader2, FileIcon as LucideFileIcon, FolderOpen, FolderPlus, Download } from "lucide-react"
 import ReactConfetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
 import { getLeadDriveFolderIdServerAction, ensureLeadDriveFolderServerAction, fetchDriveFilesServerAction } from "@/app/actions/lead-drive-actions"; // Added fetchDriveFilesServerAction
@@ -44,7 +44,7 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
     refreshFiles, 
     deleteFile, 
     uploadFile,
-    isUploading,
+    isUploading: isUploadingFiles,
   } = useLeadFiles(leadId);
   
   const { toast } = useToast();
@@ -62,6 +62,10 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
   const [driveFiles, setDriveFiles] = useState<DriveFile[]>([]);
   const [isLoadingDriveFiles, setIsLoadingDriveFiles] = useState(false);
   const [driveFilesError, setDriveFilesError] = useState<Error | null>(null);
+
+  // Add to existing state declarations at the top of the component
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
 
   // Combined files for unified display
   const combinedFiles = React.useMemo(() => {
@@ -190,12 +194,24 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
   
   const handleActualUpload = async () => {
     if (filesToUpload.length === 0) return;
+    
+    // Set uploading state and initialize progress
+    setIsUploading(true);
+    const initialProgress = {};
+    filesToUpload.forEach(file => {
+      initialProgress[file.name] = 0;
+    });
+    setUploadProgress(initialProgress);
+    
     let allSucceeded = true;
     
     if (driveFolderId) {
       // Upload to Google Drive folder if it exists
       for (const file of filesToUpload) {
         try {
+          // Update progress to indicate starting this file
+          setUploadProgress(prev => ({ ...prev, [file.name]: 10 }));
+          
           // Call a server action to upload to Drive
           const response = await fetch('/api/upload-to-drive', {
             method: 'POST',
@@ -210,6 +226,9 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
             }),
           });
           
+          // Update progress
+          setUploadProgress(prev => ({ ...prev, [file.name]: 30 }));
+          
           // Create a form data object
           const formData = new FormData();
           formData.append('file', file);
@@ -220,6 +239,9 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
             method: 'POST',
             body: formData,
           });
+          
+          // Update progress
+          setUploadProgress(prev => ({ ...prev, [file.name]: 70 }));
           
           if (!uploadResponse.ok) {
             const error = await uploadResponse.json();
@@ -233,6 +255,10 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
               setDriveFiles(driveFilesResult.files);
             }
           }
+          
+          // Set progress to 100% for this file
+          setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
+          
         } catch (error) {
           allSucceeded = false;
           console.error('Error uploading to Drive:', error);
@@ -241,11 +267,17 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
             description: error instanceof Error ? error.message : "An unexpected error occurred.",
             variant: "destructive",
           });
+          
+          // Mark failed upload
+          setUploadProgress(prev => ({ ...prev, [file.name]: -1 }));
         }
       }
     } else {
       // Fall back to local storage if no Drive folder exists
       for (const file of filesToUpload) {
+        // Update progress to indicate starting this file
+        setUploadProgress(prev => ({ ...prev, [file.name]: 30 }));
+        
         const result = await uploadFile(file, file.name);
         if (!result.success) {
           allSucceeded = false;
@@ -254,9 +286,16 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
             description: result.message || "An unexpected error occurred.",
             variant: "destructive",
           });
+          setUploadProgress(prev => ({ ...prev, [file.name]: -1 }));
+        } else {
+          setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
         }
       }
     }
+    
+    // Reset uploading states
+    setIsUploading(false);
+    setUploadProgress({});
     
     if (allSucceeded && filesToUpload.length > 0) {
       toast({
@@ -396,6 +435,14 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
                       <Button 
                         variant="outline" 
                         size="sm" 
+                        onClick={() => handleFileDownload(file)}
+                        title="Download File"
+                      >
+                        <Download className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Download</span>
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
                         onClick={async () => {
                           const shareUrl = getFileUrl(file);
                           if (navigator.share) {
@@ -463,60 +510,102 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
         </DialogHeader>
         {showSuccessConfetti && <ReactConfetti width={width} height={height} numberOfPieces={100} recycle={false} className="!fixed !z-[100]" />}
         <div className="flex-1 space-y-4 py-4 overflow-y-auto pr-1">
-          <div 
-            className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted-foreground/30 rounded-lg cursor-pointer hover:border-primary transition-colors min-h-[150px]"
-            onClick={() => fileInputRef.current?.click()}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click(); }}
-          >
-            <label htmlFor="lead-file-upload-input-modal" className="sr-only">Select files to upload</label>
-            <Upload className="h-10 w-10 text-muted-foreground mb-2" />
-            <p className="text-muted-foreground">Drag & drop files here, or click to select</p>
-            <p className="text-xs text-muted-foreground/80 mt-1">Max file size: 10MB (Example)</p>
-            <input type="file" id="lead-file-upload-input-modal" ref={fileInputRef} onChange={handleFileSelectForUpload} multiple className="hidden" aria-hidden="true" />
-          </div>
-
-          {filesToUpload.length > 0 && (
-            <ScrollArea className="max-h-[200px] pr-2">
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Selected files ({filesToUpload.length}):</p>
-                {filesToUpload.map((file, index) => (
-                  <div key={`${file.name}-${index}`} className="flex items-center justify-between p-2 bg-muted/30 rounded-md border text-sm">
-                    <div className="flex-1 min-w-0">
-                        <label htmlFor={`rename-file-input-${index}`} className="sr-only">Rename file: {file.name}</label>
-                        <Input 
-                            type="text" 
-                            id={`rename-file-input-${index}`}
-                            defaultValue={file.name} 
-                            aria-label={`Rename file: ${file.name}`} 
-                            title={`Rename file: ${file.name}`}
-                            onBlur={(e) => {
-                                const newName = e.target.value.trim();
-                                if (newName && newName !== file.name) {
-                                    const renamedFile = new File([file], newName, { type: file.type, lastModified: file.lastModified });
-                                    setFilesToUpload(prev => prev.map((f, i) => i === index ? renamedFile : f));
-                                }
-                            }}
-                            className="h-8 text-xs p-1.5"
-                        />
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setFilesToUpload(prev => prev.filter((_, i) => i !== index))}>
-                        <XIcon className="h-3.5 w-3.5" />
-                        <span className="sr-only">Remove file</span>
-                    </Button>
-                  </div>
-                ))}
+          {!isUploading ? (
+            <>
+              <div 
+                className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-muted-foreground/30 rounded-lg cursor-pointer hover:border-primary transition-colors min-h-[150px]"
+                onClick={() => fileInputRef.current?.click()}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click(); }}
+              >
+                <label htmlFor="lead-file-upload-input-modal" className="sr-only">Select files to upload</label>
+                <Upload className="h-10 w-10 text-muted-foreground mb-2" />
+                <p className="text-muted-foreground">Drag & drop files here, or click to select</p>
+                <p className="text-xs text-muted-foreground/80 mt-1">Max file size: 10MB</p>
+                <input type="file" id="lead-file-upload-input-modal" ref={fileInputRef} onChange={handleFileSelectForUpload} multiple className="hidden" aria-hidden="true" />
               </div>
-            </ScrollArea>
+
+              {filesToUpload.length > 0 && (
+                <ScrollArea className="max-h-[200px] pr-2">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Selected files ({filesToUpload.length}):</p>
+                    {filesToUpload.map((file, index) => (
+                      <div key={`${file.name}-${index}`} className="flex items-center justify-between p-2 bg-muted/30 rounded-md border text-sm">
+                        <div className="flex-1 min-w-0">
+                            <label htmlFor={`rename-file-input-${index}`} className="sr-only">Rename file: {file.name}</label>
+                            <Input 
+                                type="text" 
+                                id={`rename-file-input-${index}`}
+                                defaultValue={file.name} 
+                                aria-label={`Rename file: ${file.name}`} 
+                                title={`Rename file: ${file.name}`}
+                                onBlur={(e) => {
+                                    const newName = e.target.value.trim();
+                                    if (newName && newName !== file.name) {
+                                        const renamedFile = new File([file], newName, { type: file.type, lastModified: file.lastModified });
+                                        setFilesToUpload(prev => prev.map((f, i) => i === index ? renamedFile : f));
+                                    }
+                                }}
+                                className="h-8 text-xs p-1.5"
+                            />
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setFilesToUpload(prev => prev.filter((_, i) => i !== index))}>
+                            <XIcon className="h-3.5 w-3.5" />
+                            <span className="sr-only">Remove file</span>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </>
+          ) : (
+            <div className="py-4">
+              <div className="mb-4 text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-black mx-auto mb-2" />
+                <p className="font-medium text-foreground">Uploading files...</p>
+              </div>
+              
+              <div className="space-y-3 mt-6">
+                {filesToUpload.map((file, index) => {
+                  const progress = uploadProgress[file.name] || 0;
+                  const isComplete = progress === 100;
+                  const isFailed = progress < 0;
+                  
+                  return (
+                    <div key={`${file.name}-${index}-progress`} className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="font-medium truncate max-w-[70%]">{file.name}</span>
+                        <span className="text-muted-foreground">
+                          {isFailed ? 'Failed' : isComplete ? 'Complete' : `${progress}%`}
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full ${isFailed ? 'bg-destructive' : isComplete ? 'bg-green-500' : 'bg-primary'}`}
+                          style={{ width: `${isFailed ? 100 : progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </div>
         <DialogFooter className="mt-auto pt-4">
           <DialogClose asChild>
             <Button variant="outline" onClick={closeModal}>Cancel</Button>
           </DialogClose>
-          <Button onClick={handleActualUpload} disabled={isUploading || filesToUpload.length === 0}>
-            {isUploading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin"/> Uploading...</> : `Upload ${filesToUpload.length} File(s)`}
+          <Button 
+            onClick={handleActualUpload} 
+            disabled={isUploading || filesToUpload.length === 0}
+          >
+            {isUploading ? 
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin"/> Uploading...</> : 
+              `Upload ${filesToUpload.length} File(s)`
+            }
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -541,6 +630,51 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
   // Helper function to determine if we're loading or have an error
   const isLoading = isLoadingFiles || isLoadingDriveFiles;
   const hasError = filesError || driveFilesError;
+
+  // Add this helper function to download files
+  const handleFileDownload = async (file: CombinedFile) => {
+    try {
+      let url: string;
+      let filename = file.name;
+
+      if (file.source === 'local') {
+        // For local files, we can use the URL directly
+        url = file.url;
+      } else {
+        // For Drive files, we might need a different approach
+        url = file.webViewLink;
+        
+        // Create a link to download the Drive file
+        // You may need to handle authentication for private files
+        if (file.webViewLink.includes('/view')) {
+          // Convert view link to an export/download link for Google Docs
+          // This is a simple approach; you might need a server action for better handling
+          url = file.webViewLink.replace('/view', '/export?format=pdf');
+        }
+      }
+
+      // Create a temporary anchor element to trigger the download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.target = '_blank'; // Open in a new tab for Drive files
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "Download Started",
+        description: `${filename} download initiated.`,
+      });
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download the file. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="p-4 bg-background rounded-lg shadow">
@@ -616,15 +750,24 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
                   </div>
                 )}
                 
-                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-6 w-6" 
+                    className="h-6 w-6 bg-background/80 backdrop-blur-sm hover:bg-background" 
                     onClick={() => window.open(getFileUrl(file), '_blank')} 
                     title="View File"
                   >
                     <Eye className="h-3 w-3" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6 bg-background/80 backdrop-blur-sm hover:bg-background" 
+                    onClick={() => handleFileDownload(file)}
+                    title="Download File"
+                  >
+                    <Download className="h-3 w-3" />
                   </Button>
                 </div>
               </div>
