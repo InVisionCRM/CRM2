@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-import { LeadStatus } from '@prisma/client'
+import { LeadStatus, ActivityType } from '@prisma/client'
 import crypto from 'crypto'; // Added for UUID generation
 
 // Schema for validation
@@ -17,10 +17,18 @@ const contactUpdateSchema = z.object({
 
 export async function PATCH(
   request: Request,
-  // Tell Next.js this is a Promise you must await
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
+    const id = params.id;
+    const data = await request.json();
+    
+    console.log("Contact update request for lead:", id);
+    console.log("Contact data:", data);
+    
+    // If it's a temporary ID, handle it properly
+    const isTemporaryId = id.startsWith("temp-");
+    
     // 1. Auth check
     const session = await getServerSession(authOptions)
     if (!session) {
@@ -31,7 +39,6 @@ export async function PATCH(
     }
 
     // 2. Extract and validate ID
-    const { id } = await params
     if (!id) {
       return new NextResponse(
         JSON.stringify({ message: 'Lead ID is required' }),
@@ -40,8 +47,7 @@ export async function PATCH(
     }
 
     // 3. Parse & validate body
-    const body = await request.json()
-    const result = contactUpdateSchema.safeParse(body)
+    const result = contactUpdateSchema.safeParse(data)
     if (!result.success) {
       return new NextResponse(
         JSON.stringify({
@@ -51,10 +57,9 @@ export async function PATCH(
         { status: 400 }
       )
     }
-    const data = result.data
 
     // 4. Handle new‑lead (temp‑ID) vs existing
-    if (id.startsWith('temp-')) {
+    if (isTemporaryId) {
       // ensure user exists
       const user = await prisma.user.findUnique({ where: { id: session.user.id } })
       if (!user) {
@@ -80,14 +85,13 @@ export async function PATCH(
         }
       })
 
-      await vity.create({
+      await prisma.activity.create({
         data: {
-          type:        'LEAD_CREATED',
+          type:        ActivityType.LEAD_CREATED,
           title:       'Lead created',
           description: `New lead for ${data.firstName} ${data.lastName}`,
           userId:      session.user.id,
           leadId:      permanentLeadId, // Use permanent ID for activity log
-          status:      'COMPLETED'
         }
       })
 
@@ -128,14 +132,13 @@ export async function PATCH(
       }
     })
 
-    await vity.create({
+    await prisma.activity.create({
       data: {
-        type:        'LEAD_UPDATED',
+        type:        ActivityType.LEAD_UPDATED,
         title:       'Contact information updated',
         description: `Updated contact for ${data.firstName} ${data.lastName}`,
         userId:      session.user.id,
         leadId:      id,
-        status:      'COMPLETED'
       }
     })
 
@@ -152,10 +155,11 @@ export async function PATCH(
     })
 
   } catch (error) {
-    console.error('Error updating lead contact information:', error)
-    return new NextResponse(
-      JSON.stringify({ message: 'Internal server error' }),
+    // Improve error logging
+    console.error("Error updating lead contact:", error);
+    return NextResponse.json(
+      { error: "Failed to update lead contact", details: error.message },
       { status: 500 }
-    )
+    );
   }
 }

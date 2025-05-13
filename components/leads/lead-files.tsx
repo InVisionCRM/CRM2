@@ -191,26 +191,84 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
   const handleActualUpload = async () => {
     if (filesToUpload.length === 0) return;
     let allSucceeded = true;
-    for (const file of filesToUpload) {
-      const result = await uploadFile(file, file.name);
-      if (!result.success) {
-        allSucceeded = false;
-        toast({
-          title: `Upload Failed: ${file.name}`,
-          description: result.message || "An unexpected error occurred.",
-          variant: "destructive",
-        });
+    
+    if (driveFolderId) {
+      // Upload to Google Drive folder if it exists
+      for (const file of filesToUpload) {
+        try {
+          // Call a server action to upload to Drive
+          const response = await fetch('/api/upload-to-drive', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              folderId: driveFolderId,
+              fileName: file.name,
+              fileType: file.type,
+              leadId: leadId
+            }),
+          });
+          
+          // Create a form data object
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('folderId', driveFolderId);
+          
+          // Upload the actual file content
+          const uploadResponse = await fetch('/api/upload-drive-file', {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (!uploadResponse.ok) {
+            const error = await uploadResponse.json();
+            throw new Error(error.message || 'Failed to upload file to Drive');
+          }
+          
+          // Refresh Drive files after successful upload
+          if (driveFolderId) {
+            const driveFilesResult = await fetchDriveFilesServerAction(driveFolderId);
+            if (driveFilesResult.success) {
+              setDriveFiles(driveFilesResult.files);
+            }
+          }
+        } catch (error) {
+          allSucceeded = false;
+          console.error('Error uploading to Drive:', error);
+          toast({
+            title: `Upload Failed: ${file.name}`,
+            description: error instanceof Error ? error.message : "An unexpected error occurred.",
+            variant: "destructive",
+          });
+        }
+      }
+    } else {
+      // Fall back to local storage if no Drive folder exists
+      for (const file of filesToUpload) {
+        const result = await uploadFile(file, file.name);
+        if (!result.success) {
+          allSucceeded = false;
+          toast({
+            title: `Upload Failed: ${file.name}`,
+            description: result.message || "An unexpected error occurred.",
+            variant: "destructive",
+          });
+        }
       }
     }
+    
     if (allSucceeded && filesToUpload.length > 0) {
-        toast({
-          title: "Upload Successful",
-          description: `${filesToUpload.length} file(s) uploaded.`,
-        });
-        setShowSuccessConfetti(true);
-        setTimeout(() => setShowSuccessConfetti(false), 4000); 
-        closeModal(); 
+      toast({
+        title: "Upload Successful",
+        description: `${filesToUpload.length} file(s) uploaded to ${driveFolderId ? 'Google Drive' : 'local storage'}.`,
+      });
+      setShowSuccessConfetti(true);
+      setTimeout(() => setShowSuccessConfetti(false), 4000); 
+      closeModal(); 
     }    
+    
+    // Refresh files regardless of storage location
     await refreshFiles(); 
   };
   

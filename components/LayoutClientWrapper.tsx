@@ -16,7 +16,7 @@ interface LayoutClientWrapperProps {
  */
 export default function LayoutClientWrapper({ children }: LayoutClientWrapperProps): React.ReactElement {
   const pathname = usePathname();
-  const isMapPage = pathname === "/map";
+  const isMapPage = pathname.startsWith("/map"); // Change to check if path starts with /map
   const [isMobile, setIsMobile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default to closed
 
@@ -65,7 +65,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
 
   // Touch handling for mobile swipe
   useEffect(() => {
-    if (!isMobile) return;
+    if (!isMobile || isMapPage) return; // Don't add swipe handlers on map page
     
     let touchStartX = 0;
     let touchEndX = 0;
@@ -102,7 +102,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
       }
     };
     
-    // Add a toggle button for easier sidebar access
+    // Add a toggle button for easier sidebar access (not on map page)
     const toggleButton = document.createElement('button');
     toggleButton.innerHTML = '☰';
     toggleButton.style.position = 'fixed';
@@ -128,7 +128,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
       document.removeEventListener('touchend', handleTouchEnd);
       document.body.removeChild(toggleButton);
     };
-  }, [isMobile, isSidebarOpen]);
+  }, [isMobile, isSidebarOpen, isMapPage]);
 
   return (
     <div className="flex h-screen">
@@ -137,7 +137,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
         <AppSidebar initialCollapsed={true} />
       )}
       
-      {/* Mobile sidebar */}
+      {/* Mobile sidebar for non-map pages */}
       {!isMapPage && isMobile && (
         <>
           {/* Backdrop when sidebar is open */}
