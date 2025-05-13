@@ -116,12 +116,12 @@ body { /* Added from styles/globals.css */
   }
 
   html::before {
-    background-color: rgb(236, 108, 4); /* First blob color */
+    background-color: rgb(0, 0, 0); /* First blob color */
     animation: moveBlob1 25s infinite alternate ease-in-out;
   }
 
   html::after {
-    background-color: #1807b2; /* Second blob color */
+    background-color: #6e774754; /* Second blob color */
     animation: moveBlob2 30s infinite alternate ease-in-out -5s; /* Offset animation */
   }
 
@@ -260,11 +260,11 @@ body {
 
 @media (max-width: 768px) {
   .responsive-tabs-list {
-    background-color: #d4ff80 !important;
+    background-color: #4b4b4b62 !important;
   }
 
   .responsive-tab {
-    color: white !important;
+    color: rgba(255, 255, 255, 0.466) !important;
   }
 
   .responsive-tab[data-state="active"] {

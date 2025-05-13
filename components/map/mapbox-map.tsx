@@ -98,6 +98,31 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>((
 
             mapRef.current = map;
 
+            const handleMapClick = async (e: mapboxgl.MapMouseEvent) => {
+                if (!onMapClick) return;
+                
+                const coords: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+                console.log("[MapboxMap] Map clicked at coords:", coords);
+
+                let fetchedAddress: string | undefined = undefined;
+                if (accessToken) {
+                    try {
+                        const geocodeUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${coords[0]},${coords[1]}.json?access_token=${accessToken}&types=address&limit=1`;
+                        const response = await fetch(geocodeUrl);
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.features?.length > 0) {
+                                fetchedAddress = data.features[0].place_name;
+                            }
+                        }
+                    } catch (error) {
+                        console.error("[MapboxMap] Reverse geocoding error:", error);
+                    }
+                }
+                
+                onMapClick(coords, fetchedAddress);
+            };
+
             map.on("load", () => {
                 console.log("[MapboxMap] Map Loaded");
                 setMapLoaded(true);
@@ -139,6 +164,9 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>((
                         }
                     });
                 }
+
+                // Add map click handler after load
+                map.on("click", handleMapClick);
             });
 
             map.on("error", (e) => {
@@ -147,58 +175,23 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>((
                 setIsLoading(false);
             });
 
-            // Handle Map Clicks (if handler provided)
-            if (onMapClick) {
-                map.on("click", async (e) => { // Make handler async
-                    const coords: [number, number] = [e.lngLat.lng, e.lngLat.lat];
-                    console.log("[MapboxMap] Map clicked at coords:", coords);
-
-                    let fetchedAddress: string | undefined = undefined;
-                    if (!accessToken) {
-                        console.error("[MapboxMap] Mapbox access token is missing, cannot perform reverse geocoding.");
-                    } else {
-                        try {
-                            // Call Mapbox Reverse Geocoding API
-                            const geocodeUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${coords[0]},${coords[1]}.json?access_token=${accessToken}&types=address&limit=1`;
-                            console.log("[MapboxMap] Fetching address from:", geocodeUrl); // Log URL
-                            const response = await fetch(geocodeUrl);
-                            if (!response.ok) {
-                                const errorText = await response.text();
-                                throw new Error(`Geocoding failed: ${response.status} ${response.statusText} - ${errorText}`);
-                            }
-                            const data = await response.json();
-                            if (data.features && data.features.length > 0) {
-                                fetchedAddress = data.features[0].place_name; // Get the address string
-                                console.log("[MapboxMap] Reverse geocoded address:", fetchedAddress);
-                            } else {
-                                console.warn("[MapboxMap] Reverse geocoding returned no features for coords:", coords);
-                            }
-                        } catch (error) {
-                            console.error("[MapboxMap] Reverse geocoding fetch error:", error);
-                            // Keep fetchedAddress as undefined, the parent will handle the fallback
-                        }
-                    }
-                    // Call the prop with coordinates AND the fetched address (or undefined)
-                    onMapClick(coords, fetchedAddress);
-                });
-            }
-
+            // Cleanup function
+            return () => {
+                map.off("click", handleMapClick); // Remove click handler
+                console.log("[MapboxMap] Cleaning up map instance...");
+                mapRef.current?.remove();
+                mapRef.current = null;
+                setMapLoaded(false);
+                markersRef.current = {}; // Clear marker references
+            };
         } catch (error) {
             console.error("[MapboxMap] Failed to initialize map:", error);
             setError("Failed to initialize the map. Please check your Mapbox access token and network connection.");
             setIsLoading(false);
         }
 
-        // Cleanup function
-        return () => {
-            console.log("[MapboxMap] Cleaning up map instance...");
-            mapRef.current?.remove();
-            mapRef.current = null;
-            setMapLoaded(false);
-            markersRef.current = {}; // Clear marker references
-        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [accessToken, mapStyle, initialCenter.toString(), initialZoom, showUserLocation, onMapClick]); // Added onMapClick dependency
+    }, [accessToken, mapStyle, initialCenter.toString(), initialZoom, showUserLocation]); // Remove onMapClick from dependencies
 
 
     // --- Marker Management Effect ---
@@ -293,6 +286,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>((
 
                     marker.getElement().addEventListener('click', (e) => {
                         e.stopPropagation();
+                        e.preventDefault();
                         onMarkerClick(markerData);
                         mapRef.current?.flyTo({ center: position, zoom: Math.max(mapRef.current.getZoom(), 15) });
                     });

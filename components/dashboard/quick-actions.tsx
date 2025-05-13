@@ -64,7 +64,7 @@ function QuickAction({
         isClicked && "animate-quick-zoom", // Apply zoom animation on click
         isPrimary && !imageUrl
           ? "bg-gradient-to-br from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90"
-          : !imageUrl && "hover:bg-gray-50 dark:hover:bg-gray-800",
+          : !imageUrl && "hover:bg-gray-50 dark:hover:bg-gray-100",
         imageUrl ? "relative overflow-hidden" : "",
         className,
       )}
@@ -271,7 +271,7 @@ export function QuickActions() {
           <CardTitle className="text-lg">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent className="p-3">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 auto-rows-fr">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 auto-rows-fr bg-black/10">
             {/* Purlin-Vision - Large 2x2 tile spanning 4 columns on md+ screens */}
             <QuickAction
               icon={null}

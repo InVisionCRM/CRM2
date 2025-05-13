@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"; // Import Button
 // Import cn if needed for styling
 import Link from "next/link"
 // import KnockCounter from "@/components/map/knock-counter"; // Removed import
+import { StreetViewImage } from "@/components/map/street-view-image"
 
 // Helper function to validate status from API
 function isValidStatus(status: any): status is PropertyVisitStatus | "New" | "Search" {
@@ -174,6 +175,10 @@ export default function MapPage() {
     return `https://maps.googleapis.com/maps/api/streetview?size=${size}&location=${lat},${lng}&heading=${heading}&pitch=${pitch}&fov=${fov}&key=${apiKey}`;
   };
 
+  // 1. Create separate state variables if you haven't already
+  const [isStreetViewOpen, setIsStreetViewOpen] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+
   // handleMarkerClick - receives MapboxMarkerData
   const handleMarkerClick = useCallback((marker: MapboxMarkerData) => {
     console.log("Marker clicked (Mapbox):", marker);
@@ -194,14 +199,49 @@ export default function MapPage() {
     console.log("Street View URL:", modalData.streetViewUrl); // Log the generated URL
 
     setSelectedModalData(modalData);
-    setIsModalOpen(true);
-  }, []); // Dependencies are empty as getStreetViewUrl is stable
+    setIsStreetViewOpen(true); // Open street view
+  }, []);
 
   // handleMapClick - now triggered by onMapClick, receives [lng, lat]
   const handleMapClick = useCallback((position: [number, number], address?: string) => {
     console.log("Map clicked at position (Mapbox):", position, "address:", address);
     const [lng, lat] = position; // Destructure coordinates
+    
+    // Check if a marker already exists with this address
+    const existingMarkerWithAddress = markers.find(marker => 
+      marker.properties.address === address && address !== undefined && address !== "Unknown Address"
+    );
+    
+    if (existingMarkerWithAddress) {
+      console.log("Marker already exists at this address:", address);
+      
+      // Instead of creating a new marker, simulate clicking the existing one
+      const existingPosition = existingMarkerWithAddress.geometry.coordinates as [number, number];
+      
+      const modalData: ModalData = {
+        address: existingMarkerWithAddress.properties.address,
+        position: existingPosition,
+        markerId: existingMarkerWithAddress.id,
+        currentStatus: existingMarkerWithAddress.properties.status === "New" || 
+                      existingMarkerWithAddress.properties.status === "Search" 
+                      ? undefined 
+                      : existingMarkerWithAddress.properties.status,
+        leadId: existingMarkerWithAddress.properties.leadId,
+        streetViewUrl: getStreetViewUrl(lat, lng),
+      };
+      
+      // Fly to the marker
+      if (mapRef.current) {
+        mapRef.current.flyTo(existingPosition, 15);
+      }
+      
+      console.log("Opening existing marker at address:", modalData.address);
+      setSelectedModalData(modalData);
+      setIsStreetViewOpen(true);
+      return;
+    }
 
+    // Create a new marker if one doesn't already exist at this address
     const tempId = `temp-${Date.now()}`;
     console.log("Generated temporary ID:", tempId);
 
@@ -231,8 +271,8 @@ export default function MapPage() {
     console.log("Street View URL:", modalData.streetViewUrl); // Log the generated URL
 
     setSelectedModalData(modalData);
-    setIsModalOpen(true);
-  }, []); // Dependencies are empty
+    setIsStreetViewOpen(true);
+  }, [markers, mapRef, getStreetViewUrl]);
 
   const handleAddressSelect = useCallback((result: { place_name: string; center: { lat: number; lng: number } }) => {
     console.log("Address selected (Mapbox Geocoder):", result);
@@ -241,9 +281,9 @@ export default function MapPage() {
     if (mapRef.current) {
       mapRef.current.flyTo([lng, lat], 15); // Zoom level 15
     }
-    // Optional: Create a temporary marker for the search result
-    // handleMapClick([lng, lat], result.place_name);
-  }, []); // Add dependencies if needed
+    // Create a temporary marker for the search result
+    handleMapClick([lng, lat], result.place_name);
+  }, [handleMapClick]); // Add handleMapClick to dependencies
 
   // handleStatusChange - uses [lng, lat] but sends lat/lng separately to API
   const handleStatusChange = useCallback(async (newStatus: PropertyVisitStatus) => {
@@ -385,11 +425,10 @@ export default function MapPage() {
             : `Status set to ${newStatus} and visit recorded.`
       });
     }
-    // Close modal regardless of visit recording success/failure if marker was saved
-    setIsModalOpen(false);
-    setSelectedModalData(null);
 
-  }, [selectedModalData, toast, setIsModalOpen, setSelectedModalData, fetchKnockCount]);
+    // Close street view after successful status change
+    setIsStreetViewOpen(false);
+  }, [selectedModalData, toast, fetchKnockCount]);
 
   // Function to handle zoom changes
   const handleZoomChange = useCallback((zoomLevel: number) => {
@@ -400,10 +439,15 @@ export default function MapPage() {
 
   // THIS IS AN INFERRED LOCATION FOR THE MODAL RENDERING
   // Ensure this console.log is placed immediately before <SimpleMapCardModal /> is rendered
-  if (isModalOpen && selectedModalData) {
+  if (isStreetViewOpen && selectedModalData) {
     console.log("[MapPage] Rendering SimpleMapCardModal. selectedModalData:", JSON.stringify(selectedModalData));
     console.log("[MapPage] selectedModalData.leadId being passed:", selectedModalData.leadId);
   }
+
+  useEffect(() => {
+    console.log("StreetViewImage mounted");
+    return () => console.log("StreetViewImage unmounted");
+  }, []);
 
   return (
     <MapProvider>
@@ -428,12 +472,12 @@ export default function MapPage() {
 
         {/* Knock Counter Display - top left */}
         {knockCount !== null && (
-          <div className="absolute top-4 left-1/2 z-10 bg-green-800/40 backdrop-blur-sm shadow-md rounded-lg p-2 flex items-center space-x-2 border border-lime-400/90">
+          <div className="absolute top-[200px] left-4 z-10 bg-green-800/40 backdrop-blur-sm shadow-md rounded-lg p-2 flex items-center space-x-2 border border-lime-400/90">
             <DoorOpen className="h-8 w-8 text-white" />
             <span className="font-semibold text-base-content">
               {knockCount}
             </span>
-            <span className="text-xs text-base-content/70">Doors</span>
+            <span className="text-xs text-base-content/70"></span>
           </div>
         )}
 
@@ -478,13 +522,29 @@ export default function MapPage() {
           />
         </div>
 
-        {/* Modal (high z-index to appear above map) */}
-        {isModalOpen && selectedModalData && (
+        {/* Street View Card */}
+        {isStreetViewOpen && selectedModalData && (
           <SimpleMapCardModal
-            isOpen={isModalOpen}
+            isOpen={isStreetViewOpen}
             onClose={() => {
-              setIsModalOpen(false)
-              setSelectedModalData(null)
+              setIsStreetViewOpen(false);
+              setSelectedModalData(null);
+            }}
+            address={selectedModalData.address || ""}
+            position={selectedModalData.position}
+            streetViewUrl={selectedModalData.streetViewUrl}
+            status={selectedModalData.currentStatus}
+            onStatusChange={handleStatusChange}
+            initialLeadId={selectedModalData.leadId}
+          />
+        )}
+        
+        {/* Contact Modal */}
+        {isContactModalOpen && selectedModalData && (
+          <SimpleMapCardModal
+            isOpen={isContactModalOpen}
+            onClose={() => {
+              setIsContactModalOpen(false);
             }}
             address={selectedModalData.address || "Loading address..."}
             initialLeadId={selectedModalData.leadId}

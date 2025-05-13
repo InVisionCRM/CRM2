@@ -25,7 +25,7 @@ type ContactFormValues = z.infer<typeof contactFormSchema>
 interface ContactFormProps {
   leadId: string
   initialData?: Partial<ContactFormValues>
-  onSuccess?: (leadId: string) => void
+  onSuccess?: (leadId: string, isNewLead?: boolean) => void
   onCancel?: () => void
   isReadOnly?: boolean
 }
@@ -172,7 +172,7 @@ export function ContactForm({
       sessionStorage.removeItem(storageKey); // Clear draft on successful save
       setIsDirty(false); // Reset dirty state
       reset(data); // Update form state to reflect saved data
-      onSuccess?.(result.lead?.id || leadId);
+      onSuccess?.(result.lead?.id || leadId, leadId.startsWith('temp-'));
     } catch (err) {
       console.error("Error saving contact:", err);
       setError(err instanceof Error ? err.message : "An unexpected error occurred");
@@ -192,17 +192,16 @@ export function ContactForm({
   };
 
   const emailDomainButtonStyle = {
-    backgroundColor: "#000000",
-    color: "#ffffff", // lime-600
+    backgroundColor: "transparent",
+    color: "#ffffff",
     border: "none",
     height: "100%",
-    padding: "0 10px",
-    fontWeight: "bold",
-    fontSize: "1.6rem",
+    padding: "0 8px",
     cursor: "pointer",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
+    transition: "background-color 0.2s",
   };
 
   return (
@@ -265,37 +264,32 @@ export function ContactForm({
               placeholder="Email address"
               {...register("email")}
               disabled={isLoading || isReadOnly}
-              className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 w-full"
-              style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+              className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 w-full pr-20"
             />
+            <div className="absolute right-0 top-0 h-full flex items-center">
+              <button
+                type="button"
+                onClick={() => completeEmailWithDomain('@gmail.com')}
+                disabled={isLoading || isReadOnly}
+                style={emailDomainButtonStyle}
+                className="hover:bg-white/10 rounded-sm"
+                title="Add Gmail"
+              >
+                <img src="https://cdn-icons-png.flaticon.com/512/281/281769.png" alt="Gmail" className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => completeEmailWithDomain('@yahoo.com')}
+                disabled={isLoading || isReadOnly}
+                style={emailDomainButtonStyle}
+                className="hover:bg-white/10 rounded-sm"
+                title="Add Yahoo"
+              >
+                <img src="https://cdn-icons-png.flaticon.com/512/281/281773.png" alt="Yahoo" className="w-5 h-5" />
+              </button>
+            </div>
           </div>
-          
-          {/* Email domain buttons at the end of the field */}
-          <button
-            type="button"
-            onClick={() => completeEmailWithDomain('@gmail.com')}
-            disabled={isLoading || isReadOnly}
-            style={{
-              ...emailDomainButtonStyle,
-              borderRight: "1px solid rgba(255,255,255,0.1)",
-            }}
-          >
-            @GMAIL
-          </button>
-          <button
-            type="button"
-            onClick={() => completeEmailWithDomain('@yahoo.com')}
-            disabled={isLoading || isReadOnly}
-            style={{
-              ...emailDomainButtonStyle,
-              borderTopRightRadius: "0.375rem",
-              borderBottomRightRadius: "0.375rem",
-            }}
-          >
-            @YAHOO
-          </button>
         </div>
-        
         {errors.email && (
           <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>
         )}
@@ -347,7 +341,7 @@ export function ContactForm({
           <Button
             type="submit"
             disabled={isLoading || !isDirty} // Disable if not dirty
-            className="flex-grow bg-lime-600 hover:bg-lime-700 text-white"
+            className="flex-grow bg-lime-600 hover:bg-lime-700 text-black"
           >
             {isLoading ? (
               <>

@@ -15,6 +15,7 @@ import { Calendar } from "@/components/appointments/calendar"
 import type { CalendarAppointment, RawGCalEvent } from "@/types/appointments"
 import { AppointmentPurposeEnum } from '@/types/appointments'
 import debounce from 'lodash.debounce'
+import { useToast } from "@/components/ui/use-toast"
 
 // Mock data for appointments (can be replaced with real data fetching)
 const mockAppointments: CalendarAppointment[] = [
@@ -744,6 +745,7 @@ export function AdjusterForm({
   const [isMobile, setIsMobile] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
   const storageKey = `draft-lead-adjuster-${leadId}`
+  const { toast } = useToast()
   
   // Check if we're on mobile
   useEffect(() => {
@@ -760,16 +762,25 @@ export function AdjusterForm({
   const {
     register,
     handleSubmit,
-    formState: { errors },
     control,
-    reset,
-    getValues,
     watch,
-    setValue
+    setValue,
+    formState: { errors }
   } = useForm<AdjusterFormValues>({
     resolver: zodResolver(adjusterFormSchema),
     defaultValues: initialData
-  })
+  });
+
+  // Watch all form values
+  const watchedValues = watch();
+
+  const onSubmit = async (data: AdjusterFormValues) => {
+    try {
+      await saveAdjusterInfo();
+    } catch (error) {
+      console.error('Form submission error:', error);
+    }
+  };
 
   // --- Draft Loading ---
   useEffect(() => {
@@ -779,24 +790,19 @@ export function AdjusterForm({
     if (draft) {
       try {
         const parsedDraft = JSON.parse(draft);
-        reset(parsedDraft);
         setIsDirty(true);
         console.log("Loaded adjuster draft for lead:", leadId);
       } catch (e) {
         console.error("Failed to parse adjuster draft:", e);
         sessionStorage.removeItem(storageKey);
-        reset(initialData); // Fallback
         setIsDirty(false);
       }
     } else {
-      reset(initialData);
       setIsDirty(false);
     }
-  }, [leadId, storageKey, reset, initialData, isReadOnly]);
+  }, [leadId, storageKey, isReadOnly]);
 
   // --- Draft Saving ---
-  const watchedValues = watch();
-
   const saveDraft = useCallback(
     debounce((data: AdjusterFormValues) => {
       if (leadId && isDirty && !isReadOnly) {
@@ -828,10 +834,10 @@ export function AdjusterForm({
     try {
       // Extract only adjuster info fields
       const adjusterData = {
-        insuranceAdjusterName: getValues("insuranceAdjusterName"),
-        insuranceAdjusterPhone: getValues("insuranceAdjusterPhone"),
-        insuranceAdjusterEmail: getValues("insuranceAdjusterEmail"),
-        adjusterAppointmentNotes: getValues("adjusterAppointmentNotes")
+        insuranceAdjusterName: watchedValues.insuranceAdjusterName,
+        insuranceAdjusterPhone: watchedValues.insuranceAdjusterPhone,
+        insuranceAdjusterEmail: watchedValues.insuranceAdjusterEmail,
+        adjusterAppointmentNotes: watchedValues.adjusterAppointmentNotes
       };
 
       // Call API route to update adjuster information
@@ -849,12 +855,25 @@ export function AdjusterForm({
       }
 
       setSuccessMessage("Adjuster information updated successfully")
+      toast({
+        title: "Success",
+        description: "Adjuster information has been saved",
+        variant: "default",
+      })
       sessionStorage.removeItem(storageKey); // Clear draft
       setIsDirty(false); // Reset dirty state
-      reset(adjusterData); // Reset form with saved data
+      setValue("insuranceAdjusterName", adjusterData.insuranceAdjusterName);
+      setValue("insuranceAdjusterPhone", adjusterData.insuranceAdjusterPhone);
+      setValue("insuranceAdjusterEmail", adjusterData.insuranceAdjusterEmail);
+      setValue("adjusterAppointmentNotes", adjusterData.adjusterAppointmentNotes);
       onSuccess?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred")
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to save adjuster information",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
@@ -866,95 +885,90 @@ export function AdjusterForm({
     setSuccessMessage(null)
 
     try {
-      // Extract only appointment fields
-      const appointmentData = {
-        adjusterAppointmentDate: getValues("adjusterAppointmentDate"),
-        adjusterAppointmentTime: getValues("adjusterAppointmentTime")
+      // Include both adjuster info and appointment fields
+      const adjusterData = {
+        insuranceAdjusterName: watchedValues.insuranceAdjusterName,
+        insuranceAdjusterPhone: watchedValues.insuranceAdjusterPhone,
+        insuranceAdjusterEmail: watchedValues.insuranceAdjusterEmail,
+        adjusterAppointmentDate: watchedValues.adjusterAppointmentDate,
+        adjusterAppointmentTime: watchedValues.adjusterAppointmentTime,
+        adjusterAppointmentNotes: watchedValues.adjusterAppointmentNotes
       };
 
-      // 1. Call API route to update appointment information on the lead
-      const response = await fetch(`/api/leads/${leadId}/appointment`, {
+      // 1. Call API route to update adjuster information on the lead
+      const response = await fetch(`/api/leads/${leadId}/adjuster`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(appointmentData)
+        body: JSON.stringify(adjusterData)
       });
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.message || "Failed to update appointment information")
+        throw new Error(errorData.message || "Failed to update adjuster information")
       }
 
-      // 2. Also create an entry in the appointment calendar system
-      const appointmentDateStr = getValues("adjusterAppointmentDate");
-      if (!appointmentDateStr) {
-        console.error("Cannot create calendar appointment: Missing appointment date");
-        setSuccessMessage("Appointment information updated successfully, but calendar entry could not be created");
-        setShowSuccessDialog(true);
-        onSuccess?.();
-        return;
+      // 2. Create calendar appointment only if date and time are provided
+      if (watchedValues.adjusterAppointmentDate && watchedValues.adjusterAppointmentTime) {
+        const appointmentDateStr = watchedValues.adjusterAppointmentDate;
+        const timeString = watchedValues.adjusterAppointmentTime;
+        
+        // Parse the date string and time string properly
+        const [year, month, day] = appointmentDateStr.split('-').map(Number);
+        const [hours, minutes] = timeString.split(":").map(Number);
+        
+        // Create proper Date objects
+        const startDateTime = new Date(year, month - 1, day, hours, minutes);
+        const endDateTime = new Date(year, month - 1, day, hours + 1, minutes);
+
+        // Create calendar appointment
+        const calendarResponse = await fetch('/api/calendar/events', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            summary: `Adjuster Appointment${watchedValues.insuranceAdjusterName ? ` with ${watchedValues.insuranceAdjusterName}` : ''}`,
+            description: `Adjuster: ${watchedValues.insuranceAdjusterName || 'TBD'}\nPhone: ${watchedValues.insuranceAdjusterPhone || 'N/A'}\nEmail: ${watchedValues.insuranceAdjusterEmail || 'N/A'}\n\nNotes: ${watchedValues.adjusterAppointmentNotes || 'None'}`,
+            startTime: startDateTime.toISOString(),
+            endTime: endDateTime.toISOString(),
+            purpose: 'ADJUSTER',
+            status: 'SCHEDULED',
+            leadId: leadId,
+            location: '' // Add location if available
+          })
+        });
+
+        if (!calendarResponse.ok) {
+          const errorData = await calendarResponse.json();
+          throw new Error(errorData.message || "Failed to create calendar event");
+        }
+
+        toast({
+          title: "Appointment Scheduled",
+          description: `Adjuster appointment scheduled for ${format(startDateTime, "MMM d, yyyy 'at' h:mm a")}`,
+          variant: "default",
+        })
       }
 
-      const appointmentDate = new Date(appointmentDateStr);
-      
-      // Parse time (HH:MM format) to get hours and minutes
-      const timeString = getValues("adjusterAppointmentTime") || "12:00";
-      const [hours, minutes] = timeString.split(":").map(num => parseInt(num));
-      
-      // Set the hours and minutes on the appointment date
-      appointmentDate.setHours(hours, minutes, 0, 0);
-      
-      // Calculate end time (1 hour after start time)
-      const endDate = new Date(appointmentDate);
-      endDate.setHours(endDate.getHours() + 1);
-      
-      // Format time strings for display
-      const formatTimeString = (date: Date) => {
-        const hour = date.getHours();
-        const minute = date.getMinutes();
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        const displayHour = hour % 12 || 12;
-        return `${displayHour}:${minute.toString().padStart(2, '0')} ${ampm}`;
-      };
-      
-      const startTimeString = formatTimeString(appointmentDate);
-      const endTimeString = formatTimeString(endDate);
-      
-      // Create calendar appointment object
-      const calendarAppointment = {
-        title: "Adjuster Appointment",
-        date: appointmentDate.toISOString(),
-        startTime: startTimeString,
-        endTime: endTimeString,
-        purpose: AppointmentPurposeEnum.OTHER,
-        status: "scheduled",
-        leadId: leadId,
-        leadName: `${getValues("insuranceAdjusterName") || "Adjuster"} Meeting`,
-        address: "", // We don't have this info in the form
-        notes: getValues("adjusterAppointmentNotes") || "",
-      };
-      
-      // Call API to create calendar appointment
-      const calendarResponse = await fetch(`/api/appointments`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(calendarAppointment)
-      });
-      
-      if (!calendarResponse.ok) {
-        // We'll still consider the appointment saved, but log an error about calendar
-        console.error("Failed to add appointment to calendar system:", await calendarResponse.text());
-      }
-
-      setSuccessMessage("Appointment information updated successfully")
-      // Show success dialog
+      setSuccessMessage("Adjuster information updated successfully")
       setShowSuccessDialog(true)
+      
+      // Clear any draft data
+      sessionStorage.removeItem(storageKey);
+      setIsDirty(false);
+      
+      // Call onSuccess callback
       onSuccess?.()
     } catch (err) {
+      console.error('Error saving adjuster information:', err);
       setError(err instanceof Error ? err.message : "An unexpected error occurred")
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to schedule appointment",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
@@ -980,212 +994,213 @@ export function AdjusterForm({
   const handleDiscard = () => {
     if (window.confirm("Are you sure you want to discard unsaved changes?")) {
       sessionStorage.removeItem(storageKey);
-      reset(initialData);
       setIsDirty(false);
       console.log("Discarded adjuster draft for lead:", leadId);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 w-full relative p-1">
-      {onCancel && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={onCancel}
-          className="absolute top-0 right-0 text-white hover:text-gray-300 h-8 w-8 mt-1 mr-1 z-10"
-        >
-          <X className="h-5 w-5" />
-          <span className="sr-only">Close</span>
-        </Button>
-      )}
-
-      <div className="space-y-1 sm:space-y-2">
-        <Label htmlFor="insuranceAdjusterName" className="text-white text-opacity-90 text-sm sm:text-base">
-          Adjuster Name
-        </Label>
-        <Input
-          id="insuranceAdjusterName"
-          placeholder="Adjuster's full name"
-          {...register("insuranceAdjusterName")}
-          disabled={isLoading || isReadOnly}
-          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
-        />
-        {errors.insuranceAdjusterName && (
-          <p className="text-red-400 text-xs mt-1">{errors.insuranceAdjusterName.message}</p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-        <div className="space-y-1 sm:space-y-2">
-          <Label htmlFor="insuranceAdjusterPhone" className="text-white text-opacity-90 text-sm sm:text-base">
-            Adjuster Phone
-          </Label>
-          <Input
-            id="insuranceAdjusterPhone"
-            placeholder="Adjuster's phone number"
-            {...register("insuranceAdjusterPhone")}
-            disabled={isLoading || isReadOnly}
-            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
-          />
-        </div>
-
-        <div className="space-y-1 sm:space-y-2">
-          <Label htmlFor="insuranceAdjusterEmail" className="text-white text-opacity-90 text-sm sm:text-base">
-            Adjuster Email
-          </Label>
-          <Input
-            id="insuranceAdjusterEmail"
-            type="email"
-            placeholder="Adjuster's email address"
-            {...register("insuranceAdjusterEmail")}
-            disabled={isLoading || isReadOnly}
-            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-1 sm:space-y-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="adjusterAppointmentDate" className="text-white text-opacity-90 text-sm sm:text-base">
-            Appointment Date & Time
-          </Label>
+    <>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 w-full relative p-1">
+        {onCancel && (
           <Button
             type="button"
-            onClick={() => setShowCalendar(true)}
             variant="ghost"
-            className="text-white text-opacity-80 hover:text-opacity-100 px-2 py-1 h-auto text-xs sm:text-sm"
+            size="icon"
+            onClick={onCancel}
+            className="absolute top-0 right-0 text-white hover:text-gray-300 h-8 w-8 mt-1 mr-1 z-10"
           >
-            <CalendarIcon size={20} className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-            View Calendar
+            <X className="h-5 w-5" />
+            <span className="sr-only">Close</span>
           </Button>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Controller
-            name="adjusterAppointmentDate"
-            control={control}
-            render={({ field }) => (
-              <CustomDatePicker
-                value={field.value}
-                onChange={field.onChange}
-                disabled={isLoading || isReadOnly}
-                placeholder="Select date"
-              />
-            )}
-          />
-          <Controller
-            name="adjusterAppointmentTime"
-            control={control}
-            render={({ field }) => (
-              <CustomTimePicker
-                value={field.value}
-                onChange={field.onChange}
-                disabled={isLoading || isReadOnly}
-                placeholder="Select time"
-              />
-            )}
-          />
-        </div>
-      </div>
+        )}
 
-      <div className="space-y-1 sm:space-y-2">
-        <Label htmlFor="adjusterAppointmentNotes" className="text-white text-opacity-90 text-sm sm:text-base">
-          Appointment Notes
-        </Label>
-        <textarea
-          id="adjusterAppointmentNotes"
-          placeholder="Enter any notes or instructions for the adjuster appointment"
-          {...register("adjusterAppointmentNotes")}
-          disabled={isLoading || isReadOnly}
-          rows={isMobile ? 3 : 5}
-          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 w-full p-3 rounded-md text-sm sm:text-base"
-        />
-      </div>
+        <div className="space-y-1 sm:space-y-2">
+          <Label htmlFor="insuranceAdjusterName" className="text-white text-opacity-90 text-sm sm:text-base">
+            Adjuster Name
+          </Label>
+          <Input
+            id="insuranceAdjusterName"
+            placeholder="Adjuster's full name"
+            {...register("insuranceAdjusterName")}
+            disabled={isLoading || isReadOnly}
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+          />
+          {errors.insuranceAdjusterName && (
+            <p className="text-red-400 text-xs mt-1">{errors.insuranceAdjusterName.message}</p>
+          )}
+        </div>
 
-      {!isReadOnly && (
-        <div className="pt-2 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <Button 
-              type="button" 
-              onClick={saveAdjusterInfo}
-              disabled={isLoading}
-              className="bg-zinc-700 hover:bg-zinc-600 text-white h-10 sm:h-12 text-sm sm:text-base"
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="insuranceAdjusterPhone" className="text-white text-opacity-90 text-sm sm:text-base">
+              Adjuster Phone
+            </Label>
+            <Input
+              id="insuranceAdjusterPhone"
+              placeholder="Adjuster's phone number"
+              {...register("insuranceAdjusterPhone")}
+              disabled={isLoading || isReadOnly}
+              className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+            />
+          </div>
+
+          <div className="space-y-1 sm:space-y-2">
+            <Label htmlFor="insuranceAdjusterEmail" className="text-white text-opacity-90 text-sm sm:text-base">
+              Adjuster Email
+            </Label>
+            <Input
+              id="insuranceAdjusterEmail"
+              type="email"
+              placeholder="Adjuster's email address"
+              {...register("insuranceAdjusterEmail")}
+              disabled={isLoading || isReadOnly}
+              className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-1 sm:space-y-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="adjusterAppointmentDate" className="text-white text-opacity-90 text-sm sm:text-base">
+              Appointment Date & Time
+            </Label>
+            <Button
+              type="button"
+              onClick={() => setShowCalendar(true)}
+              variant="ghost"
+              className="text-white text-opacity-80 hover:text-opacity-100 px-2 py-1 h-auto text-xs sm:text-sm"
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Info"
-              )}
-            </Button>
-            
-            <Button 
-              type="button" 
-              onClick={saveAppointment}
-              disabled={isLoading || !watch("adjusterAppointmentDate") || !watch("adjusterAppointmentTime")}
-              className="bg-lime-600 hover:bg-lime-700 text-white h-10 sm:h-12 text-sm sm:text-base"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Scheduling...
-                </>
-              ) : (
-                "Schedule Appointment"
-              )}
+              <CalendarIcon size={20} className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+              View Calendar
             </Button>
           </div>
-          
-          {error && (
-            <div className="mt-3 text-red-400 text-sm p-3 bg-red-900 bg-opacity-25 rounded">
-              {error}
-            </div>
-          )}
-          
-          {successMessage && (
-            <div className="mt-3 text-green-400 text-sm p-3 bg-green-900 bg-opacity-25 rounded">
-              {successMessage}
-            </div>
-          )}
+          <div className="grid grid-cols-2 gap-2">
+            <Controller
+              name="adjusterAppointmentDate"
+              control={control}
+              render={({ field }) => (
+                <CustomDatePicker
+                  value={field.value}
+                  onChange={field.onChange}
+                  disabled={isLoading || isReadOnly}
+                  placeholder="Select date"
+                />
+              )}
+            />
+            <Controller
+              name="adjusterAppointmentTime"
+              control={control}
+              render={({ field }) => (
+                <CustomTimePicker
+                  value={field.value}
+                  onChange={field.onChange}
+                  disabled={isLoading || isReadOnly}
+                  placeholder="Select time"
+                />
+              )}
+            />
+          </div>
         </div>
-      )}
 
-      {/* Success Dialog */}
-      <SuccessDialog
-        isOpen={showSuccessDialog}
-        onClose={() => setShowSuccessDialog(false)}
-        appointmentDate={watch("adjusterAppointmentDate")}
-        appointmentTime={watch("adjusterAppointmentTime")}
-        adjusterName={watch("insuranceAdjusterName")}
-        appointmentNotes={watch("adjusterAppointmentNotes")}
-      />
+        <div className="space-y-1 sm:space-y-2">
+          <Label htmlFor="adjusterAppointmentNotes" className="text-white text-opacity-90 text-sm sm:text-base">
+            Appointment Notes
+          </Label>
+          <textarea
+            id="adjusterAppointmentNotes"
+            placeholder="Enter any notes or instructions for the adjuster appointment"
+            {...register("adjusterAppointmentNotes")}
+            disabled={isLoading || isReadOnly}
+            rows={isMobile ? 3 : 5}
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 w-full p-3 rounded-md text-sm sm:text-base"
+          />
+        </div>
 
-      {/* Fullscreen Calendar Modal */}
-      <FullscreenCalendarModal isOpen={isCalendarModalOpen} onClose={() => setIsCalendarModalOpen(false)}>
-        <Calendar
-          appointmentsData={{
-            appointments: appointments.map(calendarAppointmentToRawGCalEvent),
-            isLoading: calendarLoading,
-            error: calendarError,
-          }}
-          onDateClick={handleDateClick}
-          onAppointmentClick={(rawEvent: RawGCalEvent) => {
-            // If handleAppointmentClick needs CalendarAppointment, we need to find the original or transform back
-            // For now, let's find the original CalendarAppointment from our state
-            const originalAppointment = appointments.find(app => app.id === rawEvent.id);
-            if (originalAppointment) {
-              handleAppointmentClick(originalAppointment);
-            } else {
-              console.warn("Could not find original appointment for raw event:", rawEvent);
-              // Potentially create a new CalendarAppointment from RawGCalEvent if needed for the form
-            }
-          }}
-          onSwitchToDay={handleSwitchToDay}
+        {!isReadOnly && (
+          <div className="pt-2 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                type="button" 
+                onClick={saveAdjusterInfo}
+                disabled={isLoading}
+                className="bg-zinc-700 hover:bg-zinc-600 text-white h-10 sm:h-12 text-sm sm:text-base"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Info"
+                )}
+              </Button>
+              
+              <Button 
+                type="button" 
+                onClick={saveAppointment}
+                disabled={isLoading || !watch("adjusterAppointmentDate") || !watch("adjusterAppointmentTime")}
+                className="bg-lime-600 hover:bg-lime-700 text-white h-10 sm:h-12 text-sm sm:text-base"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Scheduling...
+                  </>
+                ) : (
+                  "Schedule Appointment"
+                )}
+              </Button>
+            </div>
+            
+            {error && (
+              <div className="mt-3 text-red-400 text-sm p-3 bg-red-900 bg-opacity-25 rounded">
+                {error}
+              </div>
+            )}
+            
+            {successMessage && (
+              <div className="mt-3 text-green-400 text-sm p-3 bg-green-900 bg-opacity-25 rounded">
+                {successMessage}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Success Dialog */}
+        <SuccessDialog
+          isOpen={showSuccessDialog}
+          onClose={() => setShowSuccessDialog(false)}
+          appointmentDate={watch("adjusterAppointmentDate")}
+          appointmentTime={watch("adjusterAppointmentTime")}
+          adjusterName={watch("insuranceAdjusterName")}
+          appointmentNotes={watch("adjusterAppointmentNotes")}
         />
-      </FullscreenCalendarModal>
-    </form>
+
+        {/* Fullscreen Calendar Modal */}
+        <FullscreenCalendarModal isOpen={isCalendarModalOpen} onClose={() => setIsCalendarModalOpen(false)}>
+          <Calendar
+            appointmentsData={{
+              appointments: appointments.map(calendarAppointmentToRawGCalEvent),
+              isLoading: calendarLoading,
+              error: calendarError,
+            }}
+            onDateClick={handleDateClick}
+            onAppointmentClick={(rawEvent: RawGCalEvent) => {
+              // If handleAppointmentClick needs CalendarAppointment, we need to find the original or transform back
+              // For now, let's find the original CalendarAppointment from our state
+              const originalAppointment = appointments.find(app => app.id === rawEvent.id);
+              if (originalAppointment) {
+                handleAppointmentClick(originalAppointment);
+              } else {
+                console.warn("Could not find original appointment for raw event:", rawEvent);
+                // Potentially create a new CalendarAppointment from RawGCalEvent if needed for the form
+              }
+            }}
+            onSwitchToDay={handleSwitchToDay}
+          />
+        </FullscreenCalendarModal>
+      </form>
+    </>
   );
 } 

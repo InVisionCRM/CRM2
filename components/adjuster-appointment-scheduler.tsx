@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { format, addDays, isBefore, startOfToday } from "date-fns"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2, Clock, Trash2, CalendarDays, ClipboardList, AlertCircle, CheckCircle } from "lucide-react"
+import { CheckCircle2, Clock, Trash2, CalendarDays, ClipboardList, AlertCircle, CheckCircle, MapPin } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
 import { scheduleAdjusterAppointmentAction } from "@/app/actions/lead-actions"
@@ -51,14 +51,22 @@ const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => {
 
 interface AdjusterAppointmentSchedulerProps {
   leadId: string
-  initialDate?: Date | null
-  initialTime?: string | null
-  initialNotes?: string | null
+  clientId?: string
+  address?: string
+  leadName?: string
+  appointmentId?: string
+  initialDate: Date | null
+  initialTime: string | null
+  initialNotes: string
   onScheduled?: () => void
 }
 
 export function AdjusterAppointmentScheduler({
   leadId,
+  clientId = "",
+  address = "",
+  leadName = "",
+  appointmentId = "",
   initialDate,
   initialTime,
   initialNotes,
@@ -101,35 +109,62 @@ export function AdjusterAppointmentScheduler({
     try {
       setIsSubmitting(true)
 
+      // Convert time from "8:00 AM" format to "HH:mm" format
+      const [timeStr, period] = time.split(" ")
+      const [hour, minute] = timeStr.split(":").map(Number)
+      let hour24 = hour
+      if (period === "PM" && hour !== 12) hour24 += 12
+      if (period === "AM" && hour === 12) hour24 = 0
+
+      // Create the appointment date in Eastern Time
+      const appointmentDate = new Date(date)
+      appointmentDate.setHours(hour24, minute, 0, 0)
+
+      // Format time for database
+      const time24 = `${hour24.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`
+
+      // First, schedule the appointment internally
       const result = await scheduleAdjusterAppointmentAction({
         leadId,
-        appointmentDate: date,
-        appointmentTime: time,
+        appointmentDate: date.toISOString().split("T")[0],
+        appointmentTime: time24,
         appointmentNotes: notes,
       })
 
       if (result.success) {
-        // After scheduling internally, create the Google Calendar event
-        await fetch("/api/calendar/create-adjuster-event", {
+        // Calculate end time (1 hour after start time)
+        const endDate = new Date(appointmentDate)
+        endDate.setHours(endDate.getHours() + 1)
+
+        // Then create the Google Calendar event
+        const calendarResponse = await fetch("/api/calendar/events", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            date: date.toISOString().split("T")[0], // yyyy-MM-dd
-            time: timeToISOTime(time), // hh:mm:ss
-            notes,
-            location: "123 Main St, Detroit, MI", // (placeholder address, can update later)
-            leadId,
+            summary: `Adjuster Appointment${leadName ? ` with ${leadName}` : ''}`,
+            description: notes || '',
+            startTime: appointmentDate.toISOString(),
+            endTime: endDate.toISOString(),
+            purpose: 'ADJUSTER',
+            status: 'SCHEDULED',
+            leadId: leadId,
+            location: address || '',
+            timeZone: 'America/New_York', // Specify Eastern Time zone
           }),
         })
 
+        if (!calendarResponse.ok) {
+          const errorData = await calendarResponse.json()
+          throw new Error(errorData.message || "Failed to create calendar event")
+        }
+
         toast({
           title: "Success",
-          description: isEditing
-            ? "Adjuster appointment updated successfully"
-            : "Adjuster appointment scheduled successfully",
+          description: "Adjuster appointment scheduled successfully",
+          variant: "default",
         })
+
         setShowToDoList(true)
-        setIsEditing(false)
         if (onScheduled) {
           onScheduled()
         }
@@ -144,7 +179,7 @@ export function AdjusterAppointmentScheduler({
       console.error("Error scheduling appointment:", error)
       toast({
         title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
         variant: "destructive",
       })
     } finally {
@@ -207,6 +242,10 @@ export function AdjusterAppointmentScheduler({
     if (initialDate && initialTime) {
       setShowToDoList(true)
     }
+  }
+
+  function getGoogleMapsLink(address: string) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
   }
 
   return (
@@ -350,6 +389,26 @@ export function AdjusterAppointmentScheduler({
                         placeholder="Add appointment notes..."
                         className="min-h-[100px] resize-none mt-2"
                       />
+                      {address && (
+                        <div className="space-y-2">
+                          <div className="font-medium text-sm flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-primary" />
+                            Location
+                          </div>
+                          <div className="bg-gray-50 p-3 rounded-lg border">
+                            <p className="text-sm">{address}</p>
+                            <a
+                              href={getGoogleMapsLink(address)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:text-primary/80 text-sm flex items-center mt-2"
+                            >
+                              <MapPin className="h-3 w-3 mr-1" />
+                              View on Google Maps
+                            </a>
+                          </div>
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -418,6 +477,25 @@ export function AdjusterAppointmentScheduler({
                       Notes
                     </h4>
                     <p className="text-gray-400 text-sm whitespace-pre-wrap">{notes}</p>
+                  </div>
+                )}
+
+                {address && (
+                  <div className="mb-6 bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+                    <h4 className="text-sm font-medium text-gray-300 mb-2 flex items-center">
+                      <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+                      Location
+                    </h4>
+                    <p className="text-gray-400 text-sm">{address}</p>
+                    <a
+                      href={getGoogleMapsLink(address)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:text-primary/80 text-sm flex items-center mt-2"
+                    >
+                      <MapPin className="h-3 w-3 mr-1" />
+                      View on Google Maps
+                    </a>
                   </div>
                 )}
 

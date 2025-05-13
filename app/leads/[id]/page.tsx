@@ -132,7 +132,7 @@ export default function LeadDetailPage() {
       : lead.email || 'Unknown Lead';
     
     // Route to calendar with lead info
-    window.location.href = `/calendar?leadId=${id}&leadName=${encodeURIComponent(leadName)}&returnUrl=${encodeURIComponent(`/leads/${id}`)}`;
+    window.location.href = `/dashboard/calendar?leadId=${id}&leadName=${encodeURIComponent(leadName)}&returnUrl=${encodeURIComponent(`/leads/${id}`)}`;
   };
 
   // Construct address string safely

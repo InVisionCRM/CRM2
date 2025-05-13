@@ -14,7 +14,7 @@ import {
   startOfWeek,
   endOfWeek,
 } from "date-fns"
-import { ChevronLeft, ChevronRight, CalendarIcon, AlertCircle, RefreshCw } from "lucide-react"
+import { ChevronLeft, ChevronRight, CalendarIcon, AlertCircle, RefreshCw, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useGoogleCalendar } from "@/lib/hooks/useGoogleCalendar"
@@ -24,24 +24,58 @@ import { EventTooltip } from "@/components/event-tooltip"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { AnimatePresence, motion } from "framer-motion"
 import type { RawGCalEvent } from "@/types/appointments"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { EventForm } from "@/components/event-form"
+
+// Assuming AppointmentPurposeEnum is available or we define a similar mapping here
+// For simplicity, let's define a basic color mapping here. 
+// Ideally, this would come from a shared types/utils file or be passed in.
+// This is a placeholder and might need adjustment based on your actual event data structure for 'purpose'
+const AppointmentPurposeEnum = {
+  INSPECTION: "INSPECTION",
+  FILE_CLAIM: "FILE_CLAIM",
+  FOLLOW_UP: "FOLLOW_UP",
+  ADJUSTER: "ADJUSTER",
+  BUILD_DAY: "BUILD_DAY",
+  OTHER: "OTHER",
+} as const;
+
+type AppointmentPurpose = typeof AppointmentPurposeEnum[keyof typeof AppointmentPurposeEnum];
+
+// Simplified color getter, adapt to your actual event structure and color preferences
+const getEventColor = (event?: RawGCalEvent) => {
+  const purpose = event?.extendedProperties?.private?.purpose as AppointmentPurpose | undefined;
+  // Define your color mapping here
+  const purposeColors: Record<AppointmentPurpose, string> = {
+    [AppointmentPurposeEnum.INSPECTION]: "bg-blue-500 dark:bg-blue-400",
+    [AppointmentPurposeEnum.FILE_CLAIM]: "bg-cyan-500 dark:bg-cyan-400",
+    [AppointmentPurposeEnum.FOLLOW_UP]: "bg-amber-500 dark:bg-amber-400",
+    [AppointmentPurposeEnum.ADJUSTER]: "bg-indigo-500 dark:bg-indigo-400",
+    [AppointmentPurposeEnum.BUILD_DAY]: "bg-rose-500 dark:bg-rose-400",
+    [AppointmentPurposeEnum.OTHER]: "bg-gray-500 dark:bg-gray-400"
+  };
+  return purposeColors[purpose as AppointmentPurpose] || "bg-gray-500 dark:bg-gray-400";
+};
 
 interface CalendarViewProps {
   credentials?: {
     accessToken: string;
     refreshToken?: string;
   };
-  leadId?: string;
-  leadName?: string;
+  urlLeadId?: string;
+  urlLeadName?: string;
   returnUrl?: string;
 }
 
-export function CalendarView({ credentials, leadId, leadName, returnUrl }: CalendarViewProps) {
+export function CalendarView({ credentials, urlLeadId, urlLeadName, returnUrl }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [debugInfo, setDebugInfo] = useState<string>("")
   const [direction, setDirection] = useState(0)
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
+  const [detailedDayViewDate, setDetailedDayViewDate] = useState<Date | null>(null); // State for the day view
+  const [selectedEvent, setSelectedEvent] = useState<RawGCalEvent | null>(null);
 
   const { 
     appointments,
@@ -123,21 +157,153 @@ export function CalendarView({ credentials, leadId, leadName, returnUrl }: Calen
   }
 
   const handleDateClick = (date: Date) => {
-    if (leadId && leadName) {
-      setSelectedDate(date);
-      setIsAppointmentModalOpen(true);
-    }
-  };
+    setSelectedDate(date)
+    setIsAppointmentModalOpen(true)
+  }
 
   const handleAppointmentScheduled = () => {
-    setIsAppointmentModalOpen(false);
-    setSelectedDate(null);
-    setSelectedTime(null);
+    setIsAppointmentModalOpen(false)
+    setSelectedDate(null)
+    setSelectedTime(null)
+    refetch() // Refresh the calendar to show the new appointment
     
-    // Navigate back to lead detail page if returnUrl is provided
     if (returnUrl) {
-      window.location.href = returnUrl;
+      window.location.href = returnUrl
     }
+  }
+
+  const handleEventClick = (event: RawGCalEvent, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent the day click handler from firing
+    setDetailedDayViewDate(new Date(event.start?.dateTime || event.start?.date || ''));
+    setSelectedEvent(event);
+  };
+
+  const renderDetailedDayView = () => {
+    if (!detailedDayViewDate) return null;
+
+    const dayEvents = eventsByDate[format(detailedDayViewDate, "yyyy-MM-dd")] || [];
+    const hours = Array.from({ length: 14 }, (_, i) => i + 7); // 7 AM to 8 PM
+
+    // Helper to get appointments for a specific time slot within the detailed day view
+    const getAppointmentsForTimeSlot = (hour: number) => {
+      return dayEvents.filter((event: RawGCalEvent) => {
+        if (!event.start) return false;
+        const eventDateStr = event.start.date || event.start.dateTime;
+        if (!eventDateStr) return false;
+
+        const appointmentDate = new Date(eventDateStr);
+        // Ensure it's for the correct day (already filtered by dayEvents for the most part)
+        // but double check if dealing with multi-day events later.
+        if (!isSameDay(appointmentDate, detailedDayViewDate)) return false; 
+
+        const startHour = new Date(eventDateStr).getHours();
+        return startHour === hour;
+      });
+    };
+
+    return (
+      <motion.div 
+        className="p-2 sm:p-4 bg-background rounded-lg shadow overflow-hidden w-full"
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="flex items-center justify-between pb-2 mb-4 border-b">
+          <h3 className="text-lg font-semibold">
+            {format(detailedDayViewDate, "EEEE, MMMM d, yyyy")}
+          </h3>
+          <Button variant="outline" size="sm" onClick={() => {
+            setDetailedDayViewDate(null);
+            setSelectedEvent(null);
+          }}>
+            <ChevronLeft className="h-4 w-4 mr-1" /> Back to Month
+          </Button>
+        </div>
+
+        {isLoading && (
+          <div className="flex items-center justify-center h-32">
+             <motion.div
+              className="rounded-full h-8 w-8 border-b-2 border-primary mx-auto"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+            />
+          </div>
+        )}
+        {!isLoading && error && (
+           <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              Failed to load calendar events for this day. {error.message}
+            </AlertDescription>
+          </Alert>
+        )}
+        {!isLoading && !error && dayEvents.length === 0 && (
+          <p className="text-gray-500 text-center py-4">No events scheduled for this day.</p>
+        )}
+
+        {!isLoading && !error && ( // Combined conditions for clarity
+          <div className="space-y-2">
+            {hours.map((hour) => {
+              const timeSlotAppointments = getAppointmentsForTimeSlot(hour);
+              const fullHourLabel = `${hour % 12 || 12}:00 ${hour >= 12 ? 'PM' : 'AM'}`;
+
+              return (
+                <div key={hour} className="flex items-start gap-4">
+                  <div className="w-20 text-sm text-muted-foreground pt-2">{fullHourLabel}</div>
+                  <div className="flex-1 min-h-[40px] pl-2 border-l border-border dark:border-gray-700">
+                    {timeSlotAppointments.map((appointment: RawGCalEvent) => (
+                      <div
+                        key={appointment.id}
+                        className={cn(
+                          "text-sm px-2 py-1 rounded cursor-pointer mb-1 text-white shadow-sm",
+                          getEventColor(appointment),
+                        )}
+                        onClick={(e) => handleEventClick(appointment, e)}
+                      >
+                        <div className="font-medium">{appointment.summary || "(No title)"}</div>
+                        {appointment.start?.dateTime && (
+                          <div className="text-xs opacity-90">
+                            {format(new Date(appointment.start.dateTime), "h:mma")}
+                            {appointment.end?.dateTime && ` - ${format(new Date(appointment.end.dateTime), "h:mma")}`}
+                            {appointment.location && (
+                              <div className="mt-1">📍 {appointment.location}</div>
+                            )}
+                          </div>
+                        )}
+                        {appointment.start?.date && !appointment.start?.dateTime && (
+                          <div className="text-xs opacity-90">(All day)</div>
+                        )}
+                      </div>
+                    ))}
+                    
+                    {/* Add new event button */}
+                    {urlLeadId && urlLeadName && (
+                      <div
+                        className="h-full w-full cursor-pointer hover:bg-muted/30 dark:hover:bg-slate-800/50 flex items-center justify-center text-muted-foreground/0 hover:text-primary transition-all duration-150 group rounded-md relative min-h-[40px]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const eventDateWithTime = new Date(detailedDayViewDate);
+                          eventDateWithTime.setHours(hour, 0, 0, 0);
+                          setSelectedDate(eventDateWithTime);
+                          setIsAppointmentModalOpen(true);
+                        }}
+                        title={`Schedule new event at ${fullHourLabel}`}
+                      >
+                        <span className="opacity-0 group-hover:opacity-100 text-xs font-medium transition-opacity duration-150 flex items-center">
+                          <Plus className="h-3 w-3 mr-1" /> Schedule at {fullHourLabel}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </motion.div>
+    );
   };
 
   const variants = {
@@ -209,7 +375,7 @@ export function CalendarView({ credentials, leadId, leadName, returnUrl }: Calen
         </div>
 
         <div className="grid grid-cols-7 gap-px bg-gray-200">
-          {calendarDays.map((day) => {
+          {calendarDays.map((day, index) => {
             const isToday = isSameDay(day, new Date())
 
             return (
@@ -246,13 +412,18 @@ export function CalendarView({ credentials, leadId, leadName, returnUrl }: Calen
     )
   }
 
+  // Main return: conditionally render day view or month view
+  if (detailedDayViewDate) {
+    return renderDetailedDayView();
+  }
+
   return (
     <>
       <TooltipProvider>
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-4 flex items-center justify-between border-b">
+        <div className="bg-background dark:bg-slate-900 rounded-lg shadow overflow-hidden w-full">
+          <div className="p-2 sm:p-4 flex items-center justify-between border-b border-border dark:border-gray-700">
             <motion.h2
-              className="text-xl font-semibold flex items-center"
+              className="text-xl font-semibold flex items-center text-slate-900 dark:text-slate-100"
               key={format(currentMonth, "MMMM-yyyy")}
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -291,12 +462,12 @@ export function CalendarView({ credentials, leadId, leadName, returnUrl }: Calen
           </div>
 
           {/* Debug info */}
-          <div className="px-4 py-2 text-xs text-gray-500">{debugInfo}</div>
+          <div className="px-1 sm:px-4 py-2 text-xs text-muted-foreground dark:text-gray-400">{debugInfo}</div>
 
           {/* Calendar header with weekday names */}
-          <div className="grid grid-cols-7 gap-px bg-gray-200">
+          <div className="grid grid-cols-7 gap-px bg-border dark:bg-gray-700">
             {weekDays.map((day) => (
-              <div key={day} className="bg-gray-50 py-2 text-center text-sm font-medium text-gray-500">
+              <div key={day} className="bg-muted/50 dark:bg-gray-800 py-2 text-center text-sm font-medium text-foreground dark:text-slate-300">
                 {day}
               </div>
             ))}
@@ -312,7 +483,7 @@ export function CalendarView({ credentials, leadId, leadName, returnUrl }: Calen
               animate="center"
               exit="exit"
               transition={transition}
-              className="grid grid-cols-7 gap-px bg-gray-200"
+              className="grid grid-cols-7 gap-px bg-border dark:bg-gray-600"
             >
               {calendarDays.map((day, index) => {
                 const dateKey = format(day, "yyyy-MM-dd")
@@ -324,73 +495,59 @@ export function CalendarView({ credentials, leadId, leadName, returnUrl }: Calen
                   <motion.div
                     key={day.toString()}
                     className={cn(
-                      "relative min-h-[100px] md:min-h-[120px] bg-white p-2 border-r border-b border-gray-200 dark:border-gray-700",
-                      !isCurrentMonth && "bg-gray-50 text-gray-400 dark:bg-gray-800 dark:text-gray-500",
-                      isToday && "bg-sky-50 dark:bg-sky-900/30"
+                      "relative min-h-[80px] sm:min-h-[100px] md:min-h-[120px] p-1 sm:p-2 border-r border-b",
+                      isCurrentMonth ? "bg-background dark:bg-slate-900" : "bg-muted/30 dark:bg-slate-800",
+                      isToday && "bg-sky-100 dark:bg-sky-700/50 ring-1 ring-sky-500",
+                      !isCurrentMonth && "text-muted-foreground dark:text-gray-400",
+                      "border-border dark:border-gray-700"
                     )}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.3, delay: index * 0.02 }}
-                    onClick={() => handleDateClick(day)}
+                    onClick={() => setDetailedDayViewDate(day)}
                   >
                     <div className="flex justify-between items-center">
                       <span
                         className={cn(
-                          "inline-flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium",
-                          isToday ? "bg-primary text-primary-foreground" : "text-gray-900 dark:text-gray-100",
-                          !isCurrentMonth && "text-gray-400 dark:text-gray-500"
+                          "inline-flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full text-xs sm:text-sm font-medium",
+                          isToday ? "bg-primary text-primary-foreground" : (isCurrentMonth ? "text-foreground dark:text-slate-300" : "text-muted-foreground dark:text-gray-500"),
                         )}
                       >
                         {format(day, "d")}
                       </span>
-                      {isCurrentMonth && (
-                        <Link
-                          href={`/dashboard/events/new?date=${format(day, "yyyy-MM-dd")}`}
-                          className="text-xs text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                          title="Add new event"
-                        >
-                          +
-                        </Link>
-                      )}
+                      {/* Update the events display to handle clicks */}
+                      <div className="flex flex-wrap gap-1 mt-2 py-1 justify-start items-center">
+                        {dayEvents.slice(0, 5).map((eventItem: RawGCalEvent, eventIndex: number) => (
+                          <div
+                            key={`${eventItem.id}-${eventIndex}`}
+                            className={cn("w-2 h-2 rounded-full", getEventColor(eventItem))}
+                            onClick={(e) => handleEventClick(eventItem, e)}
+                            title={eventItem.summary || "Event"}
+                          />
+                        ))}
+                        {dayEvents.length > 5 && (
+                          <div className="w-2 h-2 rounded-full bg-muted dark:bg-gray-600 flex items-center justify-center text-[8px] text-secondary-foreground dark:text-gray-200" title={`${dayEvents.length - 5} more events`}>
+                            {/* Could show +N here, or leave as a generic dot */}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    {/* Render events for this day */}
-                    <div className="mt-1 space-y-1">
-                      {dayEvents.map((eventItem: RawGCalEvent, eventIndex: number) => {
-                        const eventTime = eventItem.start?.dateTime
-                        if (eventTime) {
-                          return (
-                            <EventTooltip key={eventIndex} event={eventItem}>
-                              <motion.div
-                                initial={{ opacity: 0, x: -5 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.1 + eventIndex * 0.05 }}
-                              >
-                                <Link
-                                  href={`/dashboard/events/${eventItem.id}/edit`}
-                                  className="block text-xs p-1 rounded truncate hover:bg-gray-100 transition-all duration-200 hover:shadow-sm"
-                                >
-                                  <span className="font-medium">
-                                    {format(new Date(eventTime), "h:mm a")}
-                                  </span>
-                                  {eventItem.start?.date && !eventItem.start?.dateTime && (
-                                    <span className="inline-block w-2 h-2 mr-1 rounded-full bg-primary" />
-                                  )}
-                                  <span
-                                    className={cn(
-                                      "ml-1",
-                                      eventItem.start?.date && !eventItem.start?.dateTime ? "text-primary" : "",
-                                    )}
-                                  >
-                                    {eventItem.summary || "Untitled Event"}
-                                  </span>
-                                </Link>
-                              </motion.div>
-                            </EventTooltip>
-                          )
-                        }
-                        return null
-                      })}
-                    </div>
+                    
+                    {/* Add new event button */}
+                    {isCurrentMonth && urlLeadId && urlLeadName && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const eventDateWithTime = new Date(day);
+                          setSelectedDate(eventDateWithTime);
+                          setIsAppointmentModalOpen(true);
+                        }}
+                        className="text-xs text-muted-foreground hover:text-primary dark:text-gray-400 dark:hover:text-primary-foreground transition-colors p-1 rounded-full hover:bg-muted dark:hover:bg-slate-700"
+                        title="Add new event for this day"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    )}
                   </motion.div>
                 )
               })}
@@ -398,6 +555,25 @@ export function CalendarView({ credentials, leadId, leadName, returnUrl }: Calen
           </AnimatePresence>
         </div>
       </TooltipProvider>
+
+      {/* Appointment Creation Modal */}
+      {selectedDate && (
+        <Dialog open={isAppointmentModalOpen} onOpenChange={setIsAppointmentModalOpen}>
+          <DialogContent className="sm:max-w-[400px] md:max-w-[550px] lg:max-w-[650px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>New Event</DialogTitle>
+            </DialogHeader>
+            <EventForm
+              key={selectedDate.toISOString() + (urlLeadId || '')}
+              initialEventDate={selectedDate.toISOString()}
+              initialLeadId={urlLeadId}
+              initialLeadName={urlLeadName}
+              onFormSubmit={handleAppointmentScheduled}
+              onCancel={() => setIsAppointmentModalOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   )
 }

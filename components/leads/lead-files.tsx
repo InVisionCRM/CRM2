@@ -1,15 +1,16 @@
 "use client"
 
-import React, { useState, useRef, useCallback } from "react"
+import React, { useState, useRef, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useLeadFiles } from "@/hooks/use-lead-files"
 import { useToast } from "@/components/ui/use-toast"
-import { Upload, Eye, Camera, Trash2, Share2, XIcon, Loader2, FileIcon as LucideFileIcon } from "lucide-react"
+import { Upload, Eye, Camera, Trash2, Share2, XIcon, Loader2, FileIcon as LucideFileIcon, FolderOpen, FolderPlus } from "lucide-react"
 import ReactConfetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
+import { getLeadDriveFolderIdServerAction, ensureLeadDriveFolderServerAction } from "@/app/actions/lead-drive-actions"; // Import the new server action
 // We will need react-camera-pro if we proceed with its implementation
 // import { Camera as ReactCameraPro } from "react-camera-pro";
 
@@ -37,6 +38,60 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showSuccessConfetti, setShowSuccessConfetti] = useState(false);
+  const [driveFolderId, setDriveFolderId] = useState<string | null>(null);
+  const [isLoadingDriveLink, setIsLoadingDriveLink] = useState(true);
+  const [isCreatingDriveFolder, setIsCreatingDriveFolder] = useState(false); // New state for create button loading
+
+  useEffect(() => {
+    const fetchDriveId = async () => {
+      if (!leadId) {
+        setIsLoadingDriveLink(false);
+        setDriveFolderId(null);
+        return;
+      }
+      setIsLoadingDriveLink(true);
+      try {
+        // Now calling the imported server action
+        const folderId = await getLeadDriveFolderIdServerAction(leadId); 
+        setDriveFolderId(folderId);
+        if (folderId) {
+          console.log(`Drive folder ID loaded for lead ${leadId}: ${folderId}`);
+        } else {
+          console.log(`No Drive folder ID found for lead ${leadId}`);
+        }
+      } catch (error) {
+        console.error("Failed to fetch Drive folder ID from server action:", error);
+        toast({ title: "Error", description: "Could not load Drive folder link.", variant: "destructive" });
+        setDriveFolderId(null);
+      } finally {
+        setIsLoadingDriveLink(false);
+      }
+    };
+    fetchDriveId();
+  }, [leadId]);
+
+  const handleCreateDriveFolder = async () => {
+    if (!leadId) {
+      toast({ title: "Error", description: "Lead ID is missing.", variant: "destructive" });
+      return;
+    }
+    setIsCreatingDriveFolder(true);
+    try {
+      const result = await ensureLeadDriveFolderServerAction(leadId);
+      if (result.success && result.folderId) {
+        setDriveFolderId(result.folderId);
+        toast({ title: "Success", description: "Google Drive folder created and linked." });
+      } else {
+        toast({ title: "Error", description: result.message || "Failed to create or link Google Drive folder.", variant: "destructive" });
+        // Keep driveFolderId as null or its previous state
+      }
+    } catch (error: any) {
+      console.error("Failed to create/ensure Drive folder from client:", error);
+      toast({ title: "Error", description: error.message || "An unexpected error occurred.", variant: "destructive" });
+    } finally {
+      setIsCreatingDriveFolder(false);
+    }
+  };
 
   const openUploadModal = () => {
     setFilesToUpload([]);
@@ -56,19 +111,16 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
       const selected = Array.from(event.target.files);
       setFilesToUpload(selected);
       if (fileInputRef.current) {
-          fileInputRef.current.value = "";
+          fileInputRef.current.value = ""; // Reset file input
       }
     }
   };
   
   const handleActualUpload = async () => {
     if (filesToUpload.length === 0) return;
-
     let allSucceeded = true;
-
     for (const file of filesToUpload) {
       const result = await uploadFile(file, file.name);
-      
       if (!result.success) {
         allSucceeded = false;
         toast({
@@ -78,20 +130,16 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
         });
       }
     }
-    
     if (allSucceeded && filesToUpload.length > 0) {
         toast({
           title: "Upload Successful",
           description: `${filesToUpload.length} file(s) uploaded.`,
         });
         setShowSuccessConfetti(true);
-        setTimeout(() => setShowSuccessConfetti(false), 4000);
-        closeModal();
-    } else if (!allSucceeded && filesToUpload.length > 0) {
-        // If some failed, don't close modal, user might want to retry or adjust
-    }
-    
-    await refreshFiles();
+        setTimeout(() => setShowSuccessConfetti(false), 4000); 
+        closeModal(); 
+    }    
+    await refreshFiles(); 
   };
   
   const handleFileDelete = async (fileId: string, fileName: string) => {
@@ -237,31 +285,29 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
                             onBlur={(e) => {
                                 const newName = e.target.value.trim();
                                 if (newName && newName !== file.name) {
-                                    const updatedFile = new File([file], newName, { type: file.type, lastModified: file.lastModified });
-                                    setFilesToUpload(prev => prev.map((f, i) => i === index ? updatedFile : f));
-                                } else if (!newName) {
-                                    // If name is cleared, revert to original name for display if needed, or handle as error
-                                    // For now, let input be empty, actual file object still has old name or last valid name
-                                    // Or, force a name by resetting e.target.value = file.name;
+                                    const renamedFile = new File([file], newName, { type: file.type, lastModified: file.lastModified });
+                                    setFilesToUpload(prev => prev.map((f, i) => i === index ? renamedFile : f));
                                 }
                             }}
                             className="h-8 text-xs p-1.5"
                         />
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 ml-2 shrink-0" onClick={() => setFilesToUpload(prev => prev.filter((f, i) => i !== index))} >
-                      <XIcon className="h-4 w-4 text-destructive" />
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setFilesToUpload(prev => prev.filter((_, i) => i !== index))}>
+                        <XIcon className="h-3.5 w-3.5" />
+                        <span className="sr-only">Remove file</span>
                     </Button>
-          </div>
-        ))}
-      </div>
+                  </div>
+                ))}
+              </div>
             </ScrollArea>
           )}
         </div>
         <DialogFooter className="mt-auto pt-4">
-          <DialogClose asChild><Button variant="outline" onClick={closeModal} disabled={isUploading}>Cancel</Button></DialogClose>
-          <Button onClick={handleActualUpload} disabled={filesToUpload.length === 0 || isUploading}>
-            {isUploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />} 
-            Upload {filesToUpload.length > 0 ? `(${filesToUpload.length})` : ''}
+          <DialogClose asChild>
+            <Button variant="outline" onClick={closeModal}>Cancel</Button>
+          </DialogClose>
+          <Button onClick={handleActualUpload} disabled={isUploading || filesToUpload.length === 0}>
+            {isUploading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin"/> Uploading...</> : `Upload ${filesToUpload.length} File(s)`}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -284,22 +330,99 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
   );
 
   return (
-    <div className="py-6">
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-        <Button variant="outline" size="lg" className="w-full sm:w-auto" onClick={() => setActiveModal('view')}>
-          <Eye className="h-5 w-5 mr-2" /> View Files ({files.length})
-        </Button>
-        <Button variant="outline" size="lg" className="w-full sm:w-auto" onClick={openUploadModal}>
-          <Upload className="h-5 w-5 mr-2" /> Upload New File
-        </Button>
-        <Button variant="outline" size="lg" className="w-full sm:w-auto" onClick={() => setActiveModal('camera')} disabled>
-          <Camera className="h-5 w-5 mr-2" /> Take Photo
-        </Button>
+    <div className="p-4 bg-background rounded-lg shadow">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
+        <h2 className="text-xl font-semibold text-foreground">Lead Files</h2>
+        <div className="flex flex-wrap gap-2">
+          {/* Google Drive Folder Button */}
+          {isLoadingDriveLink ? (
+            <Button variant="outline" disabled className="bg-muted hover:bg-muted">
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading Drive Link...
+            </Button>
+          ) : driveFolderId ? (
+            <Button 
+              variant="outline" 
+              onClick={() => window.open(`https://drive.google.com/drive/folders/${driveFolderId}`, '_blank', 'noopener,noreferrer')}
+              className="border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600"
+            >
+              <FolderOpen className="h-4 w-4 mr-2" /> Open Drive Folder
+            </Button>
+          ) : (
+            <Button 
+              variant="default"
+              onClick={handleCreateDriveFolder}
+              disabled={isCreatingDriveFolder}
+              className="bg-green-500 hover:bg-green-600 text-white"
+            >
+              {isCreatingDriveFolder ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating Folder...</>
+              ) : (
+                <><FolderPlus className="h-4 w-4 mr-2" /> Create Drive Folder</>
+              )}
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => setActiveModal('view')} className="bg-muted hover:bg-muted/80">
+            <Eye className="h-4 w-4 mr-2" /> View All ({files.length})
+          </Button>
+          <Button variant="default" onClick={openUploadModal} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Upload className="h-4 w-4 mr-2" /> Upload Files
+          </Button>
+          {/* <Button variant="outline" onClick={() => setActiveModal('camera')} className="bg-muted hover:bg-muted/80">
+            <Camera className="h-4 w-4 mr-2" /> Use Camera
+          </Button> */}
+        </div>
       </div>
 
+      {/* Simplified display area, modals handle detailed views/actions */}
+      {isLoadingFiles ? (
+        <div className="text-center py-5"><Loader2 className="h-5 w-5 animate-spin inline mr-2 text-muted-foreground"/>Loading files...</div>
+      ) : filesError ? (
+        <div className="text-center py-5 text-destructive">Error loading files: {filesError.message}</div>
+      ) : files.length === 0 ? (
+        <div className="text-center py-10 px-4 border-2 border-dashed border-muted-foreground/20 rounded-lg">
+          <LucideFileIcon className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+          <p className="text-muted-foreground">No files uploaded for this lead yet.</p>
+          <p className="text-sm text-muted-foreground/80 mt-1">Use the "Upload Files" button to add documents.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {/* Display a few recent files or previews, full list in modal */}
+          {files.slice(0, 5).map(file => (
+            <div key={file.id} className="relative group p-2 border rounded-lg bg-card hover:shadow-md transition-shadow">
+              <div className="aspect-square bg-muted rounded-md flex items-center justify-center mb-2 overflow-hidden">
+                {file.type?.startsWith("image/") ? (
+                  <img src={file.url} alt={file.name} className="h-full w-full object-cover" />
+                ) : (
+                  <LucideFileIcon className="h-10 w-10 text-muted-foreground" />
+                )}
+              </div>
+              <p className="text-xs font-medium truncate text-center text-card-foreground" title={file.name}>{file.name}</p>
+              <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => window.open(file.url, '_blank')} title="View File">
+                  <Eye className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          ))}
+          {files.length > 5 && (
+            <div 
+                className="aspect-square border-2 border-dashed border-muted-foreground/20 rounded-md flex flex-col items-center justify-center text-center p-2 cursor-pointer hover:border-primary transition-colors"
+                onClick={() => setActiveModal('view')}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveModal('view'); }}
+            >
+                <Eye className="h-8 w-8 text-muted-foreground mb-1"/>
+                <p className="text-xs text-muted-foreground">View All ({files.length})</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modals */}
       {renderViewFilesModal()}
       {renderUploadModal()}
-      {renderCameraModal()} 
+      {/* {renderCameraModal()} */}
     </div>
   );
 }

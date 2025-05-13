@@ -11,10 +11,7 @@ export function DashboardContent() {
       <DynamicHero />
       
       <div className="container mx-auto space-y-6 p-4">
-        {/* Welcome message */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold">Welcome back</h2>
-        </div>
+        {/* Welcome message removed */}
 
         {/* Summary Cards removed */}
         {/* <SummaryCards /> */}

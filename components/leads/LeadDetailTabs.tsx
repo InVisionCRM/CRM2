@@ -12,6 +12,7 @@ import { LeadFilesTab } from "./tabs/LeadFilesTab"
 import { LeadContractsTab } from "./tabs/LeadContractsTab"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useSWRConfig } from "swr"
 
 interface LeadDetailTabsProps {
   lead: Lead | null;
@@ -20,7 +21,7 @@ interface LeadDetailTabsProps {
 }
 
 // Define type for the section being edited
-type EditableSection = 'contact' | 'insurance' | 'adjuster';
+type EditableSection = 'contact' | 'insurance' | 'adjuster' | null;
 
 const TABS_CONFIG = [
   { value: "overview", label: "Overview", Component: LeadOverviewTab },
@@ -31,7 +32,8 @@ const TABS_CONFIG = [
 
 export function LeadDetailTabs({ lead, activeTab, onTabChange }: LeadDetailTabsProps) {
   const [isMobile, setIsMobile] = useState(false);
-  const [formToEdit, setFormToEdit] = useState<EditableSection | null>(null); // Added state for form editing
+  const [formToEdit, setFormToEdit] = useState<EditableSection>(null);
+  const { mutate } = useSWRConfig();
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768); // md breakpoint
@@ -59,45 +61,50 @@ export function LeadDetailTabs({ lead, activeTab, onTabChange }: LeadDetailTabsP
   const ActiveTabComponent = TABS_CONFIG.find(tab => tab.value === activeTab)?.Component;
 
   const getInitialDataForForm = (formType: EditableSection) => {
+    if (!lead) return {};
+    
     switch (formType) {
       case 'contact':
         return {
-          firstName: lead.firstName || "", lastName: lead.lastName || "",
-          email: lead.email || "", phone: lead.phone || "",
-          address: lead.address || "",
+          firstName: lead.firstName ?? "",
+          lastName: lead.lastName ?? "",
+          email: lead.email ?? "",
+          phone: lead.phone ?? "",
+          address: lead.address ?? "",
         };
       case 'insurance':
         return {
-          insuranceCompany: lead.insuranceCompany || "",
-          insurancePolicyNumber: lead.insurancePolicyNumber || "",
-          insurancePhone: lead.insurancePhone || "",
-          insuranceDeductible: lead.insuranceDeductible || "",
-          insuranceSecondaryPhone: lead.insuranceSecondaryPhone || "",
+          insuranceCompany: lead.insuranceCompany ?? "",
+          insurancePolicyNumber: lead.insurancePolicyNumber ?? "",
+          insurancePhone: lead.insurancePhone ?? "",
+          insuranceDeductible: lead.insuranceDeductible ?? "",
+          insuranceSecondaryPhone: lead.insuranceSecondaryPhone ?? "",
           dateOfLoss: lead.dateOfLoss ? new Date(lead.dateOfLoss).toISOString().split('T')[0] : "",
-          damageType: lead.damageType as any || undefined,
-          claimNumber: lead.claimNumber || "",
+          damageType: lead.damageType as any ?? undefined,
+          claimNumber: lead.claimNumber ?? "",
         };
       case 'adjuster':
         return {
-          insuranceAdjusterName: lead.insuranceAdjusterName || "",
-          insuranceAdjusterPhone: lead.insuranceAdjusterPhone || "",
-          insuranceAdjusterEmail: lead.insuranceAdjusterEmail || "",
+          insuranceAdjusterName: lead.insuranceAdjusterName ?? "",
+          insuranceAdjusterPhone: lead.insuranceAdjusterPhone ?? "",
+          insuranceAdjusterEmail: lead.insuranceAdjusterEmail ?? "",
           adjusterAppointmentDate: lead.adjusterAppointmentDate 
             ? new Date(lead.adjusterAppointmentDate).toISOString().split('T')[0]
             : "",
-          adjusterAppointmentTime: lead.adjusterAppointmentTime || "",
-          adjusterAppointmentNotes: lead.adjusterAppointmentNotes || "",
+          adjusterAppointmentTime: lead.adjusterAppointmentTime ?? "",
+          adjusterAppointmentNotes: lead.adjusterAppointmentNotes ?? "",
         };
       default:
         return {};
     }
   };
 
-  const handleFormSuccess = (formType: EditableSection) => {
+  const handleFormSuccess = async (formType: EditableSection) => {
     console.log(`${formType} form submitted successfully`);
     setFormToEdit(null);
-    // Potentially add lead data refetching logic here
-    // e.g. router.refresh() or a custom callback from parent
+    
+    // Revalidate the lead data
+    await mutate(`/api/leads/${lead.id}`);
   };
 
   const handleFormCancel = () => {

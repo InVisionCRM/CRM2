@@ -347,17 +347,17 @@ export function Calendar({ credentials, appointmentsData, onDateClick, onAppoint
         {/* Calendar grid */}
         <div className="grid grid-cols-7 gap-1 flex-1">
           {monthDays.map((day, i) => {
-            const dayAppointments = getAppointmentsForDay(day)
-            const isToday = isSameDay(day, new Date())
-            const isCurrentMonth = isSameMonth(day, currentDate)
-            const isZooming = zoomingDay && isSameDay(day, zoomingDay)
+            const dayAppointments = getAppointmentsForDay(day);
+            const isToday = isSameDay(day, new Date());
+            const isCurrentMonth = isSameMonth(day, currentDate);
+            const isZooming = zoomingDay && isSameDay(day, zoomingDay);
 
             return (
               <ContextMenu key={day.toString()}>
                 <ContextMenuTrigger>
                   <div
                     className={cn(
-                      "day-cell min-h-[80px] p-1 border border-gray-200 dark:border-gray-800 rounded-md",
+                      "day-cell min-h-[80px] p-1 border border-gray-200 dark:border-gray-800 rounded-md flex flex-col items-start",
                       isCurrentMonth
                         ? "bg-white dark:bg-gray-950"
                         : "bg-gray-50 dark:bg-gray-900/50 text-gray-400 dark:text-gray-600",
@@ -366,23 +366,18 @@ export function Calendar({ credentials, appointmentsData, onDateClick, onAppoint
                     )}
                     onClick={(e) => handleDayClick(day, e)}
                   >
-                    <div className="text-right text-xs font-medium mb-1">{format(day, "d")}</div>
+                    <div className="text-right text-xs font-medium mb-1 self-end">{format(day, "d")}</div>
 
-                    {/* Appointment dots instead of text */}
+                    {/* Appointment dots ONLY */}
                     <div className="flex flex-wrap gap-1 mt-1">
                       {dayAppointments.slice(0, 5).map((appointment: RawGCalEvent) => (
                         <div
                           key={appointment.id}
                           className={cn("w-2 h-2 rounded-full", getAppointmentColor(appointment))}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onAppointmentClick(appointment)
-                          }}
                         />
                       ))}
                       {dayAppointments.length > 5 && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 ml-1">
-                          +{dayAppointments.length - 5}
+                        <div className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-[8px] text-gray-700 dark:text-gray-200">
                         </div>
                       )}
                     </div>
@@ -390,15 +385,15 @@ export function Calendar({ credentials, appointmentsData, onDateClick, onAppoint
                 </ContextMenuTrigger>
                 <ContextMenuContent>
                   <ContextMenuItem onClick={() => onSwitchToDay(day)}>Add Appointment</ContextMenuItem>
-                  <ContextMenuItem onClick={() => onDateClick(day)}>View Details</ContextMenuItem>
+                  <ContextMenuItem onClick={() => handleDayClick(day, {} as React.MouseEvent<HTMLDivElement>)}>View Day Details</ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>
-            )
+            );
           })}
         </div>
       </div>
-    )
-  }
+    );
+  };
 
   // Week view
   const renderWeekView = () => {
@@ -473,7 +468,7 @@ export function Calendar({ credentials, appointmentsData, onDateClick, onAppoint
                           )}
                           onClick={(e) => {
                             e.stopPropagation()
-                            onAppointmentClick(appointment)
+                            handleAppointmentClick(appointment)
                           }}
                         >
                           {appointment.summary || "(No title)"}
@@ -548,11 +543,18 @@ export function Calendar({ credentials, appointmentsData, onDateClick, onAppoint
                       )}
                       onClick={(e) => {
                         e.stopPropagation()
-                        onAppointmentClick(appointment)
+                        handleAppointmentClick(appointment)
                       }}
                     >
                       <div className="font-medium">{appointment.summary || "(No title)"}</div>
-                      {appointment.start?.dateTime && <div className="text-xs">({format(new Date(appointment.start.dateTime), "h:mma")})</div>}
+                      {appointment.start?.dateTime && (
+                        <div className="text-xs">
+                          {format(new Date(appointment.start.dateTime), "h:mma")}
+                          {appointment.location && (
+                            <span className="ml-2">📍 {appointment.location}</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -562,6 +564,17 @@ export function Calendar({ credentials, appointmentsData, onDateClick, onAppoint
         </div>
       </div>
     )
+  }
+
+  const handleAppointmentClick = (appointment: RawGCalEvent) => {
+    if (onAppointmentClick) {
+      // Add location to the displayed information
+      const appointmentWithLocation = {
+        ...appointment,
+        location: appointment.location || 'No location specified'
+      }
+      onAppointmentClick(appointmentWithLocation)
+    }
   }
 
   return (

@@ -70,7 +70,7 @@ export function AddressSearch({ onAddressSelect, accessToken }: AddressSearchPro
       
       {/* Results dropdown */}
       {searchResults.length > 0 && (
-        <div className="absolute w-full mt-1 bg-black/90 border border-[#59ff00]/20 rounded-lg overflow-hidden z-50 backdrop-blur-md">
+        <div className="absolute w-full mt-1 bg-black/50 border border-[#59ff00]/20 rounded-lg overflow-hidden z-50 backdrop-blur-md">
           {searchResults.map((result, index) => (
             <button
               key={index}

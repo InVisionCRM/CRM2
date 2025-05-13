@@ -66,6 +66,7 @@ model User {
   visionMarkers VisionMarker[]
   visits        Visit[]
   routePoints   RoutePoint[]
+  googleCalendarEvents GoogleCalendarEvent[]
 
   createdAt     DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt     DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
@@ -98,6 +99,7 @@ model Lead {
   googleEventId             String?
   latitude                  Decimal?  @db.Decimal(10,7)
   longitude                 Decimal?  @db.Decimal(10,7)
+  googleDriveFolderId       String?   // Field to store the Google Drive Folder ID for this lead
   createdAt                 DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt                 DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
 
@@ -212,6 +214,27 @@ model Visit {
   @@index([leadId])
   @@index([userId])
   @@index([status])
+}
+
+model GoogleCalendarEvent {
+  id            String    @id @default(cuid())
+  userId        String    @db.Uuid
+  googleEventId String?   @unique @map("googleId") // From migration SQL
+  summary       String
+  description   String?
+  location      String?
+  startTime     DateTime?
+  endTime       DateTime?
+  // The migration SQL used startDate and endDate too, if these are different from startTime/endTime, add them.
+  // For simplicity, assuming startTime/endTime cover those for now.
+  isAllDay      Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("Event") // To match the table name in the old migration
 }
 
 model ClientIdSequence {

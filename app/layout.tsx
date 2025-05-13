@@ -13,6 +13,18 @@ export const metadata: Metadata = {
   generator: 'v0.dev',
   icons: {
     icon: "https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Purlin_Logo-QGECcCeMQoHVp3aZWHJv36rKSvRq2z.png",
+    apple: "https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/ios%20-%20logo/invision-logo-V1CxU8WrdgwxkKTrSIYPMzvmxY0vQR.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Roofing Mobile CRM",
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
   },
 }
 
@@ -23,6 +35,19 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning className="dark">
+      <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Roofing Mobile CRM" />
+        <link 
+          rel="apple-touch-icon" 
+          href="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/ios%20-%20logo/invision-logo-V1CxU8WrdgwxkKTrSIYPMzvmxY0vQR.png" 
+        />
+        <link 
+          rel="apple-touch-startup-image" 
+          href="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/ios%20-%20logo/invision-logo-V1CxU8WrdgwxkKTrSIYPMzvmxY0vQR.png" 
+        />
+      </head>
       <body className={`${inter.className} h-screen`}>
         <AuthProvider>
           <LayoutClientWrapper>{children}</LayoutClientWrapper>

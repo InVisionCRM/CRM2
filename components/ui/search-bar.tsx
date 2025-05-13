@@ -6,10 +6,11 @@ import { motion, AnimatePresence } from "framer-motion"
 
 interface SearchBarProps extends React.InputHTMLAttributes<HTMLInputElement> {
   containerClassName?: string;
+  topOffset?: string;
 }
 
 export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
-  ({ className, containerClassName, ...props }, ref) => {
+  ({ className, containerClassName, topOffset = "1rem", ...props }, ref) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
     useEffect(() => {
@@ -25,8 +26,12 @@ export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
 
     return (
       <motion.div 
-        className={cn("relative w-full", containerClassName)}
-        animate={{ width: isExpanded ? "100%" : "40%" }}
+        className={cn(
+          "fixed left-1/2 -translate-x-1/2 z-50 w-100 max-w-md px-4",
+          containerClassName
+        )}
+        style={{ top: topOffset }}
+        animate={{ width: isExpanded ? "100%" : "20%" }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
       >
         <div className="relative w-full" onClick={() => setIsExpanded(true)}>

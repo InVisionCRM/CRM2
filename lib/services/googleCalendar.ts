@@ -11,27 +11,109 @@ const GOOGLE_CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3';
 
 export class GoogleCalendarService {
   private credentials: GoogleCalendarCredentials;
+  private isRefreshingToken = false; // Prevent concurrent refresh attempts
+  private retryCount = 0; // Prevent infinite retry loops
 
   constructor(credentials: GoogleCalendarCredentials) {
     this.credentials = credentials;
   }
 
-  private async fetchWithAuth(endpoint: string, options: RequestInit = {}) {
-    const response = await fetch(`${GOOGLE_CALENDAR_API_BASE}${endpoint}`, {
-      ...options,
-      headers: {
-        ...options.headers,
-        'Authorization': `Bearer ${this.credentials.accessToken}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
-      throw new Error(error.error?.message || GOOGLE_CALENDAR_CONFIG.ERRORS.FETCH_EVENTS);
+  private async refreshAccessToken(): Promise<string | null> {
+    if (!this.credentials.refreshToken) {
+      console.warn('No refresh token available to refresh access token.');
+      return null;
     }
 
-    return response.json();
+    this.isRefreshingToken = true;
+    try {
+      console.log('Attempting to refresh Google access token...');
+      // This API route needs to be created.
+      // It will take the refreshToken from the session (implicitly, or passed if needed)
+      // and return a new accessToken.
+      const response = await fetch('/api/auth/refresh-google-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // Optionally, if your API route needs the old refresh token explicitly
+        // body: JSON.stringify({ refreshToken: this.credentials.refreshToken })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to refresh token, unknown error' }));
+        console.error('Failed to refresh access token:', response.status, errorData.message);
+        throw new Error(errorData.message || 'Failed to refresh access token');
+      }
+
+      const data = await response.json();
+      if (data.accessToken) {
+        console.log('Successfully refreshed Google access token.');
+        this.credentials.accessToken = data.accessToken;
+        // If the refresh endpoint also returns a new refresh_token, update it:
+        // if (data.refreshToken) {
+        //   this.credentials.refreshToken = data.refreshToken;
+        // }
+        this.retryCount = 0; // Reset retry count on successful refresh
+        return data.accessToken;
+      } else {
+        console.error('Refresh token endpoint did not return an access token.');
+        throw new Error('Refresh token endpoint did not return an access token.');
+      }
+    } catch (error) {
+      console.error('Error during access token refresh:', error);
+      return null;
+    } finally {
+      this.isRefreshingToken = false;
+    }
+  }
+
+  private async fetchWithAuth(endpoint: string, options: RequestInit = {}, isRetry = false): Promise<any> {
+    if (this.isRefreshingToken && !isRetry) {
+      // Wait for the ongoing refresh to complete before making a new request
+      await new Promise(resolve => {
+        const interval = setInterval(() => {
+          if (!this.isRefreshingToken) {
+            clearInterval(interval);
+            resolve(null);
+          }
+        }, 100);
+      });
+    }
+    
+    try {
+      const response = await fetch(`${GOOGLE_CALENDAR_API_BASE}${endpoint}`, {
+        ...options,
+        headers: {
+          ...options.headers,
+          'Authorization': `Bearer ${this.credentials.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: { message: 'Unknown API error' } }));
+        // Google often returns 401 for expired/invalid token, but can also be 403 for other permission issues.
+        if ((response.status === 401 || response.status === 403) && !isRetry && this.retryCount < 1) {
+          this.retryCount++;
+          console.warn(`Google API request failed with status ${response.status}. Attempting token refresh.`);
+          const newAccessToken = await this.refreshAccessToken();
+          if (newAccessToken) {
+            // Retry the original request with the new token
+            return this.fetchWithAuth(endpoint, options, true);
+          } else {
+            // If refresh failed, throw the original error or a specific auth error
+            throw new Error(errorData.error?.message || `Auth error after failed refresh: ${response.status}`);
+          }
+        }
+        throw new Error(errorData.error?.message || GOOGLE_CALENDAR_CONFIG.ERRORS.FETCH_EVENTS);
+      }
+      this.retryCount = 0; // Reset retry count on successful API call
+      return response.json();
+    } catch (error) {
+      // If it's an error from our own refresh logic, or a retry already failed.
+      console.error('Error in fetchWithAuth:', error);
+      throw error;
+    }
   }
 
   async listEvents(timeMin: Date, timeMax: Date): Promise<RawGCalEvent[]> {
@@ -107,42 +189,27 @@ export class GoogleCalendarService {
   }
 
   private appointmentToGoogleEvent(appointment: CalendarAppointment) {
+    // Create date object in local time
     const startDateTime = appointment.date ? new Date(appointment.date) : new Date();
     
-    // Default start time to noon if not provided or invalid
-    let startHours = 12, startMinutes = 0;
+    // Parse the time and set hours/minutes
     if (typeof appointment.startTime === 'string' && appointment.startTime.includes(':')) {
-      const parts = appointment.startTime.split(':').map(Number);
-      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        startHours = parts[0];
-        startMinutes = parts[1];
-      }
+      const [hours, minutes] = appointment.startTime.split(':').map(Number);
+      startDateTime.setHours(hours, minutes, 0, 0);
     }
-    startDateTime.setHours(startHours, startMinutes, 0, 0); // Added seconds and milliseconds reset
 
+    // Create end time (1 hour after start time by default)
     const endDateTime = new Date(startDateTime);
     if (typeof appointment.endTime === 'string' && appointment.endTime.includes(':')) {
-      const parts = appointment.endTime.split(':').map(Number);
-      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-        endDateTime.setHours(parts[0], parts[1], 0, 0); // Added seconds and milliseconds reset
-      } else {
-        // If endTime is invalid, default to one hour after startTime
-        endDateTime.setHours(startDateTime.getHours() + 1, startDateTime.getMinutes(), 0, 0);
-      }
+      const [hours, minutes] = appointment.endTime.split(':').map(Number);
+      endDateTime.setHours(hours, minutes, 0, 0);
     } else {
-      // If endTime is not provided, default to one hour after startTime
       endDateTime.setHours(startDateTime.getHours() + 1, startDateTime.getMinutes(), 0, 0);
     }
 
     // Ensure endDateTime is after startDateTime
     if (endDateTime <= startDateTime) {
-        endDateTime.setDate(startDateTime.getDate()); // Reset date part just in case
-        endDateTime.setHours(startDateTime.getHours() + 1, startDateTime.getMinutes(), 0, 0);
-    }
-
-    let colorIdValue: string | undefined = undefined;
-    if (appointment.purpose && (Object.values(AppointmentPurpose) as string[]).includes(appointment.purpose)) {
-      colorIdValue = GOOGLE_CALENDAR_CONFIG.COLOR_MAP[appointment.purpose as AppointmentPurposeType];
+      endDateTime.setHours(startDateTime.getHours() + 1, startDateTime.getMinutes(), 0, 0);
     }
 
     return {
@@ -151,13 +218,13 @@ export class GoogleCalendarService {
       description: appointment.notes,
       start: {
         dateTime: startDateTime.toISOString(),
-        timeZone: GOOGLE_CALENDAR_CONFIG.DEFAULTS.TIME_ZONE,
+        timeZone: 'America/New_York', // Explicitly set Eastern Time
       },
       end: {
         dateTime: endDateTime.toISOString(),
-        timeZone: GOOGLE_CALENDAR_CONFIG.DEFAULTS.TIME_ZONE,
+        timeZone: 'America/New_York', // Explicitly set Eastern Time
       },
-      colorId: colorIdValue,
+      colorId: appointment.purpose ? GOOGLE_CALENDAR_CONFIG.COLOR_MAP[appointment.purpose as AppointmentPurposeType] : undefined,
       extendedProperties: {
         private: {
           leadId: appointment.leadId || '',

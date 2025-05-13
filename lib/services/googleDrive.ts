@@ -149,4 +149,33 @@ export class GoogleDriveService {
       return { success: false, message };
     }
   }
+
+  async createFolder(name: string, opts?: { parentId?: string }): Promise<ServiceResult<DriveFile>> {
+    try {
+      const metadata = {
+        name,
+        mimeType: 'application/vnd.google-apps.folder',
+        ...(opts?.parentId && { parents: [opts.parentId] }),
+        ...(!opts?.parentId && process.env.GOOGLE_DRIVE_FOLDER_ID_DEFAULT && { 
+          parents: [process.env.GOOGLE_DRIVE_FOLDER_ID_DEFAULT] 
+        })
+      };
+
+      const data = await this.fetchGoogleAPI<DriveFile>(
+        `/files?fields=id,name,mimeType,webViewLink,createdTime`,
+        {
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(metadata),
+        }
+      );
+      return { success: true, data };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to create folder";
+      console.error("createFolder error:", error);
+      return { success: false, message };
+    }
+  }
 } 

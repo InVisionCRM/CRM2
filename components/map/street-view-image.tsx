@@ -41,7 +41,7 @@ export function StreetViewImage({
         
         // Construct the Street View Static API URL
         const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-        const [lat, lng] = position
+        const [lng, lat] = position
         console.log('Street View position:', { lat, lng }) // Debug log
         
         const size = "600x600" // Square size for better scaling

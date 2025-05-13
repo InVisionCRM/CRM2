@@ -10,6 +10,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { LeadStatus, ActivityType, type Lead } from "@prisma/client"
 import { formatStatusLabel } from "@/lib/utils"
 import { v4 as uuidv4 } from 'uuid'
+import { GoogleDriveService } from "@/lib/services/googleDrive"
 
 export async function createLeadAction(
   data: {
@@ -56,34 +57,64 @@ export async function createLeadAction(
 
     console.log("Lead created successfully:", lead)
 
-    if (files && files.length > 0 && typeof uploadToBlob === "function" && typeof createFile === "function") {
-      console.log(`Uploading ${files.length} files for lead ${lead.id}`)
+    // ---- BEGIN Google Drive Folder Creation ----
+    /*
+    if (session?.accessToken && lead) {
+      const parentFolderId = process.env.GOOGLE_DRIVE_LEADS_PARENT_FOLDER_ID;
 
-      const filePromises = files.map(async (file) => {
+      if (!parentFolderId) {
+        console.warn("GOOGLE_DRIVE_LEADS_PARENT_FOLDER_ID is not set in .env. Skipping Google Drive folder creation for lead:", lead.id);
+      } else {
         try {
-          // Assuming uploadToBlob is correctly defined elsewhere
-          // const uploadedFile = await uploadToBlob(file, lead.id)
-          // console.log("File uploaded to blob:", uploadedFile)
-          // Assuming createFile is correctly defined elsewhere
-          // await createFile({
-          //   leadId: lead.id,
-          //   url: uploadedFile.url,
-          //   name: uploadedFile.filename, // Ensure these field names match your createFile expectations
-          //   size: uploadedFile.size,
-          //   type: file.type, // Or uploadedFile.type
-          // })
-          // For now, mock this part if uploadToBlob/createFile are not ready
-          console.warn("File upload logic is present but dependencies (uploadToBlob, createFile) need verification.")
-        } catch (error) {
-          console.error("Error during file upload process for a file:", error)
+          const driveService = new GoogleDriveService({ accessToken: session.accessToken as string });
+          const folderName = `Lead: ${lead.firstName || 'N/A'} ${lead.lastName || 'N/A'} - ID ${lead.id}`.replace(/[\\/:"*?<>|]/g, '_'); // Sanitize name
+
+          console.log(`Attempting to create Google Drive folder: "${folderName}" in parent "${parentFolderId}"`);
+          const folderResult = await driveService.createFolder(folderName, { parentId: parentFolderId });
+
+          if (folderResult.success && folderResult.data) {
+            await prisma.lead.update({
+              where: { id: lead.id },
+              data: { googleDriveFolderId: folderResult.data.id },
+            });
+            console.log(`Google Drive folder created and linked for lead ${lead.id}: Folder ID ${folderResult.data.id}`);
+          } else {
+            console.error(`Failed to create Google Drive folder for lead ${lead.id}. Error: ${folderResult.message}`);
+          }
+        } catch (driveError: any) {
+          console.error(`Error during Google Drive folder creation process for lead ${lead.id}: `, driveError.message || driveError);
         }
-      })
-
-      await Promise.all(filePromises)
-      console.log("File upload processing finished for lead:", lead.id)
+      }
+    } else if (!session?.accessToken) {
+      console.warn("No Google access token found in session. Skipping Google Drive folder creation for lead:", lead?.id || 'new lead');
     }
+    */
+    // ---- END Google Drive Folder Creation ----
 
-    revalidatePath("/leads")
+    // Placeholder for file uploads if files are provided.
+    // The original 'files' handling pointed to a generic blob upload.
+    // If these files should go into the newly created Drive folder, specific logic is needed here.
+    /*
+    if (files && files.length > 0 && lead && session?.accessToken) {
+        const leadDriveFolderId = (await prisma.lead.findUnique({ where: { id: lead.id }, select: { googleDriveFolderId: true } }))?.googleDriveFolderId;
+        if (leadDriveFolderId) {
+            console.log(`Processing ${files.length} files for Drive folder ${leadDriveFolderId} of lead ${lead.id}`);
+            const driveService = new GoogleDriveService({ accessToken: session.accessToken as string });
+            for (const file of files) {
+                try {
+                    await driveService.uploadFile(file, { folderId: leadDriveFolderId });
+                    console.log(`File ${file.name} uploaded to Drive for lead ${lead.id}`);
+                } catch (uploadError: any) {
+                    console.error(`Error uploading file ${file.name} to Drive for lead ${lead.id}:`, uploadError.message || uploadError);
+                }
+            }
+        } else {
+            console.warn(`Cannot upload files to Drive for lead ${lead.id}: Drive folder ID not found or not created.`);
+        }
+    }
+    */
+
+    revalidatePath("/leads");
     revalidatePath("/dashboard")
 
     return {
@@ -91,16 +122,14 @@ export async function createLeadAction(
       lead,
       message: "Lead created successfully",
     }
-  } catch (error) {
-    console.error("Error creating lead:", error)
-    let errorMessage = "Failed to create lead.";
-    if (error instanceof Error) {
-        errorMessage = error.message;
-    }
+  } catch (error: any) {
+    console.error("Error creating lead in action:", error);
     return {
       success: false,
-      message: errorMessage,
-    }
+      message: error.message || "Failed to create lead due to an unexpected error.",
+      leadId: null,
+      data: null,
+    };
   }
 }
 
@@ -309,7 +338,7 @@ export async function updateInsuranceInfoAction(
 
 type AdjusterAppointmentData = {
   leadId: string
-  appointmentDate: Date | null
+  appointmentDate: string | null
   appointmentTime: string | null
   appointmentNotes?: string | null
 }
@@ -333,11 +362,14 @@ export async function scheduleAdjusterAppointmentAction(
       }
     }
 
+    // Parse the date string into a Date object if it exists
+    const appointmentDate = data.appointmentDate ? new Date(data.appointmentDate) : null
+
     // Update the lead with appointment information using Prisma
     await prisma.lead.update({
       where: { id: data.leadId },
       data: {
-        adjusterAppointmentDate: data.appointmentDate,
+        adjusterAppointmentDate: appointmentDate,
         adjusterAppointmentTime: data.appointmentTime,
         adjusterAppointmentNotes: data.appointmentNotes,
         updatedAt: new Date(),
