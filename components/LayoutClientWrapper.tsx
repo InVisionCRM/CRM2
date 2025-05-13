@@ -18,7 +18,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
   const pathname = usePathname();
   const isMapPage = pathname === "/map";
   const [isMobile, setIsMobile] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const dragControls = useDragControls();
 
   // Effect for determining if the view is mobile
@@ -62,14 +62,13 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
   }, [isSidebarOpen]);
 
   const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const { offset, velocity } = info;
+    const { velocity } = info;
     
-    if (Math.abs(velocity.x) < 10) {
-      // If velocity is very low, use position to determine state
-      setIsSidebarOpen(offset.x > -150);
-    } else {
-      // Use velocity for swipe gesture
-      setIsSidebarOpen(velocity.x > 0);
+    // Simple left/right swipe detection
+    if (velocity.x < -100) {
+      setIsSidebarOpen(false); // Close on left swipe
+    } else if (velocity.x > 100) {
+      setIsSidebarOpen(true);  // Open on right swipe
     }
   };
 
@@ -77,7 +76,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
     <div className="flex h-screen">
       {/* Render AppSidebar for non-map pages based on screen size */}
       {!isMapPage && !isMobile && (
-        <AppSidebar initialCollapsed={true} />
+        <AppSidebar initialCollapsed={false} />
       )}
       
       {/* Mobile sidebar with swipe controls */}
@@ -86,7 +85,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
           {/* Backdrop when sidebar is open */}
           <motion.div
             className="fixed inset-0 bg-black/20 z-30"
-            initial={{ opacity: 0 }}
+            initial={{ opacity: 1 }}
             animate={{ opacity: isSidebarOpen ? 1 : 0 }}
             onClick={() => setIsSidebarOpen(false)}
             style={{ pointerEvents: isSidebarOpen ? 'auto' : 'none' }}
@@ -95,7 +94,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
           {/* Mobile sidebar */}
           <motion.div
             className="fixed inset-y-0 left-0 z-40 shadow-lg touch-pan-y"
-            initial={{ x: "-100%" }}
+            initial={{ x: 0 }}
             animate={{ x: isSidebarOpen ? 0 : "-100%" }}
             transition={{ 
               type: "spring", 
@@ -104,7 +103,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
             }}
             drag="x"
             dragConstraints={{ left: -300, right: 0 }}
-            dragElastic={0.2}
+            dragElastic={0.1}
             dragMomentum={false}
             onDragEnd={handleDragEnd}
             style={{ 
