@@ -12,10 +12,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string
+  initialCollapsed?: boolean
 }
 
-export default function AppSidebar({ className }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(true)
+export default function AppSidebar({ className, initialCollapsed = true }: SidebarProps) {
+  const [isCollapsed, setIsCollapsed] = useState(initialCollapsed)
   const pathname = usePathname()
 
   const links = [

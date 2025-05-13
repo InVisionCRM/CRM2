@@ -147,8 +147,6 @@ model Activity {
   title       String
   description String?
   status      String?
-  leadId      String
-  userId      String
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   
@@ -217,7 +215,7 @@ model Visit {
 }
 
 model GoogleCalendarEvent {
-  id            String    @id @default(cuid())
+  id            String    @id @default(uuid())
   userId        String    @db.Uuid
   googleEventId String?   @unique @map("googleId") // From migration SQL
   summary       String
