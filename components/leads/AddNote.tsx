@@ -84,7 +84,7 @@ export function AddNote({ leadId, onSuccess }: AddNoteProps) {
             disabled={isSubmitting}
           />
         </CardContent>
-        <CardFooter className="items-end justify-end">
+        <CardFooter className="flex justify-end">
           <Button 
             type="submit" 
             disabled={isSubmitting || !note.trim()}

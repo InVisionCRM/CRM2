@@ -189,38 +189,42 @@ export class GoogleCalendarService {
   }
 
   private appointmentToGoogleEvent(appointment: CalendarAppointment) {
-    // appointment.startTime and appointment.endTime are expected to be full ISO8601 UTC strings
-    // from the API route.
-    // appointment.timeZone is the target timezone string (e.g., 'America/New_York')
-
-    if (!appointment.startTime || !appointment.endTime) {
-      console.error("Error in appointmentToGoogleEvent: startTime or endTime is missing.", appointment);
-      throw new Error("Start time and end time are required for Google Calendar event.");
+    // Create date object in local time
+    const startDateTime = appointment.date ? new Date(appointment.date) : new Date();
+    
+    // Parse the time and set hours/minutes
+    if (typeof appointment.startTime === 'string' && appointment.startTime.includes(':')) {
+      const [hours, minutes] = appointment.startTime.split(':').map(Number);
+      startDateTime.setHours(hours, minutes, 0, 0);
     }
 
-    // Ensure startTime and endTime are valid ISO strings (simple check)
-    // A more robust validation might involve trying to parse them with new Date()
-    // or using a regex, but for now, we assume they are correctly formatted ISO strings.
-    if (!appointment.startTime.includes('T') || !appointment.endTime.includes('T')) {
-        console.error("Error in appointmentToGoogleEvent: startTime or endTime is not a valid ISO string.", appointment);
-        throw new Error("startTime or endTime is not in valid ISO8601 format.");
+    // Create end time (1 hour after start time by default)
+    const endDateTime = new Date(startDateTime);
+    if (typeof appointment.endTime === 'string' && appointment.endTime.includes(':')) {
+      const [hours, minutes] = appointment.endTime.split(':').map(Number);
+      endDateTime.setHours(hours, minutes, 0, 0);
+    } else {
+      endDateTime.setHours(startDateTime.getHours() + 1, startDateTime.getMinutes(), 0, 0);
     }
 
-    const targetTimeZone = appointment.timeZone || GOOGLE_CALENDAR_CONFIG.DEFAULTS.TIME_ZONE || 'America/New_York';
-    console.log("GoogleCalendarService - appointmentToGoogleEvent - Input appointment:", JSON.stringify(appointment, null, 2));
-    console.log("GoogleCalendarService - appointmentToGoogleEvent - Target timezone:", targetTimeZone);
+    // Ensure endDateTime is after startDateTime
+    if (endDateTime <= startDateTime) {
+      endDateTime.setHours(startDateTime.getHours() + 1, startDateTime.getMinutes(), 0, 0);
+    }
 
-    const googleEventPayload = {
+    const targetTimeZone = appointment.timeZone || 'America/New_York';
+
+    return {
       summary: appointment.title,
       location: appointment.address,
       description: appointment.notes,
       start: {
-        dateTime: appointment.startTime, // Directly use the ISO string
-        timeZone: targetTimeZone,
+        dateTime: startDateTime.toISOString(),
+        timeZone: targetTimeZone, 
       },
       end: {
-        dateTime: appointment.endTime,   // Directly use the ISO string
-        timeZone: targetTimeZone,
+        dateTime: endDateTime.toISOString(),
+        timeZone: targetTimeZone, 
       },
       colorId: appointment.purpose ? GOOGLE_CALENDAR_CONFIG.COLOR_MAP[appointment.purpose as AppointmentPurposeType] : undefined,
       extendedProperties: {
@@ -231,10 +235,6 @@ export class GoogleCalendarService {
           status: appointment.status || 'scheduled',
         },
       },
-      // Include recurrence if present and validly formatted for Google
-      ...(appointment.recurrenceRule && { recurrence: [appointment.recurrenceRule] }),
     };
-    console.log("GoogleCalendarService - appointmentToGoogleEvent - Google event payload:", JSON.stringify(googleEventPayload, null, 2));
-    return googleEventPayload;
   }
 } 
