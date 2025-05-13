@@ -15,7 +15,7 @@ interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   initialCollapsed?: boolean
 }
 
-export default function AppSidebar({ className, initialCollapsed = true }: SidebarProps) {
+export default function AppSidebar({ className, initialCollapsed = false }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed)
   const pathname = usePathname()
 
