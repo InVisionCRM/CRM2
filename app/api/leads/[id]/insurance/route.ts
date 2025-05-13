@@ -97,7 +97,6 @@ export async function PATCH(
         description: `Insurance information updated for lead ${id}`,
         userId: session.user.id,
         leadId: id,
-        status: 'COMPLETED'
       }
     })
 

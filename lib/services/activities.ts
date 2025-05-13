@@ -29,7 +29,6 @@ export async function createActivity({
         title,
         description,
         userId: userId || 'system', // Default to system if no user provided
-        status,
       },
       include: {
         user: {

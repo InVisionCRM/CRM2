@@ -14,7 +14,6 @@ export async function createActivity(data: {
   description?: string | null
   userId: string
   leadId?: string | null
-  status?: ActivityStatus | null
 }): Promise<Activity> {
   try {
     const activity = await prisma.activity.create({
@@ -24,7 +23,6 @@ export async function createActivity(data: {
         description: data.description || null,
         userId: data.userId,
         leadId: data.leadId || null,
-        status: data.status || null
       }
     })
 

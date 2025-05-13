@@ -93,7 +93,6 @@ export async function PATCH(
         description: `Adjuster information updated for lead ${id}`,
         userId: session.user.id,
         leadId: id,
-        status: 'COMPLETED'
       }
     })
 

@@ -80,7 +80,7 @@ export async function PATCH(
         }
       })
 
-      await prisma.activity.create({
+      await vity.create({
         data: {
           type:        'LEAD_CREATED',
           title:       'Lead created',
@@ -128,7 +128,7 @@ export async function PATCH(
       }
     })
 
-    await prisma.activity.create({
+    await vity.create({
       data: {
         type:        'LEAD_UPDATED',
         title:       'Contact information updated',
