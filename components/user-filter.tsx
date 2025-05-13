@@ -40,24 +40,29 @@ export function UserFilter({ users = defaultUsers, selectedUser = null, onUserCh
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" aria-expanded={open} className="w-full sm:w-[200px] justify-between">
+        <Button 
+          variant="outline" 
+          role="combobox" 
+          aria-expanded={open} 
+          className="w-full sm:w-[200px] justify-between bg-black/20 backdrop-blur-sm border-white/20 hover:bg-black/30"
+        >
           <User className="mr-2 h-4 w-4" />
           <span className="truncate">{selectedUserName}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full sm:w-[200px] p-0">
+      <PopoverContent className="w-full sm:w-[200px] p-0 bg-black/30 backdrop-blur-lg border-white/20">
         <Command>
-          <CommandInput placeholder="Search users..." />
+          <CommandInput placeholder="Search users..." className="bg-transparent" />
           <CommandList>
-            <CommandEmpty>No user found.</CommandEmpty>
+            <CommandEmpty className="text-white/70">No user found.</CommandEmpty>
             <CommandGroup>
               <CommandItem
                 onSelect={() => {
                   handleUserChange(null)
                   setOpen(false)
                 }}
-                className="cursor-pointer"
+                className="cursor-pointer hover:bg-white/10"
               >
                 <Check className={cn("mr-2 h-4 w-4", !selected ? "opacity-100" : "opacity-0")} />
                 All Users
@@ -69,7 +74,7 @@ export function UserFilter({ users = defaultUsers, selectedUser = null, onUserCh
                     handleUserChange(user.id)
                     setOpen(false)
                   }}
-                  className="cursor-pointer"
+                  className="cursor-pointer hover:bg-white/10"
                 >
                   <Check className={cn("mr-2 h-4 w-4", selected === user.id ? "opacity-100" : "opacity-0")} />
                   {user.name}

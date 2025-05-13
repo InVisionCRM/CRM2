@@ -49,6 +49,7 @@ export interface CalendarAppointment {
   userId?: string
   recurrenceRule?: string
   isRecurring?: boolean
+  timeZone?: string
 }
 
 export type CalendarEvent = CalendarAppointment

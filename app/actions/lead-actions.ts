@@ -11,6 +11,8 @@ import { LeadStatus, ActivityType, type Lead } from "@prisma/client"
 import { formatStatusLabel } from "@/lib/utils"
 import { v4 as uuidv4 } from 'uuid'
 import { GoogleDriveService } from "@/lib/services/googleDrive"
+import { createStatusChangeActivity } from "@/lib/services/activities"
+import { getCurrentUser } from "@/lib/session"
 
 export async function createLeadAction(
   data: {
@@ -133,62 +135,55 @@ export async function createLeadAction(
   }
 }
 
-interface UpdateLeadActionData {
-  firstName?: string
-  lastName?: string
-  email?: string | null
-  phone?: string | null
-  address?: string | null
-  status?: LeadStatus
-  notes?: string | null
-  assignedToId?: string | null
+interface UpdateLeadParams {
+  status?: LeadStatus;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  assignedToId?: string;
+  // Add other fields as needed
 }
 
 export async function updateLeadAction(
   id: string,
-  data: UpdateLeadActionData
-): Promise<{ success: boolean; error?: string; lead?: Lead }> {
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-
-  if (!userId) {
-    return { success: false, error: "User not authenticated." };
-  }
-
-  if (data.status && !Object.values(LeadStatus).includes(data.status)) {
-    return { success: false, error: "Invalid status value provided." };
-  }
-
+  params: UpdateLeadParams
+) {
   try {
-    const leadToUpdate = await prisma.lead.findUnique({ where: { id } });
-    if (!leadToUpdate) {
-        return { success: false, error: "Lead not found." };
+    // Get existing lead to compare changes
+    const existingLead = await prisma.lead.findUnique({
+      where: { id },
+      select: { status: true }
+    });
+    
+    if (!existingLead) {
+      return { success: false, error: "Lead not found" };
     }
-
+    
     const updatedLead = await prisma.lead.update({
       where: { id },
-      data: {
-        ...data,
-        ...(data.status && data.status !== leadToUpdate.status && {
-          activities: {
-            create: {
-              type: ActivityType.STATUS_CHANGED,
-              title: `Status changed to ${formatStatusLabel(data.status)}`,
-              userId: userId,
-            },
-          },
-        }),
-      },
+      data: params,
     });
-
-    revalidatePath("/leads");
-    revalidatePath(`/leads/${id}`);
-    revalidatePath("/dashboard");
+    
+    // Create activity log if status was changed
+    if (params.status && params.status !== existingLead.status) {
+      const user = await getCurrentUser();
+      await createStatusChangeActivity({
+        leadId: id,
+        userId: user?.id,
+        oldStatus: existingLead.status,
+        newStatus: params.status,
+      });
+    }
 
     return { success: true, lead: updatedLead };
   } catch (error) {
-    console.error("Error in updateLeadAction:", error);
-    return { success: false, error: "Failed to update lead." };
+    console.error("Error updating lead:", error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to update lead" 
+    };
   }
 }
 

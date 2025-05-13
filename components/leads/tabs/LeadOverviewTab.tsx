@@ -1,6 +1,6 @@
 "use client"
 
-import { formatDistanceToNow, format, isValid } from "date-fns"
+import { formatDistanceToNow, format, isValid, parse } from "date-fns"
 import type { Lead } from "@prisma/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -176,7 +176,9 @@ export function LeadOverviewTab({ lead, onEditRequest }: LeadOverviewTabProps) {
               <p className="text-xs sm:text-sm">
                 {lead.adjusterAppointmentDate && isValid(new Date(lead.adjusterAppointmentDate)) 
                   ? format(new Date(lead.adjusterAppointmentDate), "MMM d, yyyy") +
-                    (lead.adjusterAppointmentTime ? ` at ${lead.adjusterAppointmentTime}` : '')
+                    (lead.adjusterAppointmentTime 
+                      ? ` at ${format(parse(lead.adjusterAppointmentTime, "HH:mm", new Date()), "h:mm a")}`
+                      : '')
                   : "No appointment"}
               </p>
             </div>

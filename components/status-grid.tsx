@@ -41,16 +41,16 @@ export function StatusGrid({ onStatusClick, activeStatus, statusCounts }: Status
 
   const getStatusIcon = (status: LeadStatus) => {
     switch (status) {
-      case LeadStatus.signed_contract: return <FileSignature className="w-8 h-8" />;
-      case LeadStatus.scheduled: return <Calendar className="w-8 h-8" />;
-      case LeadStatus.colors: return <Palette className="w-8 h-8" />;
-      case LeadStatus.acv: return <FileText className="w-8 h-8" />;
-      case LeadStatus.job: return <Briefcase className="w-8 h-8" />;
-      case LeadStatus.completed_jobs: return <CheckCircle className="w-8 h-8" />;
-      case LeadStatus.zero_balance: return <DollarSign className="w-8 h-8" />;
-      case LeadStatus.denied: return <XCircle className="w-8 h-8" />;
-      case LeadStatus.follow_ups: return <PhoneCall className="w-8 h-8" />;
-      default: return <Users className="w-8 h-8" />;
+      case LeadStatus.signed_contract: return <FileSignature className="w-6 h-3" />;
+      case LeadStatus.scheduled: return <Calendar className="w-3 h-3" />;
+      case LeadStatus.colors: return <Palette className="w-3 h-3" />;
+      case LeadStatus.acv: return <FileText className="w-3 h-3" />;
+      case LeadStatus.job: return <Briefcase className="w-3 h-3" />;
+      case LeadStatus.completed_jobs: return <CheckCircle className="w-3 h-3" />;
+      case LeadStatus.zero_balance: return <DollarSign className="w-3 h-3" />;
+      case LeadStatus.denied: return <XCircle className="w-3 h-3" />;
+      case LeadStatus.follow_ups: return <PhoneCall className="w-3 h-3" />;
+      default: return <Users className="w-3 h-3" />;
     }
   }
 
@@ -67,10 +67,10 @@ export function StatusGrid({ onStatusClick, activeStatus, statusCounts }: Status
   }
 
   return (
-    <div className="grid grid-cols-5 md:grid-cols-5 lg:grid-cols-5 gap-1 md:gap-2 auto-rows-fr">
+    <div className="grid grid-cols-5 md:grid-cols-10 lg:grid-cols-10 gap-1 md:gap-2 auto-rows-fr">
       <div
         className={`card relative rounded-xl overflow-hidden cursor-pointer transition-all aspect-square p-3 md:p-4 ${
-          activeStatus === null ? "ring-2 ring-blue-500 scale-105" : ""
+          activeStatus === null ? "ring-2 border-2 border-white scale-105" : ""
         }`}
         style={getStatusGlowCssProperties(null)}
         onClick={() => onStatusClick(null)}
@@ -78,7 +78,7 @@ export function StatusGrid({ onStatusClick, activeStatus, statusCounts }: Status
         aria-label="All Leads"
       >
         <div className="flex flex-col items-center justify-center h-full">
-          <Users className="w-8 h-8 text-gray-600 dark:text-gray-300 mb-2" />
+          <Users className="w-6 h-6 text-gray-600 dark:text-gray-300 mb-2" />
           <div className="text-sm font-medium text-gray-800 dark:text-gray-200">All Leads</div>
           <div className="mt-1 bg-white dark:bg-gray-700 text-black dark:text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">
             {totalLeads}
@@ -109,7 +109,7 @@ export function StatusGrid({ onStatusClick, activeStatus, statusCounts }: Status
               >
                 {formatStatusLabel(statusItem.status)}
               </div>
-              <div className="mt-1 bg-white dark:bg-gray-700 text-black dark:text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">
+              <div className="mt-1 bg-white dark:bg-gray-700 text-black/20 dark:text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold">
                 {statusItem.count}
               </div>
             </div>

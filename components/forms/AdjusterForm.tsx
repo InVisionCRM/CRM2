@@ -680,6 +680,7 @@ type AdjusterFormValues = z.infer<typeof adjusterFormSchema>
 
 interface AdjusterFormProps {
   leadId: string
+  leadAddress?: string
   initialData?: Partial<AdjusterFormValues>
   onSuccess?: () => void
   onCancel?: () => void
@@ -726,6 +727,7 @@ function calendarAppointmentToRawGCalEvent(appointment: CalendarAppointment): Ra
 
 export function AdjusterForm({
   leadId,
+  leadAddress,
   initialData = {},
   onSuccess,
   onCancel,
@@ -914,13 +916,41 @@ export function AdjusterForm({
         const appointmentDateStr = watchedValues.adjusterAppointmentDate;
         const timeString = watchedValues.adjusterAppointmentTime;
         
-        // Parse the date string and time string properly
+        if (!timeString || !timeString.includes(':')) {
+          throw new Error("Invalid time format");
+        }
+
         const [year, month, day] = appointmentDateStr.split('-').map(Number);
-        const [hours, minutes] = timeString.split(":").map(Number);
+        let hours: number, minutes: number;
         
-        // Create proper Date objects
+        try {
+          const timeParts = timeString.split(':').map(Number);
+          hours = timeParts[0];
+          minutes = timeParts[1];
+          
+          if (isNaN(hours) || isNaN(minutes)) {
+            throw new Error("Invalid time format");
+          }
+        } catch (err) {
+          console.error("Time parsing error:", timeString, err);
+          throw new Error("Invalid time format. Please select a valid time.");
+        }
+        
         const startDateTime = new Date(year, month - 1, day, hours, minutes);
         const endDateTime = new Date(year, month - 1, day, hours + 1, minutes);
+
+        const payload = {
+            summary: `Adjuster Appointment${watchedValues.insuranceAdjusterName ? ` with ${watchedValues.insuranceAdjusterName}` : ''}`,
+            description: `Adjuster: ${watchedValues.insuranceAdjusterName || 'TBD'}\nPhone: ${watchedValues.insuranceAdjusterPhone || 'N/A'}\nEmail: ${watchedValues.insuranceAdjusterEmail || 'N/A'}\n\nNotes: ${watchedValues.adjusterAppointmentNotes || 'None'}`,
+            startTime: startDateTime.toISOString(),
+            endTime: endDateTime.toISOString(),
+            timeZone: 'America/New_York',
+            purpose: 'ADJUSTER',
+            status: 'SCHEDULED',
+            leadId: leadId,
+            location: leadAddress || ''
+        };
+        console.log("AdjusterForm - Sending to API:", JSON.stringify(payload, null, 2));
 
         // Create calendar appointment
         const calendarResponse = await fetch('/api/calendar/events', {
@@ -928,21 +958,26 @@ export function AdjusterForm({
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            summary: `Adjuster Appointment${watchedValues.insuranceAdjusterName ? ` with ${watchedValues.insuranceAdjusterName}` : ''}`,
-            description: `Adjuster: ${watchedValues.insuranceAdjusterName || 'TBD'}\nPhone: ${watchedValues.insuranceAdjusterPhone || 'N/A'}\nEmail: ${watchedValues.insuranceAdjusterEmail || 'N/A'}\n\nNotes: ${watchedValues.adjusterAppointmentNotes || 'None'}`,
-            startTime: startDateTime.toISOString(),
-            endTime: endDateTime.toISOString(),
-            purpose: 'ADJUSTER',
-            status: 'SCHEDULED',
-            leadId: leadId,
-            location: '' // Add location if available
-          })
+          body: JSON.stringify(payload)
         });
 
         if (!calendarResponse.ok) {
-          const errorData = await calendarResponse.json();
-          throw new Error(errorData.message || "Failed to create calendar event");
+          // Get raw text first to debug
+          const responseText = await calendarResponse.text();
+          console.error("Calendar API error response:", responseText);
+          
+          // Try to parse it only if it looks like JSON
+          let errorMessage = "Failed to create calendar event";
+          if (responseText.trim().startsWith('{')) {
+            try {
+              const errorData = JSON.parse(responseText);
+              errorMessage = errorData.message || errorMessage;
+            } catch (parseErr) {
+              console.error("Error parsing error response:", parseErr);
+            }
+          }
+          
+          throw new Error(errorMessage);
         }
 
         toast({

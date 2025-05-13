@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useSearchParams } from "next/navigation" // Use next/navigation for App Router
 import { LeadStatus } from "@prisma/client"
 import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon } from "lucide-react" // Updated icons
 import { LeadStatusBar } from "@/components/leads/LeadStatusBar" // Corrected path
 import { LeadDetailTabs } from "@/components/leads/LeadDetailTabs" // Corrected path
 import { ActivityFeed } from "@/components/leads/ActivityFeed" // Corrected path
+import { AddNote } from "@/components/leads/AddNote" // New import
 import { Button } from "@/components/ui/button"
 import { useLead } from "@/hooks/use-lead" // Corrected path
 import { Skeleton } from "@/components/ui/skeleton"
@@ -68,6 +69,16 @@ export default function LeadDetailPage() {
   const [statusBeingUpdated, setStatusBeingUpdated] = useState<LeadStatus | null>(null);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const { width, height } = useWindowSize(); // For confetti
+
+  // Add a reference to the activity feed for refreshing
+  const activityFeedRef = useRef<HTMLDivElement>(null);
+  const [refreshActivities, setRefreshActivities] = useState(0);
+  
+  // Function to refresh activities when new note is added
+  const handleNoteAdded = () => {
+    // Increment refresh counter to trigger useEffect in ActivityFeed
+    setRefreshActivities(prev => prev + 1);
+  };
 
   // Effect to update activeTab if query parameter changes after initial load (optional, but good practice)
   useEffect(() => {
@@ -251,7 +262,15 @@ export default function LeadDetailPage() {
         onTabChange={setActiveTab}
       />
       
-      <ActivityFeed leadId={lead.id} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="col-span-1">
+          <AddNote leadId={lead.id} onSuccess={handleNoteAdded} />
+        </div>
+        
+        <div className="col-span-2" ref={activityFeedRef}>
+          <ActivityFeed leadId={lead.id} key={refreshActivities} />
+        </div>
+      </div>
     </div>
   )
 }
