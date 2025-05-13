@@ -21,24 +21,70 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const dragControls = useDragControls();
 
-  // Check if device is mobile
+  // Effect for determining if the view is mobile
   useEffect(() => {
-    const checkMobile = () => {
-      const isMobileView = window.innerWidth < 768;
-      setIsMobile(isMobileView);
+    let timeoutId: NodeJS.Timeout | null = null;
+
+    const checkAndUpdateMobileState = () => {
+      const currentWidth = window.innerWidth;
+      // console.log(`Path: ${pathname}, Width: ${currentWidth}, New isMobile: ${currentWidth < 768}`);
+      setIsMobile(currentWidth < 768);
     };
-    
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
+
+    const debouncedCheck = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = setTimeout(checkAndUpdateMobileState, 100); 
+    };
+
+    debouncedCheck();
+    window.addEventListener('resize', debouncedCheck);
+
+    return () => {
+      window.removeEventListener('resize', debouncedCheck);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [pathname]);
+
+  // Effect to manage sidebar visibility on resize
+  useEffect(() => {
+    const handleResizeForSidebar = () => {
+      if (window.innerWidth >= 768 && isSidebarOpen) {
+        setIsSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResizeForSidebar);
+    return () => window.removeEventListener('resize', handleResizeForSidebar);
+  }, [isSidebarOpen]);
 
   const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    if (info.offset.x > 100) {
-      setIsSidebarOpen(true); // Open sidebar if dragged right enough
-    } else if (info.offset.x < -50) {
-      setIsSidebarOpen(false); // Close sidebar if dragged left enough
+    const { offset, velocity } = info;
+
+    // Log when the function is called and current state
+    console.log(`[Swipe Debug] handleDragEnd triggered on path: ${pathname}`);
+    console.log(`[Swipe Debug] Offset X: ${offset.x}, Velocity X: ${velocity.x}`);
+    console.log(`[Swipe Debug] isSidebarOpen (before): ${isSidebarOpen}`);
+
+    if (isSidebarOpen) {
+      // Attempting to close
+      if (offset.x < -50 || velocity.x < -300) {
+        setIsSidebarOpen(false);
+        console.log(`[Swipe Debug] Attempting to CLOSE sidebar. New isSidebarOpen: false`);
+      } else {
+        console.log(`[Swipe Debug] Drag did not meet threshold to CLOSE sidebar.`);
+      }
+    } else {
+      // Attempting to open
+      if (offset.x > 75 || velocity.x > 300) {
+        setIsSidebarOpen(true);
+        console.log(`[Swipe Debug] Attempting to OPEN sidebar. New isSidebarOpen: true`);
+      } else {
+        console.log(`[Swipe Debug] Drag did not meet threshold to OPEN sidebar.`);
+      }
     }
   };
 
@@ -46,7 +92,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
     <div className="flex h-screen">
       {/* Render AppSidebar for non-map pages based on screen size */}
       {!isMapPage && !isMobile && (
-        <AppSidebar />
+        <AppSidebar initialCollapsed={true} />
       )}
       
       {/* Mobile swipe gesture controls for non-map pages */}
@@ -54,16 +100,19 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
         <>
           {/* Invisible drag area on edge of screen to open sidebar */}
           <motion.div 
-            className="fixed left-0 top-0 w-12 h-full z-30"
+            className="fixed left-0 top-0 w-12 h-full z-30 cursor-grab"
             drag="x"
             dragControls={dragControls}
             dragConstraints={{ left: 0, right: 0 }}
             onDragEnd={handleDragEnd}
+            aria-label="Open sidebar"
+            // You can add a temporary visible background for debugging the drag area:
+            // style={{ backgroundColor: 'rgba(255, 0, 0, 0.2)' }} 
           />
           
           {/* Mobile sidebar with swipe controls */}
           <motion.div
-            className="fixed inset-y-0 left-0 z-40"
+            className="fixed inset-y-0 left-0 z-40 shadow-lg"
             initial={{ x: "-100%" }}
             animate={{ x: isSidebarOpen ? 0 : "-100%" }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
@@ -71,8 +120,11 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
             dragConstraints={{ left: -300, right: 0 }}
             dragElastic={0.1}
             onDragEnd={handleDragEnd}
+            style={{ width: '300px' }}
+            // You can add a temporary visible background for debugging the sidebar container:
+            // style={{ width: '300px', backgroundColor: 'rgba(0, 255, 0, 0.2)' }}
           >
-            <AppSidebar />
+            <AppSidebar initialCollapsed={false} />
           </motion.div>
         </>
       )}
