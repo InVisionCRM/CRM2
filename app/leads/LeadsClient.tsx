@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useLeads } from "@/hooks/use-leads"
 import { LeadsList } from "@/components/leads-list"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -8,12 +8,7 @@ import type { StatusCount } from "@/types/dashboard"
 import { UserFilter, type UserOption } from "@/components/user-filter"
 import { StatusGrid } from "@/components/status-grid"
 import { LeadStatus } from "@prisma/client"
-const mockUsers: UserOption[] = [
-  { id: "user1", name: "John Smith" },
-  { id: "user2", name: "Jane Doe" },
-  { id: "user3", name: "Robert Johnson" },
-  { id: "user4", name: "Emily Davis" },
-]
+import { getUsers } from "@/app/actions/user-actions"
 
 function LeadsLoading() {
   return (
@@ -32,7 +27,25 @@ function LeadsLoading() {
 export default function LeadsClient() {
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus | null>(null)
   const [selectedUser, setSelectedUser] = useState<string | null>(null)
+  const [users, setUsers] = useState<UserOption[]>([])
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true)
   const { leads, isLoading, error } = useLeads({ status: selectedStatus })
+
+  useEffect(() => {
+    async function fetchUsers() {
+      setIsLoadingUsers(true)
+      try {
+        const { users } = await getUsers()
+        setUsers(users)
+      } catch (error) {
+        console.error("Error fetching users:", error)
+      } finally {
+        setIsLoadingUsers(false)
+      }
+    }
+    
+    fetchUsers()
+  }, [])
 
   const statusCounts: StatusCount[] = [
     {
@@ -121,7 +134,12 @@ export default function LeadsClient() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="w-full sm:w-auto">
-          <UserFilter users={mockUsers} selectedUser={selectedUser} onUserChange={setSelectedUser} />
+          <UserFilter 
+            users={users} 
+            selectedUser={selectedUser} 
+            onUserChange={setSelectedUser} 
+            isLoading={isLoadingUsers}
+          />
         </div>
       </div>
 

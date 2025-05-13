@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export type UserOption = {
   id: string
@@ -21,12 +22,13 @@ const defaultUsers: UserOption[] = [
 ]
 
 interface UserFilterProps {
-  users?: UserOption[]
-  selectedUser?: string | null
-  onUserChange?: (userId: string | null) => void
+  users: UserOption[]
+  selectedUser: string | null
+  onUserChange: (userId: string | null) => void
+  isLoading?: boolean
 }
 
-export function UserFilter({ users = defaultUsers, selectedUser = null, onUserChange = () => {} }: UserFilterProps) {
+export function UserFilter({ users, selectedUser, onUserChange, isLoading = false }: UserFilterProps) {
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<string | null>(selectedUser)
 
@@ -36,6 +38,10 @@ export function UserFilter({ users = defaultUsers, selectedUser = null, onUserCh
   }
 
   const selectedUserName = selected ? users.find((user) => user.id === selected)?.name || "All Users" : "All Users"
+
+  if (isLoading) {
+    return <Skeleton className="h-10 w-48" />
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
