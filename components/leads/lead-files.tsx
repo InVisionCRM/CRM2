@@ -10,13 +10,29 @@ import { useToast } from "@/components/ui/use-toast"
 import { Upload, Eye, Camera, Trash2, Share2, XIcon, Loader2, FileIcon as LucideFileIcon, FolderOpen, FolderPlus } from "lucide-react"
 import ReactConfetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
-import { getLeadDriveFolderIdServerAction, ensureLeadDriveFolderServerAction } from "@/app/actions/lead-drive-actions"; // Import the new server action
+import { getLeadDriveFolderIdServerAction, ensureLeadDriveFolderServerAction, fetchDriveFilesServerAction } from "@/app/actions/lead-drive-actions"; // Added fetchDriveFilesServerAction
 // We will need react-camera-pro if we proceed with its implementation
 // import { Camera as ReactCameraPro } from "react-camera-pro";
 
 interface LeadFilesProps {
   leadId: string
 }
+
+interface DriveFile {
+  id: string;
+  name: string;
+  mimeType: string;
+  webViewLink: string;
+  thumbnailLink?: string;
+  iconLink?: string;
+  modifiedTime: string;
+  size?: string;
+  // Source identifier for UI differentiation
+  source: 'drive';
+}
+
+// Combined file type for unified display
+type CombinedFile = DriveFile | (ReturnType<typeof useLeadFiles>['files'][0] & { source: 'local' });
 
 type ModalType = null | 'view' | 'upload' | 'camera';
 
@@ -40,7 +56,27 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
   const [showSuccessConfetti, setShowSuccessConfetti] = useState(false);
   const [driveFolderId, setDriveFolderId] = useState<string | null>(null);
   const [isLoadingDriveLink, setIsLoadingDriveLink] = useState(true);
-  const [isCreatingDriveFolder, setIsCreatingDriveFolder] = useState(false); // New state for create button loading
+  const [isCreatingDriveFolder, setIsCreatingDriveFolder] = useState(false);
+  
+  // New state for Drive files
+  const [driveFiles, setDriveFiles] = useState<DriveFile[]>([]);
+  const [isLoadingDriveFiles, setIsLoadingDriveFiles] = useState(false);
+  const [driveFilesError, setDriveFilesError] = useState<Error | null>(null);
+
+  // Combined files for unified display
+  const combinedFiles = React.useMemo(() => {
+    const localWithSource = files.map(file => ({
+      ...file,
+      source: 'local' as const
+    }));
+    
+    return [...localWithSource, ...driveFiles].sort((a, b) => {
+      // Sort by upload/modified date, most recent first
+      const dateA = a.source === 'local' ? new Date(a.uploadedAt).getTime() : new Date(a.modifiedTime).getTime();
+      const dateB = b.source === 'local' ? new Date(b.uploadedAt).getTime() : new Date(b.modifiedTime).getTime();
+      return dateB - dateA;
+    });
+  }, [files, driveFiles]);
 
   useEffect(() => {
     const fetchDriveId = async () => {
@@ -70,6 +106,33 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
     fetchDriveId();
   }, [leadId]);
 
+  // New effect to fetch Drive files when folder ID is available
+  useEffect(() => {
+    const fetchDriveFilesData = async () => {
+      if (!driveFolderId) return;
+      
+      setIsLoadingDriveFiles(true);
+      setDriveFilesError(null);
+      
+      try {
+        const driveFilesResult = await fetchDriveFilesServerAction(driveFolderId);
+        if (driveFilesResult.success) {
+          setDriveFiles(driveFilesResult.files);
+        } else {
+          throw new Error(driveFilesResult.message || "Failed to fetch Drive files");
+        }
+      } catch (error: any) {
+        console.error("Error fetching Drive files:", error);
+        setDriveFilesError(error instanceof Error ? error : new Error(String(error)));
+        // Don't show toast here to avoid too many notifications
+      } finally {
+        setIsLoadingDriveFiles(false);
+      }
+    };
+    
+    fetchDriveFilesData();
+  }, [driveFolderId]);
+
   const handleCreateDriveFolder = async () => {
     if (!leadId) {
       toast({ title: "Error", description: "Lead ID is missing.", variant: "destructive" });
@@ -81,9 +144,18 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
       if (result.success && result.folderId) {
         setDriveFolderId(result.folderId);
         toast({ title: "Success", description: "Google Drive folder created and linked." });
+        
+        // Immediately fetch files from the newly created folder
+        try {
+          const filesResult = await fetchDriveFilesServerAction(result.folderId);
+          if (filesResult.success) {
+            setDriveFiles(filesResult.files);
+          }
+        } catch (fetchError) {
+          console.error("Error fetching Drive files after folder creation:", fetchError);
+        }
       } else {
         toast({ title: "Error", description: result.message || "Failed to create or link Google Drive folder.", variant: "destructive" });
-        // Keep driveFolderId as null or its previous state
       }
     } catch (error: any) {
       console.error("Failed to create/ensure Drive folder from client:", error);
@@ -174,7 +246,38 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
     }
   }, []);
 
-  // Render functions for modals will go here
+  // Helper function to get appropriate icon/thumbnail for a file
+  const getFilePreview = (file: CombinedFile) => {
+    if (file.source === 'local') {
+      // Local file logic
+      return file.type?.startsWith("image/") 
+        ? <img src={file.url} alt={file.name} className="h-full w-full object-cover" /> 
+        : <LucideFileIcon className="h-10 w-10 text-muted-foreground" />;
+    } else {
+      // Drive file logic
+      if (file.mimeType.includes('image/') && file.thumbnailLink) {
+        return <img src={file.thumbnailLink} alt={file.name} className="h-full w-full object-cover" />;
+      }
+      return <img src={file.iconLink || '/google-drive-icon.svg'} 
+                 alt="Drive file" 
+                 className="h-10 w-10 mx-auto" />;
+    }
+  };
+
+  // Helper to get the file URL based on source
+  const getFileUrl = (file: CombinedFile) => {
+    return file.source === 'local' ? file.url : file.webViewLink;
+  };
+
+  const handleFileSizeDisplay = (file: CombinedFile) => {
+    if (file.source === 'local') {
+      return file.size ? (file.size / 1024).toFixed(1) + ' KB' : 'N/A';
+    } else {
+      return file.size || 'N/A';
+    }
+  };
+
+  // Updated render function for the view files modal to include Drive files
   const renderViewFilesModal = () => (
     <Dialog open={activeModal === 'view'} onOpenChange={(isOpen) => !isOpen && closeModal()}>
       <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
@@ -182,54 +285,102 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
           <DialogTitle>View Files</DialogTitle>
         </DialogHeader>
         <ScrollArea className="flex-1 pr-2">
-          {isLoadingFiles && <p className="text-center py-4"><Loader2 className="h-5 w-5 animate-spin inline mr-2"/>Loading files...</p>}
-          {filesError && <p className="text-red-500 text-center py-4">Error: {filesError.message}</p>}
-          {!isLoadingFiles && !filesError && files.length === 0 && (
-            <p className="text-muted-foreground text-center py-10">No files uploaded yet.</p>
+          {(isLoadingFiles || isLoadingDriveFiles) && 
+            <p className="text-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin inline mr-2"/>
+              Loading files...
+            </p>}
+          
+          {(filesError || driveFilesError) && 
+            <p className="text-red-500 text-center py-4">
+              Error: {filesError?.message || driveFilesError?.message}
+            </p>}
+          
+          {!isLoadingFiles && !isLoadingDriveFiles && !filesError && !driveFilesError && combinedFiles.length === 0 && (
+            <p className="text-muted-foreground text-center py-10">No files available.</p>
           )}
-          {!isLoadingFiles && files.length > 0 && (
+          
+          {!isLoadingFiles && !isLoadingDriveFiles && combinedFiles.length > 0 && (
             <ul className="space-y-3">
-              {files.map(file => (
-                <li key={file.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-md border">
-                  <div className="flex items-center gap-3 min-w-0">
-                    {file.type?.startsWith("image/") ? <img src={file.url} alt={file.name} className="h-10 w-10 object-cover rounded" /> : <LucideFileIcon className="h-8 w-8 text-muted-foreground shrink-0" />}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate" title={file.name}>{file.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Uploaded: {new Date(file.uploadedAt).toLocaleDateString()} | Size: {file.size ? (file.size / 1024).toFixed(1) + ' KB' : 'N/A'}
-                      </p>
+              {combinedFiles.map((file, index) => {
+                const isLocalFile = file.source === 'local';
+                return (
+                  <li key={`${file.source}-${file.id}-${index}`} className="flex items-center justify-between p-3 bg-muted/30 rounded-md border">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative h-10 w-10">
+                        {getFilePreview(file)}
+                        {!isLocalFile && (
+                          <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
+                            <img src="/google-drive-icon.svg" alt="Google Drive" className="h-4 w-4" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate" title={file.name}>{file.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {isLocalFile ? 
+                            `Uploaded: ${new Date(file.uploadedAt).toLocaleDateString()}` : 
+                            `Modified: ${new Date(file.modifiedTime).toLocaleDateString()}`} | 
+                          Size: {handleFileSizeDisplay(file)}
+                          {!isLocalFile && <span className="ml-1 text-blue-500">• Drive</span>}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-1 sm:gap-2 ml-2 shrink-0">
-                    <Button variant="outline" size="sm" onClick={() => window.open(file.url, '_blank')} title="View File">
-                      <Eye className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">View</span>
-                    </Button>
-                    <Button 
+                    <div className="flex items-center gap-1 sm:gap-2 ml-2 shrink-0">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => window.open(getFileUrl(file), '_blank')} 
+                        title="View File"
+                      >
+                        <Eye className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">View</span>
+                      </Button>
+                      <Button 
                         variant="outline" 
                         size="sm" 
                         onClick={async () => {
-                            if (navigator.share) {
-                                try {
-                                    await navigator.share({ title: file.name, text: `Check out this file: ${file.name}`, url: file.url });
-                                } catch (shareError) {
-                                    console.error("Error sharing file:", shareError);
-                                    toast({ title: "Share Error", description: "Could not share file.", variant: "destructive"});
-                                }
-                            } else {
-                                navigator.clipboard.writeText(file.url);
-                                toast({ title: "Link Copied", description: "File link copied to clipboard." });
+                          const shareUrl = getFileUrl(file);
+                          if (navigator.share) {
+                            try {
+                              await navigator.share({ 
+                                title: file.name, 
+                                text: `Check out this file: ${file.name}`, 
+                                url: shareUrl 
+                              });
+                            } catch (shareError) {
+                              console.error("Error sharing file:", shareError);
+                              toast({ 
+                                title: "Share Error", 
+                                description: "Could not share file.", 
+                                variant: "destructive"
+                              });
                             }
+                          } else {
+                            navigator.clipboard.writeText(shareUrl);
+                            toast({ 
+                              title: "Link Copied", 
+                              description: "File link copied to clipboard." 
+                            });
+                          }
                         }}
                         title="Share File"
-                    >
-                      <Share2 className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Share</span>
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleFileDelete(file.id, file.name)} title="Delete File">
-                      <Trash2 className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Delete</span>
-                    </Button>
-                  </div>
-                </li>
-              ))}
+                      >
+                        <Share2 className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Share</span>
+                      </Button>
+                      {isLocalFile && (
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={() => handleFileDelete(file.id, file.name)} 
+                          title="Delete File"
+                        >
+                          <Trash2 className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Delete</span>
+                        </Button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </ScrollArea>
@@ -329,6 +480,10 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
     </Dialog>
   );
 
+  // Helper function to determine if we're loading or have an error
+  const isLoading = isLoadingFiles || isLoadingDriveFiles;
+  const hasError = filesError || driveFilesError;
+
   return (
     <div className="p-4 bg-background rounded-lg shadow">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
@@ -352,7 +507,7 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
               variant="default"
               onClick={handleCreateDriveFolder}
               disabled={isCreatingDriveFolder}
-              className="bg-green-500 hover:bg-green-600 text-white"
+              className="bg-blue-500 hover:bg-blue-600 text-white"
             >
               {isCreatingDriveFolder ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating Folder...</>
@@ -362,9 +517,9 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
             </Button>
           )}
           <Button variant="outline" onClick={() => setActiveModal('view')} className="bg-muted hover:bg-muted/80">
-            <Eye className="h-4 w-4 mr-2" /> View All ({files.length})
+            <Eye className="h-4 w-4 mr-2" /> View All ({combinedFiles.length})
           </Button>
-          <Button variant="default" onClick={openUploadModal} className="bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button variant="default" onClick={openUploadModal} className="bg-primary text-black hover:bg-primary/90">
             <Upload className="h-4 w-4 mr-2" /> Upload Files
           </Button>
           {/* <Button variant="outline" onClick={() => setActiveModal('camera')} className="bg-muted hover:bg-muted/80">
@@ -374,37 +529,50 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
       </div>
 
       {/* Simplified display area, modals handle detailed views/actions */}
-      {isLoadingFiles ? (
+      {isLoading ? (
         <div className="text-center py-5"><Loader2 className="h-5 w-5 animate-spin inline mr-2 text-muted-foreground"/>Loading files...</div>
-      ) : filesError ? (
-        <div className="text-center py-5 text-destructive">Error loading files: {filesError.message}</div>
-      ) : files.length === 0 ? (
+      ) : hasError ? (
+        <div className="text-center py-5 text-destructive">Error loading files: {filesError?.message || driveFilesError?.message}</div>
+      ) : combinedFiles.length === 0 ? (
         <div className="text-center py-10 px-4 border-2 border-dashed border-muted-foreground/20 rounded-lg">
           <LucideFileIcon className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-          <p className="text-muted-foreground">No files uploaded for this lead yet.</p>
+          <p className="text-muted-foreground">No files available for this lead yet.</p>
           <p className="text-sm text-muted-foreground/80 mt-1">Use the "Upload Files" button to add documents.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {/* Display a few recent files or previews, full list in modal */}
-          {files.slice(0, 5).map(file => (
-            <div key={file.id} className="relative group p-2 border rounded-lg bg-card hover:shadow-md transition-shadow">
-              <div className="aspect-square bg-muted rounded-md flex items-center justify-center mb-2 overflow-hidden">
-                {file.type?.startsWith("image/") ? (
-                  <img src={file.url} alt={file.name} className="h-full w-full object-cover" />
-                ) : (
-                  <LucideFileIcon className="h-10 w-10 text-muted-foreground" />
+          {combinedFiles.slice(0, 5).map((file, index) => {
+            const isLocalFile = file.source === 'local';
+            return (
+              <div key={`${file.source}-${file.id}-${index}`} className="relative group p-2 border rounded-lg bg-card hover:shadow-md transition-shadow">
+                <div className="aspect-square bg-muted rounded-md flex items-center justify-center mb-2 overflow-hidden">
+                  {getFilePreview(file)}
+                </div>
+                <p className="text-xs font-medium truncate text-center text-card-foreground" title={file.name}>{file.name}</p>
+                
+                {/* Badge to indicate Google Drive files */}
+                {!isLocalFile && (
+                  <div className="absolute top-1 left-1 bg-white rounded-full p-0.5 shadow-sm">
+                    <img src="/google-drive-icon.svg" alt="Google Drive" className="h-4 w-4" />
+                  </div>
                 )}
+                
+                <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-6 w-6" 
+                    onClick={() => window.open(getFileUrl(file), '_blank')} 
+                    title="View File"
+                  >
+                    <Eye className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
-              <p className="text-xs font-medium truncate text-center text-card-foreground" title={file.name}>{file.name}</p>
-              <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => window.open(file.url, '_blank')} title="View File">
-                  <Eye className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-          ))}
-          {files.length > 5 && (
+            );
+          })}
+          {combinedFiles.length > 5 && (
             <div 
                 className="aspect-square border-2 border-dashed border-muted-foreground/20 rounded-md flex flex-col items-center justify-center text-center p-2 cursor-pointer hover:border-primary transition-colors"
                 onClick={() => setActiveModal('view')}
@@ -413,7 +581,7 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setActiveModal('view'); }}
             >
                 <Eye className="h-8 w-8 text-muted-foreground mb-1"/>
-                <p className="text-xs text-muted-foreground">View All ({files.length})</p>
+                <p className="text-xs text-muted-foreground">View All ({combinedFiles.length})</p>
             </div>
           )}
         </div>

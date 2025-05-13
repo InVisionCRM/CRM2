@@ -49,13 +49,11 @@ const insuranceCompanies = [
 
 interface InsuranceInfo {
   company: string
-  policyNumber: string
   phone: string
   secondaryPhone?: string | null
   adjusterName: string
   adjusterPhone: string
   adjusterEmail: string
-  deductible: string
 }
 
 export interface InsuranceInfoCardProps {
@@ -89,13 +87,11 @@ export function InsuranceInfoCard({
   const [insuranceInfo, setInsuranceInfo] = useState<InsuranceInfo>(
     initialInsuranceInfo || {
       company: "",
-      policyNumber: "",
       phone: "",
       secondaryPhone: null,
       adjusterName: "",
       adjusterPhone: "",
       adjusterEmail: "",
-      deductible: "",
     },
   )
 
@@ -229,19 +225,7 @@ export function InsuranceInfoCard({
                 </select>
               </div>
 
-              {/* Policy Number */}
-              <div className="space-y-1">
-                <Label htmlFor="policyNumber">Policy Number</Label>
-                <Input
-                  id="policyNumber"
-                  value={insuranceInfo.policyNumber || ""}
-                  onChange={(e) => handleInputChange("policyNumber", e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Phone fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Insurance Phone */}
               <div className="space-y-1">
                 <Label htmlFor="phone">Insurance Phone</Label>
                 <Input
@@ -250,6 +234,10 @@ export function InsuranceInfoCard({
                   onChange={(e) => handleInputChange("phone", e.target.value)}
                 />
               </div>
+            </div>
+
+            {/* Phone fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="secondaryPhone">Secondary Phone</Label>
                 <Input
@@ -280,7 +268,7 @@ export function InsuranceInfoCard({
               </div>
             </div>
 
-            {/* Adjuster Email & Deductible */}
+            {/* Adjuster Email */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="adjusterEmail">Adjuster Email</Label>
@@ -288,14 +276,6 @@ export function InsuranceInfoCard({
                   id="adjusterEmail"
                   value={insuranceInfo.adjusterEmail || ""}
                   onChange={(e) => handleInputChange("adjusterEmail", e.target.value)}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="deductible">Deductible</Label>
-                <Input
-                  id="deductible"
-                  value={insuranceInfo.deductible || ""}
-                  onChange={(e) => handleInputChange("deductible", e.target.value)}
                 />
               </div>
             </div>
@@ -312,17 +292,6 @@ export function InsuranceInfoCard({
                     <div>
                       <div className="font-medium">Insurance Company</div>
                       <div className="text-muted-foreground">{initialInsuranceInfo.company}</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Policy Number */}
-                {initialInsuranceInfo.policyNumber && (
-                  <div className="flex items-start">
-                    <DollarSign className="h-5 w-5 mr-3 text-muted-foreground mt-0.5" />
-                    <div>
-                      <div className="font-medium">Policy Number</div>
-                      <div className="text-muted-foreground">{initialInsuranceInfo.policyNumber}</div>
                     </div>
                   </div>
                 )}
@@ -405,19 +374,6 @@ export function InsuranceInfoCard({
                         >
                           {initialInsuranceInfo.adjusterEmail}
                         </a>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Deductible */}
-                {initialInsuranceInfo.deductible && (
-                  <div className="flex items-start">
-                    <DollarSign className="h-5 w-5 mr-3 text-muted-foreground mt-0.5" />
-                    <div>
-                      <div className="font-medium">Deductible</div>
-                      <div className="text-muted-foreground">
-                        {initialInsuranceInfo.deductible ? `$${initialInsuranceInfo.deductible}` : "Not specified"}
                       </div>
                     </div>
                   </div>

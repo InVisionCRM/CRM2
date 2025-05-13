@@ -194,38 +194,38 @@ const CustomDatePicker = ({
 
 // Insurance company list with phone numbers
 const INSURANCE_COMPANIES = [
-  { name: "Not Listed", phone: "", secondaryPhone: null },
-  { name: "State Farm", phone: "800-782-8332", secondaryPhone: "800-732-5246" },
-  { name: "Auto-Owners Insurance", phone: "517-323-1200", secondaryPhone: "800-346-0346" },
-  { name: "Allstate", phone: "800-255-7828", secondaryPhone: "800-669-2214" },
-  { name: "Progressive", phone: "800-776-4737", secondaryPhone: "800-274-4499" },
   { name: "AAA / The Auto Club Group", phone: "800-222-8252", secondaryPhone: "800-672-5246" },
-  { name: "Liberty Mutual", phone: "800-290-8711", secondaryPhone: "800-837-5254" },
-  { name: "Farmers Insurance", phone: "888-327-6335", secondaryPhone: "800-435-7764" },
-  { name: "MEEMIC Insurance Company", phone: "800-333-2252", secondaryPhone: null },
-  { name: "Citizens Insurance Company of America", phone: "800-333-0606", secondaryPhone: null },
-  { name: "Frankenmuth Insurance", phone: "800-234-1133", secondaryPhone: "989-652-6121" },
-  { name: "Farm Bureau Insurance of Michigan", phone: "517-323-7000", secondaryPhone: "800-292-2680" },
-  { name: "Nationwide", phone: "877-669-6877", secondaryPhone: "800-421-3535" },
-  { name: "USAA", phone: "800-531-8722", secondaryPhone: "800-531-8111" },
-  { name: "Travelers", phone: "800-252-4633", secondaryPhone: "800-238-6225" },
-  { name: "Geico", phone: "800-207-7847", secondaryPhone: "800-841-3000" },
-  { name: "Hastings Mutual", phone: "800-442-8277", secondaryPhone: null },
-  { name: "Pioneer State Mutual", phone: "800-783-9935", secondaryPhone: null },
-  { name: "Grange Insurance", phone: "800-422-0550", secondaryPhone: "800-247-2643" },
-  { name: "Wolverine Mutual Insurance", phone: "800-733-3320", secondaryPhone: null },
-  { name: "Home-Owners Insurance", phone: "517-323-1200", secondaryPhone: "800-346-0346" },
-  { name: "Hanover Insurance", phone: "800-922-8427", secondaryPhone: null },
-  { name: "Cincinnati Insurance", phone: "888-242-8811", secondaryPhone: "800-635-7521" },
-  { name: "Chubb", phone: "800-252-4670", secondaryPhone: "800-682-4822" },
-  { name: "MetLife", phone: "800-638-5433", secondaryPhone: "800-422-4272" },
-  { name: "Hartford", phone: "860-547-5000", secondaryPhone: "800-243-5860" },
-  { name: "Erie Insurance", phone: "800-458-0811", secondaryPhone: "800-367-3743" },
+  { name: "Allstate", phone: "800-255-7828", secondaryPhone: "800-669-2214" },
   { name: "American Family Insurance", phone: "800-692-6326", secondaryPhone: "800-374-1111" },
-  { name: "Safeco Insurance", phone: "800-332-3226", secondaryPhone: null },
-  { name: "Westfield Insurance", phone: "800-243-0210", secondaryPhone: null },
   { name: "Auto Club Insurance Association", phone: "800-222-6424", secondaryPhone: null },
-]
+  { name: "Auto-Owners Insurance", phone: "517-323-1200", secondaryPhone: "800-346-0346" },
+  { name: "Chubb", phone: "800-252-4670", secondaryPhone: "800-682-4822" },
+  { name: "Cincinnati Insurance", phone: "888-242-8811", secondaryPhone: "800-635-7521" },
+  { name: "Citizens Insurance Company of America", phone: "800-333-0606", secondaryPhone: null },
+  { name: "Erie Insurance", phone: "800-458-0811", secondaryPhone: "800-367-3743" },
+  { name: "Farm Bureau Insurance of Michigan", phone: "517-323-7000", secondaryPhone: "800-292-2680" },
+  { name: "Farmers Insurance", phone: "888-327-6335", secondaryPhone: "800-435-7764" },
+  { name: "Frankenmuth Insurance", phone: "800-234-1133", secondaryPhone: "989-652-6121" },
+  { name: "Geico", phone: "800-207-7847", secondaryPhone: "800-841-3000" },
+  { name: "Grange Insurance", phone: "800-422-0550", secondaryPhone: "800-247-2643" },
+  { name: "Hanover Insurance", phone: "800-922-8427", secondaryPhone: null },
+  { name: "Hartford", phone: "860-547-5000", secondaryPhone: "800-243-5860" },
+  { name: "Hastings Mutual", phone: "800-442-8277", secondaryPhone: null },
+  { name: "Home-Owners Insurance", phone: "517-323-1200", secondaryPhone: "800-346-0346" },
+  { name: "Liberty Mutual", phone: "800-290-8711", secondaryPhone: "800-837-5254" },
+  { name: "MEEMIC Insurance Company", phone: "800-333-2252", secondaryPhone: null },
+  { name: "MetLife", phone: "800-638-5433", secondaryPhone: "800-422-4272" },
+  { name: "Nationwide", phone: "877-669-6877", secondaryPhone: "800-421-3535" },
+  { name: "Not Listed", phone: "", secondaryPhone: null },
+  { name: "Pioneer State Mutual", phone: "800-783-9935", secondaryPhone: null },
+  { name: "Progressive", phone: "800-776-4737", secondaryPhone: "800-274-4499" },
+  { name: "Safeco Insurance", phone: "800-332-3226", secondaryPhone: null },
+  { name: "State Farm", phone: "800-782-8332", secondaryPhone: "800-732-5246" },
+  { name: "Travelers", phone: "800-252-4633", secondaryPhone: "800-238-6225" },
+  { name: "USAA", phone: "800-531-8722", secondaryPhone: "800-531-8111" },
+  { name: "Westfield Insurance", phone: "800-243-0210", secondaryPhone: null },
+  { name: "Wolverine Mutual Insurance", phone: "800-733-3320", secondaryPhone: null }
+];
 
 // Damage type options
 const DAMAGE_TYPES = [
@@ -238,9 +238,7 @@ const DAMAGE_TYPES = [
 const insuranceFormSchema = z.object({
   insuranceCompany: z.string().optional().or(z.literal("")),
   customInsuranceCompany: z.string().optional().or(z.literal("")),
-  insurancePolicyNumber: z.string().optional().or(z.literal("")),
   insurancePhone: z.string().optional().or(z.literal("")),
-  insuranceDeductible: z.string().optional().or(z.literal("")),
   insuranceSecondaryPhone: z.string().optional().or(z.literal("")),
   dateOfLoss: z.string().optional().or(z.literal("")),
   damageType: z.enum(["HAIL", "WIND", "FIRE"]).optional().or(z.literal("")),
@@ -525,7 +523,7 @@ export function InsuranceForm({
     <div className="relative" ref={companyDropdownRef}>
       <div
         className={cn(
-          "flex items-center justify-between px-3 sm:p-4 bg-white bg-opacity-10 rounded-md cursor-pointer h-10 sm:h-12",
+          "flex items-center justify-between px-1 sm:p-1 bg-white bg-opacity-10 rounded-md cursor-pointer h-10 sm:h-12",
           "border border-transparent",
           showCompanyDropdown ? "hover:border-gray-600" : "cursor-not-allowed opacity-70",
           "text-sm sm:text-base"
@@ -575,23 +573,23 @@ export function InsuranceForm({
 
       <style jsx global>{`
         input[type="date"]::-webkit-calendar-picker-indicator {
-          transform: scale(1.5);
+          transform: scale(1);
           margin-right: 6px;
         }
         
         /* Force larger text sizes on all relevant elements */
         .form-label {
-          font-size: 1.5rem !important;
+          font-size: 1rem !important;
           font-weight: 700 !important;
           letter-spacing: -0.02em !important;
         }
         
         input, select, .input-text, .dropdown-text {
-          font-size: 1.25rem !important;
+          font-size: 1rem !important;
         }
         
         input::placeholder {
-          font-size: 1.25rem !important;
+          font-size: .75rem !important;
         }
         
         button.submit-button {
@@ -627,34 +625,6 @@ export function InsuranceForm({
             id="claimNumber"
             placeholder="Enter claim number (if available)"
             {...register("claimNumber")}
-            disabled={isLoading || isReadOnly}
-            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 sm:gap-3">
-        <div className="space-y-1 sm:space-y-2">
-          <Label htmlFor="insurancePolicyNumber" className="text-white text-opacity-90 text-sm sm:text-base">
-            Policy Number
-          </Label>
-          <Input
-            id="insurancePolicyNumber"
-            placeholder="Enter policy number"
-            {...register("insurancePolicyNumber")}
-            disabled={isLoading || isReadOnly}
-            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
-          />
-        </div>
-
-        <div className="space-y-1 sm:space-y-2">
-          <Label htmlFor="insuranceDeductible" className="text-white text-opacity-90 text-sm sm:text-base">
-            Deductible Amount
-          </Label>
-          <Input
-            id="insuranceDeductible"
-            placeholder="$"
-            {...register("insuranceDeductible")}
             disabled={isLoading || isReadOnly}
             className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
           />
@@ -726,7 +696,7 @@ export function InsuranceForm({
           <Button
             type="submit"
             disabled={isLoading || !isDirty}
-            className="flex-grow bg-lime-600 hover:bg-lime-700 text-white h-10 sm:h-12 text-sm sm:text-base"
+            className="flex-grow bg-lime-600 hover:bg-lime-700 text-black h-10 sm:h-12 text-sm sm:text-base"
           >
             {isLoading ? (
               <>
@@ -743,7 +713,7 @@ export function InsuranceForm({
               variant="destructive"
               onClick={handleDiscard}
               disabled={isLoading}
-              className="flex-shrink-0 h-10 sm:h-12"
+              className="flex-shrink-0 h-10 sm:h-12 text-black"
               aria-label="Discard changes"
             >
               <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />

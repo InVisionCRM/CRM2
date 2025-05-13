@@ -31,6 +31,11 @@ export default function AppSidebar({ className, initialCollapsed = false }: Side
       icon: <IconUserBolt className="h-5 w-5 shrink-0 text-[#ffffff]" />,
     },
     {
+      label: "Map",
+      href: "/map",
+      icon: <IconMap className="h-5 w-5 shrink-0 text-[#ffffff]" />,
+    },
+    {
       label: "GoogleCalendar",
       href: "/dashboard/calendar",
       icon: <IconCalendar className="h-5 w-5 shrink-0 text-[#ffffff]" />,

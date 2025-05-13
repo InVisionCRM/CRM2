@@ -123,16 +123,8 @@ export function LeadOverviewTab({ lead, onEditRequest }: LeadOverviewTabProps) {
               <p className="text-xs sm:text-sm">{lead.insuranceCompany || "N/A"}</p>
             </div>
             <div className="space-y-0.5">
-              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Policy #</p>
-              <p className="text-xs sm:text-sm">{lead.insurancePolicyNumber || "N/A"}</p>
-            </div>
-            <div className="space-y-0.5">
               <p className="text-xs sm:text-sm font-medium text-muted-foreground">Ins. Phone</p>
               <p className="text-xs sm:text-sm">{lead.insurancePhone || "N/A"}</p>
-            </div>
-            <div className="space-y-0.5">
-              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Deductible</p>
-              <p className="text-xs sm:text-sm">{lead.insuranceDeductible || "N/A"}</p>
             </div>
             <div className="space-y-0.5">
               <p className="text-xs sm:text-sm font-medium text-muted-foreground">Damage Type</p>

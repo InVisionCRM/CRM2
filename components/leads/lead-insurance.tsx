@@ -24,10 +24,8 @@ interface LeadInsuranceProps {
 
 const insuranceSchema = z.object({
   insuranceCompany: z.string().optional().nullable(),
-  insurancePolicyNumber: z.string().optional().nullable(),
   insurancePhone: z.string().optional().nullable(),
   insuranceSecondaryPhone: z.string().optional().nullable(),
-  insuranceDeductible: z.string().optional().nullable(),
   dateOfLoss: z.string().optional().nullable(),
   damageType: z.string().optional().nullable(),
   claimNumber: z.string().optional().nullable()
@@ -39,10 +37,8 @@ export function LeadInsurance({ lead }: LeadInsuranceProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     insuranceCompany: lead.insuranceCompany || "",
-    insurancePolicyNumber: lead.insurancePolicyNumber || "",
     insurancePhone: lead.insurancePhone || "",
     insuranceSecondaryPhone: lead.insuranceSecondaryPhone || "",
-    insuranceDeductible: lead.insuranceDeductible ? lead.insuranceDeductible.toString() : "",
     dateOfLoss: lead.dateOfLoss ? new Date(lead.dateOfLoss).toISOString().split('T')[0] : "",
     damageType: lead.damageType || "",
     claimNumber: lead.claimNumber || ""
@@ -162,18 +158,14 @@ export function LeadInsurance({ lead }: LeadInsuranceProps) {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="insurancePolicyNumber">Policy Number</Label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="insurancePolicyNumber"
-                      name="insurancePolicyNumber"
-                      value={formData.insurancePolicyNumber}
-                      onChange={handleInputChange}
-                      placeholder="Policy Number"
-                      className="pl-10"
-                    />
-                  </div>
+                  <Label htmlFor="claimNumber">Claim Number</Label>
+                  <Input
+                    id="claimNumber"
+                    name="claimNumber"
+                    value={formData.claimNumber}
+                    onChange={handleInputChange}
+                    placeholder="Claim Number"
+                  />
                 </div>
               </div>
             </div>
@@ -216,16 +208,6 @@ export function LeadInsurance({ lead }: LeadInsuranceProps) {
               <h3 className="text-sm font-medium text-muted-foreground">Claim Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="claimNumber">Claim Number</Label>
-                  <Input
-                    id="claimNumber"
-                    name="claimNumber"
-                    value={formData.claimNumber}
-                    onChange={handleInputChange}
-                    placeholder="Claim Number"
-                  />
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="dateOfLoss">Date of Loss</Label>
                   <Input
                     id="dateOfLoss"
@@ -251,20 +233,6 @@ export function LeadInsurance({ lead }: LeadInsuranceProps) {
                       <SelectItem value="FIRE">Fire</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="insuranceDeductible">Deductible</Label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="insuranceDeductible"
-                      name="insuranceDeductible"
-                      value={formData.insuranceDeductible}
-                      onChange={handleInputChange}
-                      placeholder="Deductible Amount"
-                      className="pl-10"
-                    />
-                  </div>
                 </div>
               </div>
             </div>
@@ -297,10 +265,8 @@ export function LeadInsurance({ lead }: LeadInsuranceProps) {
       </div>
       <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
         {renderDetail("Company", lead.insuranceCompany, Building2)}
-        {renderDetail("Policy #", lead.insurancePolicyNumber, DollarSign)}
         {renderDetail("Primary Phone", lead.insurancePhone, Phone)}
         {renderDetail("Secondary Phone", lead.insuranceSecondaryPhone, Phone)}
-        {renderDetail("Deductible", lead.insuranceDeductible, DollarSign)}
         {renderDetail(
           "Date of Loss", 
           lead.dateOfLoss ? new Date(lead.dateOfLoss).toLocaleDateString() : null, 

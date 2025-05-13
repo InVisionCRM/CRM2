@@ -8,6 +8,15 @@ export interface GoogleDriveCredentials {
   refreshToken?: string | null;
 }
 
+// Extended DriveFile interface to support additional fields from Google Drive API
+export interface ExtendedDriveFile extends DriveFile {
+  thumbnailLink?: string;
+  iconLink?: string;
+  modifiedTime?: string;
+  size?: string;
+  [key: string]: any; // To support any additional fields returned from Drive API
+}
+
 export class GoogleDriveService {
   private credentials: GoogleDriveCredentials;
 
@@ -50,30 +59,130 @@ export class GoogleDriveService {
     return response.json() as Promise<T>;
   }
 
-  async listFiles(opts?: { mimeTypes?: string[]; folderId?: string }): Promise<ServiceResult<DriveFile[]>> {
+  async listFiles(opts?: { 
+    mimeTypes?: string[]; 
+    folderId?: string;
+    customQuery?: string;
+    customFields?: string; 
+  }): Promise<ServiceResult<DriveFile[]>> {
     try {
       const params = new URLSearchParams();
-      params.append("fields", "files(id, name, mimeType, webViewLink, createdTime)");
-      let q = "trashed=false";
+      params.append("fields", opts?.customFields || "files(id, name, mimeType, webViewLink, createdTime)");
+      
+      let q = "";
+      
+      if (opts?.customQuery) {
+        // Use the provided custom query string directly
+        q = opts.customQuery;
+      } else {
+        // Build the query as before
+        q = "trashed=false";
 
-      if (opts?.folderId) {
-        q += ` and '${opts.folderId}' in parents`;
-      } else if (process.env.GOOGLE_DRIVE_FOLDER_ID_DEFAULT) {
-        q += ` and '${process.env.GOOGLE_DRIVE_FOLDER_ID_DEFAULT}' in parents`;
-      }
+        if (opts?.folderId) {
+          q += ` and '${opts.folderId}' in parents`;
+        } else if (process.env.GOOGLE_DRIVE_FOLDER_ID_DEFAULT) {
+          q += ` and '${process.env.GOOGLE_DRIVE_FOLDER_ID_DEFAULT}' in parents`;
+        }
 
-      if (opts?.mimeTypes && opts.mimeTypes.length > 0) {
-        q += ` and (${opts.mimeTypes.map(mt => `mimeType='${mt}'`).join(" or ")})`;
+        if (opts?.mimeTypes && opts.mimeTypes.length > 0) {
+          q += ` and (${opts.mimeTypes.map(mt => `mimeType='${mt}'`).join(" or ")})`;
+        }
       }
+      
       params.append("q", q);
+      
+      // Log the full request URL for debugging
+      const requestUrl = `/files?${params.toString()}`;
+      console.log(`Drive API Request: ${GOOGLE_DRIVE_API_BASE}${requestUrl}`);
 
       const data = await this.fetchGoogleAPI<{ files: DriveFile[] }>(
-        `/files?${params.toString()}`
+        requestUrl
       );
-      return { success: true, data: data.files };
+      
+      console.log(`Drive API Response received with ${data.files?.length || 0} files`);
+      
+      return { success: true, data: data.files || [] };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to list files";
       console.error("listFiles error:", error);
+      return { success: false, message };
+    }
+  }
+  
+  /**
+   * Lists files in a specific folder with customizable field selection
+   * @param folderId - The ID of the Google Drive folder
+   * @param options - Options for the request
+   */
+  async listFilesInFolder(
+    folderId: string, 
+    options?: { 
+      mimeTypes?: string[]; 
+      fields?: string;
+      pageSize?: number;
+      orderBy?: string;
+    }
+  ): Promise<ServiceResult<ExtendedDriveFile[]>> {
+    try {
+      // Skip the folder verification as it's causing API errors
+      // Just proceed directly to listing files in the folder
+      console.log(`listFilesInFolder: Getting files from folder ${folderId}`);
+      
+      const params = new URLSearchParams();
+      
+      // Correct format for fields parameter - it needs to be nested properly
+      params.append(
+        "fields", 
+        options?.fields || "files(id,name,mimeType,webViewLink,thumbnailLink,iconLink,modifiedTime,size)"
+      );
+      
+      // Make sure query is formatted correctly
+      let q = `'${folderId}' in parents and trashed=false`;
+      
+      // Add mimeTypes if specified
+      if (options?.mimeTypes && options.mimeTypes.length > 0) {
+        q += ` and (${options.mimeTypes.map(mt => `mimeType='${mt}'`).join(" or ")})`;
+      }
+      
+      params.append("q", q);
+      
+      // Add pagination if specified
+      if (options?.pageSize) {
+        params.append("pageSize", options.pageSize.toString());
+      } else {
+        // Default to a reasonable page size
+        params.append("pageSize", "100");
+      }
+      
+      // Add sorting if specified
+      if (options?.orderBy) {
+        params.append("orderBy", options.orderBy);
+      } else {
+        // Default to sorting by most recent first
+        params.append("orderBy", "modifiedTime desc");
+      }
+      
+      // Log the full request URL for debugging
+      const requestUrl = `/files?${params.toString()}`;
+      console.log(`listFilesInFolder: Drive API Request: ${GOOGLE_DRIVE_API_BASE}${requestUrl}`);
+      
+      const data = await this.fetchGoogleAPI<{ files: ExtendedDriveFile[] }>(requestUrl);
+      
+      const fileCount = data.files?.length || 0;
+      console.log(`listFilesInFolder: Drive API Response received with ${fileCount} files`);
+      
+      if (fileCount === 0) {
+        console.log(`listFilesInFolder: No files found in folder ${folderId}`);
+      } else {
+        // Log the first few file names for debugging
+        const fileNames = data.files.slice(0, 3).map(f => f.name).join(", ");
+        console.log(`listFilesInFolder: First few files: ${fileNames}${data.files.length > 3 ? '...' : ''}`);
+      }
+      
+      return { success: true, data: data.files || [] };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to list files in folder";
+      console.error("listFilesInFolder error:", error);
       return { success: false, message };
     }
   }
