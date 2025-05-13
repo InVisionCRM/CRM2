@@ -5,8 +5,7 @@ import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { IconSettings, IconUserBolt, IconHomeHeart, IconMap, IconLink, IconMenu2, IconCalendar, IconFolder, IconChevronLeft, IconChevronRight, IconDeviceLaptop, IconScale, IconLogout } from "@tabler/icons-react"
+import { IconSettings, IconUserBolt, IconHomeHeart, IconMap, IconLink, IconCalendar, IconFolder, IconChevronLeft, IconChevronRight, IconDeviceLaptop, IconScale, IconLogout } from "@tabler/icons-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { signOut } from "next-auth/react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -16,18 +15,8 @@ interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export default function AppSidebar({ className }: SidebarProps) {
-  const [isMobile, setIsMobile] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(true)
   const pathname = usePathname()
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-    checkMobile()
-    window.addEventListener("resize", checkMobile)
-    return () => window.removeEventListener("resize", checkMobile)
-  }, [])
 
   const links = [
     {
@@ -170,31 +159,10 @@ export default function AppSidebar({ className }: SidebarProps) {
     </div>
   )
 
-  // Mobile sidebar using Sheet component
-  if (isMobile) {
-    return (
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="fixed left-4 top-4 z-40 md:hidden bg-black/25 backdrop-blur-lg border-white/20"
-          >
-            <IconMenu2 className="h-5 w-5 text-[#ffffff]" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-[300px] bg-black/25 backdrop-blur-lg border-white/20 p-0">
-          <SidebarContent />
-        </SheetContent>
-      </Sheet>
-    )
-  }
-
-  // Desktop sidebar
   return (
     <div
       className={cn(
-        "hidden md:flex h-full flex-col bg-black/25 backdrop-blur-lg border-r border-white/20",
+        "flex h-full flex-col bg-black/25 backdrop-blur-lg border-r border-white/20",
         isCollapsed ? "w-[80px]" : "w-[300px]",
         "transition-all duration-300",
         className

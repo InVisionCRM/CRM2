@@ -19,7 +19,8 @@ export async function middleware(req: NextRequest) {
     if (pathname.startsWith("/auth/signin") || 
         pathname.startsWith("/api/auth") || 
         pathname.startsWith("/_next/") ||
-        pathname.includes(".") // Generally ignore paths with extensions (assets)
+        pathname.includes(".") || // Generally ignore paths with extensions (assets)
+        pathname === "/" // Allow access to the root page without authentication
        ) {
       return NextResponse.next()
     }
