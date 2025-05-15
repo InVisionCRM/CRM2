@@ -8,6 +8,15 @@ export async function getLeads(): Promise<Lead[]> {
     const leads = await prisma.lead.findMany({
       orderBy: {
         createdAt: 'desc'
+      },
+      include: {
+        assignedTo: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
       }
     })
     return leads

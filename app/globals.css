@@ -121,7 +121,7 @@ body { /* Added from styles/globals.css */
   }
 
   html::after {
-    background-color: #6e774754; /* Second blob color */
+    background-color: #000000eb; /* Second blob color */
     animation: moveBlob2 30s infinite alternate ease-in-out -5s; /* Offset animation */
   }
 

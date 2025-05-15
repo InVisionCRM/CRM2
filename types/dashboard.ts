@@ -10,6 +10,7 @@ export interface LeadSummary {
   appointmentDate?: Date
   email: string
   assignedTo?: string
+  assignedToId?: string
 }
 
 export interface AppointmentSummary {

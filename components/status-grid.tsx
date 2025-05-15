@@ -41,15 +41,15 @@ export function StatusGrid({ onStatusClick, activeStatus, statusCounts }: Status
 
   const getStatusIcon = (status: LeadStatus) => {
     switch (status) {
-      case LeadStatus.signed_contract: return <FileSignature className="w-6 h-3" />;
-      case LeadStatus.scheduled: return <Calendar className="w-3 h-3" />;
-      case LeadStatus.colors: return <Palette className="w-3 h-3" />;
-      case LeadStatus.acv: return <FileText className="w-3 h-3" />;
-      case LeadStatus.job: return <Briefcase className="w-3 h-3" />;
-      case LeadStatus.completed_jobs: return <CheckCircle className="w-3 h-3" />;
-      case LeadStatus.zero_balance: return <DollarSign className="w-3 h-3" />;
-      case LeadStatus.denied: return <XCircle className="w-3 h-3" />;
-      case LeadStatus.follow_ups: return <PhoneCall className="w-3 h-3" />;
+      case LeadStatus.signed_contract: return null;
+      case LeadStatus.scheduled: return null;
+      case LeadStatus.colors: return null;
+      case LeadStatus.acv: return null;
+      case LeadStatus.job: return null;
+      case LeadStatus.completed_jobs: return null;
+      case LeadStatus.zero_balance: return null;
+      case LeadStatus.denied: return null;
+      case LeadStatus.follow_ups: return null;
       default: return <Users className="w-3 h-3" />;
     }
   }

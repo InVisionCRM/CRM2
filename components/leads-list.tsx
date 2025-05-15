@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatDistanceToNow } from "date-fns"
 import type { LeadSummary } from "@/types/dashboard"
-import { MapPin, Mail, Phone, Calendar } from "lucide-react"
+import { MapPin, Mail, Phone, Calendar, User } from "lucide-react"
 
 interface LeadsListProps {
   leads: LeadSummary[]
@@ -71,13 +71,6 @@ export function LeadsList({ leads, isLoading = false, assignedTo }: LeadsListPro
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
   }
 
-  // Make sure the insuranceCompany appears as an optional property to avoid type errors
-  // This is a temporary solution; in a real app you would update the LeadSummary type instead
-  const getInsuranceCompany = (lead: LeadSummary) => {
-    // @ts-ignore - The property might not exist in the type but we're handling it gracefully
-    return lead.insuranceCompany || "State Farm Insurance";
-  };
-
   return (
     <div className="space-y-3">
       {leads.map((lead) => (
@@ -112,10 +105,11 @@ export function LeadsList({ leads, isLoading = false, assignedTo }: LeadsListPro
                 </div>
                 <p className="text-sm text-muted-foreground line-clamp-1 mb-2">{lead.address}</p>
                 
-                {/* Insurance company */}
+                {/* Salesperson */}
                 <div className="flex items-center gap-1 mb-2">
-                  <div className="text-xs bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded text-blue-700 dark:text-blue-300">
-                    {getInsuranceCompany(lead)}
+                  <div className="flex items-center gap-1 text-xs bg-violet-50 dark:bg-violet-900/20 px-2 py-0.5 rounded text-violet-700 dark:text-violet-300">
+                    <User className="w-3 h-3" />
+                    <span>{lead.assignedTo || lead.assignedToId || "Unassigned"}</span>
                   </div>
                 </div>
                 

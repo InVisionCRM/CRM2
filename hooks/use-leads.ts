@@ -41,20 +41,38 @@ export function useLeads(options: UseLeadsOptions = {}): UseLeadsResult {
 
         const data = await response.json()
 
+        // Debug the data received from the API
+        console.log("Raw lead data from API:", data.slice(0, 2))
+        
         // Transform the data to match LeadSummary type if needed
-        const transformedLeads: LeadSummary[] = data.map((lead: any) => ({
-          id: lead.id,
-          name: `${lead.firstName || ''} ${lead.lastName || ''}`.trim(),
-          address: lead.address || "",
-          phone: lead.phone || "",
-          email: lead.email || "",
-          status: lead.status && typeof lead.status === 'string' 
-                    ? lead.status.toLowerCase() 
-                    : 'unknown',
-          appointmentDate: lead.adjusterAppointmentDate || null,
-          assignedTo: lead.assignedTo?.name || null,
-          createdAt: lead.createdAt
-        }))
+        const transformedLeads: LeadSummary[] = data.map((lead: any) => {
+          console.log("Lead data:", {
+            assignedToId: lead.assignedToId,
+            assignedTo: lead.assignedTo
+          })
+          
+          // Get salesperson info from the assignedTo relationship if available
+          const salesperson = lead.assignedTo ? {
+            id: lead.assignedTo.id,
+            name: lead.assignedTo.name,
+            email: lead.assignedTo.email
+          } : null;
+          
+          return {
+            id: lead.id,
+            name: `${lead.firstName || ''} ${lead.lastName || ''}`.trim(),
+            address: lead.address || "",
+            phone: lead.phone || "",
+            email: lead.email || "",
+            status: lead.status && typeof lead.status === 'string' 
+                      ? lead.status.toLowerCase() 
+                      : 'unknown',
+            appointmentDate: lead.adjusterAppointmentDate || null,
+            assignedTo: salesperson ? salesperson.name : null,
+            assignedToId: lead.assignedToId || null,
+            createdAt: lead.createdAt
+          }
+        })
 
         setLeads(transformedLeads)
       } catch (err) {
