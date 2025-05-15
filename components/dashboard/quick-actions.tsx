@@ -64,7 +64,7 @@ function QuickAction({
         isClicked && "animate-quick-zoom", // Apply zoom animation on click
         isPrimary && !imageUrl
           ? "bg-gradient-to-br from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90"
-          : !imageUrl && "hover:bg-gray-50 dark:hover:bg-gray-100",
+          : !imageUrl && "hover:bg-gray-50 dark:hover:bg-gray-800",
         imageUrl ? "relative overflow-hidden" : "",
         className,
       )}
@@ -245,6 +245,8 @@ export function QuickActions() {
       router.push("/team-performance")
     } else if (action === "purlin-vision") {
       router.push("/map")
+    } else if (action === "all-leads") {
+      router.push("/leads")
     } else if (action === "file-upload") {
       // Open the lead selection sheet first
       // setLeadSelectionOpen(true)
@@ -272,6 +274,17 @@ export function QuickActions() {
         </CardHeader>
         <CardContent className="p-3">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 auto-rows-fr bg-black/10">
+            {/* All Leads - Large 2x2 tile */}
+            <QuickAction
+              icon={null}
+              label="All Leads"
+              description="View and manage leads"
+              onClick={() => handleAction("all-leads")}
+              imageUrl="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Quick%20Actions/All_Leads-SEk2NEYpt4fARvrhTSLgiBsCi68m7Y.png"
+              blurAmount="sm"
+              className="col-span-2 row-span-2 md:col-span-2 border-2 border-lime-500 text-white font-medium"
+            />
+
             {/* Purlin-Vision - Large 2x2 tile spanning 4 columns on md+ screens */}
             <QuickAction
               icon={null}

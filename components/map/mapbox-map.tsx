@@ -21,6 +21,7 @@ export interface MapboxMarkerData {
         leadId?: string;
         visits?: any[]; // Define more specific type if possible
     };
+    
 }
 
 // Define the props for the MapboxMap component

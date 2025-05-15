@@ -82,7 +82,6 @@ export async function createLead(data: CreateLeadInput): Promise<Lead> {
         description: null,
         userId: data.userId,
         leadId: lead.id,
-        status: ActivityStatus.COMPLETED
       }
     })
 
@@ -134,7 +133,6 @@ export async function updateLead(
           description: null,
           userId: data.userId,
           leadId: id,
-          status: ActivityStatus.COMPLETED
         }
       })
     }
