@@ -1,8 +1,9 @@
 import { prisma } from './prisma'
-import { Activity, ActivityType, ActivityStatus } from '@prisma/client'
+import { Activity, ActivityType } from '@prisma/client'
 
 export interface ActivityWithUser extends Activity {
   userName?: string
+  leadName?: string
 }
 
 /**
@@ -47,13 +48,20 @@ export async function getRecentActivities(limit = 5): Promise<ActivityWithUser[]
           select: {
             name: true
           }
+        },
+        lead: {
+          select: {
+            firstName: true,
+            lastName: true
+          }
         }
       }
     })
 
     return activities.map(activity => ({
       ...activity,
-      userName: activity.user.name
+      userName: activity.user.name,
+      leadName: activity.lead ? `${activity.lead.firstName} ${activity.lead.lastName}`.trim() : undefined
     }))
   } catch (error) {
     console.error("Error fetching recent activities:", error)

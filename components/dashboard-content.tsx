@@ -3,6 +3,7 @@
 // import { SummaryCards } from "@/components/dashboard/summary-cards"
 import { QuickActions } from "@/components/dashboard/quick-actions"
 import { DynamicHero } from "@/components/dynamic-components"
+import { RecentActivities } from "@/components/dashboard/recent-activities"
 
 export function DashboardContent() {
   return (
@@ -10,14 +11,20 @@ export function DashboardContent() {
       {/* Hero Section */}
       <DynamicHero />
       
-      <div className="container mx-auto space-y-6 p-4">
-        {/* Welcome message removed */}
-
-        {/* Summary Cards removed */}
-        {/* <SummaryCards /> */}
-
-        {/* Quick Actions */}
-        <QuickActions />
+      <div className="container mx-auto p-4">
+        {/* Two-column layout */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Left column - Main content */}
+          <div className="md:col-span-2 space-y-6">
+            {/* Quick Actions */}
+            <QuickActions />
+          </div>
+          
+          {/* Right column - Recent Activities */}
+          <div className="md:col-span-1">
+            <RecentActivities />
+          </div>
+        </div>
       </div>
     </div>
   )
