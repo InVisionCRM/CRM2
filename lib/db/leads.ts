@@ -16,6 +16,18 @@ export async function getLeads(): Promise<Lead[]> {
             name: true,
             email: true
           }
+        },
+        activities: {
+          take: 1,
+          orderBy: {
+            createdAt: 'desc'
+          },
+          select: {
+            id: true,
+            title: true,
+            type: true,
+            createdAt: true
+          }
         }
       }
     })
@@ -85,7 +97,7 @@ export async function createLead(data: CreateLeadInput): Promise<Lead> {
     // Create activity for lead creation
     await prisma.activity.create({
       data: {
-        id: nanoid(),
+        id: crypto.randomUUID(),
         type: ActivityType.LEAD_CREATED,
         title: `New lead created: ${lead.firstName} ${lead.lastName}`,
         description: null,
@@ -136,7 +148,7 @@ export async function updateLead(
     if (data.status) {
       await prisma.activity.create({
         data: {
-          id: nanoid(),
+          id: crypto.randomUUID(),
           type: ActivityType.STATUS_CHANGED,
           title: `Lead status changed to ${data.status}`,
           description: null,

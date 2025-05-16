@@ -11,6 +11,11 @@ export interface LeadSummary {
   email: string
   assignedTo?: string
   assignedToId?: string
+  latestActivity?: {
+    title: string
+    createdAt: string
+    type: string
+  } | null
 }
 
 export interface AppointmentSummary {

@@ -50,19 +50,24 @@ export async function POST(request: Request) {
     const leadData = {
       firstName: body.first_name,
       lastName: body.last_name,
-      email: body.email,
-      phone: body.phone,
-      address: body.address,
+      email: body.email || null,
+      phone: body.phone || null,
+      address: body.address || null,
       status: body.status,
-      assignedToId: body.assigned_to,
-      notes: body.notes,
+      assignedToId: userId, // Automatically assign to current user
+      notes: body.notes || null,
       userId: userId, // Pass the fetched user ID
     }
+
+    console.log("Creating lead with data:", leadData)
 
     const newLead = await createLead(leadData)
     return NextResponse.json(newLead, { status: 201 })
   } catch (error) {
     console.error("Error creating lead:", error)
-    return NextResponse.json({ error: "Failed to create lead" }, { status: 500 })
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : "Failed to create lead"
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }

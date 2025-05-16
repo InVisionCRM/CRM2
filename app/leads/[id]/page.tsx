@@ -208,7 +208,7 @@ export default function LeadDetailPage() {
             <ReactConfetti width={width} height={height} numberOfPieces={200} recycle={false} />
           </div>
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" onClick={() => setShowSuccessMessage(false)}></div>
-          <Card className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-11/12 max-w-md p-6 shadow-2xl bg-card animate-in fade-in duration-300 scale-in-center">
+          <Card className="fixed top-[500px] left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-11/12 max-w-md p-6 shadow-2xl bg-card animate-in fade-in duration-300 scale-in-center">
             <CardHeader className="p-0 mb-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-2xl text-green-600 dark:text-green-500">
@@ -221,17 +221,23 @@ export default function LeadDetailPage() {
             </CardHeader>
             <CardContent className="p-0 text-center">
               <p className="text-lg mb-1">Lead status successfully updated to</p>
-              <p className="text-xl font-semibold text-black mb-4">{lead.status ? formatStatusLabel(lead.status) : "the new status"}!</p>
-              <Button onClick={() => setShowSuccessMessage(false)} className="w-full sm:w-auto">Close</Button>
+              <p className="text-xl font-semibold text-green-500 mb-4">{lead.status ? formatStatusLabel(lead.status) : "the new status"}!</p>
+              <Button onClick={() => setShowSuccessMessage(false)} className="w-full text-black sm:w-auto">Close</Button>
             </CardContent>
           </Card>
         </>
       )}
 
-      <div className="w-full flex items-center justify-center gap-3 sm:gap-4 mb-2 sm:mb-0">
-        <h1 className="text-xl sm:text-2xl font-semibold truncate text-center">
+      <div className="w-full flex items-center justify-between mb-2 sm:mb-0">
+        <h1 className="text-xl sm:text-2xl font-semibold truncate">
           {lead.firstName && lead.lastName ? `${lead.firstName} ${lead.lastName}` : lead.email || lead.phone || "Lead Details"}
         </h1>
+        {lead.claimNumber && (
+          <div className="flex items-center text-lg sm:text-xl font-medium text-green-500">
+            <span className="mr-1 text-gray-500 text-sm sm:text-base">Claim #:</span>
+            {lead.claimNumber}
+          </div>
+        )}
       </div>
       
       <LeadStatusBar 

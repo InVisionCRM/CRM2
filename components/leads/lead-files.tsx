@@ -687,33 +687,43 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
               <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading Drive Link...
             </Button>
           ) : driveFolderId ? (
-            <Button 
-              variant="outline" 
-              onClick={() => window.open(`https://drive.google.com/drive/folders/${driveFolderId}`, '_blank', 'noopener,noreferrer')}
-              className="border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600"
-            >
-              <FolderOpen className="h-4 w-4 mr-2" /> Open Drive Folder
-            </Button>
+            <>
+              <Button 
+                variant="outline" 
+                onClick={() => window.open(`https://drive.google.com/drive/folders/${driveFolderId}`, '_blank', 'noopener,noreferrer')}
+                className="border-blue-500 text-blue-500 hover:bg-blue-50 hover:text-blue-600"
+              >
+                <FolderOpen className="h-4 w-4 mr-2" /> Open Drive Folder
+              </Button>
+              <Button variant="outline" onClick={() => setActiveModal('view')} className="bg-muted hover:bg-muted/80">
+                <Eye className="h-4 w-4 mr-2" /> View All ({combinedFiles.length})
+              </Button>
+              <Button variant="default" onClick={openUploadModal} className="bg-primary text-black hover:bg-primary/90">
+                <Upload className="h-4 w-4 mr-2" /> Upload Files
+              </Button>
+            </>
           ) : (
-            <Button 
-              variant="default"
-              onClick={handleCreateDriveFolder}
-              disabled={isCreatingDriveFolder}
-              className="bg-blue-500 hover:bg-blue-600 text-white"
-            >
-              {isCreatingDriveFolder ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating Folder...</>
-              ) : (
-                <><FolderPlus className="h-4 w-4 mr-2" /> Create Drive Folder</>
-              )}
-            </Button>
+            <>
+              <Button 
+                variant="default"
+                onClick={handleCreateDriveFolder}
+                disabled={isCreatingDriveFolder}
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                {isCreatingDriveFolder ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating Folder...</>
+                ) : (
+                  <><FolderPlus className="h-4 w-4 mr-2" /> Create Drive Folder</>
+                )}
+              </Button>
+              <Button variant="outline" disabled className="bg-muted cursor-not-allowed opacity-50">
+                <Eye className="h-4 w-4 mr-2" /> View All ({combinedFiles.length})
+              </Button>
+              <Button variant="default" disabled className="bg-primary/50 text-black cursor-not-allowed opacity-50">
+                <Upload className="h-4 w-4 mr-2" /> Upload Files
+              </Button>
+            </>
           )}
-          <Button variant="outline" onClick={() => setActiveModal('view')} className="bg-muted hover:bg-muted/80">
-            <Eye className="h-4 w-4 mr-2" /> View All ({combinedFiles.length})
-          </Button>
-          <Button variant="default" onClick={openUploadModal} className="bg-primary text-black hover:bg-primary/90">
-            <Upload className="h-4 w-4 mr-2" /> Upload Files
-          </Button>
           {/* <Button variant="outline" onClick={() => setActiveModal('camera')} className="bg-muted hover:bg-muted/80">
             <Camera className="h-4 w-4 mr-2" /> Use Camera
           </Button> */}

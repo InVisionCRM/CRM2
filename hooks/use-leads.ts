@@ -58,6 +58,15 @@ export function useLeads(options: UseLeadsOptions = {}): UseLeadsResult {
             email: lead.assignedTo.email
           } : null;
           
+          // Get the latest activity if available
+          const latestActivity = lead.activities && lead.activities.length > 0 
+            ? {
+                title: lead.activities[0].title,
+                createdAt: lead.activities[0].createdAt,
+                type: lead.activities[0].type
+              }
+            : null;
+          
           return {
             id: lead.id,
             name: `${lead.firstName || ''} ${lead.lastName || ''}`.trim(),
@@ -70,7 +79,8 @@ export function useLeads(options: UseLeadsOptions = {}): UseLeadsResult {
             appointmentDate: lead.adjusterAppointmentDate || null,
             assignedTo: salesperson ? salesperson.name : null,
             assignedToId: lead.assignedToId || null,
-            createdAt: lead.createdAt
+            createdAt: lead.createdAt,
+            latestActivity
           }
         })
 
