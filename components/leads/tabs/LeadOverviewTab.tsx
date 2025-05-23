@@ -1,13 +1,31 @@
 "use client"
 
 import { formatDistanceToNow, format, isValid, parse } from "date-fns"
+import { useState, useEffect } from "react"
 import type { Lead } from "@prisma/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Pencil } from "lucide-react"
+import { Pencil, Check, Loader2 } from "lucide-react"
 import { formatStatusLabel } from "@/lib/utils"
 // import { Avatar, AvatarFallback } from "@/components/ui/avatar" // Avatar removed
 import { Badge } from "@/components/ui/badge"
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select"
+import { updateLeadAssigneeAction } from "@/app/actions/lead-actions"
+import { getAssignableUsersAction } from "@/app/actions/user-actions"
+import { useToast } from "@/components/ui/use-toast"
+
+interface User {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: string;
+}
 
 interface LeadOverviewTabProps {
   lead: (Lead & { assignedTo?: { name?: string | null } | null }) | null;
@@ -15,6 +33,88 @@ interface LeadOverviewTabProps {
 }
 
 export function LeadOverviewTab({ lead, onEditRequest }: LeadOverviewTabProps) {
+  const { toast } = useToast();
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [isUpdatingAssignee, setIsUpdatingAssignee] = useState(false);
+  const [selectedAssignee, setSelectedAssignee] = useState<string>(lead?.assignedToId || "unassigned");
+
+  // Fetch users that can be assigned
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setIsLoadingUsers(true);
+      try {
+        const result = await getAssignableUsersAction();
+        if (result.success) {
+          setUsers(result.users);
+        } else {
+          toast({
+            title: "Error",
+            description: result.message || "Failed to load users",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load users",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoadingUsers(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  // Update the selected assignee when the lead data changes
+  useEffect(() => {
+    if (lead) {
+      setSelectedAssignee(lead.assignedToId || "unassigned");
+    }
+  }, [lead?.assignedToId]);
+
+  const handleAssigneeChange = async (userId: string) => {
+    if (!lead || userId === selectedAssignee) return;
+    
+    setIsUpdatingAssignee(true);
+    setSelectedAssignee(userId);
+    
+    try {
+      // If "unassigned" is selected, pass null or empty string to the server action
+      const assigneeId = userId === "unassigned" ? "" : userId;
+      const result = await updateLeadAssigneeAction(lead.id, assigneeId);
+      
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Lead assignee updated successfully",
+        });
+      } else {
+        // Revert selection on error
+        setSelectedAssignee(lead.assignedToId || "unassigned");
+        toast({
+          title: "Error",
+          description: result.message || "Failed to update assignee",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating assignee:", error);
+      // Revert selection on error
+      setSelectedAssignee(lead.assignedToId || "unassigned");
+      toast({
+        title: "Error",
+        description: "Failed to update assignee",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingAssignee(false);
+    }
+  };
+
   if (!lead) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-2 gap-6">
@@ -68,7 +168,40 @@ export function LeadOverviewTab({ lead, onEditRequest }: LeadOverviewTabProps) {
             </div>
             <div className="space-y-0.5">
               <p className="text-xs sm:text-sm font-medium text-muted-foreground">SalesPerson</p>
-              <p className="text-xs sm:text-sm">{lead?.assignedTo?.name || lead?.assignedToId || "N/A"}</p>
+              <div className="relative">
+                <Select 
+                  value={selectedAssignee} 
+                  onValueChange={handleAssigneeChange}
+                  disabled={isLoadingUsers || isUpdatingAssignee}
+                >
+                  <SelectTrigger className="h-8 text-xs sm:text-sm w-full">
+                    <SelectValue placeholder="Select salesperson">
+                      {isLoadingUsers ? (
+                        "Loading users..."
+                      ) : isUpdatingAssignee ? (
+                        "Updating..."
+                      ) : (
+                        selectedAssignee === "unassigned" 
+                          ? "Unassigned" 
+                          : users.find(user => user.id === selectedAssignee)?.name || 'Unassigned'
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    {users.map(user => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name || user.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isUpdatingAssignee && (
+                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>

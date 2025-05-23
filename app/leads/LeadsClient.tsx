@@ -24,7 +24,11 @@ function LeadsLoading() {
   )
 }
 
-export default function LeadsClient() {
+interface LeadsClientProps {
+  searchQuery?: string;
+}
+
+export default function LeadsClient({ searchQuery = "" }: LeadsClientProps) {
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus | null>(null)
   const [selectedUser, setSelectedUser] = useState<string | null>(null)
   const [users, setUsers] = useState<UserOption[]>([])
@@ -128,7 +132,25 @@ export default function LeadsClient() {
     setSelectedStatus(status)
   }
 
-  const filteredLeads = selectedUser ? leads.filter((lead) => lead.assignedTo === selectedUser) : leads
+  // Filter leads by user if selected
+  let filteredLeads = selectedUser 
+    ? leads.filter((lead) => lead.assignedTo === selectedUser) 
+    : leads;
+
+  // Further filter by search query (name or claim ID)
+  if (searchQuery.trim() !== "") {
+    const query = searchQuery.toLowerCase().trim();
+    filteredLeads = filteredLeads.filter((lead) => {
+      // Search by name (first name or last name)
+      const fullName = `${lead.firstName} ${lead.lastName}`.toLowerCase();
+      const hasMatchingName = fullName.includes(query);
+      
+      // Search by claim ID/claim number
+      const hasMatchingClaimNumber = lead.claimNumber?.toLowerCase().includes(query) || false;
+      
+      return hasMatchingName || hasMatchingClaimNumber;
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -148,6 +170,15 @@ export default function LeadsClient() {
       <div className="mt-6">
         {isLoading ? (
           <LeadsLoading />
+        ) : filteredLeads.length === 0 ? (
+          <div className="text-center py-10 border rounded-lg">
+            <p className="text-muted-foreground">No leads found matching your criteria.</p>
+            {searchQuery && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Try adjusting your search terms or filters.
+              </p>
+            )}
+          </div>
         ) : (
           <LeadsList leads={filteredLeads} isLoading={isLoading} assignedTo={selectedUser} />
         )}

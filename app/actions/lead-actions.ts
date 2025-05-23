@@ -427,3 +427,69 @@ export async function deletePhotoAction(fileId: string): Promise<{ success: bool
     }
   }
 }
+
+export async function updateLeadAssigneeAction(
+  leadId: string,
+  assignedToId: string
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return { success: false, message: "Unauthorized" };
+    }
+
+    // Get the current lead to check for changes
+    const lead = await prisma.lead.findUnique({
+      where: { id: leadId },
+      select: { assignedToId: true, status: true }
+    });
+
+    if (!lead) {
+      return { success: false, message: "Lead not found" };
+    }
+
+    // Update the lead in the database
+    await prisma.lead.update({
+      where: { id: leadId },
+      data: { 
+        assignedToId: assignedToId || null 
+      },
+    });
+
+    // Create activity for the assignment change if it actually changed
+    if (lead.assignedToId !== assignedToId) {
+      const previousAssignee = lead.assignedToId 
+        ? await prisma.user.findUnique({ where: { id: lead.assignedToId }, select: { name: true } })
+        : null;
+      
+      const newAssignee = assignedToId 
+        ? await prisma.user.findUnique({ where: { id: assignedToId }, select: { name: true } })
+        : null;
+
+      await prisma.activity.create({
+        data: {
+          leadId: leadId,
+          type: ActivityType.LEAD_UPDATED,
+          title: `Assignee Changed`,
+          description: `Lead assigned to ${newAssignee?.name || 'Unassigned'} (Previously: ${previousAssignee?.name || 'Unassigned'})`,
+          userId: session.user.id,
+        }
+      });
+    }
+
+    // Revalidate paths to refresh data
+    revalidatePath(`/leads/${leadId}`);
+    revalidatePath("/leads");
+    
+    return { 
+      success: true, 
+      message: "Lead assignee updated successfully" 
+    };
+  } catch (error) {
+    console.error("Error updating lead assignee:", error);
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : "Failed to update lead assignee" 
+    };
+  }
+}
