@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useSearchParams } from "next/navigation" // Use next/navigation for App Router
 import { LeadStatus } from "@prisma/client"
-import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive } from "lucide-react" // Updated icons
+import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image } from "lucide-react" // Added Image icon
 import { LeadStatusBar } from "@/components/leads/LeadStatusBar" // Corrected path
 import { LeadDetailTabs } from "@/components/leads/LeadDetailTabs" // Corrected path
 import { ActivityFeed } from "@/components/leads/ActivityFeed" // Corrected path
@@ -20,6 +20,7 @@ import { formatStatusLabel } from "@/lib/utils"; // Import formatStatusLabel
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { LeadFiles } from "@/components/leads/lead-files";
 import { LeadContractsTab } from "@/components/leads/tabs/LeadContractsTab";
+import { LeadPhotosTab } from "@/components/leads/tabs/LeadPhotosTab"; // Import the new Photos tab component
 
 // Quick Actions Button component
 interface QuickActionButtonProps {
@@ -156,11 +157,14 @@ export default function LeadDetailPage() {
 
   const [filesDialogOpen, setFilesDialogOpen] = useState(false);
   const [contractsDialogOpen, setContractsDialogOpen] = useState(false);
+  const [photosDialogOpen, setPhotosDialogOpen] = useState(false);
 
   const handleOpenFilesDialog = () => setFilesDialogOpen(true);
   const handleCloseFilesDialog = () => setFilesDialogOpen(false);
   const handleOpenContractsDialog = () => setContractsDialogOpen(true);
   const handleCloseContractsDialog = () => setContractsDialogOpen(false);
+  const handleOpenPhotosDialog = () => setPhotosDialogOpen(true);
+  const handleClosePhotosDialog = () => setPhotosDialogOpen(false);
 
   if (isLeadLoading && !lead) { // Show skeleton only on initial load
     return <LeadDetailSkeleton />
@@ -247,7 +251,7 @@ export default function LeadDetailPage() {
         loadingStatus={statusBeingUpdated}
       />
       
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-3 sm:gap-4">
         <QuickActionButton 
           href={leadPhone ? `tel:${leadPhone}` : undefined}
           icon={<Phone className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#59FF00' }} />}
@@ -270,6 +274,11 @@ export default function LeadDetailPage() {
           icon={<MapPin className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#59FF00' }} />}
           label="Map"
           disabled={!leadAddress}
+        />
+        <QuickActionButton 
+          onClick={handleOpenPhotosDialog}
+          icon={<Image className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#59FF00' }} />}
+          label="Photos"
         />
         <QuickActionButton 
           onClick={handleOpenFilesDialog}
@@ -306,6 +315,19 @@ export default function LeadDetailPage() {
             <DialogTitle>Files</DialogTitle>
           </DialogHeader>
           <LeadFiles leadId={lead.id} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Photos Dialog */}
+      <Dialog open={photosDialogOpen} onOpenChange={setPhotosDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Photos</DialogTitle>
+          </DialogHeader>
+          <LeadPhotosTab 
+            leadId={lead.id} 
+            googleDriveUrl={lead.googleDriveFolderId ? `https://drive.google.com/drive/folders/${lead.googleDriveFolderId}` : null}
+          />
         </DialogContent>
       </Dialog>
 

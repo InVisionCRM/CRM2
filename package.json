@@ -91,6 +91,7 @@
     "react-hook-form": "latest",
     "react-resizable-panels": "^2.1.7",
     "react-use": "^17.6.0",
+    "react-webcam": "^7.2.0",
     "recharts": "latest",
     "sonner": "latest",
     "swr": "^2.3.3",

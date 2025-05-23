@@ -67,6 +67,7 @@ model User {
   visits        Visit[]
   routePoints   RoutePoint[]
   googleCalendarEvents GoogleCalendarEvent[]
+  uploadedPhotos LeadPhoto[]
 
   createdAt     DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt     DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
@@ -99,7 +100,9 @@ model Lead {
   googleEventId             String?
   latitude                  Decimal?  @db.Decimal(10,7)
   longitude                 Decimal?  @db.Decimal(10,7)
+  googleDriveUrl            String?   // Field to store the Google Drive URL for this lead
   googleDriveFolderId       String?   // Field to store the Google Drive Folder ID for this lead
+  metadata                  Json?     // JSON field to store additional metadata (like photosFolderId)
   createdAt                 DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt                 DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
 
@@ -111,6 +114,7 @@ model Lead {
   files                    File[]
   contracts                Contract[]
   visionMarker             VisionMarker?
+  photos                   LeadPhoto[] // Relation to photos
 
   @@index([assignedToId], map: "idx_leads_assigned_to")
   @@index([status], map: "idx_leads_status")
@@ -351,4 +355,27 @@ model RoutePoint {
 
   @@index([userId])
   @@index([timestamp])
+}
+
+model LeadPhoto {
+  id            String    @id @default(uuid())
+  name          String
+  description   String?
+  url           String    // Full-size photo URL
+  thumbnailUrl  String    // Thumbnail URL
+  driveFileId   String    // Google Drive file ID
+  mimeType      String?   // File MIME type
+  size          Int?      // File size in bytes
+  
+  // Relations
+  leadId        String    @db.VarChar(255)
+  lead          Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  uploadedById  String?   @db.Uuid
+  uploadedBy    User?     @relation(fields: [uploadedById], references: [id])
+  
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(6)
+
+  @@index([leadId])
+  @@index([uploadedById])
 }

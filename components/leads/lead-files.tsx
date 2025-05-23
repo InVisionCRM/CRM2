@@ -522,7 +522,7 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
                 <label htmlFor="lead-file-upload-input-modal" className="sr-only">Select files to upload</label>
                 <Upload className="h-10 w-10 text-muted-foreground mb-2" />
                 <p className="text-muted-foreground">Drag & drop files here, or click to select</p>
-                <p className="text-xs text-muted-foreground/80 mt-1">Max file size: 10MB</p>
+                <p className="text-xs text-muted-foreground/80 mt-1">Max file size: 100MB</p>
                 <input type="file" id="lead-file-upload-input-modal" ref={fileInputRef} onChange={handleFileSelectForUpload} multiple className="hidden" aria-hidden="true" />
               </div>
 
