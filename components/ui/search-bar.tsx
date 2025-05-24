@@ -31,7 +31,7 @@ export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
           containerClassName
         )}
         style={{ top: topOffset }}
-        animate={{ width: isExpanded ? "100%" : "20%" }}
+        animate={{ width: isExpanded ? "100%" : "100%" }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
       >
         <div className="relative w-full" onClick={() => setIsExpanded(true)}>

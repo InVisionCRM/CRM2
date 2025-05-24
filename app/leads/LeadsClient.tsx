@@ -1,14 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useMemo, useState } from "react"
 import { useLeads } from "@/hooks/use-leads"
 import { LeadsList } from "@/components/leads-list"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { StatusCount } from "@/types/dashboard"
-import { UserFilter, type UserOption } from "@/components/user-filter"
+import type { StatusCount, LeadSummary } from "@/types/dashboard"
 import { StatusGrid } from "@/components/status-grid"
 import { LeadStatus } from "@prisma/client"
-import { getUsers } from "@/app/actions/user-actions"
+import type { SortOptions } from "@/app/leads/page"
 
 function LeadsLoading() {
   return (
@@ -26,32 +25,19 @@ function LeadsLoading() {
 
 interface LeadsClientProps {
   searchQuery?: string;
+  sortOptions: SortOptions;
+  selectedUser: string | null;
 }
 
-export default function LeadsClient({ searchQuery = "" }: LeadsClientProps) {
+export default function LeadsClient({ 
+  searchQuery = "", 
+  sortOptions, 
+  selectedUser 
+}: LeadsClientProps) {
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus | null>(null)
-  const [selectedUser, setSelectedUser] = useState<string | null>(null)
-  const [users, setUsers] = useState<UserOption[]>([])
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true)
   const { leads, isLoading, error } = useLeads({ status: selectedStatus })
 
-  useEffect(() => {
-    async function fetchUsers() {
-      setIsLoadingUsers(true)
-      try {
-        const { users } = await getUsers()
-        setUsers(users)
-      } catch (error) {
-        console.error("Error fetching users:", error)
-      } finally {
-        setIsLoadingUsers(false)
-      }
-    }
-    
-    fetchUsers()
-  }, [])
-
-  const statusCounts: StatusCount[] = [
+  const statusCounts: StatusCount[] = useMemo(() => [
     {
       status: "signed_contract",
       count: leads.filter((lead) => lead.status === "signed_contract").length,
@@ -124,7 +110,7 @@ export default function LeadsClient({ searchQuery = "" }: LeadsClientProps) {
       imageUrl:
         "https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Statuses/follow-up-vgb8yPL09PsiEjOWRGOXb1ZcOerKdP.png",
     },
-  ]
+  ], [leads])
 
   if (error) return <p className="text-red-600">Error: {error.message}</p>
 
@@ -132,58 +118,59 @@ export default function LeadsClient({ searchQuery = "" }: LeadsClientProps) {
     setSelectedStatus(status)
   }
 
-  // Filter leads by user if selected
-  let filteredLeads = selectedUser 
-    ? leads.filter((lead) => lead.assignedTo === selectedUser) 
-    : leads;
+  const processedLeads = useMemo(() => {
+    let tempLeads: LeadSummary[] = [...leads];
 
-  // Filter by search query (name or claim ID) with partial matches
-  if (searchQuery.trim() !== "") {
-    const query = searchQuery.toLowerCase().trim();
-    filteredLeads = filteredLeads.filter((lead) => {
-      // Search by name
-      const nameMatch = lead.name?.toLowerCase().startsWith(query);
-      
-      // Search by email
-      const emailMatch = lead.email?.toLowerCase().startsWith(query);
-      
-      // Search by phone
-      const phoneMatch = lead.phone?.startsWith(query);
-      
-      // Return true if any of the fields match
-      return nameMatch || emailMatch || phoneMatch;
-    });
-  }
+    if (selectedUser) {
+      tempLeads = tempLeads.filter((lead) => lead.assignedToId === selectedUser);
+    }
+
+    if (searchQuery.trim() !== "") {
+      const query = searchQuery.toLowerCase().trim();
+      tempLeads = tempLeads.filter((lead) => {
+        const nameMatch = lead.name?.toLowerCase().startsWith(query);
+        const emailMatch = lead.email?.toLowerCase().startsWith(query);
+        return nameMatch || emailMatch;
+      });
+    }
+
+    if (sortOptions.field) {
+      tempLeads.sort((a, b) => {
+        const fieldA = a[sortOptions.field as keyof LeadSummary];
+        const fieldB = b[sortOptions.field as keyof LeadSummary];
+
+        let comparison = 0;
+        if (fieldA === null || typeof fieldA === 'undefined') comparison = -1;
+        else if (fieldB === null || typeof fieldB === 'undefined') comparison = 1;
+        else if (fieldA > fieldB) comparison = 1;
+        else if (fieldA < fieldB) comparison = -1;
+        
+        return sortOptions.order === "desc" ? comparison * -1 : comparison;
+      });
+    }
+
+    return tempLeads;
+  }, [leads, selectedUser, searchQuery, sortOptions]);
+
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="w-full sm:w-auto">
-          <UserFilter 
-            users={users} 
-            selectedUser={selectedUser} 
-            onUserChange={setSelectedUser} 
-            isLoading={isLoadingUsers}
-          />
-        </div>
-      </div>
-
       <StatusGrid onStatusClick={handleStatusClick} activeStatus={selectedStatus} statusCounts={statusCounts} />
 
       <div className="mt-6">
         {isLoading ? (
           <LeadsLoading />
-        ) : filteredLeads.length === 0 ? (
+        ) : processedLeads.length === 0 ? (
           <div className="text-center py-10 border rounded-lg">
             <p className="text-muted-foreground">No leads found matching your criteria.</p>
-            {searchQuery && (
+            {(searchQuery || selectedStatus || selectedUser) && (
               <p className="text-sm text-muted-foreground mt-1">
                 Try adjusting your search terms or filters.
               </p>
             )}
           </div>
         ) : (
-          <LeadsList leads={filteredLeads} isLoading={isLoading} assignedTo={selectedUser} />
+          <LeadsList leads={processedLeads} isLoading={isLoading} assignedTo={selectedUser} />
         )}
       </div>
     </div>
