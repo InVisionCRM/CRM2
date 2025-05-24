@@ -137,18 +137,21 @@ export default function LeadsClient({ searchQuery = "" }: LeadsClientProps) {
     ? leads.filter((lead) => lead.assignedTo === selectedUser) 
     : leads;
 
-  // Further filter by search query (name or claim ID)
+  // Filter by search query (name or claim ID) with partial matches
   if (searchQuery.trim() !== "") {
     const query = searchQuery.toLowerCase().trim();
     filteredLeads = filteredLeads.filter((lead) => {
-      // Search by name (first name or last name)
-      const fullName = `${lead.firstName} ${lead.lastName}`.toLowerCase();
-      const hasMatchingName = fullName.includes(query);
+      // Search by name
+      const nameMatch = lead.name?.toLowerCase().startsWith(query);
       
-      // Search by claim ID/claim number
-      const hasMatchingClaimNumber = lead.claimNumber?.toLowerCase().includes(query) || false;
+      // Search by email
+      const emailMatch = lead.email?.toLowerCase().startsWith(query);
       
-      return hasMatchingName || hasMatchingClaimNumber;
+      // Search by phone
+      const phoneMatch = lead.phone?.startsWith(query);
+      
+      // Return true if any of the fields match
+      return nameMatch || emailMatch || phoneMatch;
     });
   }
 

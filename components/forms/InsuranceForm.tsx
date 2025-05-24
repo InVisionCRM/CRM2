@@ -668,14 +668,27 @@ export function InsuranceForm({
             name="dateOfLoss"
             control={control}
             render={({ field }) => (
-              <CustomDatePicker
-                value={field.value}
-                onChange={(date) => {
-                  field.onChange(date);
+              <Input
+                {...field}
+                id="dateOfLoss"
+                placeholder="MM/DD/YY"
+                className="bg-white bg-opacity-10 border-transparent hover:border-gray-600 text-white h-10 sm:h-12"
+                maxLength={8}
+                onChange={(e) => {
+                  let value = e.target.value.replace(/\D/g, '');
+                  if (value.length >= 2) {
+                    value = value.slice(0, 2) + '/' + value.slice(2);
+                  }
+                  if (value.length >= 5) {
+                    value = value.slice(0, 5) + '/' + value.slice(5);
+                  }
+                  if (value.length > 8) {
+                    value = value.slice(0, 8);
+                  }
+                  field.onChange(value);
                   setIsDirty(true);
                 }}
                 disabled={isLoading || isReadOnly}
-                placeholder="Select date of loss"
               />
             )}
           />

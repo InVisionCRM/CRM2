@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import LeadsClient from "@/app/leads/LeadsClient"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,6 +8,7 @@ import { Plus, Search } from "lucide-react"
 import { CreateLeadForm } from "@/components/forms/CreateLeadForm"
 import { useRouter } from "next/navigation"
 import { toast } from "@/components/ui/use-toast"
+import { useDebouncedCallback } from "use-debounce"
 
 export default function LeadsPage() {
   const [openCreateForm, setOpenCreateForm] = useState(false)
@@ -23,9 +24,18 @@ export default function LeadsPage() {
     router.refresh() // Refresh the page to show the new lead
   }
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value)
-  }
+  // Debounce the search query update to avoid excessive re-renders
+  const debouncedSetSearchQuery = useDebouncedCallback(
+    (value: string) => {
+      setSearchQuery(value)
+    },
+    300 // 300ms delay
+  )
+
+  const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    debouncedSetSearchQuery(value)
+  }, [debouncedSetSearchQuery])
 
   return (
     <div className="w-full">
@@ -37,7 +47,6 @@ export default function LeadsPage() {
             type="text"
             placeholder="Search by name or claim ID..."
             className="pl-9 w-full"
-            value={searchQuery}
             onChange={handleSearch}
           />
         </div>
