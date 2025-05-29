@@ -76,41 +76,10 @@ export default function LeadsPage() {
 
   return (
     <div className="w-full pt-[100px] px-4">
-      <SearchBar 
-        placeholder="Search by name"
-        onChange={handleSearchChange} 
-        value={searchQuery}
-        topOffset="20px"
-        containerClassName="pt-[50px] px-4"
-      />
-
-      <div className="w-full flex flex-col md:flex-row justify-between items-center gap-4 mt-[80px] mb-10">
-        <div className="flex flex-col sm:flex-row items-center gap-2">
-          <UserFilter 
-            users={users} 
-            selectedUser={selectedUser} 
-            onUserChange={setSelectedUser} 
-            isLoading={isLoadingUsers}
-          />
-          <Select onValueChange={handleSortChange} defaultValue={`${sortOptions.field}_${sortOptions.order}`}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <ArrowUpDown className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="createdAt_desc">Newest First</SelectItem>
-              <SelectItem value="createdAt_asc">Oldest First</SelectItem>
-              <SelectItem value="name_asc">Name (A-Z)</SelectItem>
-              <SelectItem value="name_desc">Name (Z-A)</SelectItem>
-              <SelectItem value="status_asc">Status (A-Z)</SelectItem>
-              <SelectItem value="status_desc">Status (Z-A)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
+      <div className="w-full flex justify-end items-center gap-4 mt-[80px] mb-10">
         <Button 
           size="default"
-          className="text-black font-medium bg-gradient-to-r from-lime-400 to-lime-500 hover:from-lime-500 hover:to-lime-600 shadow-lg whitespace-nowrap mt-4 md:mt-0"
+          className="text-black font-medium bg-gradient-to-r from-lime-400 to-lime-500 hover:from-lime-500 hover:to-lime-600 shadow-lg whitespace-nowrap"
           onClick={() => setOpenCreateForm(true)}
         >
           <Plus className="mr-1 h-4 w-4" />
@@ -124,7 +93,16 @@ export default function LeadsPage() {
         onSuccess={handleLeadCreated}
       />
 
-      <LeadsClient searchQuery={searchQuery} sortOptions={sortOptions} selectedUser={selectedUser} />
+      <LeadsClient 
+        searchQuery={searchQuery} 
+        sortOptions={sortOptions} 
+        selectedUser={selectedUser} 
+        users={users} 
+        isLoadingUsers={isLoadingUsers} 
+        onUserChange={setSelectedUser} 
+        onSortChange={setSortOptions} 
+        onSearchChange={setSearchQuery} 
+      />
     </div>
   )
 }

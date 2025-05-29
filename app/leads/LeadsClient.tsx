@@ -8,6 +8,11 @@ import type { StatusCount, LeadSummary } from "@/types/dashboard"
 import { StatusGrid } from "@/components/status-grid"
 import { LeadStatus } from "@prisma/client"
 import type { SortOptions } from "@/app/leads/page"
+import { useDebouncedCallback } from "use-debounce"
+import { SearchBar } from "@/components/ui/search-bar"
+import { UserFilter, type UserOption } from "@/components/user-filter"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ArrowUpDown } from "lucide-react"
 
 function LeadsLoading() {
   return (
@@ -27,15 +32,32 @@ interface LeadsClientProps {
   searchQuery?: string;
   sortOptions: SortOptions;
   selectedUser: string | null;
+  users: UserOption[];
+  isLoadingUsers: boolean;
+  onUserChange: (user: string | null) => void;
+  onSortChange: (sortOptions: SortOptions) => void;
+  onSearchChange: (query: string) => void;
 }
 
 export default function LeadsClient({ 
   searchQuery = "", 
   sortOptions, 
-  selectedUser 
+  selectedUser,
+  users,
+  isLoadingUsers,
+  onUserChange,
+  onSortChange,
+  onSearchChange
 }: LeadsClientProps) {
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus | null>(null)
   const { leads, isLoading, error } = useLeads({ status: selectedStatus })
+
+  const debouncedSetSearchQuery = useDebouncedCallback((value: string) => onSearchChange(value), 300)
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => debouncedSetSearchQuery(e.target.value)
+  const handleSortChange = (value: string) => {
+    const [field, order] = value.split("_") as [SortField, SortOrder];
+    onSortChange({ field, order });
+  };
 
   const statusCounts: StatusCount[] = useMemo(() => [
     {
@@ -156,6 +178,38 @@ export default function LeadsClient({
   return (
     <div className="space-y-6">
       <StatusGrid onStatusClick={handleStatusClick} activeStatus={selectedStatus} statusCounts={statusCounts} />
+
+      <div className="w-full flex flex-row justify-between items-center gap-4">
+        <SearchBar 
+          placeholder="Search by name"
+          onChange={handleSearchChange} 
+          value={searchQuery}
+          topOffset="20px"
+          containerClassName="pt-[50px] px-4"
+        />
+        <div className="flex flex-row justify-end items-center gap-4">
+          <UserFilter 
+            users={users} 
+            selectedUser={selectedUser} 
+            onUserChange={onUserChange} 
+            isLoading={isLoadingUsers}
+          />
+          <Select onValueChange={handleSortChange} defaultValue={`${sortOptions.field}_${sortOptions.order}`}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <ArrowUpDown className="mr-2 h-4 w-4" />
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="createdAt_desc">Newest First</SelectItem>
+              <SelectItem value="createdAt_asc">Oldest First</SelectItem>
+              <SelectItem value="name_asc">Name (A-Z)</SelectItem>
+              <SelectItem value="name_desc">Name (Z-A)</SelectItem>
+              <SelectItem value="status_asc">Status (A-Z)</SelectItem>
+              <SelectItem value="status_desc">Status (Z-A)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       <div className="mt-6">
         {isLoading ? (

@@ -97,7 +97,7 @@ body { /* Added from styles/globals.css */
   html { /* Simplified selector */
     position: relative;
     overflow-x: hidden; /* Prevent horizontal scroll from blobs */
-    background: linear-gradient(to bottom, rgb(6, 20, 5) 40%, rgba(25, 42, 27, 0.961) 75%, #141a11 100%) !important;
+    background: linear-gradient(to bottom, rgb(6, 20, 5) 40%, rgb(8, 75, 16) 75%, #000000b9 100%) !important;
     min-height: 100vh; /* Ensure gradient covers full viewport height */
   }
 
@@ -121,7 +121,7 @@ body { /* Added from styles/globals.css */
   }
 
   html::after {
-    background-color: #000000eb; /* Second blob color */
+    background-color: #26b32654; /* Second blob color */
     animation: moveBlob2 30s infinite alternate ease-in-out -5s; /* Offset animation */
   }
 
