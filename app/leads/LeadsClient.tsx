@@ -7,18 +7,25 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { StatusCount, LeadSummary } from "@/types/dashboard"
 import { StatusGrid } from "@/components/status-grid"
 import { LeadStatus } from "@prisma/client"
-import type { SortOptions } from "@/app/leads/page"
-import { useDebouncedCallback } from "use-debounce"
-import { SearchBar } from "@/components/ui/search-bar"
+import type { SortOptions, SortField, SortOrder } from "@/app/leads/page"
 import { UserFilter, type UserOption } from "@/components/user-filter"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowUpDown } from "lucide-react"
+import { ArrowUpDown, Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { CreateLeadForm } from "@/components/forms/CreateLeadForm"
+import { useRouter } from "next/navigation"
+import { toast } from "@/components/ui/use-toast"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogFooter } from "@/components/ui/dialog"
+import { ActivityFeed } from "@/components/leads/ActivityFeed"
+import { LeadFiles } from "@/components/leads/lead-files"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { AddNote } from "@/components/leads/AddNote"
 
 function LeadsLoading() {
   return (
     <div className="space-y-3 py-4">
       {[...Array(3)].map((_, i) => (
-        <div key={i} className="border rounded-lg p-4">
+        <div key={i} className="border rounded-lg p-4 bg-white shadow-sm">
           <Skeleton className="h-6 w-3/4 mb-2" />
           <Skeleton className="h-4 w-1/2 mb-1" />
           <Skeleton className="h-4 w-2/3" />
@@ -50,14 +57,15 @@ export default function LeadsClient({
   onSearchChange
 }: LeadsClientProps) {
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus | null>(null)
-  const { leads, isLoading, error } = useLeads({ status: selectedStatus })
+  const { leads, isLoading, error } = useLeads({ status: selectedStatus, assignedTo: selectedUser, search: searchQuery, sort: sortOptions.field, order: sortOptions.order })
+  const [openCreateForm, setOpenCreateForm] = useState(false)
+  const router = useRouter()
 
-  const debouncedSetSearchQuery = useDebouncedCallback((value: string) => onSearchChange(value), 300)
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => debouncedSetSearchQuery(e.target.value)
-  const handleSortChange = (value: string) => {
-    const [field, order] = value.split("_") as [SortField, SortOrder];
-    onSortChange({ field, order });
-  };
+  // State for dialogs
+  const [isActivityLogOpen, setIsActivityLogOpen] = useState(false);
+  const [isFilesViewOpen, setIsFilesViewOpen] = useState(false);
+  const [selectedLeadForDialog, setSelectedLeadForDialog] = useState<LeadSummary | null>(null);
+  const [refreshActivityKey, setRefreshActivityKey] = useState(0)
 
   const statusCounts: StatusCount[] = useMemo(() => [
     {
@@ -140,82 +148,82 @@ export default function LeadsClient({
     setSelectedStatus(status)
   }
 
-  const processedLeads = useMemo(() => {
-    let tempLeads: LeadSummary[] = [...leads];
+  const handleViewActivity = (lead: LeadSummary) => {
+    setSelectedLeadForDialog(lead);
+    setIsActivityLogOpen(true);
+  };
 
-    if (selectedUser) {
-      tempLeads = tempLeads.filter((lead) => lead.assignedToId === selectedUser);
-    }
+  const handleViewFiles = (lead: LeadSummary) => {
+    setSelectedLeadForDialog(lead);
+    setIsFilesViewOpen(true);
+  };
 
-    if (searchQuery.trim() !== "") {
-      const query = searchQuery.toLowerCase().trim();
-      tempLeads = tempLeads.filter((lead) => {
-        const nameMatch = lead.name?.toLowerCase().startsWith(query);
-        const emailMatch = lead.email?.toLowerCase().startsWith(query);
-        return nameMatch || emailMatch;
-      });
-    }
+  const handleLeadCreated = (leadId: string) => {
+    toast({
+      title: "Lead Created",
+      description: "New lead has been successfully created.",
+      variant: "default",
+    })
+    router.refresh()
+    setOpenCreateForm(false)
+  }
 
-    if (sortOptions.field) {
-      tempLeads.sort((a, b) => {
-        const fieldA = a[sortOptions.field as keyof LeadSummary];
-        const fieldB = b[sortOptions.field as keyof LeadSummary];
+  const handleNoteAddedSuccessfully = () => {
+    setRefreshActivityKey(prev => prev + 1);
+    toast({ title: "Note Added", description: "The new note has been successfully added." });
+  };
 
-        let comparison = 0;
-        if (fieldA === null || typeof fieldA === 'undefined') comparison = -1;
-        else if (fieldB === null || typeof fieldB === 'undefined') comparison = 1;
-        else if (fieldA > fieldB) comparison = 1;
-        else if (fieldA < fieldB) comparison = -1;
-        
-        return sortOptions.order === "desc" ? comparison * -1 : comparison;
-      });
-    }
-
-    return tempLeads;
-  }, [leads, selectedUser, searchQuery, sortOptions]);
-
+  const handleSortChange = (value: string) => {
+    const [field, order] = value.split("_") as [SortField, SortOrder];
+    onSortChange({ field, order });
+  };
 
   return (
     <div className="space-y-6">
       <StatusGrid onStatusClick={handleStatusClick} activeStatus={selectedStatus} statusCounts={statusCounts} />
 
-      <div className="w-full flex flex-row justify-between items-center gap-4">
-        <SearchBar 
-          placeholder="Search by name"
-          onChange={handleSearchChange} 
-          value={searchQuery}
-          topOffset="20px"
-          containerClassName="pt-[50px] px-4"
+      <div className="w-full flex flex-row justify-end items-center gap-4">
+        <UserFilter 
+          users={users} 
+          selectedUser={selectedUser} 
+          onUserChange={onUserChange} 
+          isLoading={isLoadingUsers}
         />
-        <div className="flex flex-row justify-end items-center gap-4">
-          <UserFilter 
-            users={users} 
-            selectedUser={selectedUser} 
-            onUserChange={onUserChange} 
-            isLoading={isLoadingUsers}
-          />
-          <Select onValueChange={handleSortChange} defaultValue={`${sortOptions.field}_${sortOptions.order}`}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <ArrowUpDown className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="createdAt_desc">Newest First</SelectItem>
-              <SelectItem value="createdAt_asc">Oldest First</SelectItem>
-              <SelectItem value="name_asc">Name (A-Z)</SelectItem>
-              <SelectItem value="name_desc">Name (Z-A)</SelectItem>
-              <SelectItem value="status_asc">Status (A-Z)</SelectItem>
-              <SelectItem value="status_desc">Status (Z-A)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <Select onValueChange={handleSortChange} defaultValue={`${sortOptions.field}_${sortOptions.order}`}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <ArrowUpDown className="mr-2 h-4 w-4" />
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="createdAt_desc">Newest First</SelectItem>
+            <SelectItem value="createdAt_asc">Oldest First</SelectItem>
+            <SelectItem value="name_asc">Name (A-Z)</SelectItem>
+            <SelectItem value="name_desc">Name (Z-A)</SelectItem>
+            <SelectItem value="status_asc">Status (A-Z)</SelectItem>
+            <SelectItem value="status_desc">Status (Z-A)</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button 
+          size="default"
+          className="text-black font-medium bg-gradient-to-r from-lime-400 to-lime-500 hover:from-lime-500 hover:to-lime-600 shadow-lg whitespace-nowrap"
+          onClick={() => setOpenCreateForm(true)}
+        >
+          <Plus className="mr-1 h-4 w-4" />
+          Create Lead
+        </Button>
       </div>
+
+      <CreateLeadForm 
+        open={openCreateForm}
+        onOpenChange={setOpenCreateForm}
+        onSuccess={handleLeadCreated}
+      />
 
       <div className="mt-6">
         {isLoading ? (
           <LeadsLoading />
-        ) : processedLeads.length === 0 ? (
-          <div className="text-center py-10 border rounded-lg">
+        ) : leads.length === 0 ? (
+          <div className="text-center py-10 border rounded-lg bg-white shadow-sm">
             <p className="text-muted-foreground">No leads found matching your criteria.</p>
             {(searchQuery || selectedStatus || selectedUser) && (
               <p className="text-sm text-muted-foreground mt-1">
@@ -224,9 +232,47 @@ export default function LeadsClient({
             )}
           </div>
         ) : (
-          <LeadsList leads={processedLeads} isLoading={isLoading} assignedTo={selectedUser} />
+          <LeadsList 
+            leads={leads} 
+            isLoading={isLoading} 
+            assignedTo={selectedUser} 
+            onViewActivity={handleViewActivity}
+            onViewFiles={handleViewFiles}
+          />
         )}
       </div>
+
+      {/* Activity Log Dialog */}
+      {selectedLeadForDialog && (
+        <Dialog open={isActivityLogOpen} onOpenChange={setIsActivityLogOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Activity Log: {selectedLeadForDialog.name}</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="flex-1 p-1 pr-2 -mr-2">
+              <ActivityFeed leadId={selectedLeadForDialog.id} key={refreshActivityKey} />
+            </ScrollArea>
+            <DialogFooter className="mt-auto pt-4 flex items-center justify-between">
+              <AddNote leadId={selectedLeadForDialog.id} onSuccess={handleNoteAddedSuccessfully} />
+              <DialogClose asChild>
+                <Button variant="outline">Close</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Files Dialog */}
+      {selectedLeadForDialog && (
+        <Dialog open={isFilesViewOpen} onOpenChange={setIsFilesViewOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Files: {selectedLeadForDialog.name}</DialogTitle>
+            </DialogHeader>
+            <LeadFiles leadId={selectedLeadForDialog.id} />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

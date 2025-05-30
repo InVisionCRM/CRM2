@@ -1,27 +1,25 @@
 "use client"
 
-// import { SummaryCards } from "@/components/dashboard/summary-cards"
 import { QuickActions } from "@/components/dashboard/quick-actions"
 import { DynamicHero } from "@/components/dynamic-components"
 import { RecentActivities } from "@/components/dashboard/recent-activities"
 
 export function DashboardContent() {
   return (
-    <div className="flex-1 overflow-y-auto pb-20">
+    <div className="flex-1 h-full overflow-hidden">
       {/* Hero Section */}
       <DynamicHero />
       
-      <div className="container mx-auto p-4">
+      <div className="container mx-auto p-4 h-[calc(100%-theme(space.32))] overflow-hidden">
         {/* Two-column layout */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="flex gap-2 h-full">
           {/* Left column - Main content */}
-          <div className="md:col-span-2 space-y-6">
-            {/* Quick Actions */}
+          <div className="flex-1 overflow-y-auto">
             <QuickActions />
           </div>
           
           {/* Right column - Recent Activities */}
-          <div className="md:col-span-1">
+          <div className="flex-1 overflow-y-auto">
             <RecentActivities />
           </div>
         </div>

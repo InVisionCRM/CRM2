@@ -2,12 +2,6 @@
 
 import { useState, useCallback, useEffect } from "react"
 import LeadsClient from "@/app/leads/LeadsClient"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Plus, ArrowUpDown } from "lucide-react"
-import { CreateLeadForm } from "@/components/forms/CreateLeadForm"
-import { useRouter } from "next/navigation"
-import { toast } from "@/components/ui/use-toast"
 import { useDebouncedCallback } from "use-debounce"
 import { 
   Select, 
@@ -29,13 +23,11 @@ export interface SortOptions {
 }
 
 export default function LeadsPage() {
-  const [openCreateForm, setOpenCreateForm] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [sortOptions, setSortOptions] = useState<SortOptions>({ field: "createdAt", order: "desc" });
   const [users, setUsers] = useState<UserOption[]>([])
   const [isLoadingUsers, setIsLoadingUsers] = useState(true)
   const [selectedUser, setSelectedUser] = useState<string | null>(null)
-  const router = useRouter()
 
   useEffect(() => {
     async function fetchUsers() {
@@ -58,40 +50,27 @@ export default function LeadsPage() {
     fetchUsers()
   }, [])
 
-  const handleLeadCreated = (leadId: string) => {
-    toast({
-      title: "Lead Created",
-      description: "New lead has been successfully created.",
-      variant: "default",
-    })
-    router.refresh() 
-  }
-
   const debouncedSetSearchQuery = useDebouncedCallback((value: string) => setSearchQuery(value), 300)
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => debouncedSetSearchQuery(e.target.value), [debouncedSetSearchQuery])
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    debouncedSetSearchQuery(e.target.value);
+  }, [debouncedSetSearchQuery]);
+
   const handleSortChange = (value: string) => {
     const [field, order] = value.split("_") as [SortField, SortOrder];
     setSortOptions({ field, order });
   };
 
   return (
-    <div className="w-full pt-[100px] px-4">
-      <div className="w-full flex justify-end items-center gap-4 mt-[80px] mb-10">
-        <Button 
-          size="default"
-          className="text-black font-medium bg-gradient-to-r from-lime-400 to-lime-500 hover:from-lime-500 hover:to-lime-600 shadow-lg whitespace-nowrap"
-          onClick={() => setOpenCreateForm(true)}
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          Create Lead
-        </Button>
+    <div className="w-full pt-[20px] px-4">
+      <div className="w-full flex justify-center items-center gap-1 mt-[10px] mb-10">
+        <SearchBar
+          containerClassName="!relative !transform-none !left-auto !top-auto !z-auto !w-60"
+          topOffset="0px"
+          placeholder=""
+          value={searchQuery}
+          onChange={handleSearchChange}
+        />
       </div>
-
-      <CreateLeadForm
-        open={openCreateForm}
-        onOpenChange={setOpenCreateForm}
-        onSuccess={handleLeadCreated}
-      />
 
       <LeadsClient 
         searchQuery={searchQuery} 
@@ -101,7 +80,7 @@ export default function LeadsPage() {
         isLoadingUsers={isLoadingUsers} 
         onUserChange={setSelectedUser} 
         onSortChange={setSortOptions} 
-        onSearchChange={setSearchQuery} 
+        onSearchChange={setSearchQuery}
       />
     </div>
   )

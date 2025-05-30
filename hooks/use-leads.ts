@@ -3,9 +3,14 @@
 import { useState, useEffect } from "react"
 import type { LeadSummary } from "@/types/dashboard"
 import { LeadStatus } from "@prisma/client"
+import type { SortField, SortOrder } from "@/app/leads/page"
 
 interface UseLeadsOptions {
   status?: LeadStatus | null
+  assignedTo?: string | null
+  search?: string
+  sort?: SortField
+  order?: SortOrder
 }
 
 interface UseLeadsResult {
@@ -27,12 +32,24 @@ export function useLeads(options: UseLeadsOptions = {}): UseLeadsResult {
       setError(null)
 
       try {
-        // Build the URL with query parameters if status is provided
-        let url = "/api/leads"
+        const queryParams = new URLSearchParams()
         if (options.status) {
-          url += `?status=${options.status}`
+          queryParams.append("status", options.status)
+        }
+        if (options.assignedTo) {
+          queryParams.append("assignedTo", options.assignedTo)
+        }
+        if (options.search) {
+          queryParams.append("search", options.search)
+        }
+        if (options.sort) {
+          queryParams.append("sort", options.sort)
+        }
+        if (options.order) {
+          queryParams.append("order", options.order)
         }
 
+        const url = `/api/leads?${queryParams.toString()}`
         const response = await fetch(url)
 
         if (!response.ok) {
@@ -40,32 +57,21 @@ export function useLeads(options: UseLeadsOptions = {}): UseLeadsResult {
         }
 
         const data = await response.json()
-
-        // Debug the data received from the API
-        console.log("Raw lead data from API:", data.slice(0, 2))
         
-        // Transform the data to match LeadSummary type if needed
         const transformedLeads: LeadSummary[] = data.map((lead: any) => {
-          console.log("Lead data:", {
-            assignedToId: lead.assignedToId,
-            assignedTo: lead.assignedTo
-          })
-          
-          // Get salesperson info from the assignedTo relationship if available
           const salesperson = lead.assignedTo ? {
             id: lead.assignedTo.id,
             name: lead.assignedTo.name,
             email: lead.assignedTo.email
-          } : null;
+          } : null
           
-          // Get the latest activity if available
           const latestActivity = lead.activities && lead.activities.length > 0 
             ? {
                 title: lead.activities[0].title,
                 createdAt: lead.activities[0].createdAt,
                 type: lead.activities[0].type
               }
-            : null;
+            : null
           
           return {
             id: lead.id,
@@ -74,11 +80,12 @@ export function useLeads(options: UseLeadsOptions = {}): UseLeadsResult {
             phone: lead.phone || "",
             email: lead.email || "",
             status: lead.status && typeof lead.status === 'string' 
-                      ? lead.status.toLowerCase() 
-                      : 'unknown',
+                      ? lead.status.toLowerCase() as LeadStatus
+                      : LeadStatus.NEW_LEAD,
             appointmentDate: lead.adjusterAppointmentDate || null,
             assignedTo: salesperson ? salesperson.name : null,
             assignedToId: lead.assignedToId || null,
+            claimNumber: lead.claimNumber || null,
             createdAt: lead.createdAt,
             latestActivity
           }
@@ -94,7 +101,7 @@ export function useLeads(options: UseLeadsOptions = {}): UseLeadsResult {
     }
 
     fetchLeads()
-  }, [options.status, refreshKey])
+  }, [options.status, options.assignedTo, options.search, options.sort, options.order, refreshKey])
 
   const refetch = () => setRefreshKey((prev) => prev + 1)
 

@@ -11,6 +11,7 @@ export interface LeadSummary {
   email: string
   assignedTo?: string
   assignedToId?: string
+  claimNumber?: string | null
   latestActivity?: {
     title: string
     createdAt: string

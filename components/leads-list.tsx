@@ -6,15 +6,61 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatDistanceToNow, format } from "date-fns"
 import type { LeadSummary } from "@/types/dashboard"
-import { MapPin, Mail, Phone, Calendar, User, Clock, Activity } from "lucide-react"
+import { MapPin, Mail, Phone, Calendar, User, Clock, Activity, Eye, ListChecks, Folder, MoreHorizontal } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { LeadStatus } from "@prisma/client"
+import { Button } from "@/components/ui/button"
 
 interface LeadsListProps {
   leads: LeadSummary[]
   isLoading?: boolean
   assignedTo?: string | null
+  onViewActivity: (lead: LeadSummary) => void
+  onViewFiles: (lead: LeadSummary) => void
 }
 
-export function LeadsList({ leads, isLoading = false, assignedTo }: LeadsListProps) {
+// Helper function for string truncation
+const truncateString = (str: string | null | undefined, num: number): string => {
+  if (!str) return "N/A";
+  if (str.length <= num) {
+    return str;
+  }
+  return str.slice(0, num) + "...";
+};
+
+const getStatusColorClasses = (status: LeadStatus | undefined): string => {
+  if (!status) return "bg-gray-200 text-gray-700"
+  switch (status) {
+    case LeadStatus.signed_contract:
+      return "bg-sky-100 text-sky-700 border border-sky-300"
+    case LeadStatus.scheduled:
+      return "bg-blue-100 text-blue-700 border border-blue-300"
+    case LeadStatus.colors:
+      return "bg-indigo-100 text-indigo-700 border border-indigo-300"
+    case LeadStatus.acv:
+      return "bg-purple-100 text-purple-700 border border-purple-300"
+    case LeadStatus.job:
+      return "bg-amber-100 text-amber-700 border border-amber-300"
+    case LeadStatus.completed_jobs:
+      return "bg-emerald-100 text-emerald-700 border border-emerald-300"
+    case LeadStatus.zero_balance:
+      return "bg-green-100 text-green-700 border border-green-300"
+    case LeadStatus.denied:
+      return "bg-red-100 text-red-700 border border-red-300"
+    case LeadStatus.follow_ups:
+      return "bg-yellow-100 text-yellow-700 border border-yellow-300"
+    default:
+      return "bg-gray-100 text-gray-600 border border-gray-300"
+  }
+}
+
+// Helper to get Google Maps URL for navigation
+const getGoogleMapsUrl = (address: string | null | undefined) => {
+  if (!address) return "#";
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+}
+
+export function LeadsList({ leads, isLoading = false, assignedTo, onViewActivity, onViewFiles }: LeadsListProps) {
   if (isLoading) {
     return <p>Loading leads...</p>
   }
@@ -26,31 +72,6 @@ export function LeadsList({ leads, isLoading = false, assignedTo }: LeadsListPro
         <p className="text-muted-foreground">Try adjusting your filters or create a new lead.</p>
       </div>
     )
-  }
-
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case "signed_contract":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-      case "scheduled":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-      case "colors":
-        return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300"
-      case "acv":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
-      case "job":
-        return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300"
-      case "completed_jobs":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-      case "zero_balance":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-      case "denied":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-      case "follow_ups":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-    }
   }
 
   const formatStatusLabel = (status: string): string => {
@@ -98,106 +119,112 @@ export function LeadsList({ leads, isLoading = false, assignedTo }: LeadsListPro
   }
 
   return (
-    <div className="space-y-3">
-      {leads.map((lead) => (
-        <Link 
-          key={lead.id}
-          href={`/leads/${lead.id}`}
-          className="block"
-        >
-          <Card className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors relative cursor-pointer">
-            <CardContent className="p-1">
-              <div className="flex">
-                <a 
-                  href={getGoogleMapsUrl(lead.address)} 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-[130px] h-[130px] rounded-md overflow-hidden mr-2 flex-shrink-0 relative group"
-                >
-                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    <MapPin className="text-white w-1 h-1" />
-                  </div>
-                  <Image 
-                    src={getStaticMapUrl(lead.address)}
-                    alt={`Map for ${lead.address}`}
-                    width={130}
-                    height={130}
-                    className="object-cover"
-                  />
-                </a>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-medium text-md truncate">{lead.name}</h3>
-                    <Badge className={`${getStatusBadgeColor(lead.status)} ml-2 flex-shrink-0`}>
-                      {formatStatusLabel(lead.status)}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground line-clamp-1 mb-2">{lead.address}</p>
-                  
-                  {/* Salesperson and creation date */}
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <div className="flex items-center gap-1 text-xs bg-violet-50 dark:bg-violet-900/20 px-2 py-0.5 rounded text-violet-700 dark:text-violet-300">
-                      <User className="w-3 h-3" />
-                      <span>{lead.assignedTo || lead.assignedToId || "Unassigned"}</span>
-                    </div>
-                    
-                    {lead.createdAt && (
-                      <div className="flex items-center gap-1 text-xs bg-slate-50 dark:bg-slate-900/20 px-2 py-0.5 rounded text-slate-700 dark:text-slate-300">
-                        <Clock className="w-3 h-3" />
-                        <span>{format(new Date(lead.createdAt), 'MMM d, yyyy')}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Latest Activity */}
-                  {lead.latestActivity && (
-                    <div className="mb-2">
-                      <div className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded ${getActivityBadgeColor(lead.latestActivity.type)}`}>
-                        <Activity className="w-3 h-3" />
-                        <span className="font-medium">{formatActivityType(lead.latestActivity.type)}:</span>
-                        <span className="truncate">{lead.latestActivity.title}</span>
-                        <span className="text-xs opacity-70 ml-auto">
-                          {formatDistanceToNow(new Date(lead.latestActivity.createdAt), { addSuffix: true })}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Contact actions row with appointment */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <a 
-                      href={`tel:${lead.phone}`} 
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-green-500/10 hover:bg-green-500/20 text-green-600 dark:text-green-400 transition-colors text-xs"
-                    >
-                      <Phone className="w-3 h-3" />
-                      <span className="font-medium">Call</span>
-                    </a>
-                    
-                    <a 
-                      href={`mailto:${lead.email}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-colors text-xs"
-                    >
-                      <Mail className="w-3 h-3" />
-                      <span className="font-medium">Email</span>
-                    </a>
-                    
-                    {lead.appointmentDate && (
-                      <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs">
-                        <Calendar className="w-3 h-3" />
-                        <span className="font-medium">{formatDistanceToNow(new Date(lead.appointmentDate), { addSuffix: true })}</span>
-                      </div>
-                    )}
-                  </div>
+    <div className="overflow-x-auto relative border rounded-lg shadow-sm bg-white">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-100 sticky top-0 z-10">
+          <tr>
+            <th
+              scope="col"
+              className="px-1 py-1 text-left text-md font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+            >
+              Name
+            </th>
+            <th
+              scope="col"
+              className="px-4 py-3 text-left text-md font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap sm:min-w-[200px]"
+            >
+              Actions
+            </th>
+            <th
+              scope="col"
+              className="px-4 py-3 text-left text-md font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+            >
+              Status
+            </th>
+            <th
+              scope="col"
+              className="px-4 py-3 text-left text-md font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+            >
+              Claim #
+            </th>
+            <th
+              scope="col"
+              className="px-4 py-3 text-left text-md font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+            >
+              Address
+            </th>
+            <th
+              scope="col"
+              className="px-4 py-3 text-left text-md font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+            >
+              SalesPerson
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {leads.map((lead) => (
+            <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
+              <td className="px-4 py-3 whitespace-nowrap">
+                <div className="text-sm font-medium text-gray-900" title={lead.name || "N/A"}>
+                  {truncateString(lead.name, 17)}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-      ))}
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <Link href={`/leads/${lead.id}`} passHref legacyBehavior>
+                    <Button asChild variant="outline" size="sm" title="View Lead" className="text-lime-700 bg-white border-lime-500 hover:text-lime-600 hover:bg-white hover:border-lime-300 h-9 px-2 sm:px-3">
+                      <a>
+                        <Eye className="h-4 w-4 sm:mr-1.5" />
+                        <span className="hidden sm:inline">View</span>
+                      </a>
+                    </Button>
+                  </Link>
+                  <Button variant="outline" size="sm" title="View Activity" onClick={() => onViewActivity(lead)} className="text-blue-500 bg-white border-blue-500 hover:text-indigo-600 hover:bg-white hover:border-indigo-300 h-9 px-2 sm:px-3">
+                    <ListChecks className="h-4 w-4 sm:mr-1.5" />
+                    <span className="hidden sm:inline">Activity</span>
+                  </Button>
+                  <Button variant="outline" size="sm" title="View Files" onClick={() => onViewFiles(lead)} className="text-red-700 bg-white border-red-500 hover:text-indigo-600 hover:bg-white hover:border-indigo-300 h-9 px-2 sm:px-3">
+                    <Folder className="h-4 w-4 sm:mr-1.5" />
+                    <span className="hidden sm:inline">Files</span>
+                  </Button>
+                </div>
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap">
+                <span
+                  className={cn(
+                    "px-2 inline-flex text-xs leading-5 font-semibold rounded-full",
+                    getStatusColorClasses(lead.status)
+                  )}
+                >
+                  {lead.status ? lead.status.replace(/_/g, ' ') : "Unknown"}
+                </span>
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                {lead.claimNumber || "N/A"}
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap">
+                <div className="flex items-center space-x-1 text-md text-gray-700">
+                  <span title={lead.address || "N/A"}>{truncateString(lead.address, 20)}</span>
+                  {lead.address && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      title="Open in Google Maps" 
+                      onClick={() => window.open(getGoogleMapsUrl(lead.address), "_blank", "noopener,noreferrer")}
+                      className="h-7 w-7 text-green-600 hover:text-blue-600 hover:bg-gray-100 rounded" 
+                    >
+                      <MapPin className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </td>
+              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                {lead.assignedTo || "Unassigned"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }

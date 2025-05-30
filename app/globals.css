@@ -97,7 +97,7 @@ body { /* Added from styles/globals.css */
   html { /* Simplified selector */
     position: relative;
     overflow-x: hidden; /* Prevent horizontal scroll from blobs */
-    background: linear-gradient(to bottom, rgb(6, 20, 5) 40%, rgb(8, 75, 16) 75%, #000000b9 100%) !important;
+    background: linear-gradient(to bottom, rgb(0, 0, 0) 40%, rgb(8, 75, 16) 95%, #08c02a 100%) !important;
     min-height: 100vh; /* Ensure gradient covers full viewport height */
   }
 
@@ -107,12 +107,12 @@ body { /* Added from styles/globals.css */
     position: fixed;
     left: 1/2;
     top: 10%;
-    width: 100vmax; /* Large blobs */
-    height: 100vmax;
-    border-radius: 100%;
+    width: 50vmax; /* Large blobs */
+    height: 50vmax;
+    border-radius: 50%;
     z-index: -1; /* Behind content */
     mix-blend-mode: lighten; /* Or lighten, experiment for desired effect */
-    filter: blur(50px); /* Soft edges */
+    filter: blur(100px); /* Soft edges */
   }
 
   html::before {
@@ -121,13 +121,13 @@ body { /* Added from styles/globals.css */
   }
 
   html::after {
-    background-color: #26b32654; /* Second blob color */
+    background-color: #000000; /* Second blob color */
     animation: moveBlob2 30s infinite alternate ease-in-out -5s; /* Offset animation */
   }
 
   body {
     @apply bg-transparent text-foreground !important; /* Make body background transparent */
-    min-height: 100vh;
+    min-height: 50vh;
     position: relative; /* Ensure body content is above pseudo-elements */
     z-index: 1;
   }

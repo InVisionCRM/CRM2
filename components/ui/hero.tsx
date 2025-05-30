@@ -23,7 +23,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { isValidImage, isValidFileSize, createFilePreview, resizeImage } from "@/lib/upload-helper"
-import { SearchBar } from "@/components/ui/search-bar"
 
 export const Hero = () => {
   const logoRef = useRef<HTMLDivElement>(null)
@@ -342,16 +341,6 @@ export const Hero = () => {
           </div>
         </div>
       )}
-
-      {/* Search Bar */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 0.1 }}
-        className="absolute top-60 left-60 transform -translate-x-1/2 w-full max-w-xl px-4 z-50"
-      >
-        <SearchBar placeholder="" />
-      </motion.div>
 
       {/* Logo in the background with shadow play effect */}
       <motion.div
