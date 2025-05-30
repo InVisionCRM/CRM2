@@ -121,7 +121,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo, onViewActivity
   return (
     <div className="overflow-x-auto relative border rounded-lg shadow-sm bg-white">
       <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-100 sticky top-0 z-10">
+        <thead className="bg-gray-200 sticky top-0 z-10">
           <tr>
             <th
               scope="col"
@@ -157,7 +157,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo, onViewActivity
               scope="col"
               className="px-4 py-3 text-left text-md font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
             >
-              SalesPerson
+              Assigned To
             </th>
           </tr>
         </thead>

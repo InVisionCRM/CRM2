@@ -5,7 +5,7 @@ import { useLeads } from "@/hooks/use-leads"
 import { LeadsList } from "@/components/leads-list"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { StatusCount, LeadSummary } from "@/types/dashboard"
-import { StatusGrid } from "@/components/status-grid"
+import { StatusDropdownMenu } from "@/components/leads/status-dropdown-menu"
 import { LeadStatus } from "@prisma/client"
 import type { SortOptions, SortField, SortOrder } from "@/app/leads/page"
 import { UserFilter, type UserOption } from "@/components/user-filter"
@@ -69,72 +69,72 @@ export default function LeadsClient({
 
   const statusCounts: StatusCount[] = useMemo(() => [
     {
-      status: "signed_contract",
-      count: leads.filter((lead) => lead.status === "signed_contract").length,
+      status: LeadStatus.signed_contract,
+      count: leads.filter((lead) => lead.status === LeadStatus.signed_contract).length,
       color: "border-blue-500",
       borderColor: "border-blue-500",
       imageUrl:
         "https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Statuses/Signed-Contract-YymWy953WCStBonHJV4Ags1GZZnRgZ.png",
     },
     {
-      status: "scheduled",
-      count: leads.filter((lead) => lead.status === "scheduled").length,
+      status: LeadStatus.scheduled,
+      count: leads.filter((lead) => lead.status === LeadStatus.scheduled).length,
       color: "border-blue-500",
       borderColor: "border-blue-500",
       imageUrl:
         "https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Statuses/Scheduled-0wiyJ7ynJ81HasqBzYPklcXByysAUP.png",
     },
     {
-      status: "colors",
-      count: leads.filter((lead) => lead.status === "colors").length,
+      status: LeadStatus.colors,
+      count: leads.filter((lead) => lead.status === LeadStatus.colors).length,
       color: "border-indigo-500",
       borderColor: "border-indigo-500",
       imageUrl:
         "https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Statuses/colors-DBitQFEELepnwDxeeDBoCqKoXcRwNO.png",
     },
     {
-      status: "acv",
-      count: leads.filter((lead) => lead.status === "acv").length,
+      status: LeadStatus.acv,
+      count: leads.filter((lead) => lead.status === LeadStatus.acv).length,
       color: "border-purple-500",
       borderColor: "border-purple-500",
       imageUrl:
         "https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Statuses/acv-xBRM3B9fD3tTeWwu2qqC2IBR7mLA98.png",
     },
     {
-      status: "job",
-      count: leads.filter((lead) => lead.status === "job").length,
+      status: LeadStatus.job,
+      count: leads.filter((lead) => lead.status === LeadStatus.job).length,
       color: "border-orange-500",
       borderColor: "border-orange-500",
       imageUrl:
         "https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Statuses/job-YcMjwzDLpiItcohAiG7ilRQzXocUOh.png",
     },
     {
-      status: "completed_jobs",
-      count: leads.filter((lead) => lead.status === "completed_jobs").length,
+      status: LeadStatus.completed_jobs,
+      count: leads.filter((lead) => lead.status === LeadStatus.completed_jobs).length,
       color: "border-green-500",
       borderColor: "border-green-500",
       imageUrl:
         "https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Statuses/job-completed-M3sT1rLN0jZa8z386aqPK8NNjlguPh.png",
     },
     {
-      status: "zero_balance",
-      count: leads.filter((lead) => lead.status === "zero_balance").length,
+      status: LeadStatus.zero_balance,
+      count: leads.filter((lead) => lead.status === LeadStatus.zero_balance).length,
       color: "border-green-500",
       borderColor: "border-green-500",
       imageUrl:
         "https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Statuses/zero-balance-0c8qigPnLMX1ls6nfyoOXQuzxSq3eG.png",
     },
     {
-      status: "denied",
-      count: leads.filter((lead) => lead.status === "denied").length,
+      status: LeadStatus.denied,
+      count: leads.filter((lead) => lead.status === LeadStatus.denied).length,
       color: "border-red-500",
       borderColor: "border-red-500",
       imageUrl:
         "https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Statuses/denied-sozqLkPt6Pe2MnEQWyhJIMmFg0InCb.png",
     },
     {
-      status: "follow_ups",
-      count: leads.filter((lead) => lead.status === "follow_ups").length,
+      status: LeadStatus.follow_ups,
+      count: leads.filter((lead) => lead.status === LeadStatus.follow_ups).length,
       color: "border-yellow-500",
       borderColor: "border-yellow-500",
       imageUrl:
@@ -144,7 +144,7 @@ export default function LeadsClient({
 
   if (error) return <p className="text-red-600">Error: {error.message}</p>
 
-  const handleStatusClick = (status: LeadStatus | null) => {
+  const handleStatusSelect = (status: LeadStatus | null) => {
     setSelectedStatus(status)
   }
 
@@ -178,21 +178,27 @@ export default function LeadsClient({
     onSortChange({ field, order });
   };
 
+  const userFilterTriggerText = selectedUser ? users.find(u => u.id === selectedUser)?.name || "Unknown User" : "All";
+
   return (
     <div className="space-y-6">
-      <StatusGrid onStatusClick={handleStatusClick} activeStatus={selectedStatus} statusCounts={statusCounts} />
-
-      <div className="w-full flex flex-row justify-end items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <StatusDropdownMenu 
+          statusCounts={statusCounts} 
+          activeStatus={selectedStatus} 
+          onStatusSelect={handleStatusSelect} 
+          disabled={isLoading}
+        />
         <UserFilter 
           users={users} 
           selectedUser={selectedUser} 
           onUserChange={onUserChange} 
-          isLoading={isLoadingUsers}
+          isLoading={isLoadingUsers || isLoading}
         />
-        <Select onValueChange={handleSortChange} defaultValue={`${sortOptions.field}_${sortOptions.order}`}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <ArrowUpDown className="mr-2 h-4 w-4" />
-            <SelectValue placeholder="Sort by" />
+        <Select onValueChange={handleSortChange} defaultValue={`${sortOptions.field}_${sortOptions.order}`} disabled={isLoading}>
+          <SelectTrigger className="flex items-center gap-1.5 text-sm h-9 px-3 w-auto min-w-[130px]">
+            <span>Sort:</span>
+            <span className="font-medium"><SelectValue placeholder="Sort by" /></span>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="createdAt_desc">Newest First</SelectItem>
@@ -203,14 +209,17 @@ export default function LeadsClient({
             <SelectItem value="status_desc">Status (Z-A)</SelectItem>
           </SelectContent>
         </Select>
-        <Button 
-          size="default"
-          className="text-black font-medium bg-gradient-to-r from-lime-400 to-lime-500 hover:from-lime-500 hover:to-lime-600 shadow-lg whitespace-nowrap"
-          onClick={() => setOpenCreateForm(true)}
-        >
-          <Plus className="mr-1 h-4 w-4" />
-          Create Lead
-        </Button>
+        <div className="ml-auto">
+          <Button 
+            size="default"
+            className="text-black font-medium bg-gradient-to-r from-lime-400 to-lime-500 hover:from-lime-500 hover:to-lime-600 shadow-lg whitespace-nowrap h-9 px-3"
+            onClick={() => setOpenCreateForm(true)}
+            disabled={isLoading}
+          >
+            <Plus className="mr-1.5 h-4 w-4" />
+            Create Lead
+          </Button>
+        </div>
       </div>
 
       <CreateLeadForm 

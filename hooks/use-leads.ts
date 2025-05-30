@@ -26,7 +26,18 @@ export function useLeads(options: UseLeadsOptions = {}): UseLeadsResult {
   const [error, setError] = useState<Error | null>(null)
   const [refreshKey, setRefreshKey] = useState<number>(0)
 
+  console.log("[useLeads] Hook called with options:", JSON.stringify(options));
+
   useEffect(() => {
+    console.log("[useLeads] useEffect triggered. Dependencies:", JSON.stringify({
+      status: options.status,
+      assignedTo: options.assignedTo,
+      search: options.search,
+      sort: options.sort,
+      order: options.order,
+      refreshKey
+    }));
+
     const fetchLeads = async () => {
       setIsLoading(true)
       setError(null)
@@ -50,6 +61,7 @@ export function useLeads(options: UseLeadsOptions = {}): UseLeadsResult {
         }
 
         const url = `/api/leads?${queryParams.toString()}`
+        console.log("[useLeads] Fetching URL:", url);
         const response = await fetch(url)
 
         if (!response.ok) {
