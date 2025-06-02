@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useLeadFiles } from "@/hooks/use-lead-files"
 import { useToast } from "@/components/ui/use-toast"
-import { Upload, Eye, Camera, Trash2, Share2, XIcon, Loader2, FileIcon as LucideFileIcon, FolderOpen, FolderPlus, Download } from "lucide-react"
+import { Upload, Eye, Camera, Trash2, Share2, XIcon, Loader2, FileIcon as LucideFileIcon, FolderOpen, FolderPlus, Download, FileArchive } from "lucide-react"
 import ReactConfetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
 import { getLeadDriveFolderIdServerAction, ensureLeadDriveFolderServerAction, fetchDriveFilesServerAction } from "@/app/actions/lead-drive-actions"; // Added fetchDriveFilesServerAction
@@ -197,7 +197,7 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
     
     // Set uploading state and initialize progress
     setIsUploading(true);
-    const initialProgress = {};
+    const initialProgress: {[key: string]: number} = {};
     filesToUpload.forEach(file => {
       initialProgress[file.name] = 0;
     });
@@ -678,9 +678,17 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
 
   return (
     <div className="p-4 bg-background rounded-lg shadow">
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-6 relative">
         <h2 className="text-xl font-semibold text-foreground">Lead Files</h2>
-        <div className="flex flex-wrap gap-2">
+        <a 
+          href="https://www.adobe.com/acrobat/online/compress-pdf.html" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="absolute top-[10px] right-[50px] text-blue-600 hover:text-blue-800 hover:underline text-sm"
+        >
+          Compress PDF
+        </a>
+        <div className="flex flex-wrap gap-2 mt-8">
           {/* Google Drive Folder Button */}
           {isLoadingDriveLink ? (
             <Button variant="outline" disabled className="bg-muted hover:bg-muted">
@@ -801,7 +809,7 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
       {/* Modals */}
       {renderViewFilesModal()}
       {renderUploadModal()}
-      {/* {renderCameraModal()} */}
+      {renderCameraModal()}
     </div>
   );
 }
