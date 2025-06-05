@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { LeadFiles } from "@/components/leads/lead-files";
 import { LeadContractsTab } from "@/components/leads/tabs/LeadContractsTab";
 import { LeadPhotosTab } from "@/components/leads/tabs/LeadPhotosTab"; // Import the new Photos tab component
+import { cn } from "@/lib/utils"
 
 // Quick Actions Button component
 interface QuickActionButtonProps {
@@ -232,16 +233,18 @@ export default function LeadDetailPage() {
         </>
       )}
 
-      <div className="w-full flex items-center justify-between mb-2 sm:mb-0">
-        <h1 className="text-xl sm:text-2xl font-semibold truncate">
-          {lead.firstName && lead.lastName ? `${lead.firstName} ${lead.lastName}` : lead.email || lead.phone || "Lead Details"}
-        </h1>
-        {lead.claimNumber && (
-          <div className="flex items-center text-lg sm:text-xl font-medium text-green-500">
-            <span className="mr-1 text-gray-500 text-sm sm:text-base">Claim #:</span>
-            {lead.claimNumber}
-          </div>
-        )}
+      <div className="w-full flex flex-col items-center justify-center mb-4 sm:mb-6">
+        <div className="w-full flex items-center justify-center relative px-2 sm:px-4">
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold text-center">
+            {lead.firstName && lead.lastName ? `${lead.firstName} ${lead.lastName}` : lead.email || lead.phone || "Lead Details"}
+          </h1>
+          {lead.claimNumber && (
+            <div className="flex flex-col items-center absolute right-2 sm:right-4 gap-0.5 min-w-[80px]">
+              <span className="text-gray-500 text-[10px] sm:text-xs leading-none text-center w-full">Claim #</span>
+              <span className="text-green-500 text-sm sm:text-base lg:text-lg font-medium leading-none text-center w-full">{lead.claimNumber}</span>
+            </div>
+          )}
+        </div>
       </div>
       
       <LeadStatusBar 
@@ -250,46 +253,80 @@ export default function LeadDetailPage() {
         isLoading={isStatusUpdating}
         loadingStatus={statusBeingUpdated}
       />
-      
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-3 sm:gap-4">
-        <QuickActionButton 
-          href={leadPhone ? `tel:${leadPhone}` : undefined}
-          icon={<Phone className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#59FF00' }} />}
-          label="Call"
-          disabled={!leadPhone}
-        />
-        <QuickActionButton 
-          href={leadEmail ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(leadEmail)}` : undefined}
-          icon={<Mail className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#59FF00' }} />}
-          label="Email"
-          disabled={!leadEmail}
-        />
-        <QuickActionButton 
-          onClick={handleScheduleAppointment}
-          icon={<CalendarPlus className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#59FF00' }} />}
-          label="Schedule"
-        />
-        <QuickActionButton 
-          href={leadAddress ? `https://maps.google.com/?q=${encodeURIComponent(leadAddress)}` : undefined}
-          icon={<MapPin className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#59FF00' }} />}
-          label="Map"
-          disabled={!leadAddress}
-        />
-        <QuickActionButton 
-          onClick={handleOpenPhotosDialog}
-          icon={<Image className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#59FF00' }} />}
-          label="Photos"
-        />
-        <QuickActionButton 
-          onClick={handleOpenFilesDialog}
-          icon={<FileText className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#59FF00' }} />}
-          label="Files"
-        />
-        <QuickActionButton 
-          onClick={handleOpenContractsDialog}
-          icon={<FileArchive className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#59FF00' }} />}
-          label="Contracts"
-        />
+
+      <div className="flex items-center justify-center w-full mb-6 overflow-x-auto scrollbar-hide">
+        <div className="flex items-center justify-between w-full max-w-[1200px] px-2 sm:px-4 md:px-6">
+          <Button
+            variant="ghost"
+            size="default"
+            onClick={handleScheduleAppointment}
+            className={cn(
+              "bg-transparent text-lime-500 hover:bg-lime-500/10 hover:text-lime-400",
+              "h-8 sm:h-9 md:h-10 px-3 sm:px-4 md:px-6 text-xs sm:text-sm md:text-base font-medium transition-all duration-200",
+              "relative group whitespace-nowrap flex-1"
+            )}
+          >
+            Schedule
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-px bg-gray-300/20" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="default"
+            onClick={() => leadAddress ? window.location.href = `https://maps.google.com/?q=${encodeURIComponent(leadAddress)}` : undefined}
+            disabled={!leadAddress}
+            className={cn(
+              "bg-transparent text-lime-500 hover:bg-lime-500/10 hover:text-lime-400",
+              "h-8 sm:h-9 md:h-10 px-3 sm:px-4 md:px-6 text-xs sm:text-sm md:text-base font-medium transition-all duration-200",
+              "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent",
+              "relative group whitespace-nowrap flex-1"
+            )}
+          >
+            Map
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-px bg-gray-300/20" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="default"
+            onClick={handleOpenPhotosDialog}
+            className={cn(
+              "bg-transparent text-lime-500 hover:bg-lime-500/10 hover:text-lime-400",
+              "h-8 sm:h-9 md:h-10 px-3 sm:px-4 md:px-6 text-xs sm:text-sm md:text-base font-medium transition-all duration-200",
+              "relative group whitespace-nowrap flex-1"
+            )}
+          >
+            Photos
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-px bg-gray-300/20" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="default"
+            onClick={handleOpenFilesDialog}
+            className={cn(
+              "bg-transparent text-lime-500 hover:bg-lime-500/10 hover:text-lime-400",
+              "h-8 sm:h-9 md:h-10 px-3 sm:px-4 md:px-6 text-xs sm:text-sm md:text-base font-medium transition-all duration-200",
+              "relative group whitespace-nowrap flex-1"
+            )}
+          >
+            Files
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-px bg-gray-300/20" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="default"
+            onClick={handleOpenContractsDialog}
+            className={cn(
+              "bg-transparent text-lime-500 hover:bg-lime-500/10 hover:text-lime-400",
+              "h-8 sm:h-9 md:h-10 px-3 sm:px-4 md:px-6 text-xs sm:text-sm md:text-base font-medium transition-all duration-200",
+              "relative group whitespace-nowrap flex-1"
+            )}
+          >
+            Contracts
+          </Button>
+        </div>
       </div>
       
       <LeadDetailTabs 
@@ -298,12 +335,12 @@ export default function LeadDetailPage() {
         onTabChange={setActiveTab}
       />
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="col-span-1">
+      <div className="flex flex-col gap-6">
+        <div className="w-full">
           <AddNote leadId={lead.id} onSuccess={handleNoteAdded} />
         </div>
         
-        <div className="col-span-2" ref={activityFeedRef}>
+        <div className="w-full" ref={activityFeedRef}>
           <ActivityFeed leadId={lead.id} key={refreshActivities} />
         </div>
       </div>

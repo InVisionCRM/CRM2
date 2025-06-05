@@ -304,6 +304,7 @@ enum DamageType {
   HAIL
   WIND
   FIRE
+  WIND_AND_HAIL
 }
 
 model File {

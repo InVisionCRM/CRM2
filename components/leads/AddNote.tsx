@@ -75,25 +75,25 @@ export function AddNote({ leadId, onSuccess }: AddNoteProps) {
         <CardTitle className="text-sm">Add Note</CardTitle>
       </CardHeader>
       <form onSubmit={handleSubmit}>
-        <CardContent>
-          <Textarea
-            placeholder="Enter note details here..."
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            className="min-h-[50px]"
-            disabled={isSubmitting}
-          />
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Textarea
+              placeholder="Enter note details here..."
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="min-h-[50px] flex-1"
+              disabled={isSubmitting}
+            />
+            <Button 
+              type="submit" 
+              disabled={isSubmitting || !note.trim()}
+              className="flex items-center gap-2 text-black h-full"
+            >
+              <span>{isSubmitting ? "Adding..." : "Add Note"}</span>
+              <Send className="w-4 h-4 text-black" />
+            </Button>
+          </div>
         </CardContent>
-        <CardFooter className="flex justify-end">
-          <Button 
-            type="submit" 
-            disabled={isSubmitting || !note.trim()}
-            className="flex items-center gap-2 text-black"
-          >
-            <span>{isSubmitting ? "Adding..." : "Add Note"}</span>
-            <Send className="w-4 h-4 text-black" />
-          </Button>
-        </CardFooter>
       </form>
     </Card>
   )

@@ -231,7 +231,8 @@ const INSURANCE_COMPANIES = [
 const DAMAGE_TYPES = [
   { value: "HAIL", label: "Hail" },
   { value: "WIND", label: "Wind" },
-  { value: "FIRE", label: "Fire" }
+  { value: "FIRE", label: "Fire" },
+  { value: "WIND_AND_HAIL", label: "Wind and Hail" }
 ]
 
 // Form schema based on Prisma Lead model fields
@@ -240,9 +241,11 @@ const insuranceFormSchema = z.object({
   customInsuranceCompany: z.string().optional().or(z.literal("")),
   insurancePhone: z.string().optional().or(z.literal("")),
   insuranceSecondaryPhone: z.string().optional().or(z.literal("")),
+  insuranceDeductible: z.string().optional().or(z.literal("")),
   dateOfLoss: z.string().optional().or(z.literal("")),
-  damageType: z.enum(["HAIL", "WIND", "FIRE"]).optional().or(z.literal("")),
-  claimNumber: z.string().optional().or(z.literal(""))
+  damageType: z.enum(["HAIL", "WIND", "FIRE", "WIND_AND_HAIL"]).optional().or(z.literal("")),
+  claimNumber: z.string().optional().or(z.literal("")),
+  insurancePolicyNumber: z.string().optional().or(z.literal(""))
 })
 
 type InsuranceFormValues = z.infer<typeof insuranceFormSchema>
@@ -421,7 +424,7 @@ export function InsuranceForm({
   }
 
   const handleDamageTypeSelect = (damageType: string) => {
-    setValue("damageType", damageType as "HAIL" | "WIND" | "FIRE", { shouldDirty: true })
+    setValue("damageType", damageType as "HAIL" | "WIND" | "FIRE" | "WIND_AND_HAIL", { shouldDirty: true })
     setShowDamageTypeDropdown(false)
   }
 
@@ -615,6 +618,19 @@ export function InsuranceForm({
               className="mt-2 bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
             />
           )}
+        </div>
+
+        <div className="space-y-1 sm:space-y-2">
+          <Label htmlFor="insurancePolicyNumber" className="text-white text-opacity-90 text-sm sm:text-base">
+            Policy Number
+          </Label>
+          <Input
+            id="insurancePolicyNumber"
+            placeholder="Enter policy number"
+            {...register("insurancePolicyNumber")}
+            disabled={isLoading || isReadOnly}
+            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+          />
         </div>
 
         <div className="space-y-1 sm:space-y-2">

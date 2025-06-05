@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import type { Lead } from "@prisma/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Pencil, Check, Loader2 } from "lucide-react"
+import { Pencil, Check, Loader2, Phone, Mail, MapPin } from "lucide-react"
 import { formatStatusLabel } from "@/lib/utils"
 // import { Avatar, AvatarFallback } from "@/components/ui/avatar" // Avatar removed
 import { Badge } from "@/components/ui/badge"
@@ -19,6 +19,7 @@ import {
 import { updateLeadAssigneeAction } from "@/app/actions/lead-actions"
 import { getAssignableUsersAction } from "@/app/actions/user-actions"
 import { useToast } from "@/components/ui/use-toast"
+import { cn } from "@/lib/utils"
 
 interface User {
   id: string;
@@ -31,6 +32,61 @@ interface LeadOverviewTabProps {
   lead: (Lead & { assignedTo?: { name?: string | null } | null }) | null;
   onEditRequest?: (section: 'contact' | 'insurance' | 'adjuster') => void;
 }
+
+// Add this new component for interactive contact info
+interface ContactItemProps {
+  label: string;
+  value: string | null;
+  type: 'phone' | 'email' | 'address';
+  className?: string;
+}
+
+const ContactItem = ({ label, value, type, className }: ContactItemProps) => {
+  if (!value) return (
+    <div className={cn("space-y-0.5", className)}>
+      <p className="text-xs sm:text-sm font-medium text-muted-foreground">{label}</p>
+      <p className="text-xs sm:text-sm">N/A</p>
+    </div>
+  );
+
+  const handleClick = () => {
+    switch (type) {
+      case 'phone':
+        window.location.href = `tel:${value}`;
+        break;
+      case 'email':
+        window.location.href = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(value)}`;
+        break;
+      case 'address':
+        window.location.href = `https://maps.google.com/?q=${encodeURIComponent(value)}`;
+        break;
+    }
+  };
+
+  const icon = {
+    phone: <Phone className="h-3 w-3 text-lime-500" />,
+    email: <Mail className="h-3 w-3 text-lime-500" />,
+    address: <MapPin className="h-3 w-3 text-lime-500" />
+  }[type];
+
+  return (
+    <div className={cn("space-y-0.5", className)}>
+      <p className="text-xs sm:text-sm font-medium text-muted-foreground">{label}</p>
+      <div className="flex items-center gap-1.5">
+        <p className="text-xs sm:text-sm">{value}</p>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-5 w-5 rounded-full hover:bg-lime-500/10 text-lime-500 hover:text-lime-600"
+          onClick={handleClick}
+        >
+          {icon}
+          <span className="sr-only">Contact via {type}</span>
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 export function LeadOverviewTab({ lead, onEditRequest }: LeadOverviewTabProps) {
   const { toast } = useToast();
@@ -113,6 +169,11 @@ export function LeadOverviewTab({ lead, onEditRequest }: LeadOverviewTabProps) {
     } finally {
       setIsUpdatingAssignee(false);
     }
+  };
+
+  // Fix the email button click handler
+  const handleEmailClick = (email: string) => {
+    window.location.href = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}`;
   };
 
   if (!lead) {
@@ -219,21 +280,35 @@ export function LeadOverviewTab({ lead, onEditRequest }: LeadOverviewTabProps) {
           )}
         </CardHeader>
         <CardContent className="space-y-3 px-4 pb-4 sm:px-6 sm:pb-5">
-          {/* Avatar removed */}
           <div>
             <p className="font-medium text-sm sm:text-base">{fullName}</p>
-            <p className="text-xs sm:text-sm text-muted-foreground break-all">{lead.email || "No email"}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-xs sm:text-sm text-muted-foreground break-all">{lead.email || "No email"}</p>
+              {lead.email && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 rounded-full hover:bg-lime-500/10 text-lime-500 hover:text-lime-600"
+                  onClick={() => handleEmailClick(lead.email!)}
+                >
+                  <Mail className="h-3 w-3 text-lime-500" />
+                  <span className="sr-only">Send email</span>
+                </Button>
+              )}
+            </div>
           </div>
           
           <div className="grid grid-cols-1 gap-1.5 pt-1">
-            <div className="space-y-0.5">
-              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Phone</p>
-              <p className="text-xs sm:text-sm">{lead.phone || "No phone"}</p>
-            </div>
-            <div className="space-y-0.5">
-              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Address</p>
-              <p className="text-xs sm:text-sm">{addressDisplay}</p>
-            </div>
+            <ContactItem
+              label="Phone"
+              value={lead.phone}
+              type="phone"
+            />
+            <ContactItem
+              label="Address"
+              value={addressDisplay !== "No address provided" ? addressDisplay : null}
+              type="address"
+            />
           </div>
         </CardContent>
       </Card>
@@ -243,7 +318,12 @@ export function LeadOverviewTab({ lead, onEditRequest }: LeadOverviewTabProps) {
         <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-6">
           <CardTitle className="text-md sm:text-lg">Insurance Details</CardTitle>
           {onEditRequest && (
-            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7" onClick={() => onEditRequest('insurance')}>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 sm:h-7 sm:w-7" 
+              onClick={() => onEditRequest?.('insurance')}
+            >
               <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
               <span className="sr-only">Edit Insurance Details</span>
             </Button>
@@ -255,10 +335,11 @@ export function LeadOverviewTab({ lead, onEditRequest }: LeadOverviewTabProps) {
               <p className="text-xs sm:text-sm font-medium text-muted-foreground">Company</p>
               <p className="text-xs sm:text-sm">{lead.insuranceCompany || "N/A"}</p>
             </div>
-            <div className="space-y-0.5">
-              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Ins. Phone</p>
-              <p className="text-xs sm:text-sm">{lead.insurancePhone || "N/A"}</p>
-            </div>
+            <ContactItem
+              label="Ins. Phone"
+              value={lead.insurancePhone}
+              type="phone"
+            />
             <div className="space-y-0.5">
               <p className="text-xs sm:text-sm font-medium text-muted-foreground">Damage Type</p>
               <p className="text-xs sm:text-sm">{lead.damageType || "N/A"}</p>
@@ -276,7 +357,12 @@ export function LeadOverviewTab({ lead, onEditRequest }: LeadOverviewTabProps) {
         <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-6">
           <CardTitle className="text-md sm:text-lg">Adjuster Details</CardTitle>
           {onEditRequest && (
-            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7" onClick={() => onEditRequest('adjuster')}>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 sm:h-7 sm:w-7" 
+              onClick={() => onEditRequest?.('adjuster')}
+            >
               <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
               <span className="sr-only">Edit Adjuster Details</span>
             </Button>
@@ -288,21 +374,24 @@ export function LeadOverviewTab({ lead, onEditRequest }: LeadOverviewTabProps) {
               <p className="text-xs sm:text-sm font-medium text-muted-foreground">Adjuster Name</p>
               <p className="text-xs sm:text-sm">{lead.insuranceAdjusterName || "N/A"}</p>
             </div>
-            <div className="space-y-0.5">
-              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Adjuster Phone</p>
-              <p className="text-xs sm:text-sm">{lead.insuranceAdjusterPhone || "N/A"}</p>
-            </div>
-            <div className="space-y-0.5 col-span-1 sm:col-span-2">
-              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Adjuster Email</p>
-              <p className="text-xs sm:text-sm break-all">{lead.insuranceAdjusterEmail || "N/A"}</p>
-            </div>
+            <ContactItem
+              label="Adjuster Phone"
+              value={lead.insuranceAdjusterPhone}
+              type="phone"
+            />
+            <ContactItem
+              label="Adjuster Email"
+              value={lead.insuranceAdjusterEmail}
+              type="email"
+              className="col-span-1 sm:col-span-2"
+            />
             <div className="space-y-0.5 col-span-1 sm:col-span-2">
               <p className="text-xs sm:text-sm font-medium text-muted-foreground">Next Appointment</p>
               <p className="text-xs sm:text-sm">
                 {lead.adjusterAppointmentDate && isValid(new Date(lead.adjusterAppointmentDate)) 
                   ? format(new Date(lead.adjusterAppointmentDate), "MMM d, yyyy") +
                     (lead.adjusterAppointmentTime 
-                      ? ` at ${format(parse(lead.adjusterAppointmentTime, "HH:mm", new Date()), "h:mm a")}`
+                      ? ` at ${format(parse(lead.adjusterAppointmentTime || "", "HH:mm", new Date()), "h:mm a")}`
                       : '')
                   : "No appointment"}
               </p>

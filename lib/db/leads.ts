@@ -1,14 +1,63 @@
 import { prisma } from './prisma'
-import { Lead, ActivityType, ActivityStatus, LeadStatus } from '@prisma/client'
+import { Lead, ActivityType, LeadStatus } from '@prisma/client'
 import { nanoid } from "nanoid"
 import crypto from "crypto"
+import type { SortField, SortOrder } from "@/app/leads/page"
 
-export async function getLeads(): Promise<Lead[]> {
+interface GetLeadsOptions {
+  status?: LeadStatus | null
+  assignedTo?: string | null
+  search?: string
+  sort?: SortField
+  order?: SortOrder
+}
+
+export async function getLeads(options: GetLeadsOptions = {}): Promise<Lead[]> {
   try {
+    // Build where clause
+    const where: any = {}
+    
+    if (options.status) {
+      where.status = options.status
+    }
+    
+    if (options.assignedTo) {
+      where.assignedToId = options.assignedTo
+    }
+    
+    if (options.search) {
+      where.OR = [
+        { firstName: { contains: options.search, mode: 'insensitive' } },
+        { lastName: { contains: options.search, mode: 'insensitive' } },
+        { email: { contains: options.search, mode: 'insensitive' } },
+        { phone: { contains: options.search, mode: 'insensitive' } },
+        { address: { contains: options.search, mode: 'insensitive' } },
+      ]
+    }
+
+    // Build orderBy
+    const orderBy: any = {}
+    if (options.sort) {
+      switch (options.sort) {
+        case 'name':
+          orderBy.firstName = options.order || 'asc'
+          break
+        case 'status':
+          orderBy.status = options.order || 'asc'
+          break
+        case 'createdAt':
+          orderBy.createdAt = options.order || 'desc'
+          break
+        default:
+          orderBy.createdAt = 'desc'
+      }
+    } else {
+      orderBy.createdAt = 'desc'
+    }
+
     const leads = await prisma.lead.findMany({
-      orderBy: {
-        createdAt: 'desc'
-      },
+      where,
+      orderBy,
       include: {
         assignedTo: {
           select: {
@@ -161,20 +210,6 @@ export async function updateLead(
     return lead
   } catch (error) {
     console.error(`Error updating lead with ID ${id}:`, error)
-    throw new Error(`Failed to update lead: ${error instanceof Error ? error.message : "Unknown error"}`)
-  }
-}
-
-export async function deleteLead(id: string): Promise<boolean> {
-  try {
-    // Delete the lead (this will cascade delete related records due to our schema setup)
-    const result = await prisma.lead.delete({
-      where: { id }
-    })
-
-    return !!result
-  } catch (error) {
-    console.error(`Error deleting lead with ID ${id}:`, error)
-    throw new Error(`Failed to delete lead: ${error instanceof Error ? error.message : "Unknown error"}`)
+    return null
   }
 }

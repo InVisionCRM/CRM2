@@ -1,15 +1,27 @@
 import { NextResponse } from "next/server"
 import { getLeads, createLead } from "@/lib/db/leads"
 import { getSession } from "@/lib/auth-utils"
+import { LeadStatus } from "@prisma/client"
+import type { SortField, SortOrder } from "@/app/leads/page"
 
 export async function GET(request: Request) {
   try {
     // Get query parameters
     const url = new URL(request.url)
-    const status = url.searchParams.get("status")
+    const status = url.searchParams.get("status") as LeadStatus | null
+    const assignedTo = url.searchParams.get("assignedTo")
+    const search = url.searchParams.get("search")
+    const sort = url.searchParams.get("sort") as SortField | undefined
+    const order = url.searchParams.get("order") as SortOrder | undefined
 
-    // Fetch leads from the database
-    const leads = await getLeads()
+    // Fetch leads from the database with filters
+    const leads = await getLeads({
+      status,
+      assignedTo: assignedTo || undefined,
+      search: search || undefined,
+      sort,
+      order,
+    })
 
     // Log the raw leads data received from the database function
     console.log("Raw leads fetched from DB:", JSON.stringify(leads, null, 2));
