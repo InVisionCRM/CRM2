@@ -195,7 +195,6 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
   const handleActualUpload = async () => {
     if (filesToUpload.length === 0) return;
     
-    // Set uploading state and initialize progress
     setIsUploading(true);
     const initialProgress: {[key: string]: number} = {};
     filesToUpload.forEach(file => {
@@ -206,59 +205,60 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
     let allSucceeded = true;
     
     if (driveFolderId) {
-      // Upload to Google Drive folder if it exists
       for (const file of filesToUpload) {
         try {
-          // Update progress to indicate starting this file
-          setUploadProgress(prev => ({ ...prev, [file.name]: 10 }));
-          
-          // Call a server action to upload to Drive
-          const response = await fetch('/api/upload-to-drive', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              folderId: driveFolderId,
-              fileName: file.name,
-              fileType: file.type,
-              leadId: leadId
-            }),
-          });
-          
-          // Update progress
-          setUploadProgress(prev => ({ ...prev, [file.name]: 30 }));
-          
-          // Create a form data object
+          setUploadProgress(prev => ({ ...prev, [file.name]: 5 }));
+
+          // Create FormData with file and metadata
           const formData = new FormData();
           formData.append('file', file);
           formData.append('folderId', driveFolderId);
-          
-          // Upload the actual file content
+          formData.append('fileName', file.name);
+          formData.append('fileType', file.type);
+          formData.append('leadId', leadId);
+
+          // Upload directly to our backend endpoint
           const uploadResponse = await fetch('/api/upload-drive-file', {
             method: 'POST',
             body: formData,
           });
-          
-          // Update progress
-          setUploadProgress(prev => ({ ...prev, [file.name]: 70 }));
-          
+
+          setUploadProgress(prev => ({ ...prev, [file.name]: 50 }));
+
           if (!uploadResponse.ok) {
-            const error = await uploadResponse.json();
-            throw new Error(error.message || 'Failed to upload file to Drive');
+            let errorData;
+            try {
+              errorData = await uploadResponse.json();
+            } catch (e) {
+              const errorText = await uploadResponse.text();
+              errorData = { message: 'Upload failed. Server response: ' + (errorText || uploadResponse.statusText) };
+            }
+            throw new Error(errorData.message || `Failed to upload file. Status: ${uploadResponse.status}`);
           }
+
+          const result = await uploadResponse.json();
           
+          if (!result.success) {
+            throw new Error(result.message || 'Upload failed without error details');
+          }
+
           // Refresh Drive files after successful upload
           if (driveFolderId) {
             const driveFilesResult = await fetchDriveFilesServerAction(driveFolderId);
             if (driveFilesResult.success) {
               setDriveFiles(driveFilesResult.files);
+            } else {
+              console.warn("Failed to refresh Drive files list after upload:", driveFilesResult.message);
+              toast({
+                title: "Upload Complete, Refresh Pending",
+                description: "File uploaded, but there was an issue refreshing the Drive file list. It may update shortly.",
+                variant: "default"
+              });
             }
           }
-          
-          // Set progress to 100% for this file
+
           setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
-          
+
         } catch (error) {
           allSucceeded = false;
           console.error('Error uploading to Drive:', error);
@@ -267,18 +267,16 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
             description: error instanceof Error ? error.message : "An unexpected error occurred.",
             variant: "destructive",
           });
-          
-          // Mark failed upload
           setUploadProgress(prev => ({ ...prev, [file.name]: -1 }));
         }
       }
     } else {
       // Fall back to local storage if no Drive folder exists
       for (const file of filesToUpload) {
-        // Update progress to indicate starting this file
-        setUploadProgress(prev => ({ ...prev, [file.name]: 30 }));
+        setUploadProgress(prev => ({ ...prev, [file.name]: 10 })); // Progress for local
         
-        const result = await uploadFile(file, file.name);
+        const result = await uploadFile(file, file.name); // This is from useLeadFiles hook
+        
         if (!result.success) {
           allSucceeded = false;
           toast({
@@ -293,7 +291,6 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
       }
     }
     
-    // Reset uploading states
     setIsUploading(false);
     setUploadProgress({});
     
