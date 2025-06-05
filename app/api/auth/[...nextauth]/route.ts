@@ -1,12 +1,13 @@
 import { AuthOptions } from "next-auth"
 import NextAuth from "next-auth/next"
 import GoogleProvider from "next-auth/providers/google"
-import { PrismaAdapter } from "@next-auth/prisma-adapter"
-import { prisma } from "@/lib/prisma"
+import { PrismaAdapter } from "@auth/prisma-adapter"
+import { prisma } from "@/lib/db/prisma"
 // import { GOOGLE_CALENDAR_CONFIG } from "@/lib/config/google-calendar"
+import { GOOGLE_SCOPES } from "@/lib/constants"
 
 // Define all required Google Calendar scopes
-const GOOGLE_SCOPES = [
+const GOOGLE_SCOPES_JOINED = [
   "openid",
   "email",
   "profile",
@@ -28,7 +29,7 @@ export const authOptions: AuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          scope: GOOGLE_SCOPES,
+          scope: GOOGLE_SCOPES.join(" "),
           prompt: "consent",
           access_type: "offline",
           response_type: "code"
@@ -46,6 +47,17 @@ export const authOptions: AuthOptions = {
         token.refreshToken = account.refresh_token;
         // token.expiresAt = account.expires_at; // If Google provides it and you need it
         token.id = user?.id; // Make sure user.id is available from adapter/profile
+
+        // Fetch user role from database
+        if (user?.id) {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { role: true }
+          });
+          if (dbUser) {
+            token.role = dbUser.role;
+          }
+        }
       }
       return token;
     },
@@ -54,6 +66,9 @@ export const authOptions: AuthOptions = {
       session.refreshToken = token.refreshToken as string;
       if (token.id) {
         session.user.id = token.id as string;
+      }
+      if (token.role) {
+        session.user.role = token.role as string;
       }
       // session.user.role = token.role as string; // if you add role to token
       return session;

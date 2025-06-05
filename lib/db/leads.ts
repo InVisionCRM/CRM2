@@ -1,5 +1,5 @@
 import { prisma } from './prisma'
-import { Lead, ActivityType, LeadStatus } from '@prisma/client'
+import { Lead, ActivityType, LeadStatus, UserRole } from '@prisma/client'
 import { nanoid } from "nanoid"
 import crypto from "crypto"
 import type { SortField, SortOrder } from "@/app/leads/page"
@@ -10,10 +10,21 @@ interface GetLeadsOptions {
   search?: string
   sort?: SortField
   order?: SortOrder
+  userId: string // Add userId as a required field
 }
 
-export async function getLeads(options: GetLeadsOptions = {}): Promise<Lead[]> {
+export async function getLeads(options: GetLeadsOptions): Promise<Lead[]> {
   try {
+    // Get user role
+    const user = await prisma.user.findUnique({
+      where: { id: options.userId },
+      select: { role: true },
+    });
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
     // Build where clause
     const where: any = {}
     
@@ -21,7 +32,11 @@ export async function getLeads(options: GetLeadsOptions = {}): Promise<Lead[]> {
       where.status = options.status
     }
     
-    if (options.assignedTo) {
+    // If user is not an admin, only show their assigned leads
+    if (user.role !== UserRole.ADMIN) {
+      where.assignedToId = options.userId
+    } else if (options.assignedTo) {
+      // If admin and assignedTo filter is provided, use it
       where.assignedToId = options.assignedTo
     }
     

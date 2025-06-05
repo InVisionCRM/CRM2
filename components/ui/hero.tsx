@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from "react"
 import { motion } from "framer-motion"
-import { SparklesCore } from "@/components/ui/sparkles"
 import { Camera, LogIn, LogOut, User, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import Image from "next/image"
@@ -23,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { isValidImage, isValidFileSize, createFilePreview, resizeImage } from "@/lib/upload-helper"
+import { Badge } from "@/components/ui/badge"
 
 export const Hero = () => {
   const logoRef = useRef<HTMLDivElement>(null)
@@ -36,6 +36,7 @@ export const Hero = () => {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const isAdmin = session?.user?.role === "ADMIN"
 
   // Initialize user data from session
   useEffect(() => {
@@ -54,29 +55,6 @@ export const Hero = () => {
   }, [])
 
   const opacity = Math.max(1 - scrollY / 200, 0)
-
-  // Effect to create the dynamic shadow/light effect on the logo
-  useEffect(() => {
-    if (!logoRef.current) return
-
-    // This creates a subtle movement of the "light" on the logo
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!logoRef.current) return
-
-      const { clientX, clientY } = e
-      const rect = logoRef.current.getBoundingClientRect()
-      const x = clientX - rect.left
-      const y = clientY - rect.top
-
-      // Update the radial gradient position based on mouse movement
-      // This creates the effect of light moving across the logo
-      logoRef.current.style.setProperty("--x", `${x}px`)
-      logoRef.current.style.setProperty("--y", `${y}px`)
-    }
-
-    window.addEventListener("mousemove", handleMouseMove)
-    return () => window.removeEventListener("mousemove", handleMouseMove)
-  }, [])
 
   const handleProfileUpdate = async () => {
     if (!session?.user?.id) return
@@ -197,9 +175,9 @@ export const Hero = () => {
       animate={{ opacity: 1, y: 0 }}
       style={{ opacity }}
       transition={{ duration: 0.8, ease: "easeOut" }}
-      className="h-[30rem] w-full bg-transparent flex flex-col items-center justify-center overflow-hidden rounded-md relative"
+      className="h-[22.5rem] w-full bg-transparent flex flex-col items-center overflow-hidden rounded-md relative"
     >
-      {/* User Avatar in top left */}
+      {/* User Avatar in top right */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
@@ -209,15 +187,24 @@ export const Hero = () => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="cursor-pointer ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-              <Avatar className="h-10 w-10 border border-white/20 hover:border-white/40 transition-colors bg-black/50 backdrop-blur-sm">
-                {session?.user?.image ? (
-                  <AvatarImage src={session.user.image} alt={session.user.name || "User"} />
-                ) : (
-                  <AvatarFallback className="bg-black/50 text-white">
-                    <User className="h-5 w-5" />
-                  </AvatarFallback>
+              <div className="flex flex-col items-center">
+                <Avatar className="h-10 w-10 border border-white/20 hover:border-white/40 transition-colors bg-black/50 backdrop-blur-sm">
+                  {session?.user?.image ? (
+                    <AvatarImage src={session.user.image} alt={session.user.name || "User"} />
+                  ) : (
+                    <AvatarFallback className="bg-black/50 text-white">
+                      <User className="h-5 w-5" />
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+                {isAdmin && (
+                  <div className="mt-1">
+                    <Badge variant="secondary" className="bg-[#59ff00] text-black hover:bg-[#59ff00]/90 text-xs">
+                      Admin
+                    </Badge>
+                  </div>
                 )}
-              </Avatar>
+              </div>
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56 bg-black/80 backdrop-blur-md border-white/20 text-white" align="start">
@@ -342,96 +329,59 @@ export const Hero = () => {
         </div>
       )}
 
-      {/* Logo in the background with shadow play effect */}
-      <motion.div
-        ref={logoRef}
-        initial={{ scale: 0.8, opacity: 0 }}
-        whileInView={{ scale: 1, opacity: 0.2 }}
-        viewport={{ once: true }}
-        transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
-        className="absolute inset-0 flex items-center justify-center pointer-events-none"
-        style={{
-          // This creates the base shadow effect
-          maskImage: "radial-gradient(circle at var(--x, 50%) var(--y, 50%), black 10%, transparent 65%)",
-          WebkitMaskImage: "radial-gradient(circle at var(--x, 50%) var(--y, 50%), black 10%, transparent 65%)",
-        }}
-      >
-        <div className="relative w-[280px] h-[160px] transform scale-120">
-          <Image
-            src="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/in-vision-logo-UJNZxvzrwPs8WsZrFbI7Z86L8TWcc5.png"
-            alt="Purlin Logo"
-            fill
-            className="object-contain"
-            style={{
-              filter: "drop-shadow(0 0 30px rgba(136, 214, 1, 0.97))",
-            }}
+      {/* Main content container with flex layout */}
+      <div className="w-full h-full flex flex-col items-center">
+        {/* PURLIN text at top */}
+        <motion.h1 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
+          className="text-5xl md:text-6xl lg:text-8xl font-bold text-center z-20 mt-[75px]"
+        >
+          <span className="text-white">PURL</span>
+          <span style={{ color: "#59ff00" }} className="drop-shadow-[0_0_8px_rgba(89,255,0,0.8)]">
+            IN
+          </span>
+        </motion.h1>
+
+        {/* Glowing line */}
+        <div className="relative w-[40rem] h-8">
+          <motion.div 
+            initial={{ scaleX: 0 }}
+            whileInView={{ scaleX: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.2, delay: 0.8, ease: "easeOut" }}
+            className="absolute inset-x-20 top-0 bg-gradient-to-r from-transparent via-[#59ff00] to-transparent h-[2px] w-3/4 blur-sm" 
+          />
+          <motion.div 
+            initial={{ scaleX: 0 }}
+            whileInView={{ scaleX: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.2, delay: 0.8, ease: "easeOut" }}
+            className="absolute inset-x-20 top-0 bg-gradient-to-r from-transparent via-[#59ff00] to-transparent h-px w-3/4" 
           />
         </div>
-      </motion.div>
 
-      {/* Main content */}
-      <motion.h1 
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-        className="text-5xl md:text-6xl lg:text-8xl font-bold text-center relative z-20"
-      >
-        <span className="text-white">PURL</span>
-        <span style={{ color: "#59ff00" }} className="drop-shadow-[0_0_8px_rgba(89,255,0,0.8)]">
-          IN
-        </span>
-      </motion.h1>
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9 }}
-        whileInView={{ opacity: 1, scale: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 1, delay: 0.6, ease: "easeOut" }}
-        className="w-[40rem] lg:h-32 h-40 relative"
-      >
-        {/* Gradients */}
-        <motion.div 
-          initial={{ scaleX: 0 }}
-          whileInView={{ scaleX: 1 }}
+        {/* Logo below text with margin */}
+        <motion.div
+          ref={logoRef}
+          initial={{ scale: 0.8, opacity: 0 }}
+          whileInView={{ scale: 1, opacity: 1 }}
           viewport={{ once: true }}
-          transition={{ duration: 1.2, delay: 0.8, ease: "easeOut" }}
-          className="absolute inset-x-20 top-0 bg-gradient-to-r from-transparent via-[#59ff00] to-transparent h-[2px] w-3/4 blur-sm" 
-        />
-        <motion.div 
-          initial={{ scaleX: 0 }}
-          whileInView={{ scaleX: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1.2, delay: 0.8, ease: "easeOut" }}
-          className="absolute inset-x-20 top-0 bg-gradient-to-r from-transparent via-[#59ff00] to-transparent h-px w-3/4" 
-        />
-        <motion.div 
-          initial={{ scaleX: 0 }}
-          whileInView={{ scaleX: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1, delay: 1, ease: "easeOut" }}
-          className="absolute inset-x-60 top-0 bg-gradient-to-r from-transparent via-[#59ff00] to-transparent h-[5px] w-1/4 blur-sm" 
-        />
-        <motion.div 
-          initial={{ scaleX: 0 }}
-          whileInView={{ scaleX: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1, delay: 1, ease: "easeOut" }}
-          className="absolute inset-x-60 top-0 bg-gradient-to-r from-transparent via-[#59ff00] to-transparent h-px w-1/4" 
-        />
-
-        {/* Core component */}
-        <SparklesCore
-          background="transparent"
-          minSize={0.4}
-          maxSize={1}
-          particleDensity={1000}
-          className="w-full h-full"
-          particleColor="#59ff00"
-        />
-
-        {/* Radial Gradient to prevent sharp edges */}
-        <div className="absolute inset-0 w-full h-full bg-transparent [mask-image:radial-gradient(280px_160px_at_top,transparent_20%,white)]"></div>
-      </motion.div>
+          transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
+          className="mt-12 flex items-center justify-center pointer-events-none"
+        >
+          <div className="relative w-[200px] h-[120px] transform scale-100">
+            <Image
+              src="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/in-vision-logo-UJNZxvzrwPs8WsZrFbI7Z86L8TWcc5.png"
+              alt="Purlin Logo"
+              fill
+              className="object-contain"
+            />
+          </div>
+        </motion.div>
+      </div>
     </motion.div>
   )
 } 

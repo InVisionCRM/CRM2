@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
+import type { NextRequest as NextRequestType } from 'next/server'
 
-export async function middleware(req: NextRequest) {
+export async function middleware(request: NextRequestType) {
   try {
     // Get the token from the request
     const token = await getToken({
-      req,
+      req: request,
       secret: process.env.NEXTAUTH_SECRET,
     })
 
     console.log("Middleware token:", token ? "exists" : "null")
 
     // Get the pathname from the URL
-    const { pathname } = req.nextUrl
+    const { pathname } = request.nextUrl
 
     // The matcher in `config` should ideally handle these exclusions.
     // This check is an additional safeguard.
@@ -38,9 +39,34 @@ export async function middleware(req: NextRequest) {
 
       // For page routes, redirect to the custom sign-in page defined in authOptions
       // Ensure this path matches what's in your NextAuth config (pages.signIn)
-      const signInUrl = new URL("/auth/signin", req.url) 
+      const signInUrl = new URL("/auth/signin", request.url) 
       signInUrl.searchParams.set("callbackUrl", pathname)
       return NextResponse.redirect(signInUrl)
+    }
+
+    // Handle admin routes
+    if (pathname.startsWith('/admin')) {
+      try {
+        // Fetch user role from database
+        const response = await fetch(`${process.env.NEXTAUTH_URL}/api/user/role?userId=${token.id}`, {
+          headers: {
+            'Cookie': request.headers.get('cookie') || '',
+          },
+        })
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch user role')
+        }
+        
+        const data = await response.json()
+        
+        if (data.role !== 'ADMIN') {
+          return NextResponse.redirect(new URL('/', request.url))
+        }
+      } catch (error) {
+        console.error('Error checking user role:', error)
+        return NextResponse.redirect(new URL('/', request.url))
+      }
     }
 
     return NextResponse.next()
@@ -61,5 +87,7 @@ export const config = {
     // - _next/image (image optimization files)
     // - files with extensions (e.g., .ico, .png, .svg)
     "/((?!api/auth|auth/signin|_next/static|_next/image|.*\..*).*)",
+    '/admin/:path*',
+    '/api/admin/:path*',
   ],
 }

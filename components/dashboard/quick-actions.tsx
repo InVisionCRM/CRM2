@@ -4,7 +4,6 @@ import { useState } from "react"
 import type React from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -16,87 +15,44 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { FileCheck, Plus, Trash, FileUp } from "lucide-react"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Plus, Trash } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LeadSummary } from "@/types/dashboard"
 
 interface QuickActionProps {
-  icon: React.ReactNode | null
   label: string
-  description?: string
-  onClick: () => void
-  isPrimary?: boolean
-  className?: string
+  value: string
   imageUrl?: string
-  blurAmount?: string
 }
 
 function QuickAction({
-  icon,
   label,
-  description,
-  onClick,
-  isPrimary = false,
-  className,
+  value,
   imageUrl,
-  blurAmount,
 }: QuickActionProps) {
-  const [isClicked, setIsClicked] = useState(false)
-
-  const handleClick = () => {
-    setIsClicked(true)
-    onClick()
-    setTimeout(() => {
-      setIsClicked(false)
-    }, 300) // Match this with the animation duration
-  }
-
   return (
-    <Button
-      variant={isPrimary ? "default" : "outline"}
-      className={cn(
-        "flex-col h-full py-4 px-4",
-        "w-full text-center items-center justify-center gap-2",
-        "rounded-xl border",
-        "text-white", // Added text-white to ensure all text is white
-        "transition-all duration-300 ease-in-out", // Base transition for all effects
-        "hover:scale-[1.03] hover:shadow-lg", // Expand on hover
-        isClicked && "animate-quick-zoom", // Apply zoom animation on click
-        isPrimary && !imageUrl
-          ? "bg-gradient-to-br from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90"
-          : !imageUrl && "hover:bg-gray-50 dark:hover:bg-gray-800",
-        imageUrl ? "relative overflow-hidden" : "",
-        className,
-      )}
-      onClick={handleClick}
-    >
-      {imageUrl && (
-        <div className="absolute inset-0 w-full h-full">
-          <img
-            src={imageUrl || "/placeholder.svg"}
-            alt=""
-            className={cn("w-full h-full object-cover", blurAmount ? `blur-${blurAmount}` : "")}
-          />
-          <div className="absolute inset-0 bg-black/30" />
-        </div>
-      )}
-      {icon && (
-        <div
-          className={cn(
-            "p-2 rounded-lg relative z-10",
-            "bg-white/20 text-white", // Changed to always use white text for icons
-          )}
-        >
-          {icon}
-        </div>
-      )}
-      <div className="relative z-10">
-        <div className="font-medium mb-1 text-2xl text-white">{label}</div> {/* Added text-white */}
-        {description && (
-          <p className="text-sm text-white/90">{description}</p> // Changed to always use white text with 90% opacity
+    <div className="relative w-full pb-[56.25%]"> {/* 16:9 aspect ratio */}
+      <TabsTrigger
+        value={value}
+        className={cn(
+          "absolute inset-0 w-full h-full",
+          "overflow-hidden rounded-xl border-2 border-lime-500",
+          "transition-all duration-300",
+          "hover:brightness-110 data-[state=active]:bg-primary",
         )}
-      </div>
-    </Button>
+        style={{
+          backgroundImage: imageUrl ? `url(${imageUrl})` : undefined,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40" />
+        <div className="relative z-10 flex flex-col items-center justify-center h-full">
+          <span className="text-lg font-medium text-white text-center">{label}</span>
+        </div>
+      </TabsTrigger>
+    </div>
   )
 }
 
@@ -234,92 +190,58 @@ export function QuickActions() {
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false)
   const router = useRouter()
 
-  const handleAction = (action: string) => {
-    console.log(`Action triggered: ${action}`)
-    // Implement actions accordingly
-    if (action === "quick-links") {
+  const handleTabChange = (value: string) => {
+    console.log(`Tab changed: ${value}`)
+    if (value === "quick-links") {
       router.push("/quick-links")
-    } else if (action === "invoice") {
+    } else if (value === "invoice") {
       setInvoiceDialogOpen(true)
-    } else if (action === "team") {
-      router.push("/team-performance")
-    } else if (action === "purlin-vision") {
+    } else if (value === "purlin-vision") {
       router.push("/map")
-    } else if (action === "all-leads") {
+    } else if (value === "all-leads") {
       router.push("/leads")
-    } else if (action === "file-upload") {
-      // Open the lead selection sheet first
-      // setLeadSelectionOpen(true)
-      // TODO: Implement file upload functionality or show a message
-      console.log("File upload functionality is currently being reworked.")
-      alert("File upload functionality is temporarily unavailable.")
+    } else if (value === "file-upload") {
+      router.push("/drive")
+    } else if (value === "contract") {
+      window.open('https://contracts.purlin.pro', '_blank')
     }
   }
 
   return (
     <>
-      <style jsx global>{`
-        @keyframes quickZoom {
-          0% { transform: scale(1); }
-          50% { transform: scale(0.95); }
-          100% { transform: scale(1); }
-        }
-        .animate-quick-zoom {
-          animation: quickZoom 0.3s ease-in-out;
-        }
-      `}</style>
-      <Card className="border-none shadow-md">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="p-3">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 auto-rows-fr bg-black/10">
-            {/* All Leads - Large 2x2 tile */}
+      <div className="w-[90%] mx-auto">
+        <Tabs
+          defaultValue="all-leads"
+          onValueChange={handleTabChange}
+          className="w-full"
+        >
+          <TabsList className="grid grid-cols-4 gap-4 h-auto bg-transparent p-0">
             <QuickAction
-              icon={null}
               label="All Leads"
-              description="View and manage leads"
-              onClick={() => handleAction("all-leads")}
+              value="all-leads"
               imageUrl="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Quick%20Actions/All_Leads-SEk2NEYpt4fARvrhTSLgiBsCi68m7Y.png"
-              blurAmount="sm"
-              className="col-span-2 row-span-2 md:col-span-2 border-2 border-lime-500 text-white font-medium"
             />
 
-            {/* Purlin-Vision - Large 2x2 tile spanning 4 columns on md+ screens */}
             <QuickAction
-              icon={null}
-              label="Purlin-Vision"
-              description="Map-based lead creation"
-              onClick={() => handleAction("purlin-vision")}
+              label="Map"
+              value="purlin-vision"
               imageUrl="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Screenshot%202025-04-21%20at%2011.20.34%E2%80%AFAM-AtE0adjEctfQKxvUQsj3mL2NZtkzAt.png"
-              blurAmount="sm"
-              className="col-span-2 row-span-2 md:col-span-2 border-2 border-lime-500 text-white font-medium"
             />
 
-            {/* File Upload - Medium tile */}
             <QuickAction
-              icon={<FileUp className="h-5 w-5" />}
               label="File Upload"
-              description="Upload documents"
-              onClick={() => handleAction("file-upload")}
+              value="file-upload"
               imageUrl="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/dashboard-images/file-upload.png"
-              blurAmount="sm"
-              className="col-span-2 md:col-span-2 border-2 border-lime-500"
             />
 
-            {/* Contract - Small tile with image background */}
             <QuickAction
-              icon={<FileCheck className="h-5 w-5" />}
               label="Contract"
-              description="Generate contract"
-              onClick={() => window.open('https://contracts.purlin.pro', '_blank')}
+              value="contract"
               imageUrl="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/dashboard-images/contracts.png"
-              blurAmount="sm"
-              className="col-span-2 md:col-span-2 border-2 border-lime-500"
             />
-          </div>
-        </CardContent>
-      </Card>
+          </TabsList>
+        </Tabs>
+      </div>
 
       {/* Invoice Dialog */}
       <Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>
@@ -339,14 +261,6 @@ export function QuickActions() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Lead Selection Sheet Commented out / To be removed if not needed elsewhere 
-      <LeadSelectionSheet
-        isOpen={leadSelectionOpen}
-        onClose={() => setLeadSelectionOpen(false)}
-        onLeadSelect={handleLeadSelect}
-      />
-      */}
     </>
   )
 }

@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server"
 import { getLeads, createLead } from "@/lib/db/leads"
-import { getSession } from "@/lib/auth-utils"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { LeadStatus } from "@prisma/client"
 import type { SortField, SortOrder } from "@/app/leads/page"
 
 export async function GET(request: Request) {
   try {
+    // Get session
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     // Get query parameters
     const url = new URL(request.url)
     const status = url.searchParams.get("status") as LeadStatus | null
@@ -21,6 +28,7 @@ export async function GET(request: Request) {
       search: search || undefined,
       sort,
       order,
+      userId: session.user.id, // Pass the user ID
     })
 
     // Log the raw leads data received from the database function
@@ -47,7 +55,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getSession() // Use the utility function
+    const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       console.error("Unauthorized: No session found or user ID missing in session.")
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

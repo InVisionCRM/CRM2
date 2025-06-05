@@ -10,19 +10,14 @@ export function DashboardContent() {
       {/* Hero Section */}
       <DynamicHero />
       
-      <div className="container mx-auto p-4 h-[calc(100%-theme(space.32))] overflow-hidden">
-        {/* Two-column layout */}
-        <div className="flex gap-2 h-full">
-          {/* Left column - Main content */}
-          <div className="flex-1 overflow-y-auto">
-            <QuickActions />
-          </div>
-          
-          {/* Right column - Recent Activities */}
-          <div className="flex-1 overflow-y-auto">
-            <RecentActivities />
-          </div>
-        </div>
+      {/* Quick Actions as Tabs */}
+      <div className="container mx-auto px-4 py-6">
+        <QuickActions />
+      </div>
+      
+      {/* Recent Activities */}
+      <div className="container mx-auto px-4 py-6">
+        <RecentActivities />
       </div>
     </div>
   )
