@@ -42,7 +42,7 @@ export function NavigationBar() {
   ]
 
   return (
-    <header className="bg-white border-b sticky top-0 z-10">
+    <header className="border-b sticky top-0 z-10 backdrop-blur-sm bg-black/10">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           {/* Logo and brand */}
@@ -51,7 +51,7 @@ export function NavigationBar() {
               <motion.div whileHover={{ rotate: 10 }} transition={{ type: "spring", stiffness: 400, damping: 10 }}>
                 <Calendar className="h-6 w-6 text-primary" />
               </motion.div>
-              <span className="text-xl font-bold">Calendar Manager</span>
+              <span className="text-xl font-bold text-white">Calendar Manager</span>
             </Link>
           </div>
 
@@ -65,7 +65,7 @@ export function NavigationBar() {
                   "flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200",
                   isActive(item.href)
                     ? "bg-primary text-white shadow-md"
-                    : "text-gray-700 hover:bg-gray-100 hover:text-gray-900 hover:shadow-sm",
+                    : "text-white/70 hover:text-white hover:bg-white/10",
                 )}
               >
                 <motion.div
@@ -85,11 +85,11 @@ export function NavigationBar() {
             {session ? (
               <>
                 <div className="hidden md:block text-sm">
-                  <span className="text-gray-500">Signed in as </span>
-                  <span className="font-medium">{session.user?.email}</span>
+                  <span className="text-white/70">Signed in as </span>
+                  <span className="font-medium text-white">{session.user?.email}</span>
                 </div>
                 <Link href="/api/auth/signout">
-                  <Button variant="outline" size="sm" className="transition-all duration-200 hover:shadow-md">
+                  <Button variant="outline" size="sm" className="transition-all duration-200 hover:shadow-md border-white/20 text-white hover:bg-white/10">
                     Sign Out
                   </Button>
                 </Link>
@@ -104,7 +104,7 @@ export function NavigationBar() {
 
             {/* Mobile menu button */}
             <motion.button
-              className="md:hidden p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+              className="md:hidden p-2 rounded-md text-white/70 hover:text-white hover:bg-white/10"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               whileTap={{ scale: 0.9 }}
             >
@@ -117,7 +117,7 @@ export function NavigationBar() {
         <AnimatePresence>
           {isMenuOpen && (
             <motion.div
-              className="md:hidden py-2 border-t"
+              className="md:hidden py-2 border-t border-white/10"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
@@ -137,7 +137,7 @@ export function NavigationBar() {
                         "flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-md",
                         isActive(item.href)
                           ? "bg-primary text-white"
-                          : "text-gray-700 hover:bg-gray-100 hover:text-gray-900",
+                          : "text-white/70 hover:text-white hover:bg-white/10",
                       )}
                       onClick={() => setIsMenuOpen(false)}
                     >

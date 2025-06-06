@@ -24,10 +24,12 @@ export function useAppointments(options: UseAppointmentsOptions = {}) {
       const params = new URLSearchParams()
 
       if (options.startDate) {
+        // Pass startDate as an ISO string
         params.append("startDate", options.startDate.toISOString())
       }
 
       if (options.endDate) {
+        // Pass endDate as an ISO string
         params.append("endDate", options.endDate.toISOString())
       }
 
@@ -54,7 +56,7 @@ export function useAppointments(options: UseAppointmentsOptions = {}) {
         try {
           const errorData = JSON.parse(errorText)
           errorMessage = errorData.message || errorMessage
-        } catch (e) {
+        } catch {
           // If parsing fails, use the status text
           errorMessage = `${response.status}: ${response.statusText || errorMessage}`
         }
@@ -67,7 +69,7 @@ export function useAppointments(options: UseAppointmentsOptions = {}) {
     } catch (err) {
       // Check if the error is an AbortError (fetch was cancelled)
       if (err instanceof Error && err.name === "AbortError") {
-        console.log("Fetch aborted");
+        console.log("Fetch aborted")
         // Don't set error state if fetch was aborted
       } else {
         setError(err instanceof Error ? err : new Error("An unknown error occurred"))

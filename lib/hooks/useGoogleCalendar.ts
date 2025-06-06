@@ -1,5 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from 'date-fns';
+import {
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  startOfDay,
+  endOfDay,
+} from 'date-fns';
 import { GoogleCalendarService } from '@/lib/services/googleCalendar';
 import type { CalendarAppointment, RawGCalEvent } from '@/types/appointments';
 import { useDebounce } from './useDebounce';
@@ -17,12 +24,12 @@ interface UseGoogleCalendarReturn {
   appointments: RawGCalEvent[];
   isLoading: boolean;
   error: Error | null;
-  fetchAppointmentsCallback: (startDate: Date, endDate: Date) => Promise<void>;
+  fetchAppointmentsCallback: () => Promise<void>;
   createAppointment: (appointment: CalendarAppointment) => Promise<RawGCalEvent>;
   updateAppointment: (appointment: CalendarAppointment) => Promise<RawGCalEvent>;
   deleteAppointment: (id: string) => Promise<void>;
   refetch: () => void;
-  currentMonth: Date;
+  currentRangeStart: Date;
 }
 
 export function useGoogleCalendar({
@@ -39,7 +46,8 @@ export function useGoogleCalendar({
   const debouncedCurrentDate = useDebounce(currentDate, debounceDelay);
   const debouncedView = useDebounce(view, debounceDelay);
 
-  const getDateRange = useCallback(() => {
+  // Compute the start/end range as Date objects
+  const { timeMin, timeMax } = useMemo(() => {
     let start: Date;
     let end: Date;
 
@@ -60,7 +68,7 @@ export function useGoogleCalendar({
         start = startOfMonth(debouncedCurrentDate);
         end = endOfMonth(debouncedCurrentDate);
     }
-    return { timeMin: start.toISOString(), timeMax: end.toISOString() };
+    return { timeMin: start, timeMax: end };
   }, [debouncedCurrentDate, debouncedView]);
 
   const fetchAppointmentsCallback = useCallback(async () => {
@@ -73,9 +81,8 @@ export function useGoogleCalendar({
     setIsLoading(true);
     setError(null);
     try {
-      const { timeMin, timeMax } = getDateRange();
       const service = new GoogleCalendarService(credentials);
-      const events = await service.listEvents(new Date(timeMin), new Date(timeMax));
+      const events = await service.listEvents(timeMin, timeMax);
       setAppointments(events);
     } catch (err) {
       console.error("Failed to fetch Google Calendar events:", err);
@@ -88,7 +95,7 @@ export function useGoogleCalendar({
     } finally {
       setIsLoading(false);
     }
-  }, [getDateRange, credentials]);
+  }, [credentials, timeMin, timeMax]);
 
   useEffect(() => {
     fetchAppointmentsCallback();
@@ -102,13 +109,16 @@ export function useGoogleCalendar({
       try {
         const newAppointment = await service.createEvent(appointmentData);
         setAppointments((prev) => [...prev, newAppointment]);
-        setError(null); // Clear previous errors on success
+        setError(null);
         return newAppointment;
       } catch (err) {
-        const errorToSet = err instanceof Error ? err : new Error("An unknown error occurred during event creation.");
+        const errorToSet =
+          err instanceof Error
+            ? err
+            : new Error("An unknown error occurred during event creation.");
         setError(errorToSet);
         console.error("Failed to create appointment:", errorToSet);
-        throw errorToSet; // Re-throw the error
+        throw errorToSet;
       } finally {
         setIsLoading(false);
       }
@@ -119,21 +129,26 @@ export function useGoogleCalendar({
   const updateAppointment = useCallback(
     async (appointmentData: CalendarAppointment): Promise<RawGCalEvent> => {
       if (!credentials) throw new Error("Credentials not provided for updateAppointment");
-      if (!appointmentData.id) throw new Error("Appointment ID is required for update."); // Added check
+      if (!appointmentData.id) throw new Error("Appointment ID is required for update.");
       const service = new GoogleCalendarService(credentials);
       setIsLoading(true);
       try {
         const updatedAppointment = await service.updateEvent(appointmentData);
         setAppointments((prev) =>
-          prev.map((app) => (app.id === updatedAppointment.id ? updatedAppointment : app))
+          prev.map((app) =>
+            app.id === updatedAppointment.id ? updatedAppointment : app
+          )
         );
-        setError(null); // Clear previous errors on success
+        setError(null);
         return updatedAppointment;
       } catch (err) {
-        const errorToSet = err instanceof Error ? err : new Error("An unknown error occurred during event update.");
+        const errorToSet =
+          err instanceof Error
+            ? err
+            : new Error("An unknown error occurred during event update.");
         setError(errorToSet);
         console.error("Failed to update appointment:", errorToSet);
-        throw errorToSet; // Re-throw the error
+        throw errorToSet;
       } finally {
         setIsLoading(false);
       }
@@ -162,9 +177,9 @@ export function useGoogleCalendar({
     [credentials]
   );
 
-  const refetch = () => {
+  const refetch = useCallback(() => {
     fetchAppointmentsCallback();
-  };
+  }, [fetchAppointmentsCallback]);
 
   return {
     appointments,
@@ -175,6 +190,6 @@ export function useGoogleCalendar({
     updateAppointment,
     deleteAppointment,
     refetch,
-    currentMonth: getDateRange().timeMin ? new Date(getDateRange().timeMin) : new Date(),
+    currentRangeStart: timeMin,
   };
-} 
+}

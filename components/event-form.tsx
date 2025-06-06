@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm, type ControllerRenderProps, type SubmitHandler } from "react-hook-form"
+import { useForm, type SubmitHandler } from "react-hook-form"
 import { z } from "zod"
 import { format } from "date-fns"
 import { CalendarIcon, Clock, ChevronsUpDown, Check } from "lucide-react"
@@ -12,7 +12,15 @@ import { toast } from "@/components/ui/use-toast"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -24,21 +32,17 @@ import { Command, CommandInput, CommandList, CommandItem } from "@/components/ui
 
 // Define a type for the lead search results
 interface LeadSearchResult {
-  id: string;
-  name: string;
+  id: string
+  name: string
 }
 
 const formSchema = z.object({
   summary: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   location: z.string().optional(),
-  startDate: z.date({
-    required_error: "Start date is required",
-  }),
+  startDate: z.date({ required_error: "Start date is required" }),
   startTime: z.string().optional(),
-  endDate: z.date({
-    required_error: "End date is required",
-  }),
+  endDate: z.date({ required_error: "End date is required" }),
   endTime: z.string().optional(),
   isAllDay: z.boolean().optional(),
   leadId: z.string().optional(),
@@ -56,21 +60,26 @@ interface EventFormProps {
   onCancel?: () => void
 }
 
-export function EventForm({ event, initialLeadId, initialLeadName, initialEventDate, onFormSubmit, onCancel }: EventFormProps = {}) {
+export function EventForm({
+  event,
+  initialLeadId,
+  initialLeadName,
+  initialEventDate,
+  onFormSubmit,
+  onCancel,
+}: EventFormProps = {}) {
   const router = useRouter()
   const { data: session } = useSession()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const searchParams = useSearchParams()
-  const [leadAddress, setLeadAddress] = useState<string>('')
+  const [leadAddress, setLeadAddress] = useState<string>("")
 
   // State for lead combobox
-  const [isLeadPopoverOpen, setIsLeadPopoverOpen] = useState(false);
-  const [leadSearchQuery, setLeadSearchQuery] = useState("");
-  const [searchedLeads, setSearchedLeads] = useState<LeadSearchResult[]>([]);
-  const [isLeadSearching, setIsLeadSearching] = useState(false);
-  const [leadSearchError, setLeadSearchError] = useState<string | null>(null);
-
-  // console.log("[EventForm] Props received:", { initialLeadId, initialLeadName, initialEventDate }); // Debugging
+  const [isLeadPopoverOpen, setIsLeadPopoverOpen] = useState(false)
+  const [leadSearchQuery, setLeadSearchQuery] = useState("")
+  const [searchedLeads, setSearchedLeads] = useState<LeadSearchResult[]>([])
+  const [isLeadSearching, setIsLeadSearching] = useState(false)
+  const [leadSearchError, setLeadSearchError] = useState<string | null>(null)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -80,9 +89,13 @@ export function EventForm({ event, initialLeadId, initialLeadName, initialEventD
           description: event.description || "",
           location: event.location || "",
           startDate: new Date(event.start.dateTime || event.start.date),
-          startTime: event.start.dateTime ? format(new Date(event.start.dateTime), "HH:mm") : undefined,
+          startTime: event.start.dateTime
+            ? format(new Date(event.start.dateTime), "HH:mm")
+            : undefined,
           endDate: new Date(event.end.dateTime || event.end.date),
-          endTime: event.end.dateTime ? format(new Date(event.end.dateTime), "HH:mm") : undefined,
+          endTime: event.end.dateTime
+            ? format(new Date(event.end.dateTime), "HH:mm")
+            : undefined,
           isAllDay: !event.start.dateTime,
           leadId: event?.extendedProperties?.private?.leadId || initialLeadId || "",
           leadName: event?.extendedProperties?.private?.leadName || initialLeadName || "",
@@ -92,10 +105,12 @@ export function EventForm({ event, initialLeadId, initialLeadName, initialEventD
           description: "",
           location: "",
           startDate: initialEventDate ? new Date(initialEventDate) : new Date(),
-          startTime: initialEventDate ? format(new Date(initialEventDate), "HH:mm") : format(new Date(), "HH:mm"),
+          startTime: initialEventDate
+            ? format(new Date(initialEventDate), "HH:mm")
+            : format(new Date(), "HH:mm"),
           endDate: initialEventDate ? new Date(initialEventDate) : new Date(),
-          endTime: initialEventDate 
-            ? format(new Date(new Date(initialEventDate).getTime() + 60 * 60 * 1000), "HH:mm") 
+          endTime: initialEventDate
+            ? format(new Date(new Date(initialEventDate).getTime() + 60 * 60 * 1000), "HH:mm")
             : format(new Date(Date.now() + 60 * 60 * 1000), "HH:mm"),
           isAllDay: false,
           leadId: initialLeadId || "",
@@ -108,7 +123,7 @@ export function EventForm({ event, initialLeadId, initialLeadName, initialEventD
       const dateParam = searchParams.get("date")
       if (dateParam) {
         try {
-          const parsedDate = new Date(dateParam) // Ensure dateParam is in a format Date constructor understands
+          const parsedDate = new Date(dateParam)
           if (!isNaN(parsedDate.getTime())) {
             form.setValue("startDate", parsedDate)
             form.setValue("endDate", parsedDate)
@@ -123,8 +138,8 @@ export function EventForm({ event, initialLeadId, initialLeadName, initialEventD
   useEffect(() => {
     if (initialLeadId) {
       fetch(`/api/leads/${initialLeadId}`)
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           if (data.address) {
             setLeadAddress(data.address)
           }
@@ -136,8 +151,8 @@ export function EventForm({ event, initialLeadId, initialLeadName, initialEventD
   const isAllDay = form.watch("isAllDay")
 
   // Use form.watch to get reactive values for display in the combobox trigger
-  const watchedLeadId = form.watch("leadId");
-  const watchedLeadName = form.watch("leadName");
+  const watchedLeadId = form.watch("leadId")
+  const watchedLeadName = form.watch("leadName")
 
   // Placeholder for debounced lead fetching logic
   // const debouncedLeadSearch = useDebounce(leadSearchQuery, 500);
@@ -145,105 +160,112 @@ export function EventForm({ event, initialLeadId, initialLeadName, initialEventD
   // Placeholder for actual API call to fetch leads
   const fetchLeads = async (query: string) => {
     if (!query) {
-      setSearchedLeads([]);
-      return;
+      setSearchedLeads([])
+      return
     }
-    setIsLeadSearching(true);
-    setLeadSearchError(null);
+    setIsLeadSearching(true)
+    setLeadSearchError(null)
     try {
       // Replace with your actual API call
       // const response = await fetch(`/api/leads/search?name=${encodeURIComponent(query)}`);
       // if (!response.ok) throw new Error('Failed to fetch leads');
       // const data = await response.json();
-      // setSearchedLeads(data.leads || []); 
-      console.log("Fetching leads for:", query); // Placeholder
-      // Dummy data for now:
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+      // setSearchedLeads(data.leads || []);
+      console.log("Fetching leads for:", query)
+      await new Promise((resolve) => setTimeout(resolve, 500))
       if (query.toLowerCase().startsWith("test")) {
         setSearchedLeads([
           { id: "lead1", name: "Test Lead One" },
           { id: "lead2", name: "Test Lead Two" },
-        ]);
+        ])
       } else {
-        setSearchedLeads([]);
+        setSearchedLeads([])
       }
     } catch (error) {
-      console.error("Failed to search leads:", error);
-      setLeadSearchError(error instanceof Error ? error.message : "An unknown error occurred");
-      setSearchedLeads([]);
+      console.error("Failed to search leads:", error)
+      setLeadSearchError(error instanceof Error ? error.message : "An unknown error occurred")
+      setSearchedLeads([])
     } finally {
-      setIsLeadSearching(false);
+      setIsLeadSearching(false)
     }
-  };
+  }
 
   useEffect(() => {
-    // This would be triggered by debouncedLeadSearch in a real implementation
     if (leadSearchQuery) {
-        fetchLeads(leadSearchQuery);
+      fetchLeads(leadSearchQuery)
     } else {
-        setSearchedLeads([]);
+      setSearchedLeads([])
     }
-  }, [leadSearchQuery]); // Replace leadSearchQuery with debouncedLeadSearch when useDebounce is implemented
+  }, [leadSearchQuery])
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     setIsSubmitting(true)
 
     try {
-      const userId = (session?.user as any)?.id // Consider a more specific type for session.user
+      const userId = (session?.user as any)?.id
       const accessToken = session?.accessToken
 
       if (!userId || !accessToken) {
         throw new Error("User ID or access token not found")
       }
 
-      const calendarService = new GoogleCalendarService({ accessToken, refreshToken: null }) // refreshToken might be needed for long-lived sessions
+      const calendarService = new GoogleCalendarService({
+        accessToken,
+        refreshToken: null,
+      })
 
+      // Compute local-time strings before building the payload
+      const datePartStart = format(data.startDate, "yyyy-MM-dd")
+      const timePartStart = data.startTime || "00:00"
+      const startDateTimeLocal = `${datePartStart}T${timePartStart}:00`
+
+      const datePartEnd = format(data.endDate, "yyyy-MM-dd")
+      const timePartEnd = data.endTime || "00:00"
+      const endDateTimeLocal = `${datePartEnd}T${timePartEnd}:00`
+
+      // Build the event payload using local-time strings + timeZone
       const baseEventPayload = {
         summary: data.summary,
         description: data.description,
         location: data.location,
         start: {
-          dateTime: data.isAllDay
-            ? undefined
-            : new Date(`${format(data.startDate, "yyyy-MM-dd")}T${data.startTime || '00:00'}`).toISOString(),
-          date: data.isAllDay ? format(data.startDate, "yyyy-MM-dd") : undefined,
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          dateTime: data.isAllDay ? undefined : startDateTimeLocal,
+          date: data.isAllDay ? datePartStart : undefined,
+          timeZone: "America/New_York",
         },
         end: {
-          dateTime: data.isAllDay
-            ? undefined
-            : new Date(`${format(data.endDate, "yyyy-MM-dd")}T${data.endTime || '00:00'}`).toISOString(),
-          date: data.isAllDay ? format(data.endDate, "yyyy-MM-dd") : undefined,
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          dateTime: data.isAllDay ? undefined : endDateTimeLocal,
+          date: data.isAllDay ? datePartEnd : undefined,
+          timeZone: "America/New_York",
         },
         extendedProperties: {
           private: {
-            leadId: data.leadId || undefined, // Ensure undefined if empty string or null
-            leadName: data.leadName || undefined, // Ensure undefined if empty string or null
-          }
-        }
-      };
+            leadId: data.leadId || undefined,
+            leadName: data.leadName || undefined,
+          },
+        },
+      }
 
       if (event?.id) {
-        await calendarService.updateEvent({ ...baseEventPayload, id: event.id } as any) // Type appropriately
+        await calendarService.updateEvent({
+          ...baseEventPayload,
+          id: event.id,
+        } as any)
       } else {
-        await calendarService.createEvent(baseEventPayload as any) // Type appropriately
+        await calendarService.createEvent(baseEventPayload as any)
       }
 
       if (onFormSubmit) {
-        onFormSubmit(data); // Callback handles modal close and data refresh
+        onFormSubmit(data)
       } else {
-        router.push("/dashboard/events"); // Fallback if not used in modal
+        router.push("/dashboard/events")
       }
-      // router.refresh() was here, but onFormSubmit should handle its own refresh,
-      // and router.push to a new page implies that page will fetch its data.
     } catch (error) {
       console.error("Failed to save event:", error)
-      // Consider adding user-friendly error feedback here (e.g., a toast notification)
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to save event',
-        variant: 'destructive'
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save event",
+        variant: "destructive",
       })
     } finally {
       setIsSubmitting(false)
@@ -273,16 +295,11 @@ export function EventForm({ event, initialLeadId, initialLeadName, initialEventD
           render={({ field }) => (
             <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
               <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
+                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
               </FormControl>
               <div className="space-y-1 leading-none">
                 <FormLabel>All-day event</FormLabel>
-                <FormDescription>
-                  Event will not have specific start and end times.
-                </FormDescription>
+                <FormDescription>Event will not have specific start and end times.</FormDescription>
               </div>
             </FormItem>
           )}
@@ -305,22 +322,13 @@ export function EventForm({ event, initialLeadId, initialLeadName, initialEventD
                           !field.value && "text-muted-foreground"
                         )}
                       >
-                        {field.value ? (
-                          format(field.value, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
+                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      initialFocus
-                    />
+                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
                   </PopoverContent>
                 </Popover>
                 <FormMessage />
@@ -335,9 +343,9 @@ export function EventForm({ event, initialLeadId, initialLeadName, initialEventD
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Start Time</FormLabel>
-                    <FormControl>
-                      <TimePicker value={field.value} onChange={field.onChange} />
-                    </FormControl>
+                  <FormControl>
+                    <TimePicker value={field.value} onChange={field.onChange} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -362,22 +370,13 @@ export function EventForm({ event, initialLeadId, initialLeadName, initialEventD
                           !field.value && "text-muted-foreground"
                         )}
                       >
-                        {field.value ? (
-                          format(field.value, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
+                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      initialFocus
-                    />
+                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
                   </PopoverContent>
                 </Popover>
                 <FormMessage />
@@ -392,9 +391,9 @@ export function EventForm({ event, initialLeadId, initialLeadName, initialEventD
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>End Time</FormLabel>
-                    <FormControl>
-                      <TimePicker value={field.value} onChange={field.onChange} />
-                    </FormControl>
+                  <FormControl>
+                    <TimePicker value={field.value} onChange={field.onChange} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -423,11 +422,7 @@ export function EventForm({ event, initialLeadId, initialLeadName, initialEventD
             <FormItem>
               <FormLabel>Description (Optional)</FormLabel>
               <FormControl>
-                <Textarea
-                  placeholder="Add details about this event"
-                  className="min-h-[120px] resize-none"
-                  {...field}
-                />
+                <Textarea placeholder="Add details about this event" className="min-h-[120px] resize-none" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -436,8 +431,8 @@ export function EventForm({ event, initialLeadId, initialLeadName, initialEventD
 
         <FormField
           control={form.control}
-          name="leadId" // This field primarily controls the ID
-          render={({ field }) => ( // field here refers to leadId field controller
+          name="leadId"
+          render={({ field }) => (
             <FormItem className="flex flex-col">
               <FormLabel>Lead</FormLabel>
               <Popover open={isLeadPopoverOpen} onOpenChange={setIsLeadPopoverOpen}>
@@ -449,53 +444,44 @@ export function EventForm({ event, initialLeadId, initialLeadName, initialEventD
                       aria-expanded={isLeadPopoverOpen}
                       className={cn(
                         "w-full justify-between",
-                        !watchedLeadId && "text-muted-foreground" // Use watchedLeadId for disabled style
+                        !watchedLeadId && "text-muted-foreground"
                       )}
                     >
-                      {watchedLeadId // Display based on watchedLeadId and watchedLeadName
-                        ? watchedLeadName || watchedLeadId // Show name if available, else ID
-                        : "Select Lead..."}
+                      {watchedLeadId ? watchedLeadName || watchedLeadId : "Select Lead..."}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                   <Command shouldFilter={false}>
-                    <CommandInput 
-                      placeholder="Search lead name..." 
-                      value={leadSearchQuery}
-                      onValueChange={setLeadSearchQuery}
-                    />
+                    <CommandInput placeholder="Search lead name..." value={leadSearchQuery} onValueChange={setLeadSearchQuery} />
                     <CommandList>
-                      {/* ... CommandItems ... */}
                       {searchedLeads.map((lead: LeadSearchResult) => (
-                          <CommandItem
-                            value={lead.name} 
-                            key={lead.id}
-                            onSelect={() => {
-                              form.setValue("leadId", lead.id, { shouldDirty: true });
-                              form.setValue("leadName", lead.name, { shouldDirty: true });
-                              setIsLeadPopoverOpen(false);
-                              setLeadSearchQuery("");
-                              setSearchedLeads([]);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                lead.id === watchedLeadId ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {lead.name}
-                          </CommandItem>
-                        ))}
+                        <CommandItem
+                          value={lead.name}
+                          key={lead.id}
+                          onSelect={() => {
+                            form.setValue("leadId", lead.id, { shouldDirty: true })
+                            form.setValue("leadName", lead.name, { shouldDirty: true })
+                            setIsLeadPopoverOpen(false)
+                            setLeadSearchQuery("")
+                            setSearchedLeads([])
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              lead.id === watchedLeadId ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {lead.name}
+                        </CommandItem>
+                      ))}
                     </CommandList>
                   </Command>
                 </PopoverContent>
               </Popover>
-              <FormDescription>
-                Associate this event with a specific lead by searching.
-              </FormDescription>
+              <FormDescription>Associate this event with a specific lead by searching.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -506,16 +492,10 @@ export function EventForm({ event, initialLeadId, initialLeadName, initialEventD
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <>
-                {/* You can use a spinner icon here if you have one, e.g., from lucide-react */}
-                {/* <Loader2 className="mr-2 h-4 w-4 animate-spin" /> */}
-                Saving...
-              </>
-            ) : event?.id ? "Update Event" : "Create Event"}
+            {isSubmitting ? "Saving..." : event?.id ? "Update Event" : "Create Event"}
           </Button>
         </div>
       </form>
     </Form>
   )
-} 
+}

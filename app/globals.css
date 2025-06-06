@@ -70,6 +70,18 @@ body { /* Added from styles/globals.css */
     z-index: 1;
   }
 
+  /* Main content wrapper should be above the background */
+  .min-h-screen {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Ensure content is above the background */
+  main {
+    position: relative;
+    z-index: 1;
+  }
+
   /* Glassmorphism styles for specified elements */
   .card,
   .modal-box,
@@ -250,4 +262,23 @@ body {
 .hide-scrollbar {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
+}
+
+/* Fixed Wavy Background */
+.fixed-wavy-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fixed-wavy-background > div {
+  width: 100%;
+  height: 100%;
 }

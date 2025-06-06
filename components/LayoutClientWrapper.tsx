@@ -4,6 +4,7 @@ import React, { ReactNode, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import AppSidebar from '@/components/AppSidebar';
 import { cn } from '@/lib/utils';
+import { FixedWavyBackground } from '@/components/ui/fixed-wavy-background';
 
 interface LayoutClientWrapperProps {
   children: ReactNode;
@@ -21,28 +22,31 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   return (
-    <div className="min-h-screen bg-black">
-      {/* Render AppSidebar for all pages except map and auth pages */}
-      {!isMapPage && !isAuthPage && (
-        <AppSidebar 
-          initialCollapsed={true} 
-          onCollapsedChange={setIsSidebarCollapsed}
-        />
-      )}
-      
-      {/* Main content area */}
-      <div 
-        className={cn(
-          "min-h-screen transition-[margin] duration-300",
-          !isMapPage && !isAuthPage && "md:ml-[80px] md:ml-[300px]",
-          // Add bottom padding on mobile for the navigation bar
-          "pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0"
+    <>
+      <FixedWavyBackground />
+      <div className="min-h-screen bg-transparent relative z-[1]">
+        {/* Render AppSidebar for all pages except map and auth pages */}
+        {!isMapPage && !isAuthPage && (
+          <AppSidebar 
+            initialCollapsed={true} 
+            onCollapsedChange={setIsSidebarCollapsed}
+          />
         )}
-      >
-        <main>
-          {children}
-        </main>
+        
+        {/* Main content area */}
+        <div 
+          className={cn(
+            "min-h-screen transition-[margin] duration-300 relative",
+            !isMapPage && !isAuthPage && "md:ml-[80px] md:ml-[300px]",
+            // Add bottom padding on mobile for the navigation bar
+            "pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0"
+          )}
+        >
+          <main>
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </>
   );
 } 

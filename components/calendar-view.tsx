@@ -418,143 +418,151 @@ export function CalendarView({ credentials, urlLeadId, urlLeadName, returnUrl }:
   }
 
   return (
-    <>
-      <TooltipProvider>
-        <div className="bg-background dark:bg-slate-900 rounded-lg shadow overflow-hidden w-full">
-          <div className="p-2 sm:p-4 flex items-center justify-between border-b border-border dark:border-gray-700">
-            <motion.h2
-              className="text-xl font-semibold flex items-center text-slate-900 dark:text-slate-100"
-              key={format(currentMonth, "MMMM-yyyy")}
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <CalendarIcon className="mr-2 h-5 w-5" />
-              {format(currentMonth, "MMMM yyyy")}
-            </motion.h2>
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={previousMonth}
-                className="transition-transform hover:scale-110 active:scale-95"
+    <TooltipProvider>
+      <div className="w-full h-full p-4 md:p-6 bg-black/50 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentMonth.toISOString()}
+            className="bg-transparent rounded-lg shadow-lg overflow-hidden w-full"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="p-2 sm:p-4 flex items-center justify-between border-b border-white/10">
+              <motion.h2
+                className="text-xl font-semibold flex items-center text-white"
+                key={format(currentMonth, "MMMM-yyyy")}
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
               >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={nextMonth}
-                className="transition-transform hover:scale-110 active:scale-95"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleRetry}
-                title="Refresh calendar"
-                className="transition-transform hover:scale-110 active:scale-95"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Debug info */}
-          <div className="px-1 sm:px-4 py-2 text-xs text-muted-foreground dark:text-gray-400">{debugInfo}</div>
-
-          {/* Calendar header with weekday names */}
-          <div className="grid grid-cols-7 gap-px bg-border dark:bg-gray-700">
-            {weekDays.map((day) => (
-              <div key={day} className="bg-muted/50 dark:bg-gray-800 py-2 text-center text-sm font-medium text-foreground dark:text-slate-300">
-                {day}
+                <CalendarIcon className="mr-2 h-5 w-5" />
+                {format(currentMonth, "MMMM yyyy")}
+              </motion.h2>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={previousMonth}
+                  className="transition-transform hover:scale-110 active:scale-95 bg-transparent border-white/20 text-white hover:bg-white/10"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={nextMonth}
+                  className="transition-transform hover:scale-110 active:scale-95 bg-transparent border-white/20 text-white hover:bg-white/10"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleRetry}
+                  title="Refresh calendar"
+                  className="transition-transform hover:scale-110 active:scale-95 bg-transparent border-white/20 text-white hover:bg-white/10"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
               </div>
-            ))}
-          </div>
+            </div>
 
-          {/* Calendar grid with animation */}
-          <AnimatePresence initial={false} custom={direction} mode="wait">
-            <motion.div
-              key={format(currentMonth, "yyyy-MM")}
-              custom={direction}
-              variants={variants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={transition}
-              className="grid grid-cols-7 gap-px bg-border dark:bg-gray-600"
-            >
-              {calendarDays.map((day, index) => {
-                const dateKey = format(day, "yyyy-MM-dd")
-                const dayEvents = eventsByDate[dateKey] || []
-                const isToday = isSameDay(day, new Date())
-                const isCurrentMonth = isSameMonth(day, currentMonth)
+            {/* Debug info */}
+            <div className="px-1 sm:px-4 py-2 text-xs text-white/60">{debugInfo}</div>
 
-                return (
-                  <motion.div
-                    key={day.toString()}
-                    className={cn(
-                      "relative min-h-[80px] sm:min-h-[100px] md:min-h-[120px] p-1 sm:p-2 border-r border-b",
-                      isCurrentMonth ? "bg-background dark:bg-slate-900" : "bg-muted/30 dark:bg-slate-800",
-                      isToday && "bg-sky-100 dark:bg-sky-700/50 ring-1 ring-sky-500",
-                      !isCurrentMonth && "text-muted-foreground dark:text-gray-400",
-                      "border-border dark:border-gray-700"
-                    )}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3, delay: index * 0.02 }}
-                    onClick={() => setDetailedDayViewDate(day)}
-                  >
-                    <div className="flex justify-between items-center">
-                      <span
-                        className={cn(
-                          "inline-flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full text-xs sm:text-sm font-medium",
-                          isToday ? "bg-primary text-primary-foreground" : (isCurrentMonth ? "text-foreground dark:text-slate-300" : "text-muted-foreground dark:text-gray-500"),
-                        )}
-                      >
-                        {format(day, "d")}
-                      </span>
-                      {/* Update the events display to handle clicks */}
-                      <div className="flex flex-wrap gap-1 mt-2 py-1 justify-start items-center">
-                        {dayEvents.slice(0, 5).map((eventItem: RawGCalEvent, eventIndex: number) => (
-                          <div
-                            key={`${eventItem.id}-${eventIndex}`}
-                            className={cn("w-2 h-2 rounded-full", getEventColor(eventItem))}
-                            onClick={(e) => handleEventClick(eventItem, e)}
-                            title={eventItem.summary || "Event"}
-                          />
-                        ))}
-                        {dayEvents.length > 5 && (
-                          <div className="w-2 h-2 rounded-full bg-muted dark:bg-gray-600 flex items-center justify-center text-[8px] text-secondary-foreground dark:text-gray-200" title={`${dayEvents.length - 5} more events`}>
-                            {/* Could show +N here, or leave as a generic dot */}
-                          </div>
-                        )}
+            {/* Calendar header with weekday names */}
+            <div className="grid grid-cols-7">
+              {weekDays.map((day) => (
+                <div key={day} className="py-2 text-center text-sm font-medium text-white/80">
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar grid with animation */}
+            <AnimatePresence initial={false} custom={direction} mode="wait">
+              <motion.div
+                key={format(currentMonth, "yyyy-MM")}
+                custom={direction}
+                variants={variants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={transition}
+                className="grid grid-cols-7 border-t border-white/10"
+              >
+                {calendarDays.map((day, index) => {
+                  const dateKey = format(day, "yyyy-MM-dd")
+                  const dayEvents = eventsByDate[dateKey] || []
+                  const isToday = isSameDay(day, new Date())
+                  const isCurrentMonth = isSameMonth(day, currentMonth)
+
+                  return (
+                    <motion.div
+                      key={day.toString()}
+                      className={cn(
+                        "relative min-h-[80px] sm:min-h-[100px] md:min-h-[120px] p-1 sm:p-2 border-r border-b border-l border-white/10",
+                        isCurrentMonth ? "transition-colors hover:bg-white/5" : "bg-black/10",
+                        isToday && "bg-sky-500/20 ring-1 ring-sky-400",
+                        !isCurrentMonth && "text-white/40",
+                      )}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3, delay: index * 0.02 }}
+                      onClick={() => setDetailedDayViewDate(day)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span
+                          className={cn(
+                            "inline-flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full text-xs sm:text-sm font-medium",
+                            isToday ? "bg-primary text-white font-semibold" : (isCurrentMonth ? "text-white" : "text-white/50"),
+                          )}
+                        >
+                          {format(day, "d")}
+                        </span>
+                        {/* Update the events display to handle clicks */}
+                        <div className="flex flex-wrap gap-1 mt-2 py-1 justify-start items-center">
+                          {dayEvents.slice(0, 5).map((eventItem: RawGCalEvent, eventIndex: number) => (
+                            <div
+                              key={`${eventItem.id}-${eventIndex}`}
+                              className={cn("w-2 h-2 rounded-full", getEventColor(eventItem))}
+                              onClick={(e) => handleEventClick(eventItem, e)}
+                              title={eventItem.summary || "Event"}
+                            />
+                          ))}
+                          {dayEvents.length > 5 && (
+                            <div className="w-2 h-2 rounded-full bg-white/20 flex items-center justify-center text-[8px] text-white/80" title={`${dayEvents.length - 5} more events`}>
+                              {/* Could show +N here, or leave as a generic dot */}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    
-                    {/* Add new event button */}
-                    {isCurrentMonth && urlLeadId && urlLeadName && (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const eventDateWithTime = new Date(day);
-                          setSelectedDate(eventDateWithTime);
-                          setIsAppointmentModalOpen(true);
-                        }}
-                        className="text-xs text-muted-foreground hover:text-primary dark:text-gray-400 dark:hover:text-primary-foreground transition-colors p-1 rounded-full hover:bg-muted dark:hover:bg-slate-700"
-                        title="Add new event for this day"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    )}
-                  </motion.div>
-                )
-              })}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </TooltipProvider>
+                      
+                      {/* Add new event button */}
+                      {isCurrentMonth && urlLeadId && urlLeadName && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const eventDateWithTime = new Date(day);
+                            setSelectedDate(eventDateWithTime);
+                            setIsAppointmentModalOpen(true);
+                          }}
+                          className="text-xs text-white/60 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
+                          title="Add new event for this day"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      )}
+                    </motion.div>
+                  )
+                })}
+              </motion.div>
+            </AnimatePresence>
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
       {/* Appointment Creation Modal */}
       {selectedDate && (
@@ -574,6 +582,6 @@ export function CalendarView({ credentials, urlLeadId, urlLeadName, returnUrl }:
           </DialogContent>
         </Dialog>
       )}
-    </>
+    </TooltipProvider>
   )
 }

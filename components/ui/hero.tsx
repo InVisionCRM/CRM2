@@ -23,7 +23,6 @@ import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { isValidImage, isValidFileSize, createFilePreview, resizeImage } from "@/lib/upload-helper"
 import { Badge } from "@/components/ui/badge"
-import { WavyBackground } from "@/components/ui/wavy-background"
 
 export const Hero = () => {
   const logoRef = useRef<HTMLDivElement>(null)
@@ -170,16 +169,7 @@ export const Hero = () => {
   }
 
   return (
-    <WavyBackground 
-      className="w-full"
-      containerClassName="h-[15.25rem]"
-      colors={["#59ff00", "#38bdf8", "#818cf8"]}
-      waveWidth={50}
-      backgroundFill="rgba(0, 0, 0, 0.5)"
-      blur={10}
-      speed="fast"
-      waveOpacity={0.5}
-    >
+    <>
       <motion.div 
         ref={containerRef}
         initial={{ opacity: 0, y: 20 }}
@@ -375,6 +365,6 @@ export const Hero = () => {
           </div>
         </div>
       </motion.div>
-    </WavyBackground>
+    </>
   )
 } 
