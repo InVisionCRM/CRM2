@@ -554,7 +554,6 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
   const [uploadFiles, setUploadFiles] = useState<File[]>([])
   const [uploadPreviews, setUploadPreviews] = useState<UploadPreview[]>([])
-  const [description, setDescription] = useState("")
   const [isUploading, setIsUploading] = useState(false)
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
   const [isSelectionMode, setIsSelectionMode] = useState(false)
@@ -755,7 +754,7 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
       simulateProgress(30, 70, 2000)
       
       // Upload photos
-      const result = await uploadPhotos(leadId, serializedFiles, description)
+      const result = await uploadPhotos(leadId, serializedFiles)
       
       if (result.success) {
         // Update progress for finalization phase
@@ -788,7 +787,6 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
         setIsUploadDialogOpen(false)
         setUploadFiles([])
         setUploadPreviews([])
-        setDescription("")
         setUploadProgress(0)
         if (progressInterval.current) {
           clearInterval(progressInterval.current)
@@ -1204,8 +1202,6 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
         if (!open) {
           setUploadFiles([])
           setUploadPreviews([])
-          setDescription("")
-          setEditingNameIndex(null)
           setUploadProgress(0)
           if (progressInterval.current) {
             clearInterval(progressInterval.current)
@@ -1213,12 +1209,6 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
         }
       }}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Upload Photos</DialogTitle>
-            <DialogDescription>
-              Select photos to upload. Click on a photo name to edit it.
-            </DialogDescription>
-          </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label htmlFor="photos">Select</Label>
@@ -1234,38 +1224,38 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
 
             {/* Preview Grid */}
             {uploadPreviews.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mt-4">
                 {uploadPreviews.map((preview, index) => (
                   <div key={index} className="relative group">
-                    <div className="relative aspect-square border rounded-lg overflow-hidden bg-muted">
+                    <div className="relative aspect-square border rounded-md overflow-hidden bg-muted">
                       <Image
                         src={preview.previewUrl}
                         alt={preview.name}
                         fill
                         className="object-cover"
-                        sizes="(max-width: 768px) 50vw, 33vw"
+                        sizes="(max-width: 768px) 25vw, 16vw"
                       />
                       <button
                         onClick={() => removePreview(index)}
-                        className="absolute top-1 right-1 bg-black/50 hover:bg-black/70 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-0.5 right-0.5 bg-black/50 hover:bg-black/70 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
                         aria-label={`Remove ${preview.name}`}
                       >
-                        <X className="h-4 w-4 text-white" />
+                        <X className="h-3 w-3 text-white" />
                       </button>
                     </div>
-                    <div className="mt-1">
+                    <div className="mt-0.5">
                       {editingNameIndex === index ? (
                         <Input
                           ref={nameInputRef}
                           defaultValue={preview.name}
                           onBlur={(e) => handleNameEdit(index, e.target.value)}
                           onKeyDown={(e) => handleNameKeyDown(e, index)}
-                          className="h-7 text-xs py-1"
+                          className="h-6 text-xs py-0.5"
                         />
                       ) : (
                         <button
                           onClick={() => setEditingNameIndex(index)}
-                          className="w-full text-left text-xs text-muted-foreground group/name flex items-center gap-1.5 hover:text-foreground"
+                          className="w-full text-left text-[10px] text-muted-foreground group/name flex items-center gap-1 hover:text-foreground"
                           title="Click to edit name"
                         >
                           <div className="truncate flex-1">
@@ -1274,7 +1264,7 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
                               {`.${preview.originalName.split('.').pop()}`}
                             </span>
                           </div>
-                          <Pencil className="h-3 w-3 opacity-0 group-hover/name:opacity-100 transition-opacity shrink-0" />
+                          <Pencil className="h-2.5 w-2.5 opacity-0 group-hover/name:opacity-100 transition-opacity shrink-0" />
                         </button>
                       )}
                     </div>
@@ -1302,17 +1292,6 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
               </div>
             )}
 
-            <div>
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="mt-1.5"
-                placeholder="Add a description for these photos..."
-                disabled={isUploading}
-              />
-            </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
@@ -1321,8 +1300,6 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
                 onClick={() => {
                   setUploadFiles([])
                   setUploadPreviews([])
-                  setDescription("")
-                  setEditingNameIndex(null)
                   setUploadProgress(0)
                   if (progressInterval.current) {
                     clearInterval(progressInterval.current)
