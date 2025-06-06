@@ -10,9 +10,10 @@ interface PhotoCanvasProps {
   imageUrl: string
   onSave: (annotatedImageUrl: string) => void
   initialAnnotations?: string
+  isSaving?: boolean
 }
 
-export default function PhotoCanvas({ imageUrl, onSave, initialAnnotations }: PhotoCanvasProps) {
+export default function PhotoCanvas({ imageUrl, onSave, initialAnnotations, isSaving }: PhotoCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
   const [lines, setLines] = useState<Array<{ points: Array<{ x: number; y: number }>; color: string; width: number }>>(
@@ -35,7 +36,7 @@ export default function PhotoCanvas({ imageUrl, onSave, initialAnnotations }: Ph
     canvas.height = canvas.clientHeight
 
     // Create and load image
-    const img = new Image()
+    const img = document.createElement('img')
     img.crossOrigin = "anonymous"
     img.src = imageUrl
     imageRef.current = img
@@ -228,7 +229,7 @@ export default function PhotoCanvas({ imageUrl, onSave, initialAnnotations }: Ph
     if (!canvasRef.current || !imageRef.current) return
 
     // Get the canvas data URL with the image and annotations
-    const dataUrl = canvasRef.current.toDataURL("image/png")
+    const dataUrl = canvasRef.current.toDataURL("image/jpeg", 0.95)
 
     // Pass the annotated image back to the parent component
     onSave(dataUrl)
@@ -256,12 +257,17 @@ export default function PhotoCanvas({ imageUrl, onSave, initialAnnotations }: Ph
       </div>
 
       <div className="flex justify-between">
-        <Button variant="outline" size="sm" onClick={handleUndo} disabled={lines.length === 0}>
+        <Button variant="outline" size="sm" onClick={handleUndo} disabled={lines.length === 0 || isSaving}>
           <Undo className="h-4 w-4 mr-1" />
           Undo
         </Button>
-        <Button onClick={handleSave} size="sm" className="bg-[#a4c639] hover:bg-[#8aaa2a] text-black">
-          Done
+        <Button 
+          onClick={handleSave} 
+          size="sm" 
+          className="bg-[#a4c639] hover:bg-[#8aaa2a] text-black"
+          disabled={isSaving}
+        >
+          {isSaving ? "Saving..." : "Done"}
         </Button>
       </div>
     </div>

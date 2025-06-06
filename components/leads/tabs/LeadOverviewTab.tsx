@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Pencil, Check, Loader2, Phone, Mail, MapPin } from "lucide-react"
 import { formatStatusLabel } from "@/lib/utils"
 // import { Avatar, AvatarFallback } from "@/components/ui/avatar" // Avatar removed
-import { Badge } from "@/components/ui/badge"
 import { 
   Select, 
   SelectContent, 
@@ -212,10 +211,6 @@ export function LeadOverviewTab({ lead, onEditRequest }: LeadOverviewTabProps) {
         </CardHeader>
         <CardContent className="space-y-3 px-4 pb-4 sm:px-6 sm:pb-5">
           <div className="space-y-2">
-            <div className="space-y-0.5">
-              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Status</p>
-              <Badge variant={lead.status as any} className="text-xs px-1.5 py-0.5 sm:text-sm sm:px-2 sm:py-1">{formatStatusLabel(lead.status)}</Badge>
-            </div>
             <div className="space-y-0.5">
               <p className="text-xs sm:text-sm font-medium text-muted-foreground">Created</p>
               {createdDate && isValid(createdDate) ? (

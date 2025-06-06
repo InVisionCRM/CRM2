@@ -5,19 +5,32 @@ import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { IconSettings, IconUserBolt, IconHomeHeart, IconMap, IconLink, IconCalendar, IconFolder, IconChevronLeft, IconChevronRight, IconDeviceLaptop, IconScale, IconLogout } from "@tabler/icons-react"
+import { IconUserBolt, IconHomeHeart, IconMap, IconLink, IconCalendar, IconFolder, IconChevronLeft, IconChevronRight } from "@tabler/icons-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { signOut } from "next-auth/react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string
   initialCollapsed?: boolean
+  onCollapsedChange?: (collapsed: boolean) => void
 }
 
-export default function AppSidebar({ className, initialCollapsed = false }: SidebarProps) {
+export default function AppSidebar({ 
+  className, 
+  initialCollapsed = true,
+  onCollapsedChange 
+}: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed)
-  const pathname = usePathname()
+  const pathname = usePathname() || ''
+
+  // Call onCollapsedChange when isCollapsed changes
+  useEffect(() => {
+    onCollapsedChange?.(isCollapsed)
+  }, [isCollapsed, onCollapsedChange])
+
+  const handleCollapse = () => {
+    setIsCollapsed(!isCollapsed)
+  }
 
   const links = [
     {
@@ -46,23 +59,21 @@ export default function AppSidebar({ className, initialCollapsed = false }: Side
       icon: <IconFolder className="h-5 w-5 shrink-0 text-[#ffffff]" />,
     },
     {
-      label: "Metrics",
-      href: "/team",
-      icon: <IconScale className="h-5 w-5 shrink-0 text-[#ffffff]" />,
-    },
-    {
       label: "Links",
       href: "/quick-links",
       icon: <IconLink className="h-5 w-5 shrink-0 text-[#ffffff]" />,
     },
-    {
-      label: "Settings",
-      href: "/settings",
-      icon: <IconSettings className="h-5 w-5 shrink-0 text-[#ffffff]" />,
-    },
   ]
 
-  const SidebarContent = () => (
+  return (
+    <div
+      className={cn(
+        "fixed left-0 top-0 bottom-0 z-40 flex flex-col bg-black/25 backdrop-blur-lg border-r border-white/20",
+        isCollapsed ? "w-[80px]" : "w-[300px]",
+        "transition-all duration-300",
+        className
+      )}
+    >
     <div className="flex h-full w-full flex-col gap-4">
       <div className="flex h-[60px] items-center justify-between px-6">
         <AnimatePresence initial={false}>
@@ -81,7 +92,7 @@ export default function AppSidebar({ className, initialCollapsed = false }: Side
           variant="ghost"
           size="icon"
           className="h-8 w-8 text-[#59ff00] hover:bg-white/10"
-          onClick={() => setIsCollapsed(!isCollapsed)}
+            onClick={handleCollapse}
         >
           {isCollapsed ? <IconChevronRight size={28} /> : <IconChevronLeft size={28} />}
         </Button>
@@ -126,55 +137,7 @@ export default function AppSidebar({ className, initialCollapsed = false }: Side
           </TooltipProvider>
         </div>
       </ScrollArea>
-      <div className={cn("flex flex-col gap-2 px-4 pb-4 z-200", isCollapsed && "items-center")}>
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn("text-[#59ff00] hover:bg-white/10", isCollapsed ? "w-10 h-10" : "w-full h-10")}
-                onClick={async () => {
-                  await signOut({ callbackUrl: "/login", redirect: true });
-                }}
-              >
-                <IconLogout className="h-5 w-5" />
-                <AnimatePresence initial={false}>
-                  {!isCollapsed && (
-                    <motion.span
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: "auto" }}
-                      exit={{ opacity: 0, width: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="ml-2"
-                    >
-                      Logout
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </Button>
-            </TooltipTrigger>
-            {isCollapsed && (
-              <TooltipContent side="right">
-                Logout
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
       </div>
-    </div>
-  )
-
-  return (
-    <div
-      className={cn(
-        "flex h-full flex-col bg-black/25 backdrop-blur-lg border-r border-white/20",
-        isCollapsed ? "w-[80px]" : "w-[300px]",
-        "transition-all duration-300",
-        className
-      )}
-    >
-      <SidebarContent />
     </div>
   )
 }

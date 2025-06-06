@@ -7,11 +7,12 @@ import { motion, AnimatePresence } from "framer-motion"
 interface SearchBarProps extends React.InputHTMLAttributes<HTMLInputElement> {
   containerClassName?: string;
   topOffset?: string;
+  startOpen?: boolean;
 }
 
 export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
-  ({ className, containerClassName, topOffset = "1rem", ...props }, ref) => {
-    const [isExpanded, setIsExpanded] = useState(false);
+  ({ className, containerClassName, topOffset = "1rem", startOpen = false, ...props }, ref) => {
+    const [isExpanded, setIsExpanded] = useState(startOpen);
 
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
@@ -31,6 +32,7 @@ export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
           containerClassName
         )}
         style={{ top: topOffset }}
+        initial={{ width: startOpen ? "100%" : "50%" }}
         animate={{ width: isExpanded ? "100%" : "50%" }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
       >
@@ -39,7 +41,7 @@ export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
             ref={ref}
             type="search"
             className={cn(
-              "w-full py-2 bg-black/50 text-white placeholder-white/1",
+              "w-full py-2 bg-black/50 text-white placeholder-white/50",
               "rounded-full backdrop-blur-sm focus:ring-0 font-extralight",
               "h-10 sm:h-12 pl-8 sm:pl-10 pr-3 sm:pr-4",
               "border border-[#59ff00]",
@@ -62,13 +64,17 @@ export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
             )} 
           />
           <AnimatePresence>
-            {isExpanded && (
+            {isExpanded && props.value && (
               <motion.button
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (props.onChange) {
+                    const event = { target: { value: "" } } as React.ChangeEvent<HTMLInputElement>;
+                    props.onChange(event);
+                  }
                   setIsExpanded(false);
                 }}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-white/50 hover:text-white/80 transition-colors rounded-full hover:bg-white/10"

@@ -362,11 +362,11 @@ model LeadPhoto {
   id            String    @id @default(uuid())
   name          String
   description   String?
-  url           String    // Full-size photo URL
-  thumbnailUrl  String    // Thumbnail URL
-  driveFileId   String    // Google Drive file ID
+  url           String    // Full-size photo URL from Vercel Blob
+  thumbnailUrl  String    // Thumbnail URL from Vercel Blob
   mimeType      String?   // File MIME type
   size          Int?      // File size in bytes
+  driveFileId   String?   // Optional Google Drive file ID
   
   // Relations
   leadId        String    @db.VarChar(255)
@@ -379,4 +379,6 @@ model LeadPhoto {
 
   @@index([leadId])
   @@index([uploadedById])
+  @@index([createdAt])
+  @@index([updatedAt])
 }

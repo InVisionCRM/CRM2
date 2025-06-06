@@ -44,6 +44,8 @@ interface LeadsClientProps {
   onUserChange: (user: string | null) => void;
   onSortChange: (sortOptions: SortOptions) => void;
   onSearchChange: (query: string) => void;
+  openCreateForm: boolean;
+  setOpenCreateForm: (open: boolean) => void;
 }
 
 export default function LeadsClient({ 
@@ -54,11 +56,12 @@ export default function LeadsClient({
   isLoadingUsers,
   onUserChange,
   onSortChange,
-  onSearchChange
+  onSearchChange,
+  openCreateForm,
+  setOpenCreateForm
 }: LeadsClientProps) {
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus | null>(null)
   const { leads, isLoading, error } = useLeads({ status: selectedStatus, assignedTo: selectedUser, search: searchQuery, sort: sortOptions.field, order: sortOptions.order })
-  const [openCreateForm, setOpenCreateForm] = useState(false)
   const router = useRouter()
 
   // State for dialogs
@@ -209,17 +212,6 @@ export default function LeadsClient({
             <SelectItem value="status_desc">Status (Z-A)</SelectItem>
           </SelectContent>
         </Select>
-        <div className="ml-auto">
-          <Button 
-            size="default"
-            className="text-black font-medium bg-gradient-to-r from-lime-400 to-lime-500 hover:from-lime-500 hover:to-lime-600 shadow-lg whitespace-nowrap h-9 px-3"
-            onClick={() => setOpenCreateForm(true)}
-            disabled={isLoading}
-          >
-            <Plus className="mr-1.5 h-4 w-4" />
-            Create Lead
-          </Button>
-        </div>
       </div>
 
       <CreateLeadForm 

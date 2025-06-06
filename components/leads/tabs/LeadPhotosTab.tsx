@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Camera, Upload, FolderPlus, X, Info, Trash2 } from "lucide-react"
+import { useState, useEffect, useCallback, useRef } from "react"
+import { Camera, Upload, X, Info, Trash2, Check, Share2, Copy, Link, Mail, Download, Crop, Pencil, Type, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -11,20 +11,25 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
+  DialogDescription,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import Image from "next/image"
-// Re-enable server actions now that the migration is applied
-import { 
-  checkPhotosFolder, 
-  createPhotosFolder, 
-  getLeadPhotos, 
-  uploadPhotos,
-  deletePhoto
-} from "@/app/actions/photo-actions"
+import { getLeadPhotos, uploadPhotos, deletePhoto, updatePhoto } from "@/app/actions/photo-actions"
+import ReactCrop, { type Crop as ReactCropType } from 'react-image-crop'
+import 'react-image-crop/dist/ReactCrop.css'
+import PhotoCanvas from "@/components/photos/photo-canvas"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Progress } from "@/components/ui/progress"
 
 // Types for photos
 interface Photo {
@@ -32,12 +37,27 @@ interface Photo {
   url: string
   thumbnailUrl: string
   name: string
-  description: string
+  description: string | null
   createdAt: string
   uploadedBy?: {
     name: string | null
     image: string | null
   } | null
+  leadId: string
+}
+
+// Add new interface for photo updates
+interface PhotoUpdate {
+  description?: string | null
+  imageData?: string
+}
+
+// Add new interface for serialized file data
+interface SerializedFile {
+  name: string
+  type: string
+  size: number
+  base64Data: string
 }
 
 interface PhotoDialogProps {
@@ -45,20 +65,260 @@ interface PhotoDialogProps {
   isOpen: boolean
   onClose: () => void
   onDelete?: (photoId: string) => void
+  onUpdate?: (photoId: string, updates: PhotoUpdate) => void
   canDelete?: boolean
+  claimNumber?: string
 }
 
 interface LeadPhotosTabProps {
   leadId: string
-  googleDriveUrl?: string | null
+  claimNumber?: string
 }
 
-// PhotoDialog component for viewing photos in full size
-const PhotoDialog = ({ photo, isOpen, onClose, onDelete, canDelete = true }: PhotoDialogProps) => {
+interface UploadPreview {
+  file: File
+  previewUrl: string
+  name: string
+  originalName: string
+}
+
+// Add new interface for tracking individual file progress
+interface UploadProgressTracker {
+  preparing: number;
+  uploading: number;
+  finalizing: number;
+}
+
+// Helper function to create Gmail share link
+const createGmailShareLink = (photos: Photo[], claimNumber?: string) => {
+  const subject = encodeURIComponent(`Photos${claimNumber ? ` - Claim #${claimNumber}` : ''}`)
+  const body = encodeURIComponent(
+    `${claimNumber ? `Claim #${claimNumber}\n\n` : ''}` +
+    photos.map(photo => `${photo.name}:\n${photo.url}`).join('\n\n')
+  )
+  return `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`
+}
+
+// Helper function to fetch image as blob
+const fetchImageAsBlob = async (url: string): Promise<Blob> => {
+  const response = await fetch(url)
+  return response.blob()
+}
+
+// Helper function to download image
+const downloadImage = async (url: string, filename: string) => {
+  const blob = await fetchImageAsBlob(url)
+  const blobUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = blobUrl
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(blobUrl)
+}
+
+// Helper function to get cropped image data
+function getCroppedImg(image: HTMLImageElement, crop: ReactCropType): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas')
+    const scaleX = image.naturalWidth / image.width
+    const scaleY = image.naturalHeight / image.height
+    canvas.width = crop.width
+    canvas.height = crop.height
+    const ctx = canvas.getContext('2d')
+
+    if (!ctx) {
+      reject(new Error('No 2d context'))
+      return
+    }
+
+    try {
+      ctx.drawImage(
+        image,
+        crop.x * scaleX,
+        crop.y * scaleY,
+        crop.width * scaleX,
+        crop.height * scaleY,
+        0,
+        0,
+        crop.width,
+        crop.height
+      )
+
+      // Convert to base64 with high quality
+      const base64 = canvas.toDataURL('image/jpeg', 0.95)
+      resolve(base64)
+    } catch (err) {
+      reject(err)
+    }
+  })
+}
+
+// Helper function to load an image
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = document.createElement('img')
+    img.crossOrigin = "anonymous" // Enable CORS
+    img.onload = () => resolve(img)
+    img.onerror = reject
+    img.src = src
+  })
+}
+
+// PhotoDialog component
+const PhotoDialog = ({ photo, isOpen, onClose, onDelete, onUpdate, canDelete = true, claimNumber }: PhotoDialogProps) => {
   const [isDeleting, setIsDeleting] = useState(false)
+  const [editMode, setEditMode] = useState<'crop' | 'draw' | 'caption' | null>(null)
+  const [crop, setCrop] = useState<ReactCropType>()
+  const [completedCrop, setCompletedCrop] = useState<ReactCropType>()
+  const [editedImageUrl, setEditedImageUrl] = useState<string>('')
+  const [caption, setCaption] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
   const { toast } = useToast()
 
-  if (!photo) return null
+  useEffect(() => {
+    if (photo) {
+      setEditedImageUrl(photo.url)
+      setCaption(photo.description || '')
+      setCrop(undefined)
+      setCompletedCrop(undefined)
+    }
+  }, [photo])
+
+  const handleCropComplete = useCallback(async () => {
+    if (!completedCrop || !photo) return
+
+    try {
+      const img = await loadImage(photo.url)
+      const croppedImageUrl = await getCroppedImg(img, completedCrop)
+      
+      // Save the cropped image
+      setIsSaving(true)
+      await onUpdate?.(photo.id, {
+        imageData: croppedImageUrl,
+        description: photo.description
+      })
+
+      setEditedImageUrl(croppedImageUrl)
+      setEditMode(null)
+      
+      toast({
+        title: "Success",
+        description: "Image cropped successfully",
+      })
+    } catch (e) {
+      console.error('Error cropping image:', e)
+      toast({
+        title: "Error",
+        description: "Failed to crop image",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }, [completedCrop, photo, onUpdate, toast])
+
+  const handleSaveAnnotations = async (annotatedImageUrl: string) => {
+    if (!photo) return
+
+    try {
+      setIsSaving(true)
+      await onUpdate?.(photo.id, {
+        imageData: annotatedImageUrl,
+        description: photo.description
+      })
+
+      setEditedImageUrl(annotatedImageUrl)
+      setEditMode(null)
+
+      toast({
+        title: "Success",
+        description: "Drawing saved successfully",
+      })
+    } catch (error) {
+      console.error('Error saving drawing:', error)
+      toast({
+        title: "Error",
+        description: "Failed to save drawing",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleSaveChanges = async () => {
+    if (!photo || !onUpdate) return
+
+    try {
+      setIsSaving(true)
+      
+      // For caption changes, we don't need to include the image data
+      await onUpdate(photo.id, {
+        description: caption
+      })
+
+      toast({
+        title: "Success",
+        description: "Caption updated successfully",
+      })
+      
+      setEditMode(null)
+    } catch (error) {
+      console.error('Error saving changes:', error)
+      toast({
+        title: "Error",
+        description: "Failed to save changes",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleShare = async () => {
+    if (!photo) return
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: photo.name,
+          text: photo.description || 'Check out this photo',
+          url: photo.url,
+        })
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          console.error('Error sharing:', error)
+          copyToClipboard()
+        }
+      }
+    } else {
+      copyToClipboard()
+    }
+  }
+
+  const handleGmailShare = () => {
+    if (!photo) return
+    window.open(createGmailShareLink([photo], claimNumber), '_blank')
+  }
+
+  const copyToClipboard = () => {
+    if (!photo) return
+    navigator.clipboard.writeText(photo.url).then(() => {
+      toast({
+        title: "Link copied",
+        description: "Photo URL has been copied to clipboard",
+      })
+    }).catch((error) => {
+      console.error('Error copying to clipboard:', error)
+      toast({
+        title: "Error",
+        description: "Failed to copy link to clipboard",
+        variant: "destructive",
+      })
+    })
+  }
 
   const handleDelete = async () => {
     if (!photo || !onDelete) return
@@ -79,75 +339,265 @@ const PhotoDialog = ({ photo, isOpen, onClose, onDelete, canDelete = true }: Pho
     }
   }
 
+  if (!photo) return null
+
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden flex flex-col">
         <DialogHeader className="p-4 flex justify-between items-center">
           <DialogTitle className="text-lg">{photo.name}</DialogTitle>
           <div className="flex items-center gap-2">
-            {canDelete && onDelete && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={handleDelete} 
-                disabled={isDeleting}
-                className="h-8 w-8 text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+            {!editMode && (
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleShare}>
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Share photo
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleGmailShare}>
+                      <Mail className="h-4 w-4 mr-2" />
+                      Share via Gmail
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={copyToClipboard}>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy link
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setEditMode('crop')}>
+                      <Crop className="h-4 w-4 mr-2" />
+                      Crop
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setEditMode('draw')}>
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Draw
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setEditMode('caption')}>
+                      <Type className="h-4 w-4 mr-2" />
+                      Caption
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {canDelete && onDelete && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={handleDelete} 
+                    disabled={isDeleting}
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </>
             )}
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => {
+                if (editMode) {
+                  setEditMode(null)
+                  setEditedImageUrl(photo.url)
+                  setCaption(photo.description || '')
+                } else {
+                  onClose()
+                }
+              }} 
+              className="h-8 w-8"
+            >
               <X className="h-4 w-4" />
             </Button>
           </div>
         </DialogHeader>
         
         <div className="relative flex-grow overflow-auto">
-          <div className="relative w-full h-full min-h-[50vh]">
-            <Image
-              src={photo.url}
-              alt={photo.name}
-              fill
-              className="object-contain"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 75vw, 50vw"
+          {editMode === 'crop' ? (
+            <div className="relative w-full h-full min-h-[50vh] bg-black flex flex-col">
+              <div className="flex-grow relative overflow-hidden flex items-center justify-center p-4">
+                <div className="relative max-h-[calc(100vh-16rem)] h-full w-full flex items-center justify-center">
+                  <ReactCrop
+                    crop={crop}
+                    onChange={(c) => setCrop(c)}
+                    onComplete={(c) => setCompletedCrop(c)}
+                    className="max-w-full max-h-full flex items-center justify-center"
+                  >
+                    <img
+                      src={photo.url}
+                      alt={photo.name}
+                      className="max-h-full max-w-full object-contain"
+                      style={{ maxHeight: 'calc(100vh - 16rem)' }}
+                      crossOrigin="anonymous"
+                    />
+                  </ReactCrop>
+                </div>
+              </div>
+              <div className="p-4 flex justify-end gap-2 bg-background/95 border-t">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setEditMode(null)
+                    setEditedImageUrl(photo.url)
+                    setCrop(undefined)
+                    setCompletedCrop(undefined)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleCropComplete}
+                  disabled={!completedCrop?.width || !completedCrop?.height || isSaving}
+                  className="bg-[#59ff00] text-black hover:bg-[#59ff00]/90"
+                >
+                  {isSaving ? "Saving..." : "Apply Crop"}
+                </Button>
+              </div>
+            </div>
+          ) : editMode === 'draw' ? (
+            <PhotoCanvas
+              imageUrl={editedImageUrl}
+              onSave={handleSaveAnnotations}
+              isSaving={isSaving}
             />
-          </div>
+          ) : editMode === 'caption' ? (
+            <div className="p-4 space-y-4">
+              <div className="relative w-full h-[40vh]">
+                <Image
+                  src={editedImageUrl}
+                  alt={photo.name}
+                  fill
+                  className="object-contain"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 75vw, 50vw"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="caption">Caption</Label>
+                <Textarea
+                  id="caption"
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  placeholder="Add a caption to this photo..."
+                  rows={4}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setEditMode(null)
+                    setCaption(photo.description || '')
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSaveChanges}
+                  disabled={isSaving}
+                  className="bg-[#59ff00] text-black hover:bg-[#59ff00]/90"
+                >
+                  {isSaving ? "Saving..." : "Save Caption"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="relative w-full h-full min-h-[50vh]">
+              <Image
+                src={editedImageUrl}
+                alt={photo.name}
+                fill
+                className="object-contain"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 75vw, 50vw"
+              />
+            </div>
+          )}
         </div>
         
-        <div className="p-4 bg-muted/30">
-          {photo.description && (
-            <p className="text-sm text-muted-foreground mb-2">{photo.description}</p>
-          )}
-          <div className="flex justify-between items-center text-xs text-muted-foreground">
-            <span>Uploaded: {new Date(photo.createdAt).toLocaleString()}</span>
-            {photo.uploadedBy?.name && (
-              <span>By: {photo.uploadedBy.name}</span>
+        {!editMode && (
+          <div className="p-4 bg-muted/30">
+            {photo.description && (
+              <p className="text-sm text-muted-foreground mb-2">{photo.description}</p>
             )}
+            <div className="flex justify-between items-center text-xs text-muted-foreground">
+              <span>Uploaded: {new Date(photo.createdAt).toLocaleString()}</span>
+              {photo.uploadedBy?.name && (
+                <span>By: {photo.uploadedBy.name}</span>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   )
 }
 
 // Main PhotosTab component
-export function LeadPhotosTab({ leadId, googleDriveUrl }: LeadPhotosTabProps) {
+export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
   const [photos, setPhotos] = useState<Photo[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const [isPhotoDialogOpen, setIsPhotoDialogOpen] = useState(false)
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
-  const [hasFolderCreated, setHasFolderCreated] = useState(false)
-  const [isFolderCreating, setIsFolderCreating] = useState(false)
   const [uploadFiles, setUploadFiles] = useState<File[]>([])
+  const [uploadPreviews, setUploadPreviews] = useState<UploadPreview[]>([])
   const [description, setDescription] = useState("")
   const [isUploading, setIsUploading] = useState(false)
+  const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
+  const [isSelectionMode, setIsSelectionMode] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false)
+  const [editingNameIndex, setEditingNameIndex] = useState<number | null>(null)
+  const nameInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
-
-  // Check if photos folder exists in Google Drive and fetch photos
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const progressInterval = useRef<NodeJS.Timeout>()
+  
+  // Cleanup interval on unmount
   useEffect(() => {
-    const checkFolder = async () => {
+    return () => {
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current)
+      }
+    }
+  }, [])
+
+  const simulateProgress = (start: number, end: number, duration: number) => {
+    if (progressInterval.current) {
+      clearInterval(progressInterval.current)
+    }
+
+    const step = (end - start) / (duration / 50) // Update every 50ms
+    let current = start
+
+    progressInterval.current = setInterval(() => {
+      current += step
+      if (current >= end) {
+        current = end
+        if (progressInterval.current) {
+          clearInterval(progressInterval.current)
+        }
+      }
+      setUploadProgress(Math.min(Math.round(current), end))
+    }, 50)
+  }
+
+  // Fetch photos
+  useEffect(() => {
+    const fetchPhotos = async () => {
       if (!leadId) {
         setError("Lead ID is required")
         setIsLoading(false)
@@ -156,88 +606,111 @@ export function LeadPhotosTab({ leadId, googleDriveUrl }: LeadPhotosTabProps) {
 
       try {
         setIsLoading(true)
+        const result = await getLeadPhotos(leadId)
         
-        // Check if the Photos folder exists
-        const folderResult = await checkPhotosFolder(leadId)
-        
-        if (folderResult.success && folderResult.hasFolder) {
-          setHasFolderCreated(true)
-          
-          // Fetch photos
-          const photosResult = await getLeadPhotos(leadId)
-          
-          if (photosResult.success) {
-            setPhotos(photosResult.photos)
-          } else {
-            setError(photosResult.error || "Failed to fetch photos")
-          }
+        if (result.success && result.photos) {
+          // Transform the photos to match our interface
+          const transformedPhotos: Photo[] = result.photos.map(photo => ({
+            id: photo.id,
+            url: photo.url,
+            thumbnailUrl: photo.thumbnailUrl || photo.url,
+            name: photo.name,
+            description: photo.description,
+            createdAt: photo.createdAt.toISOString(),
+            uploadedBy: photo.uploadedBy,
+            leadId: photo.leadId
+          }))
+          setPhotos(transformedPhotos)
         } else {
-          setHasFolderCreated(false)
-          if (!googleDriveUrl) {
-            setError("No Google Drive folder set up for this lead")
-          }
+          setError(result.error || "Failed to fetch photos")
         }
       } catch (error) {
-        console.error("Error checking photos folder:", error)
-        setError("Failed to check if photos folder exists")
+        console.error("Error fetching photos:", error)
+        setError("Failed to fetch photos")
       } finally {
         setIsLoading(false)
       }
     }
 
     if (leadId) {
-      checkFolder()
+      fetchPhotos()
     }
-  }, [googleDriveUrl, leadId])
+  }, [leadId])
 
-  // Handle creating the Photos folder in Google Drive
-  const handleCreatePhotosFolder = async () => {
-    if (!leadId) {
-      toast({
-        title: "Error",
-        description: "Lead ID is required",
-        variant: "destructive",
-      })
-      return
-    }
+  // Function to create file previews
+  const createPreviews = (files: File[]) => {
+    const previews: UploadPreview[] = []
     
-    try {
-      setIsFolderCreating(true)
-      
-      const result = await createPhotosFolder(leadId)
-      
-      if (result.success) {
-        setHasFolderCreated(true)
-        toast({
-          title: "Photos folder created",
-          description: "You can now upload photos for this lead",
-        })
-        
-        // Refresh photos (should be empty for a new folder)
-        const photosResult = await getLeadPhotos(leadId)
-        if (photosResult.success) {
-          setPhotos(photosResult.photos)
+    files.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          previews.push({
+            file,
+            previewUrl: e.target.result as string,
+            name: file.name.replace(/\.[^/.]+$/, ""),
+            originalName: file.name
+          })
+          if (previews.length === files.length) {
+            setUploadPreviews(previews)
+          }
         }
-      } else {
-        toast({
-          title: "Error creating folder",
-          description: result.error || "Failed to create photos folder",
-          variant: "destructive",
-        })
       }
-    } catch (error) {
-      console.error("Error creating photos folder:", error)
-      toast({
-        title: "Error creating folder",
-        description: "Failed to create photos folder",
-        variant: "destructive",
-      })
-    } finally {
-      setIsFolderCreating(false)
+      reader.readAsDataURL(file)
+    })
+  }
+
+  // Focus input when editing name
+  useEffect(() => {
+    if (editingNameIndex !== null && nameInputRef.current) {
+      nameInputRef.current.focus()
+      nameInputRef.current.select()
+    }
+  }, [editingNameIndex])
+
+  const handleNameEdit = (index: number, newName: string) => {
+    setUploadPreviews(prev => prev.map((preview, i) => {
+      if (i === index) {
+        const extension = preview.originalName.split('.').pop() || ''
+        return {
+          ...preview,
+          name: newName,
+          file: new File([preview.file], `${newName}.${extension}`, { type: preview.file.type })
+        }
+      }
+      return preview
+    }))
+    setUploadFiles(prev => prev.map((file, i) => {
+      if (i === index) {
+        const extension = uploadPreviews[index].originalName.split('.').pop() || ''
+        return new File([file], `${newName}.${extension}`, { type: file.type })
+      }
+      return file
+    }))
+    setEditingNameIndex(null)
+  }
+
+  const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === 'Enter') {
+      handleNameEdit(index, e.currentTarget.value)
+    } else if (e.key === 'Escape') {
+      setEditingNameIndex(null)
     }
   }
 
-  // Handle photo upload
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      const files = Array.from(event.target.files)
+      setUploadFiles(files)
+      createPreviews(files)
+    }
+  }
+
+  const removePreview = (index: number) => {
+    setUploadFiles(prev => prev.filter((_, i) => i !== index))
+    setUploadPreviews(prev => prev.filter((_, i) => i !== index))
+  }
+
   const handleUpload = async () => {
     if (!leadId) {
       toast({
@@ -259,49 +732,81 @@ export function LeadPhotosTab({ leadId, googleDriveUrl }: LeadPhotosTabProps) {
       }
 
       setIsUploading(true)
+      setUploadProgress(0)
       
-      // Prepare files for upload by converting them to serializable objects
-      const serializedFiles = await Promise.all(
+      // Start progress animation for preparation phase
+      simulateProgress(0, 30, 1000)
+
+      // Prepare files for upload
+      const serializedFiles: SerializedFile[] = await Promise.all(
         Array.from(uploadFiles).map(async (file) => {
-          const arrayBuffer = await file.arrayBuffer();
+          const buffer = await file.arrayBuffer()
+          const base64Data = Buffer.from(buffer).toString('base64')
           return {
             name: file.name,
             type: file.type,
             size: file.size,
-            arrayBuffer
-          };
+            base64Data
+          }
         })
-      );
+      )
+
+      // Update progress for upload phase
+      simulateProgress(30, 70, 2000)
       
-      // Upload photos to Google Drive
+      // Upload photos
       const result = await uploadPhotos(leadId, serializedFiles, description)
       
       if (result.success) {
-        // Refresh photos
+        // Update progress for finalization phase
+        simulateProgress(70, 90, 1000)
+        
+        // Update photos list
         const photosResult = await getLeadPhotos(leadId)
         
-        if (photosResult.success) {
-          setPhotos(photosResult.photos)
+        if (photosResult.success && photosResult.photos) {
+          const transformedPhotos: Photo[] = photosResult.photos.map(photo => ({
+            id: photo.id,
+            url: photo.url,
+            thumbnailUrl: photo.thumbnailUrl || photo.url,
+            name: photo.name,
+            description: photo.description,
+            createdAt: photo.createdAt.toISOString(),
+            uploadedBy: photo.uploadedBy,
+            leadId: photo.leadId
+          }))
+          setPhotos(transformedPhotos)
+          
+          // Complete the progress smoothly
+          simulateProgress(90, 100, 500)
+          
+          // Small delay before closing to show completion
+          await new Promise(resolve => setTimeout(resolve, 800))
         }
         
         // Close dialog and reset state
         setIsUploadDialogOpen(false)
         setUploadFiles([])
+        setUploadPreviews([])
         setDescription("")
+        setUploadProgress(0)
+        if (progressInterval.current) {
+          clearInterval(progressInterval.current)
+        }
         
         toast({
           title: "Photos uploaded",
           description: `Successfully uploaded ${uploadFiles.length} photo${uploadFiles.length > 1 ? 's' : ''}`,
         })
       } else {
-        toast({
-          title: "Upload failed",
-          description: result.error || "Failed to upload photos",
-          variant: "destructive",
-        })
+        throw new Error(result.error)
       }
     } catch (error) {
       console.error("Error uploading photos:", error)
+      if (progressInterval.current) {
+        clearInterval(progressInterval.current)
+      }
+      setUploadProgress(0)
       toast({
         title: "Upload failed",
         description: "Failed to upload photos",
@@ -309,12 +814,6 @@ export function LeadPhotosTab({ leadId, googleDriveUrl }: LeadPhotosTabProps) {
       })
     } finally {
       setIsUploading(false)
-    }
-  }
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setUploadFiles(Array.from(event.target.files))
     }
   }
 
@@ -352,6 +851,167 @@ export function LeadPhotosTab({ leadId, googleDriveUrl }: LeadPhotosTabProps) {
     }
   }
 
+  const toggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode)
+    setSelectedPhotos(new Set())
+  }
+
+  const togglePhotoSelection = (photoId: string, event: React.MouseEvent) => {
+    event.stopPropagation() // Prevent opening the photo dialog
+    const newSelection = new Set(selectedPhotos)
+    if (newSelection.has(photoId)) {
+      newSelection.delete(photoId)
+    } else {
+      newSelection.add(photoId)
+    }
+    setSelectedPhotos(newSelection)
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedPhotos.size === 0) return
+
+    try {
+      setIsDeletingBulk(true)
+      let successCount = 0
+      let errorCount = 0
+
+      for (const photoId of selectedPhotos) {
+        try {
+          const result = await deletePhoto(photoId)
+          if (result.success) {
+            successCount++
+          } else {
+            errorCount++
+          }
+        } catch {
+          errorCount++
+        }
+      }
+
+      // Update the photos list by removing deleted photos
+      setPhotos(photos.filter(photo => !selectedPhotos.has(photo.id)))
+      setSelectedPhotos(new Set())
+      setIsSelectionMode(false)
+      setIsDeleteDialogOpen(false)
+
+      // Show result toast
+      if (successCount > 0) {
+        toast({
+          title: "Photos deleted",
+          description: `Successfully deleted ${successCount} photo${successCount > 1 ? 's' : ''}${
+            errorCount > 0 ? `. Failed to delete ${errorCount} photo${errorCount > 1 ? 's' : ''}.` : ''
+          }`,
+          variant: errorCount > 0 ? "destructive" : "default",
+        })
+      } else {
+        toast({
+          title: "Delete failed",
+          description: "Failed to delete selected photos",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error deleting photos:", error)
+      toast({
+        title: "Delete failed",
+        description: "Failed to delete selected photos",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeletingBulk(false)
+    }
+  }
+
+  const handleSharePhotos = async (photos: Photo[]) => {
+    if (photos.length === 0) return
+
+    try {
+      // Try native share first
+      if (navigator.share && navigator.canShare) {
+        // Fetch all images as files
+        const files = await Promise.all(
+          photos.map(async (photo) => {
+            const blob = await fetchImageAsBlob(photo.url)
+            return new File([blob], photo.name, { type: blob.type })
+          })
+        )
+
+        const shareData = {
+          files,
+          title: photos.length === 1 ? 'Shared Photo' : 'Shared Photos',
+          text: photos.length === 1 ? 'Here is the photo I wanted to share with you.' : 'Here are the photos I wanted to share with you.'
+        }
+
+        if (navigator.canShare(shareData)) {
+          await navigator.share(shareData)
+          return
+        }
+      }
+
+      // Fallback to downloading files
+      if (photos.length === 1) {
+        await downloadImage(photos[0].url, photos[0].name)
+      } else {
+        // For multiple photos, download them sequentially
+        toast({
+          title: "Downloading photos",
+          description: "Your photos will begin downloading shortly...",
+        })
+        
+        for (const photo of photos) {
+          await downloadImage(photo.url, photo.name)
+        }
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        console.error('Error sharing:', error)
+        toast({
+          title: "Error",
+          description: "Failed to share photos",
+          variant: "destructive",
+        })
+      }
+    }
+  }
+
+  const handleUpdatePhoto = async (photoId: string, updates: PhotoUpdate) => {
+    try {
+      const result = await updatePhoto(photoId, updates)
+      
+      if (result.success && result.photo) {
+        // Update the local state with the updated photo
+        setPhotos(photos.map(photo => 
+          photo.id === photoId 
+            ? { 
+                ...photo, 
+                description: result.photo.description,
+                url: result.photo.url || photo.url,
+                thumbnailUrl: result.photo.thumbnailUrl || photo.thumbnailUrl
+              }
+            : photo
+        ))
+
+        toast({
+          title: "Success",
+          description: "Photo updated successfully",
+        })
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (error) {
+      console.error('Error updating photo:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update photo",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleGmailShare = (photos: Photo[]) => {
+    window.open(createGmailShareLink(photos, claimNumber), '_blank')
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -360,55 +1020,10 @@ export function LeadPhotosTab({ leadId, googleDriveUrl }: LeadPhotosTabProps) {
     )
   }
 
-  if (error && !googleDriveUrl) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 text-center">
-        <Info className="h-8 w-8 text-amber-500 mb-2" />
-        <p className="text-muted-foreground">{error}</p>
-        <p className="text-sm text-muted-foreground mt-2">
-          A Google Drive folder must be set up for this lead before photos can be added.
-        </p>
-      </div>
-    )
-  }
-
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-center">
-        <Info className="h-8 w-8 text-amber-500 mb-2" />
-        <p className="text-muted-foreground">{error}</p>
-        <p className="text-sm text-muted-foreground mt-2">
-          There was an issue accessing the photos. Please try again later.
-        </p>
-      </div>
-    )
-  }
-
-  if (!hasFolderCreated && googleDriveUrl) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 text-center">
-        <FolderPlus className="h-16 w-16 text-muted-foreground/50 mb-4" />
-        <h3 className="text-lg font-medium mb-2">No Photos Folder Yet</h3>
-        <p className="text-muted-foreground mb-4 max-w-md">
-          This lead has a Google Drive folder, but no Photos folder has been created yet.
-        </p>
-        <Button 
-          onClick={handleCreatePhotosFolder} 
-          disabled={isFolderCreating}
-          className="gap-2"
-        >
-          {isFolderCreating ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-              Creating...
-            </>
-          ) : (
-            <>
-              <FolderPlus className="h-4 w-4" />
-              Create Photos Folder
-            </>
-          )}
-        </Button>
+      <div className="text-center py-8">
+        <p className="text-destructive">{error}</p>
       </div>
     )
   }
@@ -416,118 +1031,362 @@ export function LeadPhotosTab({ leadId, googleDriveUrl }: LeadPhotosTabProps) {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Lead Photos</h3>
-        <Button onClick={() => setIsUploadDialogOpen(true)} className="gap-2">
-          <Upload className="h-4 w-4" />
-          Upload Photos
-        </Button>
+        <div className="flex gap-2">
+          {isSelectionMode && selectedPhotos.size > 0 && (
+            <>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                disabled={isDeletingBulk}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                 ({selectedPhotos.size})
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share 
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem 
+                    onClick={() => handleSharePhotos(photos.filter(p => selectedPhotos.has(p.id)))}
+                  >
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share photos
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => handleGmailShare(photos.filter(p => selectedPhotos.has(p.id)))}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Share via Gmail
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      const selectedUrls = photos
+                        .filter(p => selectedPhotos.has(p.id))
+                        .map(p => p.url)
+                        .join('\n')
+                      navigator.clipboard.writeText(selectedUrls)
+                      toast({
+                        title: "Links copied",
+                        description: `${selectedPhotos.size} photo URL${selectedPhotos.size > 1 ? 's' : ''} copied to clipboard`,
+                      })
+                    }}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy links
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          )}
+        </div>
+        <div className="flex gap-2">
+          {photos.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleSelectionMode}
+              className={isSelectionMode ? "bg-muted" : ""}
+            >
+              {isSelectionMode ? "Cancel" : "Select"}
+            </Button>
+          )}
+          <Button onClick={() => setIsUploadDialogOpen(true)} className="bg-[#59ff00] text-black hover:bg-[#59ff00]/90">
+            <Plus className="h-4 w-4 mr-2" />
+            Upload Photos
+          </Button>
+        </div>
       </div>
 
       {photos.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 border border-dashed rounded-lg bg-muted/20">
-          <Camera className="h-16 w-16 text-muted-foreground/50 mb-3" />
-          <p className="text-muted-foreground">No photos yet</p>
-          <Button 
-            variant="outline" 
-            className="mt-4"
-            onClick={() => setIsUploadDialogOpen(true)}
-          >
-            Upload your first photo
-          </Button>
+        <div className="text-center py-10 border-2 border-dashed rounded-lg">
+          <p className="text-muted-foreground">No photos available.</p>
+          <p className="text-sm text-muted-foreground mt-1">Upload photos to get started.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {photos.map((photo) => (
             <Card 
               key={photo.id} 
-              className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
-              onClick={() => openPhotoDialog(photo)}
+              className={`group relative cursor-pointer overflow-hidden ${
+                isSelectionMode ? 'ring-2 ring-muted' : ''
+              } ${selectedPhotos.has(photo.id) ? 'ring-2 ring-primary' : ''}`}
+              onClick={(event) => isSelectionMode ? togglePhotoSelection(photo.id, event!) : openPhotoDialog(photo)}
             >
-              <CardContent className="p-0 relative pb-[75%]">
-                <Image
-                  src={photo.thumbnailUrl}
-                  alt={photo.name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 33vw, 25vw"
-                />
+              <CardContent className="p-0">
+                <div className="relative aspect-square">
+                  <Image
+                    src={photo.thumbnailUrl}
+                    alt={photo.name}
+                    fill
+                    className="object-cover transition-transform group-hover:scale-105"
+                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                  />
+                  {!isSelectionMode && (
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="secondary" size="icon" className="h-8 w-8 bg-black/50 hover:bg-black/70">
+                            <Share2 className="h-4 w-4 text-white" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={async (e) => {
+                            e.stopPropagation()
+                            await handleSharePhotos([photo])
+                          }}>
+                            <Share2 className="h-4 w-4 mr-2" />
+                            Share photo
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation()
+                            handleGmailShare([photo])
+                          }}>
+                            <Mail className="h-4 w-4 mr-2" />
+                            Share via Gmail
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={async (e) => {
+                            e.stopPropagation()
+                            await downloadImage(photo.url, photo.name)
+                          }}>
+                            <Download className="h-4 w-4 mr-2" />
+                            Download
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation()
+                            navigator.clipboard.writeText(photo.url)
+                            toast({
+                              title: "Link copied",
+                              description: "Photo URL has been copied to clipboard",
+                            })
+                          }}>
+                            <Copy className="h-4 w-4 mr-2" />
+                            Copy link
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  )}
+                  {isSelectionMode ? (
+                    <div 
+                      className={`absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity ${
+                        selectedPhotos.has(photo.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                      }`}
+                      onClick={(e) => togglePhotoSelection(photo.id, e)}
+                    >
+                      <div className={`rounded-full p-2 ${
+                        selectedPhotos.has(photo.id) ? 'bg-primary' : 'bg-muted/50'
+                      }`}>
+                        <Check className={`h-6 w-6 ${
+                          selectedPhotos.has(photo.id) ? 'text-primary-foreground' : 'text-muted-foreground'
+                        }`} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Info className="h-6 w-6 text-white" />
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
 
-      {/* Photo upload dialog */}
-      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+      {/* Upload Dialog */}
+      <Dialog open={isUploadDialogOpen} onOpenChange={(open) => {
+        setIsUploadDialogOpen(open)
+        if (!open) {
+          setUploadFiles([])
+          setUploadPreviews([])
+          setDescription("")
+          setEditingNameIndex(null)
+          setUploadProgress(0)
+          if (progressInterval.current) {
+            clearInterval(progressInterval.current)
+          }
+        }
+      }}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Upload Photos</DialogTitle>
+            <DialogDescription>
+              Select photos to upload. Click on a photo name to edit it.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="photos">Select Photos</Label>
-              <Input 
-                id="photos" 
-                type="file" 
-                accept="image/*" 
-                multiple 
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="photos">Select</Label>
+              <Input
+                id="photos"
+                type="file"
+                accept="image/*"
+                multiple
                 onChange={handleFileChange}
-                disabled={isUploading}
-              />
-              <p className="text-xs text-muted-foreground">
-                You can select multiple photos to upload at once
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="description">Description (optional)</Label>
-              <Textarea 
-                id="description" 
-                value={description} 
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Add a description for these photos"
-                rows={3}
-                disabled={isUploading}
+                className="mt-1.5"
               />
             </div>
-            
-            {uploadFiles.length > 0 && (
-              <div className="text-sm">
-                <p className="font-medium">{uploadFiles.length} file(s) selected</p>
-                <ul className="list-disc list-inside text-xs text-muted-foreground mt-1">
-                  {Array.from(uploadFiles).slice(0, 3).map((file, index) => (
-                    <li key={index}>{file.name}</li>
-                  ))}
-                  {uploadFiles.length > 3 && <li>...and {uploadFiles.length - 3} more</li>}
-                </ul>
+
+            {/* Preview Grid */}
+            {uploadPreviews.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
+                {uploadPreviews.map((preview, index) => (
+                  <div key={index} className="relative group">
+                    <div className="relative aspect-square border rounded-lg overflow-hidden bg-muted">
+                      <Image
+                        src={preview.previewUrl}
+                        alt={preview.name}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 50vw, 33vw"
+                      />
+                      <button
+                        onClick={() => removePreview(index)}
+                        className="absolute top-1 right-1 bg-black/50 hover:bg-black/70 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        aria-label={`Remove ${preview.name}`}
+                      >
+                        <X className="h-4 w-4 text-white" />
+                      </button>
+                    </div>
+                    <div className="mt-1">
+                      {editingNameIndex === index ? (
+                        <Input
+                          ref={nameInputRef}
+                          defaultValue={preview.name}
+                          onBlur={(e) => handleNameEdit(index, e.target.value)}
+                          onKeyDown={(e) => handleNameKeyDown(e, index)}
+                          className="h-7 text-xs py-1"
+                        />
+                      ) : (
+                        <button
+                          onClick={() => setEditingNameIndex(index)}
+                          className="w-full text-left text-xs text-muted-foreground group/name flex items-center gap-1.5 hover:text-foreground"
+                          title="Click to edit name"
+                        >
+                          <div className="truncate flex-1">
+                            {preview.name}
+                            <span className="text-muted-foreground/50">
+                              {`.${preview.originalName.split('.').pop()}`}
+                            </span>
+                          </div>
+                          <Pencil className="h-3 w-3 opacity-0 group-hover/name:opacity-100 transition-opacity shrink-0" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
+
+            {isUploading && (
+              <div className="space-y-2">
+                <Progress 
+                  value={uploadProgress} 
+                  className="h-2 transition-all duration-300"
+                />
+                <p className="text-sm text-muted-foreground text-center">
+                  {uploadProgress < 30 && "Preparing photos..."}
+                  {uploadProgress >= 30 && uploadProgress < 70 && "Uploading photos..."}
+                  {uploadProgress >= 70 && uploadProgress < 90 && "Processing upload..."}
+                  {uploadProgress >= 90 && uploadProgress < 100 && "Finalizing..."}
+                  {uploadProgress === 100 && "Upload complete!"}
+                </p>
+                <p className="text-xs text-muted-foreground/80 text-center">
+                  {uploadProgress}%
+                </p>
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="mt-1.5"
+                placeholder="Add a description for these photos..."
+                disabled={isUploading}
+              />
+            </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline" disabled={isUploading}>Cancel</Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setUploadFiles([])
+                  setUploadPreviews([])
+                  setDescription("")
+                  setEditingNameIndex(null)
+                  setUploadProgress(0)
+                  if (progressInterval.current) {
+                    clearInterval(progressInterval.current)
+                  }
+                }}
+                disabled={isUploading}
+              >
+                Cancel
+              </Button>
             </DialogClose>
-            <Button onClick={handleUpload} disabled={isUploading}>
+            <Button 
+              onClick={handleUpload} 
+              disabled={isUploading || uploadFiles.length === 0}
+              className="bg-[#59ff00] text-black hover:bg-[#59ff00]/90"
+            >
               {isUploading ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                  Uploading...
+                  <span className="animate-spin mr-2">⏳</span>
+                  Uploading {uploadFiles.length} photo{uploadFiles.length > 1 ? 's' : ''}...
                 </>
               ) : (
-                'Upload'
+                `Upload ${uploadFiles.length} photo${uploadFiles.length > 1 ? 's' : ''}`
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Photo view dialog */}
-      <PhotoDialog 
-        photo={selectedPhoto} 
-        isOpen={isPhotoDialogOpen} 
-        onClose={() => setIsPhotoDialogOpen(false)} 
+      {/* Photo View Dialog */}
+      <PhotoDialog
+        photo={selectedPhoto}
+        isOpen={isPhotoDialogOpen}
+        onClose={() => {
+          setIsPhotoDialogOpen(false)
+          setSelectedPhoto(null)
+        }}
         onDelete={handleDeletePhoto}
+        onUpdate={handleUpdatePhoto}
+        claimNumber={claimNumber}
       />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Selected Photos</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {selectedPhotos.size} selected photo{selectedPhotos.size > 1 ? 's' : ''}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button 
+              variant="destructive" 
+              onClick={handleBulkDelete}
+              disabled={isDeletingBulk}
+            >
+              {isDeletingBulk ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 

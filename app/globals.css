@@ -51,44 +51,6 @@ body { /* Added from styles/globals.css */
   }
 }
 
-@keyframes moveBlob1 {
-  0%, 100% {
-    transform: translate(-10%, -10%) scale(1);
-    opacity: 0.7;
-  }
-  25% {
-    transform: translate(30%, -20%) scale(1.1);
-    opacity: 0.6;
-  }
-  50% {
-    transform: translate(20%, 30%) scale(0.9);
-    opacity: 0.8;
-  }
-  75% {
-    transform: translate(-20%, 20%) scale(1.2);
-    opacity: 0.5;
-  }
-}
-
-@keyframes moveBlob2 {
-  0%, 100% {
-    transform: translate(10%, 10%) scale(1);
-    opacity: 0.7;
-  }
-  25% {
-    transform: translate(-30%, 20%) scale(1.2);
-    opacity: 0.5;
-  }
-  50% {
-    transform: translate(-20%, -30%) scale(0.8);
-    opacity: 0.8;
-  }
-  75% {
-    transform: translate(20%, -20%) scale(1.1);
-    opacity: 0.6;
-  }
-}
-
 @layer base {
   * {
     @apply border-border;
@@ -96,39 +58,15 @@ body { /* Added from styles/globals.css */
 
   html { /* Simplified selector */
     position: relative;
-    overflow-x: hidden; /* Prevent horizontal scroll from blobs */
-    background: linear-gradient(to bottom, rgb(0, 0, 0) 40%, rgb(8, 75, 16) 95%, #08c02a 100%) !important;
-    min-height: 100vh; /* Ensure gradient covers full viewport height */
-  }
-
-  html::before,
-  html::after {
-    content: "";
-    position: fixed;
-    left: 1/2;
-    top: 10%;
-    width: 50vmax; /* Large blobs */
-    height: 50vmax;
-    border-radius: 50%;
-    z-index: -1; /* Behind content */
-    mix-blend-mode: lighten; /* Or lighten, experiment for desired effect */
-    filter: blur(100px); /* Soft edges */
-  }
-
-  html::before {
-    background-color: rgb(0, 0, 0); /* First blob color */
-    animation: moveBlob1 25s infinite alternate ease-in-out;
-  }
-
-  html::after {
-    background-color: #000000; /* Second blob color */
-    animation: moveBlob2 30s infinite alternate ease-in-out -5s; /* Offset animation */
+    overflow-x: hidden;
+    min-height: 100vh;
+    background-color: black !important;
   }
 
   body {
-    @apply bg-transparent text-foreground !important; /* Make body background transparent */
+    @apply bg-transparent text-foreground !important;
     min-height: 50vh;
-    position: relative; /* Ensure body content is above pseudo-elements */
+    position: relative;
     z-index: 1;
   }
 
@@ -138,10 +76,10 @@ body { /* Added from styles/globals.css */
   .container,
   .styled-container,
   .btn {
-    background-color: hsla(var(--card-h), var(--card-s), var(--card-l), 0.5) !important; /* 50% transparent card background */
-    -webkit-backdrop-filter: blur(8px); /* Safari support, user changed blur to 8px in app/globals.css previously */
-    backdrop-filter: blur(8px); /* User changed blur to 8px in app/globals.css previously */
-    border: 1px solid hsla(var(--border-h), var(--border-s), 10%, 0.6) !important; /* Darker, more opaque border */
+    background-color: hsla(var(--card-h), var(--card-s), var(--card-l), 0.5) !important;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: 1px solid hsla(var(--border-h), var(--border-s), 10%, 0.6) !important;
   }
 }
 
@@ -176,7 +114,7 @@ body {
   padding: 0;
   height: 100%;
   width: 100%;
-  overflow: auto; /* changed from hidden */
+  overflow: auto;
 }
 
 /* Full screen map container */

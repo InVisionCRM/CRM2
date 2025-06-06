@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { useParams, useSearchParams } from "next/navigation" // Use next/navigation for App Router
 import { LeadStatus } from "@prisma/client"
 import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image } from "lucide-react" // Added Image icon
-import { LeadStatusBar } from "@/components/leads/LeadStatusBar" // Corrected path
+import { StatusChangeDrawer } from "@/components/leads/StatusChangeDrawer"
 import { LeadDetailTabs } from "@/components/leads/LeadDetailTabs" // Corrected path
 import { ActivityFeed } from "@/components/leads/ActivityFeed" // Corrected path
 import { AddNote } from "@/components/leads/AddNote" // New import
@@ -22,6 +22,7 @@ import { LeadFiles } from "@/components/leads/lead-files";
 import { LeadContractsTab } from "@/components/leads/tabs/LeadContractsTab";
 import { LeadPhotosTab } from "@/components/leads/tabs/LeadPhotosTab"; // Import the new Photos tab component
 import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
 
 // Quick Actions Button component
 interface QuickActionButtonProps {
@@ -247,12 +248,20 @@ export default function LeadDetailPage() {
         </div>
       </div>
       
-      <LeadStatusBar 
+      <div className="flex flex-col gap-4 sm:gap-6">
+        <div className="flex items-center gap-2 text-lg">
+          <span>Status:</span>
+          <Badge variant={lead.status as any} className="text-sm px-2 py-1">
+            {formatStatusLabel(lead.status)}
+          </Badge>
+          <StatusChangeDrawer
         currentStatus={lead.status}
         onStatusChange={handleStatusChange}
         isLoading={isStatusUpdating}
         loadingStatus={statusBeingUpdated}
       />
+        </div>
+      </div>
 
       <div className="flex items-center justify-center w-full mb-6 overflow-x-auto scrollbar-hide">
         <div className="flex items-center justify-between w-full max-w-[1200px] px-2 sm:px-4 md:px-6">
@@ -359,11 +368,11 @@ export default function LeadDetailPage() {
       <Dialog open={photosDialogOpen} onOpenChange={setPhotosDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Photos (Coming soon)</DialogTitle>
+            <DialogTitle>Photos</DialogTitle>
           </DialogHeader>
           <LeadPhotosTab 
-            leadId={lead.id} 
-            googleDriveUrl={lead.googleDriveFolderId ? `https://drive.google.com/drive/folders/${lead.googleDriveFolderId}` : null}
+            leadId={lead.id}
+            claimNumber={lead.claimNumber || undefined}
           />
         </DialogContent>
       </Dialog>

@@ -32,12 +32,12 @@ function QuickAction({
   imageUrl,
 }: QuickActionProps) {
   return (
-    <div className="relative w-full pb-[56.25%]"> {/* 16:9 aspect ratio */}
+    <div className="relative w-full pb-[40.25%]"> {/* 16:9 aspect ratio */}
       <TabsTrigger
         value={value}
         className={cn(
           "absolute inset-0 w-full h-full",
-          "overflow-hidden rounded-xl border-2 border-lime-500",
+          "overflow-hidden rounded-lg border-2 border-lime-500/30",
           "transition-all duration-300",
           "hover:brightness-110 data-[state=active]:bg-primary",
         )}
@@ -198,10 +198,8 @@ export function QuickActions() {
       setInvoiceDialogOpen(true)
     } else if (value === "purlin-vision") {
       router.push("/map")
-    } else if (value === "all-leads") {
+    } else if (value === "leads") {
       router.push("/leads")
-    } else if (value === "file-upload") {
-      router.push("/drive")
     } else if (value === "contract") {
       window.open('https://contracts.purlin.pro', '_blank')
     }
@@ -209,16 +207,16 @@ export function QuickActions() {
 
   return (
     <>
-      <div className="w-[90%] mx-auto">
+      <div className="w-100%] mx-auto">
         <Tabs
-          defaultValue="all-leads"
+          defaultValue="leads"
           onValueChange={handleTabChange}
           className="w-full"
         >
-          <TabsList className="grid grid-cols-4 gap-4 h-auto bg-transparent p-0">
+          <TabsList className="grid grid-cols-3 gap-1 h-auto bg-transparent p-0">
             <QuickAction
-              label="All Leads"
-              value="all-leads"
+              label="Leads"
+              value="leads"
               imageUrl="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Quick%20Actions/All_Leads-SEk2NEYpt4fARvrhTSLgiBsCi68m7Y.png"
             />
 
@@ -229,13 +227,7 @@ export function QuickActions() {
             />
 
             <QuickAction
-              label="File Upload"
-              value="file-upload"
-              imageUrl="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/dashboard-images/file-upload.png"
-            />
-
-            <QuickAction
-              label="Contract"
+              label="Contracts"
               value="contract"
               imageUrl="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/dashboard-images/contracts.png"
             />

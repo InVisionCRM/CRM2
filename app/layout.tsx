@@ -12,8 +12,8 @@ export const metadata: Metadata = {
   description: "Mobile-first CRM for roofing contractors",
   generator: 'v0.dev',
   icons: {
-    icon: "https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Purlin_Logo-QGECcCeMQoHVp3aZWHJv36rKSvRq2z.png",
-    apple: "https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/ios%20-%20logo/invision-logo-V1CxU8WrdgwxkKTrSIYPMzvmxY0vQR.png",
+    icon: "https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/in-vision-logo-UJNZxvzrwPs8WsZrFbI7Z86L8TWcc5.png",
+    apple: "https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/in-vision-logo-UJNZxvzrwPs8WsZrFbI7Z86L8TWcc5.png",
   },
   appleWebApp: {
     capable: true,
@@ -41,11 +41,11 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Roofing Mobile CRM" />
         <link 
           rel="apple-touch-icon" 
-          href="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/ios%20-%20logo/invision-logo-V1CxU8WrdgwxkKTrSIYPMzvmxY0vQR.png" 
+          href="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/in-vision-logo-UJNZxvzrwPs8WsZrFbI7Z86L8TWcc5.png" 
         />
         <link 
           rel="apple-touch-startup-image" 
-          href="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/ios%20-%20logo/invision-logo-V1CxU8WrdgwxkKTrSIYPMzvmxY0vQR.png" 
+          href="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/in-vision-logo-UJNZxvzrwPs8WsZrFbI7Z86L8TWcc5.png" 
         />
       </head>
       <body className={`${inter.className} h-screen`}>
