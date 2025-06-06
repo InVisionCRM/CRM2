@@ -277,31 +277,17 @@ export default function LeadDetailPage() {
           <Button
             variant="ghost"
             size="default"
-            onClick={handleScheduleAppointment}
-            className={cn(
-              "bg-transparent text-lime-500 hover:bg-lime-500/10 hover:text-lime-400",
-              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[10px] sm:text-xs md:text-base font-medium transition-all duration-200",
-              "relative group whitespace-nowrap flex-1"
-            )}
-          >
-            Schedule
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-px bg-gray-300/20" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="default"
             onClick={() => leadAddress ? window.location.href = `https://maps.google.com/?q=${encodeURIComponent(leadAddress)}` : undefined}
             disabled={!leadAddress}
             className={cn(
-              "bg-transparent text-lime-500 hover:bg-lime-500/10 hover:text-lime-400",
-              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[10px] sm:text-xs md:text-base font-medium transition-all duration-200",
+              "bg-transparent text-white hover:bg-lime-500/10 hover:text-white",
+              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[12px] sm:text-sm md:text-base font-medium transition-all duration-200",
               "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent",
               "relative group whitespace-nowrap flex-1"
             )}
           >
             Map
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-px bg-gray-300/20" />
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-[2px] bg-gray-300/20" />
           </Button>
 
           <Button
@@ -309,13 +295,13 @@ export default function LeadDetailPage() {
             size="default"
             onClick={handleOpenPhotosDialog}
             className={cn(
-              "bg-transparent text-lime-500 hover:bg-lime-500/10 hover:text-lime-400",
-              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[10px] sm:text-xs md:text-base font-medium transition-all duration-200",
+              "bg-transparent text-white hover:bg-lime-500/10 hover:text-white",
+              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[12px] sm:text-sm md:text-base font-medium transition-all duration-200",
               "relative group whitespace-nowrap flex-1"
             )}
           >
             Photos
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-px bg-gray-300/20" />
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-[2px] bg-gray-300/20" />
           </Button>
 
           <Button
@@ -323,13 +309,13 @@ export default function LeadDetailPage() {
             size="default"
             onClick={handleOpenFilesDialog}
             className={cn(
-              "bg-transparent text-lime-500 hover:bg-lime-500/10 hover:text-lime-400",
-              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[10px] sm:text-xs md:text-base font-medium transition-all duration-200",
+              "bg-transparent text-white hover:bg-lime-500/10 hover:text-white",
+              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[12px] sm:text-sm md:text-base font-medium transition-all duration-200",
               "relative group whitespace-nowrap flex-1"
             )}
           >
             Files
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-px bg-gray-300/20" />
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-[2px] bg-gray-300/20" />
           </Button>
 
           <Button
@@ -337,8 +323,8 @@ export default function LeadDetailPage() {
             size="default"
             onClick={handleOpenContractsDialog}
             className={cn(
-              "bg-transparent text-lime-500 hover:bg-lime-500/10 hover:text-lime-400",
-              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[10px] sm:text-xs md:text-base font-medium transition-all duration-200",
+              "bg-transparent text-white hover:bg-lime-500/10 hover:text-white",
+              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[12px] sm:text-sm md:text-base font-medium transition-all duration-200",
               "relative group whitespace-nowrap flex-1"
             )}
           >
@@ -347,15 +333,22 @@ export default function LeadDetailPage() {
         </div>
       </div>
       
+      {/* Divider under quick action tabs */}
+      <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500/50 to-transparent" />
+      
       {/* Main content area - Two column layout on desktop */}
       <div className="grid grid-cols-1 md:grid-cols-[2fr,1fr] gap-6">
         {/* Left column - Lead Detail Tabs and Add Note */}
         <div className="flex flex-col gap-6">
-          <LeadDetailTabs 
-            lead={lead}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-          />
+          <div className="space-y-4">
+            <LeadDetailTabs 
+              lead={lead}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+            />
+            {/* Divider under lead overview tab */}
+            <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500/50 to-transparent" />
+          </div>
           <div className="w-full">
             <AddNote leadId={lead.id} onSuccess={handleNoteAdded} />
           </div>
