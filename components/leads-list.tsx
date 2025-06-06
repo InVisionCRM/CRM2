@@ -172,19 +172,19 @@ export function LeadsList({ leads, isLoading = false, assignedTo, onViewActivity
               <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                 <div className="flex items-center space-x-1 sm:space-x-2">
                   <Link href={`/leads/${lead.id}`} passHref legacyBehavior>
-                    <Button asChild variant="outline" size="sm" title="View Lead" className="text-lime-700 bg-white border-lime-500 hover:text-lime-600 hover:bg-white hover:border-lime-300 h-9 px-2 sm:px-3">
+                    <Button asChild variant="outline" size="sm" title="View Lead" className="text-lime-700 bg-white border-lime-500 hover:text-lime-600 hover:bg-white hover:border-lime-300 h-7 sm:h-9 px-1.5 sm:px-3 text-[10px] sm:text-sm">
                       <a>
-                        <Eye className="h-4 w-4 sm:mr-1.5" />
+                        <Eye className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1.5" />
                         <span className="hidden sm:inline">View</span>
                       </a>
                     </Button>
                   </Link>
-                  <Button variant="outline" size="sm" title="View Activity" onClick={() => onViewActivity(lead)} className="text-blue-500 bg-white border-blue-500 hover:text-indigo-600 hover:bg-white hover:border-indigo-300 h-9 px-2 sm:px-3">
-                    <ListChecks className="h-4 w-4 sm:mr-1.5" />
+                  <Button variant="outline" size="sm" title="View Activity" onClick={() => onViewActivity(lead)} className="text-blue-500 bg-white border-blue-500 hover:text-indigo-600 hover:bg-white hover:border-indigo-300 h-7 sm:h-9 px-1.5 sm:px-3 text-[10px] sm:text-sm">
+                    <ListChecks className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1.5" />
                     <span className="hidden sm:inline">Activity</span>
                   </Button>
-                  <Button variant="outline" size="sm" title="View Files" onClick={() => onViewFiles(lead)} className="text-red-700 bg-white border-red-500 hover:text-indigo-600 hover:bg-white hover:border-indigo-300 h-9 px-2 sm:px-3">
-                    <Folder className="h-4 w-4 sm:mr-1.5" />
+                  <Button variant="outline" size="sm" title="View Files" onClick={() => onViewFiles(lead)} className="text-red-700 bg-white border-red-500 hover:text-indigo-600 hover:bg-white hover:border-indigo-300 h-7 sm:h-9 px-1.5 sm:px-3 text-[10px] sm:text-sm">
+                    <Folder className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1.5" />
                     <span className="hidden sm:inline">Files</span>
                   </Button>
                 </div>

@@ -234,35 +234,44 @@ export default function LeadDetailPage() {
         </>
       )}
 
-      <div className="w-full flex flex-col items-center justify-center mb-4 sm:mb-6">
-        <div className="w-full flex items-center justify-center relative px-2 sm:px-4">
-          <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold text-center">
-            {lead.firstName && lead.lastName ? `${lead.firstName} ${lead.lastName}` : lead.email || lead.phone || "Lead Details"}
-          </h1>
+      <div className="w-full flex flex-col gap-4 sm:gap-6">
+        {/* Top section with name, status, and claim number */}
+        <div className="w-full grid grid-cols-3 items-start">
+          {/* Name on the left */}
+          <div className="text-left">
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold">
+              {lead.firstName && lead.lastName ? `${lead.firstName} ${lead.lastName}` : lead.email || lead.phone || "Lead Details"}
+            </h1>
+          </div>
+
+          {/* Status in the middle */}
+          <div className="flex flex-col items-center justify-center">
+            <Badge variant={lead.status as any} className="text-sm px-2 py-1">
+              {formatStatusLabel(lead.status)}
+            </Badge>
+            <div className="mt-2">
+              <StatusChangeDrawer
+                currentStatus={lead.status}
+                onStatusChange={handleStatusChange}
+                isLoading={isStatusUpdating}
+                loadingStatus={statusBeingUpdated}
+              />
+            </div>
+          </div>
+
+          {/* Claim number on the right */}
           {lead.claimNumber && (
-            <div className="flex flex-col items-center absolute right-2 sm:right-4 gap-0.5 min-w-[80px]">
-              <span className="text-gray-500 text-[10px] sm:text-xs leading-none text-center w-full">Claim #</span>
-              <span className="text-green-500 text-sm sm:text-base lg:text-lg font-medium leading-none text-center w-full">{lead.claimNumber}</span>
+            <div className="flex flex-col items-end">
+              <span className="text-gray-500 text-[8px] sm:text-[10px] leading-none">Claim #</span>
+              <span className="text-green-500 text-xs sm:text-sm font-medium leading-none">{lead.claimNumber}</span>
             </div>
           )}
         </div>
       </div>
       
-      <div className="flex flex-col gap-4 sm:gap-6">
-        <div className="flex items-center gap-2 text-lg">
-          <span>Status:</span>
-          <Badge variant={lead.status as any} className="text-sm px-2 py-1">
-            {formatStatusLabel(lead.status)}
-          </Badge>
-          <StatusChangeDrawer
-        currentStatus={lead.status}
-        onStatusChange={handleStatusChange}
-        isLoading={isStatusUpdating}
-        loadingStatus={statusBeingUpdated}
-      />
-        </div>
-      </div>
-
+      {/* Divider */}
+      <div className="w-full h-px bg-gradient-to-r from-transparent via-lime-500/50 to-transparent my-2 sm:my-3" />
+      
       <div className="flex items-center justify-center w-full mb-6 overflow-x-auto scrollbar-hide">
         <div className="flex items-center justify-between w-full max-w-[1200px] px-2 sm:px-4 md:px-6">
           <Button
@@ -271,7 +280,7 @@ export default function LeadDetailPage() {
             onClick={handleScheduleAppointment}
             className={cn(
               "bg-transparent text-lime-500 hover:bg-lime-500/10 hover:text-lime-400",
-              "h-8 sm:h-9 md:h-10 px-3 sm:px-4 md:px-6 text-xs sm:text-sm md:text-base font-medium transition-all duration-200",
+              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[10px] sm:text-xs md:text-base font-medium transition-all duration-200",
               "relative group whitespace-nowrap flex-1"
             )}
           >
@@ -286,7 +295,7 @@ export default function LeadDetailPage() {
             disabled={!leadAddress}
             className={cn(
               "bg-transparent text-lime-500 hover:bg-lime-500/10 hover:text-lime-400",
-              "h-8 sm:h-9 md:h-10 px-3 sm:px-4 md:px-6 text-xs sm:text-sm md:text-base font-medium transition-all duration-200",
+              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[10px] sm:text-xs md:text-base font-medium transition-all duration-200",
               "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent",
               "relative group whitespace-nowrap flex-1"
             )}
@@ -301,7 +310,7 @@ export default function LeadDetailPage() {
             onClick={handleOpenPhotosDialog}
             className={cn(
               "bg-transparent text-lime-500 hover:bg-lime-500/10 hover:text-lime-400",
-              "h-8 sm:h-9 md:h-10 px-3 sm:px-4 md:px-6 text-xs sm:text-sm md:text-base font-medium transition-all duration-200",
+              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[10px] sm:text-xs md:text-base font-medium transition-all duration-200",
               "relative group whitespace-nowrap flex-1"
             )}
           >
@@ -315,7 +324,7 @@ export default function LeadDetailPage() {
             onClick={handleOpenFilesDialog}
             className={cn(
               "bg-transparent text-lime-500 hover:bg-lime-500/10 hover:text-lime-400",
-              "h-8 sm:h-9 md:h-10 px-3 sm:px-4 md:px-6 text-xs sm:text-sm md:text-base font-medium transition-all duration-200",
+              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[10px] sm:text-xs md:text-base font-medium transition-all duration-200",
               "relative group whitespace-nowrap flex-1"
             )}
           >
@@ -329,7 +338,7 @@ export default function LeadDetailPage() {
             onClick={handleOpenContractsDialog}
             className={cn(
               "bg-transparent text-lime-500 hover:bg-lime-500/10 hover:text-lime-400",
-              "h-8 sm:h-9 md:h-10 px-3 sm:px-4 md:px-6 text-xs sm:text-sm md:text-base font-medium transition-all duration-200",
+              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[10px] sm:text-xs md:text-base font-medium transition-all duration-200",
               "relative group whitespace-nowrap flex-1"
             )}
           >
@@ -338,17 +347,21 @@ export default function LeadDetailPage() {
         </div>
       </div>
       
-      <LeadDetailTabs 
-        lead={lead}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
-      
-      <div className="flex flex-col gap-6">
-        <div className="w-full">
-          <AddNote leadId={lead.id} onSuccess={handleNoteAdded} />
+      {/* Main content area - Two column layout on desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-[2fr,1fr] gap-6">
+        {/* Left column - Lead Detail Tabs and Add Note */}
+        <div className="flex flex-col gap-6">
+          <LeadDetailTabs 
+            lead={lead}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
+          <div className="w-full">
+            <AddNote leadId={lead.id} onSuccess={handleNoteAdded} />
+          </div>
         </div>
-        
+
+        {/* Right column - Activity Feed only */}
         <div className="w-full" ref={activityFeedRef}>
           <ActivityFeed leadId={lead.id} key={refreshActivities} />
         </div>

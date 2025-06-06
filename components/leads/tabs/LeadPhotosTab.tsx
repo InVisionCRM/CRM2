@@ -1037,14 +1037,15 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
                 size="sm"
                 onClick={() => setIsDeleteDialogOpen(true)}
                 disabled={isDeletingBulk}
+                className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs"
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                 ({selectedPhotos.size})
+                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                Delete ({selectedPhotos.size})
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Share2 className="h-4 w-4 mr-2" />
+                  <Button variant="outline" size="sm" className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs">
+                    <Share2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     Share 
                   </Button>
                 </DropdownMenuTrigger>

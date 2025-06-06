@@ -3,6 +3,7 @@
 import React, { ReactNode, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import AppSidebar from '@/components/AppSidebar';
+import { cn } from '@/lib/utils';
 
 interface LayoutClientWrapperProps {
   children: ReactNode;
@@ -31,13 +32,12 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
       
       {/* Main content area */}
       <div 
-        className={`min-h-screen transition-[margin] duration-300 ${
-          !isMapPage && !isAuthPage 
-            ? isSidebarCollapsed 
-              ? 'ml-[80px]' 
-              : 'ml-[300px]'
-            : ''
-        }`}
+        className={cn(
+          "min-h-screen transition-[margin] duration-300",
+          !isMapPage && !isAuthPage && "md:ml-[80px] md:ml-[300px]",
+          // Add bottom padding on mobile for the navigation bar
+          "pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0"
+        )}
       >
         <main>
           {children}

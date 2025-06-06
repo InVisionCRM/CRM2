@@ -426,16 +426,18 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
                         size="sm" 
                         onClick={() => window.open(getFileUrl(file), '_blank')} 
                         title="View File"
+                        className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs"
                       >
-                        <Eye className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">View</span>
+                        <Eye className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" /> <span className="hidden sm:inline">View</span>
                       </Button>
                       <Button 
                         variant="outline" 
                         size="sm" 
                         onClick={() => handleFileDownload(file)}
                         title="Download File"
+                        className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs"
                       >
-                        <Download className="h-4 w-4 sm:mr-1" /> <span className="hidden sm:inline">Download</span>
+                        <Download className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" /> <span className="hidden sm:inline">Download</span>
                       </Button>
                       <Button 
                         variant="outline" 
@@ -688,8 +690,8 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
         <div className="flex flex-wrap gap-2 mt-8">
           {/* Google Drive Folder Button */}
           {isLoadingDriveLink ? (
-            <Button variant="outline" disabled className="bg-muted hover:bg-muted">
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading Drive Link...
+            <Button variant="outline" disabled className="bg-muted hover:bg-muted h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs">
+              <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" /> Loading Drive Link...
             </Button>
           ) : driveFolderId ? (
             <>
