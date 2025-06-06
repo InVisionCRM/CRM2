@@ -12,9 +12,7 @@ body { /* Added from styles/globals.css */
     --foreground: 0 0% 100%;
     
     /* Card variables based on app/globals.css dark theme */
-    --card-h: 0;
-    --card-s: 0%;
-    --card-l: 0%; /* From --card: 0 0% 0%; */
+    --card: 0 0% 0%;
     --card-foreground: 0 0% 100%;
     
     --popover: 222.2 84% 4.9%;
@@ -31,9 +29,7 @@ body { /* Added from styles/globals.css */
     --destructive-foreground: 210 40% 98%;
     
     /* Border variables based on app/globals.css dark theme */
-    --border-h: 217.2;
-    --border-s: 32.6%;
-    --border-l: 17.5%; /* From --border: 217.2 32.6% 17.5%; */
+    --border: 217.2 32.6% 17.5%;
 
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
@@ -52,10 +48,6 @@ body { /* Added from styles/globals.css */
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
   html { /* Simplified selector */
     position: relative;
     overflow-x: hidden;
@@ -64,7 +56,7 @@ body { /* Added from styles/globals.css */
   }
 
   body {
-    @apply bg-transparent text-foreground !important;
+    @apply bg-transparent text-white !important;
     min-height: 50vh;
     position: relative;
     z-index: 1;
@@ -88,10 +80,10 @@ body { /* Added from styles/globals.css */
   .container,
   .styled-container,
   .btn {
-    background-color: hsla(var(--card-h), var(--card-s), var(--card-l), 0.5) !important;
+    background-color: hsla(var(--card), 0.5) !important;
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
-    border: 1px solid hsla(var(--border-h), var(--border-s), 10%, 0.6) !important;
+    border: 1px solid hsl(var(--border)) !important;
   }
 }
 

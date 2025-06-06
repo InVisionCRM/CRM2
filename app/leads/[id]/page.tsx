@@ -60,13 +60,13 @@ const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, ic
 
 export default function LeadDetailPage() {
   const params = useParams();
-  const searchParams = useSearchParams(); // Get search params
-  const id = typeof params.id === 'string' ? params.id : undefined;
+  const searchParams = useSearchParams();
+  const id = params?.id?.toString();
   
   const { lead, isLoading: isLeadLoading, error, mutate } = useLead(id) // useLead hook handles undefined id
   
   // Determine initial tab: from URL query or default to "overview"
-  const initialTab = searchParams.get("tab") === "files" ? "files" : "overview";
+  const initialTab = searchParams?.get("tab") === "files" ? "files" : "overview";
   const [activeTab, setActiveTab] = useState<string>(initialTab)
 
   const { toast } = useToast()
@@ -86,14 +86,13 @@ export default function LeadDetailPage() {
     setRefreshActivities(prev => prev + 1);
   };
 
-  // Effect to update activeTab if query parameter changes after initial load (optional, but good practice)
+  // Effect to update activeTab if query parameter changes after initial load
   useEffect(() => {
-    const tabFromQuery = searchParams.get("tab");
+    const tabFromQuery = searchParams?.get("tab");
     if (tabFromQuery === "files" && activeTab !== "files") {
       setActiveTab("files");
-    } else if (!tabFromQuery && activeTab !== "overview" && !searchParams.has("tab")) {
-      // If no tab query param and current tab is not overview, reset to overview (or keep current based on preference)
-      // For now, let's be explicit: if 'files' is in query, switch to it. Otherwise, initialTab handles default.
+    } else if (!tabFromQuery && activeTab !== "overview" && !searchParams?.has("tab")) {
+      // If no tab query param and current tab is not overview, reset to overview
     }
   }, [searchParams, activeTab]);
 
@@ -239,7 +238,7 @@ export default function LeadDetailPage() {
         <div className="w-full grid grid-cols-3 items-start">
           {/* Name on the left */}
           <div className="text-left">
-            <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold">
+            <h1 className="font-michroma text-lg sm:text-xl lg:text-2xl font-semibold">
               {lead.firstName && lead.lastName ? `${lead.firstName} ${lead.lastName}` : lead.email || lead.phone || "Lead Details"}
             </h1>
           </div>
@@ -281,12 +280,12 @@ export default function LeadDetailPage() {
             disabled={!leadAddress}
             className={cn(
               "bg-transparent text-white hover:bg-lime-500/10 hover:text-white",
-              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[12px] sm:text-sm md:text-base font-medium transition-all duration-200",
+              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[14px] sm:text-base md:text-lg font-medium transition-all duration-200",
               "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent",
-              "relative group whitespace-nowrap flex-1"
+              "relative group whitespace-nowrap flex-1 font-bakbak uppercase"
             )}
           >
-            Map
+            MAP
             <div className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-[2px] bg-gray-300/20" />
           </Button>
 
@@ -296,11 +295,11 @@ export default function LeadDetailPage() {
             onClick={handleOpenPhotosDialog}
             className={cn(
               "bg-transparent text-white hover:bg-lime-500/10 hover:text-white",
-              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[12px] sm:text-sm md:text-base font-medium transition-all duration-200",
-              "relative group whitespace-nowrap flex-1"
+              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[14px] sm:text-base md:text-lg font-medium transition-all duration-200",
+              "relative group whitespace-nowrap flex-1 font-bakbak uppercase"
             )}
           >
-            Photos
+            PHOTOS
             <div className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-[2px] bg-gray-300/20" />
           </Button>
 
@@ -310,11 +309,11 @@ export default function LeadDetailPage() {
             onClick={handleOpenFilesDialog}
             className={cn(
               "bg-transparent text-white hover:bg-lime-500/10 hover:text-white",
-              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[12px] sm:text-sm md:text-base font-medium transition-all duration-200",
-              "relative group whitespace-nowrap flex-1"
+              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[14px] sm:text-base md:text-lg font-medium transition-all duration-200",
+              "relative group whitespace-nowrap flex-1 font-bakbak uppercase"
             )}
           >
-            Files
+            FILES
             <div className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-[2px] bg-gray-300/20" />
           </Button>
 
@@ -324,11 +323,11 @@ export default function LeadDetailPage() {
             onClick={handleOpenContractsDialog}
             className={cn(
               "bg-transparent text-white hover:bg-lime-500/10 hover:text-white",
-              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[12px] sm:text-sm md:text-base font-medium transition-all duration-200",
-              "relative group whitespace-nowrap flex-1"
+              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[14px] sm:text-base md:text-lg font-medium transition-all duration-200",
+              "relative group whitespace-nowrap flex-1 font-bakbak uppercase"
             )}
           >
-            Contracts
+            CONTRACTS
           </Button>
         </div>
       </div>

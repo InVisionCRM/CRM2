@@ -191,9 +191,17 @@ export async function uploadPhotos(
     }
 
     const uploadedPhotos = []
+    const errors = []
     
     for (const file of files) {
       try {
+        // Log incoming file details
+        console.log('Processing file:', {
+          name: file.name,
+          type: file.type,
+          size: file.size
+        })
+
         // Convert base64 back to File object
         let base64Data = file.base64Data
         // Remove data URL prefix if present
@@ -203,6 +211,22 @@ export async function uploadPhotos(
         
         if (!base64Data) {
           throw new Error('Invalid base64 data')
+        }
+
+        // Check for HEIC format
+        const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic')
+        if (isHeic) {
+          console.log('HEIC format detected, conversion needed')
+          // For now, we'll just log this. We'll need to add HEIC conversion library later
+          errors.push(`HEIC format detected for ${file.name}. Please convert to JPEG before uploading.`)
+          continue
+        }
+
+        // Validate file size (e.g., 25MB limit)
+        const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25MB in bytes
+        if (file.size > MAX_FILE_SIZE) {
+          errors.push(`File ${file.name} exceeds maximum size of 25MB`)
+          continue
         }
 
         const buffer = Buffer.from(base64Data, 'base64')
@@ -226,21 +250,23 @@ export async function uploadPhotos(
             mimeType: file.type,
             size: file.size,
             uploadedById: session.user.id,
-            driveFileId: null // This is now optional in the schema
+            driveFileId: null
           }
         })
 
         uploadedPhotos.push(photo)
       } catch (error) {
         console.error(`Error uploading photo ${file.name}:`, error)
-        // Continue with next file instead of failing the entire batch
+        errors.push(`Failed to upload ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
     }
 
     if (uploadedPhotos.length === 0) {
       return { 
         success: false, 
-        error: "Failed to upload any photos" 
+        error: errors.length > 0 
+          ? `Failed to upload photos: ${errors.join(', ')}` 
+          : "Failed to upload any photos"
       }
     }
 
@@ -248,13 +274,14 @@ export async function uploadPhotos(
     
     return { 
       success: true, 
-      photos: uploadedPhotos
+      photos: uploadedPhotos,
+      warnings: errors.length > 0 ? errors : undefined
     }
   } catch (error) {
     console.error("Error uploading photos:", error)
     return { 
       success: false, 
-      error: "Failed to upload photos" 
+      error: error instanceof Error ? error.message : "Failed to upload photos"
     }
   }
 }

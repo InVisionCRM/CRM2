@@ -1,11 +1,37 @@
 import React from "react"
 import "./globals.css"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Inter, Poppins, Michroma, Bakbak_One } from "next/font/google"
 import LayoutClientWrapper from "@/components/LayoutClientWrapper"
 import { AuthProvider } from "./auth-provider"
 
-const inter = Inter({ subsets: ["latin"] })
+// Configure your fonts
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+})
+
+const poppins = Poppins({
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-poppins',
+})
+
+const michroma = Michroma({
+  weight: ['400'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-michroma',
+})
+
+const bakbakOne = Bakbak_One({
+  weight: ['400'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-bakbak',
+})
 
 export const metadata: Metadata = {
   title: "Roofing Mobile CRM",
@@ -34,7 +60,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className="dark">
+    <html 
+      lang="en" 
+      suppressHydrationWarning 
+      className={`dark ${inter.variable} ${poppins.variable} ${michroma.variable} ${bakbakOne.variable}`}
+    >
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

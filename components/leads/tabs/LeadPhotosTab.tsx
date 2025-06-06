@@ -698,11 +698,20 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
   }
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      const files = Array.from(event.target.files)
-      setUploadFiles(files)
-      createPreviews(files)
-    }
+    const files = event.target.files
+    if (!files) return
+
+    // Log file information for debugging
+    Array.from(files).forEach(file => {
+      console.log('File details:', {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+      })
+    })
+
+    setUploadFiles(Array.from(files))
+    createPreviews(Array.from(files))
   }
 
   const removePreview = (index: number) => {
@@ -735,6 +744,22 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
       
       // Start progress animation for preparation phase
       simulateProgress(0, 30, 1000)
+
+      // Check for unsupported formats before upload
+      const unsupportedFiles = uploadFiles.filter(file => 
+        file.type === 'image/heic' || 
+        file.type === 'image/heif' || 
+        file.name.toLowerCase().endsWith('.heic')
+      )
+
+      if (unsupportedFiles.length > 0) {
+        toast({
+          title: "Unsupported Format",
+          description: "HEIC/HEIF format is not supported. Please convert your photos to JPEG format before uploading.",
+          variant: "destructive",
+        })
+        return
+      }
 
       // Prepare files for upload
       const serializedFiles: SerializedFile[] = await Promise.all(
@@ -792,10 +817,19 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
           clearInterval(progressInterval.current)
         }
         
-        toast({
-          title: "Photos uploaded",
-          description: `Successfully uploaded ${uploadFiles.length} photo${uploadFiles.length > 1 ? 's' : ''}`,
-        })
+        // Show success message with warnings if any
+        if (result.warnings && result.warnings.length > 0) {
+          toast({
+            title: "Photos uploaded with warnings",
+            description: result.warnings.join('\n'),
+            variant: "warning",
+          })
+        } else {
+          toast({
+            title: "Photos uploaded",
+            description: `Successfully uploaded ${uploadFiles.length} photo${uploadFiles.length > 1 ? 's' : ''}`,
+          })
+        }
       } else {
         throw new Error(result.error)
       }
@@ -807,7 +841,7 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
       setUploadProgress(0)
       toast({
         title: "Upload failed",
-        description: "Failed to upload photos",
+        description: error instanceof Error ? error.message : "Failed to upload photos",
         variant: "destructive",
       })
     } finally {
