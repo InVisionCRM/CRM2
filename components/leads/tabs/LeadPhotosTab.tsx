@@ -24,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import Image from "next/image"
-import { getLeadPhotos, uploadPhotos, deletePhoto, updatePhoto } from "@/app/actions/photo-actions"
+import { getLeadPhotos, uploadSinglePhoto, deletePhoto, updatePhoto } from "@/app/actions/photo-actions"
 import ReactCrop, { type Crop as ReactCropType } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import PhotoCanvas from "@/components/photos/photo-canvas"
@@ -563,6 +563,7 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
   const nameInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
   const [uploadProgress, setUploadProgress] = useState(0)
+  const [currentUploadingFile, setCurrentUploadingFile] = useState<string | null>(null)
   const progressInterval = useRef<NodeJS.Timeout>()
   
   // Cleanup interval on unmount
@@ -698,20 +699,11 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
   }
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files
-    if (!files) return
-
-    // Log file information for debugging
-    Array.from(files).forEach(file => {
-      console.log('File details:', {
-        name: file.name,
-        type: file.type,
-        size: file.size,
-      })
-    })
-
-    setUploadFiles(Array.from(files))
-    createPreviews(Array.from(files))
+    if (event.target.files) {
+      const files = Array.from(event.target.files)
+      setUploadFiles(files)
+      createPreviews(files)
+    }
   }
 
   const removePreview = (index: number) => {
@@ -721,131 +713,93 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
 
   const handleUpload = async () => {
     if (!leadId) {
-      toast({
-        title: "Error",
-        description: "Lead ID is required",
-        variant: "destructive",
-      })
+      toast({ title: "Error", description: "Lead ID is required", variant: "destructive" })
       return
     }
     
-    try {
-      if (uploadFiles.length === 0) {
-        toast({
-          title: "No files selected",
-          description: "Please select at least one photo to upload",
-          variant: "destructive",
-        })
-        return
-      }
+    if (uploadFiles.length === 0) {
+      toast({ title: "No files selected", description: "Please select at least one photo to upload", variant: "destructive" })
+      return
+    }
 
-      setIsUploading(true)
-      setUploadProgress(0)
+    setIsUploading(true)
+    setUploadProgress(0)
+    const totalFiles = uploadFiles.length
+    const uploadedPhotos = []
+    const failedUploads = []
+
+    for (let i = 0; i < totalFiles; i++) {
+      const file = uploadFiles[i]
+      const preview = uploadPreviews[i]
+      setCurrentUploadingFile(`Uploading ${preview.name} (${i + 1}/${totalFiles})...`)
       
-      // Start progress animation for preparation phase
-      simulateProgress(0, 30, 1000)
-
-      // Check for unsupported formats before upload
-      const unsupportedFiles = uploadFiles.filter(file => 
-        file.type === 'image/heic' || 
-        file.type === 'image/heif' || 
-        file.name.toLowerCase().endsWith('.heic')
-      )
-
-      if (unsupportedFiles.length > 0) {
-        toast({
-          title: "Unsupported Format",
-          description: "HEIC/HEIF format is not supported. Please convert your photos to JPEG format before uploading.",
-          variant: "destructive",
-        })
-        return
-      }
-
-      // Prepare files for upload
-      const serializedFiles: SerializedFile[] = await Promise.all(
-        Array.from(uploadFiles).map(async (file) => {
-          const buffer = await file.arrayBuffer()
-          const base64Data = Buffer.from(buffer).toString('base64')
-          return {
-            name: file.name,
-            type: file.type,
-            size: file.size,
-            base64Data
-          }
-        })
-      )
-
-      // Update progress for upload phase
-      simulateProgress(30, 70, 2000)
-      
-      // Upload photos
-      const result = await uploadPhotos(leadId, serializedFiles)
-      
-      if (result.success) {
-        // Update progress for finalization phase
-        simulateProgress(70, 90, 1000)
-        
-        // Update photos list
-        const photosResult = await getLeadPhotos(leadId)
-        
-        if (photosResult.success && photosResult.photos) {
-          const transformedPhotos: Photo[] = photosResult.photos.map(photo => ({
-            id: photo.id,
-            url: photo.url,
-            thumbnailUrl: photo.thumbnailUrl || photo.url,
-            name: photo.name,
-            description: photo.description,
-            createdAt: photo.createdAt.toISOString(),
-            uploadedBy: photo.uploadedBy,
-            leadId: photo.leadId
-          }))
-          setPhotos(transformedPhotos)
-          
-          // Complete the progress smoothly
-          simulateProgress(90, 100, 500)
-          
-          // Small delay before closing to show completion
-          await new Promise(resolve => setTimeout(resolve, 800))
+      try {
+        // Prepare file for upload
+        const buffer = await file.arrayBuffer()
+        const base64Data = Buffer.from(buffer).toString('base64')
+        const serializedFile = {
+          name: preview.name, // Use the (possibly edited) name from preview
+          type: file.type,
+          size: file.size,
+          base64Data
         }
+
+        // Upload photo
+        const result = await uploadSinglePhoto(leadId, serializedFile)
         
-        // Close dialog and reset state
-        setIsUploadDialogOpen(false)
-        setUploadFiles([])
-        setUploadPreviews([])
-        setUploadProgress(0)
-        if (progressInterval.current) {
-          clearInterval(progressInterval.current)
-        }
-        
-        // Show success message with warnings if any
-        if (result.warnings && result.warnings.length > 0) {
-          toast({
-            title: "Photos uploaded with warnings",
-            description: result.warnings.join('\n'),
-            variant: "warning",
-          })
+        if (result.success && result.photo) {
+          uploadedPhotos.push(result.photo)
         } else {
-          toast({
-            title: "Photos uploaded",
-            description: `Successfully uploaded ${uploadFiles.length} photo${uploadFiles.length > 1 ? 's' : ''}`,
-          })
+          throw new Error(result.error || `Failed to upload ${file.name}`)
         }
-      } else {
-        throw new Error(result.error)
+      } catch (error) {
+        console.error(`Error uploading ${file.name}:`, error)
+        failedUploads.push(file.name)
+      } finally {
+        // Update progress
+        setUploadProgress(((i + 1) / totalFiles) * 100)
       }
-    } catch (error) {
-      console.error("Error uploading photos:", error)
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current)
-      }
-      setUploadProgress(0)
+    }
+
+    setIsUploading(false)
+    setCurrentUploadingFile(null)
+
+    // Show results
+    if (uploadedPhotos.length > 0) {
+      // Manually add new photos to state to avoid re-fetching everything
+      const newPhotos: Photo[] = uploadedPhotos.map(p => ({
+        id: p.id,
+        url: p.url,
+        thumbnailUrl: p.thumbnailUrl,
+        name: p.name,
+        description: p.description,
+        createdAt: p.createdAt.toISOString(),
+        leadId: p.leadId,
+        uploadedBy: p.uploadedBy // This might be null if not included in return
+      }));
+
+      setPhotos(prev => [...newPhotos, ...prev]);
+
       toast({
-        title: "Upload failed",
-        description: error instanceof Error ? error.message : "Failed to upload photos",
+        title: "Upload Complete",
+        description: `Successfully uploaded ${uploadedPhotos.length} photo${uploadedPhotos.length > 1 ? 's' : ''}.`,
+      })
+    }
+
+    if (failedUploads.length > 0) {
+      toast({
+        title: "Some uploads failed",
+        description: `Failed to upload: ${failedUploads.join(", ")}`,
         variant: "destructive",
       })
-    } finally {
-      setIsUploading(false)
+    }
+
+    // Close dialog and reset state
+    if (failedUploads.length === 0) {
+      setIsUploadDialogOpen(false)
+      setUploadFiles([])
+      setUploadPreviews([])
+      setUploadProgress(0)
     }
   }
 
@@ -1314,15 +1268,13 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
                   value={uploadProgress} 
                   className="h-2 transition-all duration-300"
                 />
-                <p className="text-sm text-muted-foreground text-center">
-                  {uploadProgress < 30 && "Preparing photos..."}
-                  {uploadProgress >= 30 && uploadProgress < 70 && "Uploading photos..."}
-                  {uploadProgress >= 70 && uploadProgress < 90 && "Processing upload..."}
-                  {uploadProgress >= 90 && uploadProgress < 100 && "Finalizing..."}
-                  {uploadProgress === 100 && "Upload complete!"}
-                </p>
+                {currentUploadingFile && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    {currentUploadingFile}
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground/80 text-center">
-                  {uploadProgress}%
+                  {Math.round(uploadProgress)}%
                 </p>
               </div>
             )}
