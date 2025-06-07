@@ -437,8 +437,8 @@ export function InsuranceForm({
       // Prepare data for submission
       const submissionData = {
         ...data,
-        // Use custom company name if "Not Listed" is selected
-        insuranceCompany: data.insuranceCompany === "Not Listed" ? data.customInsuranceCompany : data.insuranceCompany
+        // Use custom company name if provided, otherwise use selected company
+        insuranceCompany: data.customInsuranceCompany || data.insuranceCompany
       }
       
       // Remove customInsuranceCompany as it's not part of the API schema

@@ -465,8 +465,7 @@ export default function MapPage() {
             </Button>
           </Link>
           <AddressSearch 
-            onAddressSelect={handleAddressSelect} 
-            accessToken={mapboxAccessToken}
+            onAddressSelect={handleAddressSelect}
           />
         </div>
 
