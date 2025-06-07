@@ -112,6 +112,43 @@ This CRM is designed to work great on mobile devices:
 - **File Storage**: Vercel Blob for file/image uploads
 - **Authentication**: JWT with HTTP-only cookies
 
+## 🔐 Authentication
+
+This project uses Google OAuth 2.0 with a refresh token strategy for secure, long-lived user sessions.
+
+### Flow
+1.  **Login**: User is redirected to Google's consent screen via `/api/auth/login`.
+2.  **Callback**: After granting permission, Google redirects to `/api/auth/callback`. The app exchanges the authorization code for an `access_token` and a `refresh_token`.
+3.  **Token Storage**:
+    *   `access_token`: A short-lived token stored in a secure, `HttpOnly` cookie.
+    *   `refresh_token`: A long-lived token stored in a secure, `HttpOnly` cookie. Used to get new access tokens without requiring the user to log in again.
+    *   `access_token_expiry`: The expiration timestamp of the access token, stored in a regular cookie accessible to the client-side.
+4.  **Token Refresh**: The client-side `useAuth` hook checks if the access token is nearing expiration. If so, it silently calls `/api/auth/refresh` which uses the `refresh_token` to get a new `access_token`.
+5.  **Logout**: `/api/auth/logout` revokes the refresh token with Google and clears all authentication cookies.
+
+### Environment Variables
+
+Add the following to your `.env.local` file:
+
+```
+# Google OAuth
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+GOOGLE_REDIRECT_URI="http://localhost:3000/api/auth/callback" # Use your actual production URL in production
+```
+
+### Cookie Details
+
+| Cookie Name             | Purpose                       | Type       | Expiration (Max Age) |
+| ----------------------- | ----------------------------- | ---------- | -------------------- |
+| `access_token`          | Authenticates API requests    | `HttpOnly` | 1 hour               |
+| `refresh_token`         | Obtains new access tokens     | `HttpOnly` | 30+ days             |
+| `access_token_expiry`   | Client-side expiration check  | Standard   | 30+ days             |
+
+*   **HttpOnly**: Prevents access from client-side JavaScript, mitigating XSS attacks.
+*   **Secure**: Sent only over HTTPS (in production).
+*   **SameSite=Lax**: Provides protection against CSRF attacks.
+
 ## 📂 Project Structure
 
 \`\`\`

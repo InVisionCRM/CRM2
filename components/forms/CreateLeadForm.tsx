@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Input } from "@/components/ui/input"
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
 import { LeadStatus } from "@prisma/client"
 import { useRouter } from "next/navigation"
+import AsyncSelect from "react-select/async"
 import {
   Select,
   SelectContent,
@@ -45,8 +46,7 @@ interface CreateLeadFormProps {
 
 declare global {
   interface Window {
-    google: any;
-    initAutocomplete: () => void;
+    google: any
   }
 }
 
@@ -55,9 +55,8 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [emailPrefix, setEmailPrefix] = useState<string>("")
-  const addressInputRef = useRef<HTMLInputElement | null>(null)
-  const autocompleteRef = useRef<any>(null)
-  const scriptLoadedRef = useRef(false)
+  const [placesService, setPlacesService] = useState<any>(null)
+  const scriptRef = useRef<HTMLScriptElement | null>(null)
 
   const {
     register,
@@ -66,6 +65,7 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
     reset,
     setValue,
     watch,
+    control,
   } = useForm<CreateLeadFormValues>({
     resolver: zodResolver(createLeadSchema),
     defaultValues: {
@@ -79,87 +79,58 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
     },
   })
 
-  const emailValue = watch("email") || ""
-
   useEffect(() => {
-    const atIndex = emailValue.indexOf("@")
-    setEmailPrefix(atIndex >= 0 ? emailValue.substring(0, atIndex) : emailValue)
-  }, [emailValue])
-
-  useEffect(() => {
-    if (!open || scriptLoadedRef.current) return
-
+    if (!open) return
+    
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-    if (!apiKey) return
+    if (!apiKey || scriptRef.current) return
 
-    const script = document.createElement("script")
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-    script.async = true
-    script.defer = true
-    script.onload = () => {
-      scriptLoadedRef.current = true
-      initializeAutocomplete()
+    scriptRef.current = document.createElement("script")
+    scriptRef.current.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
+    scriptRef.current.async = true
+    scriptRef.current.onload = () => {
+      setPlacesService(new window.google.maps.places.AutocompleteService())
     }
-    document.head.appendChild(script)
+    document.head.appendChild(scriptRef.current)
 
     return () => {
-      if (script.parentNode) {
-        document.head.removeChild(script)
+      if (scriptRef.current?.parentNode) {
+        document.head.removeChild(scriptRef.current)
+        scriptRef.current = null
       }
     }
   }, [open])
 
-  useEffect(() => {
-    if (!open || !scriptLoadedRef.current || !addressInputRef.current || !window.google?.maps?.places) return
-
-    initializeAutocomplete()
-  }, [open])
-
-  const initializeAutocomplete = () => {
-    if (!addressInputRef.current) return
-
-    if (autocompleteRef.current) {
-      google.maps.event.clearInstanceListeners(autocompleteRef.current)
-    }
-
-    autocompleteRef.current = new window.google.maps.places.Autocomplete(addressInputRef.current, {
-      types: ["address"],
-      componentRestrictions: { country: "us" },
-      fields: ["formatted_address", "address_components"],
-    })
-
-    autocompleteRef.current.addListener("place_changed", () => {
-      const place = autocompleteRef.current.getPlace()
-      if (place?.formatted_address) {
-        setValue("address", place.formatted_address, { shouldValidate: true })
+  const loadAddressOptions = (inputValue: string) => {
+    return new Promise<any[]>((resolve) => {
+      if (!inputValue || !placesService) {
+        resolve([])
+        return
       }
-    })
 
-    autocompleteRef.current.addListener("place_changed", () => {
-        const place = autocompleteRef.current.getPlace()
-        if (place?.formatted_address) {
-          addressInputRef.current!.value = place.formatted_address  // <-- ADD THIS LINE
-          setValue("address", place.formatted_address, { shouldValidate: true })
+      placesService.getPlacePredictions(
+        {
+          input: inputValue,
+          componentRestrictions: { country: "us" },
+          types: ["address"],
+        },
+        (predictions: any[] | null) => {
+          if (!predictions) {
+            resolve([])
+            return
+          }
+
+          const options = predictions.map((prediction) => ({
+            label: prediction.description,
+            value: prediction.description,
+          }))
+          resolve(options)
         }
-      })      
+      )
+    })
   }
 
-  useEffect(() => {
-    const style = document.createElement("style")
-    style.textContent = `
-      .pac-container {
-        z-index: 9999 !important;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        border-radius: 0.375rem;
-      }
-    `
-    document.head.appendChild(style)
-    return () => {
-      if (style.parentNode) {
-        document.head.removeChild(style)
-      }
-    }
-  }, [])
+  const emailValue = watch("email") || ""
 
   const completeEmailWithDomain = (domain: string) => {
     const atIndex = emailValue.indexOf("@")
@@ -178,8 +149,6 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
         body: JSON.stringify(apiData),
       })
 
-      // Even if there's an error response, the lead might have been created successfully
-      // Let's try to parse the response first
       let result
       try {
         result = await response.json()
@@ -188,22 +157,14 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
       }
 
       if (result && result.id) {
-        // If we got an ID back, the lead was created successfully
         reset()
         onOpenChange(false)
-        
-        // Refresh the router to update any cached data
         router.refresh()
-        
-        // Navigate to the lead detail page
         router.push(`/leads/${result.id}`)
-        
-        // Also call onSuccess if provided
         onSuccess?.(result.id)
         return
       }
 
-      // If we didn't get an ID and the response wasn't ok, throw an error
       if (!response.ok) {
         let msg = "Failed to create lead"
         if (result && result.error) {
@@ -212,8 +173,6 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
         throw new Error(msg)
       }
 
-      // If we get here, the response was ok but didn't include an ID
-      // This shouldn't happen, but just in case
       reset()
       onOpenChange(false)
     } catch (err) {
@@ -266,12 +225,55 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
 
           <div className="space-y-2">
             <Label htmlFor="address">Address</Label>
-            <div className="relative">
-              <Input id="address" placeholder="Start typing address" disabled={isLoading} autoComplete="off" ref={addressInputRef} className="pr-10" />
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                <img src="https://developers.google.com/maps/documentation/images/powered_by_google_on_white.png" alt="Powered by Google" className="h-5 opacity-70" />
-              </div>
-            </div>
+            <Controller
+              name="address"
+              control={control}
+              render={({ field }) => (
+                <AsyncSelect
+                  {...field}
+                  id="address"
+                  loadOptions={loadAddressOptions}
+                  placeholder="Start typing an address..."
+                  isDisabled={isLoading}
+                  className="react-select-container"
+                  classNamePrefix="react-select"
+                  onChange={(option: any) => {
+                    field.onChange(option?.value || "")
+                  }}
+                  value={field.value ? { label: field.value, value: field.value } : null}
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      backgroundColor: "rgb(0 0 0 / 0.8)",
+                      borderColor: "rgb(255 255 255 / 0.2)",
+                      "&:hover": {
+                        borderColor: "rgb(255 255 255 / 0.3)",
+                      },
+                    }),
+                    menu: (base) => ({
+                      ...base,
+                      backgroundColor: "rgb(0 0 0 / 0.8)",
+                      backdropFilter: "blur(12px)",
+                      border: "1px solid rgb(255 255 255 / 0.2)",
+                    }),
+                    option: (base, state) => ({
+                      ...base,
+                      backgroundColor: state.isFocused ? "rgb(255 255 255 / 0.1)" : "transparent",
+                      color: "white",
+                      cursor: "pointer",
+                    }),
+                    singleValue: (base) => ({
+                      ...base,
+                      color: "white",
+                    }),
+                    input: (base) => ({
+                      ...base,
+                      color: "white",
+                    }),
+                  }}
+                />
+              )}
+            />
             {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address.message}</p>}
           </div>
 

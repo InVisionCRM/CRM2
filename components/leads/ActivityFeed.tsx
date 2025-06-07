@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { formatDistanceToNow } from "date-fns"
-import { ActivityType, type Activity as PrismaActivity } from "@prisma/client" // Use PrismaActivity type
+import { ActivityType, type Activity as PrismaActivity } from "@prisma/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import Image from "next/image"
 
 interface ActivityFeedProps {
   leadId: string
@@ -85,6 +86,8 @@ export function ActivityFeed({ leadId, limit = 5 }: ActivityFeedProps) {
     );
   }
 
+  const displayedActivities = showAll ? activities : activities.slice(0, 5)
+
   return (
     <Card className="shadow-sm">
       <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
@@ -103,7 +106,7 @@ export function ActivityFeed({ leadId, limit = 5 }: ActivityFeedProps) {
           <p className="text-muted-foreground text-center py-6">No activity recorded for this lead yet.</p>
         ) : (
           <div className="space-y-4">
-            {displayActivities.map((activity) => (
+            {displayedActivities.map((activity) => (
               <div key={activity.id} className="border-b border-border/40 pb-3 last:border-0 last:pb-0">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium text-card-foreground">{activity.title}</span>

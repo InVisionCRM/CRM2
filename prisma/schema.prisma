@@ -150,6 +150,7 @@ model Activity {
   type        ActivityType
   title       String
   description String?
+  imageUrl    String?     // URL to any associated image (like Street View)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   

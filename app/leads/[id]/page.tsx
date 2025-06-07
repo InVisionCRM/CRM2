@@ -168,6 +168,20 @@ export default function LeadDetailPage() {
   const handleOpenPhotosDialog = () => setPhotosDialogOpen(true);
   const handleClosePhotosDialog = () => setPhotosDialogOpen(false);
 
+  const [streetViewUrl, setStreetViewUrl] = useState<string>("")
+  const [isStreetViewLoading, setIsStreetViewLoading] = useState(true)
+  const [streetViewError, setStreetViewError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (lead?.address) {
+      setIsStreetViewLoading(true)
+      setStreetViewError(null)
+      const encodedAddress = encodeURIComponent(lead.address)
+      const url = `https://maps.googleapis.com/maps/api/streetview?size=800x400&location=${encodedAddress}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+      setStreetViewUrl(url)
+    }
+  }, [lead?.address])
+
   if (isLeadLoading && !lead) { // Show skeleton only on initial load
     return <LeadDetailSkeleton />
   }
@@ -267,6 +281,57 @@ export default function LeadDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Street View Section */}
+        {lead?.address && (
+          <Card className="w-full overflow-hidden">
+            <CardHeader className="p-4 border-b">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">{lead.address}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(lead.address)}`, '_blank', 'noopener,noreferrer')}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  Open in Maps
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {streetViewUrl && (
+                <div className="relative w-full h-[400px]">
+                  <img
+                    src={streetViewUrl}
+                    alt={`Street view of ${lead.address}`}
+                    className="w-full h-full object-cover"
+                    onLoad={() => setIsStreetViewLoading(false)}
+                    onError={() => {
+                      setIsStreetViewLoading(false)
+                      setStreetViewError("Failed to load Street View image")
+                    }}
+                  />
+                  {isStreetViewLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                      <Skeleton className="w-full h-full" />
+                    </div>
+                  )}
+                  {streetViewError && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-500">
+                      <p>{streetViewError}</p>
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2">
+                    Street View
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
       
       {/* Divider */}

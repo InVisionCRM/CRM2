@@ -1,6 +1,6 @@
 'use client';
 
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import AppSidebar from '@/components/AppSidebar';
 import { cn } from '@/lib/utils';
@@ -19,33 +19,26 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
   const pathname = usePathname() || '';
   const isMapPage = pathname.startsWith("/map");
   const isAuthPage = pathname.startsWith("/auth");
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   return (
     <>
       <FixedWavyBackground />
       <div className="min-h-screen bg-transparent relative z-[1]">
-        {/* Render AppSidebar for all pages except map and auth pages */}
-        {!isMapPage && !isAuthPage && (
-          <AppSidebar 
-            initialCollapsed={true} 
-            onCollapsedChange={setIsSidebarCollapsed}
-          />
-        )}
-        
         {/* Main content area */}
         <div 
           className={cn(
-            "min-h-screen transition-[margin] duration-300 relative",
-            !isMapPage && !isAuthPage && "md:ml-[80px] md:ml-[300px]",
-            // Add bottom padding on mobile for the navigation bar
-            "pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0"
+            "min-h-screen relative",
+            // Add bottom padding for the navigation bar
+            "pb-[calc(4rem+env(safe-area-inset-bottom))]"
           )}
         >
           <main>
             {children}
           </main>
         </div>
+        
+        {/* Render AppSidebar for all pages except map and auth pages */}
+        {!isMapPage && !isAuthPage && <AppSidebar />}
       </div>
     </>
   );

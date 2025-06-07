@@ -12,6 +12,7 @@ export interface LeadSummary {
   assignedTo?: string
   assignedToId?: string
   claimNumber?: string | null
+  insuranceCompany?: string | null
   latestActivity?: {
     title: string
     createdAt: string

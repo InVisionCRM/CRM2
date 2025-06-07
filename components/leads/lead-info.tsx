@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import type { LeadWithAssignedUser } from "@/types/lead"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -37,6 +37,7 @@ export function LeadInfo({ lead }: LeadInfoProps) {
     address: lead.address || "",
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [streetViewUrl, setStreetViewUrl] = useState<string>("")
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -101,6 +102,14 @@ export function LeadInfo({ lead }: LeadInfoProps) {
       setIsSubmitting(false)
     }
   }
+
+  useEffect(() => {
+    if (lead.address) {
+      const encodedAddress = encodeURIComponent(lead.address)
+      const url = `https://maps.googleapis.com/maps/api/streetview?size=800x400&location=${encodedAddress}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+      setStreetViewUrl(url)
+    }
+  }, [lead.address])
 
   if (isEditing) {
     return (
@@ -208,34 +217,56 @@ export function LeadInfo({ lead }: LeadInfoProps) {
 
   return (
     <Card>
-      <CardContent className="p-4 space-y-4">
-        <div className="flex justify-between items-center">
-          <h3 className="text-sm font-medium text-muted-foreground">Contact Information</h3>
-          <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-            Edit
-          </Button>
-        </div>
-        <div className="grid gap-2">
-          <div className="flex items-center gap-2">
-            <Mail className="h-4 w-4 text-muted-foreground" />
-            <span>{lead.email || "No email provided"}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Phone className="h-4 w-4 text-muted-foreground" />
-            <span>{lead.phone || "No phone provided"}</span>
-          </div>
-        </div>
-
+      <CardContent className="space-y-6">
+        {/* Contact Information */}
         <div className="space-y-2">
-          <h3 className="text-sm font-medium text-muted-foreground">Address</h3>
-          <div className="flex items-start gap-2">
-            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-            <div>
-              <p>{lead.address || "No address provided"}</p>
+          <h3 className="text-sm font-medium text-muted-foreground">Contact Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center space-x-2">
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">{lead.email || "No email provided"}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Phone className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">{lead.phone || "No phone provided"}</span>
             </div>
           </div>
         </div>
 
+        {/* Location Information with Street View */}
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium text-muted-foreground">Location</h3>
+          {lead.address && (
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">{lead.address}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-2"
+                  onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(lead.address)}`, '_blank', 'noopener,noreferrer')}
+                >
+                  Open in Maps
+                </Button>
+              </div>
+              {streetViewUrl && (
+                <div className="relative w-full h-[300px] rounded-lg overflow-hidden border border-border">
+                  <img
+                    src={streetViewUrl}
+                    alt={`Street view of ${lead.address}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2">
+                    Street View
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Additional Details */}
         <div className="space-y-2">
           <h3 className="text-sm font-medium text-muted-foreground">Additional Details</h3>
           <div className="grid grid-cols-2 gap-4">

@@ -130,4 +130,16 @@ export async function getActivitiesByLeadId(leadId: string): Promise<ActivityWit
     console.error("Error fetching lead activities:", error)
     throw new Error(`Failed to fetch lead activities: ${error instanceof Error ? error.message : "Unknown error"}`)
   }
+}
+
+/**
+ * Gets total count of activities
+ */
+export async function getTotalActivitiesCount(): Promise<number> {
+  try {
+    return await prisma.activity.count()
+  } catch (error) {
+    console.error("Error getting total activities count:", error)
+    throw new Error(`Failed to get total activities count: ${error instanceof Error ? error.message : "Unknown error"}`)
+  }
 } 

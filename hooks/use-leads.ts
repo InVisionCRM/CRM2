@@ -98,6 +98,7 @@ export function useLeads(options: UseLeadsOptions = {}): UseLeadsResult {
             assignedTo: salesperson ? salesperson.name : null,
             assignedToId: lead.assignedToId || null,
             claimNumber: lead.claimNumber || null,
+            insuranceCompany: lead.insuranceCompany || null,
             createdAt: lead.createdAt,
             latestActivity
           }
