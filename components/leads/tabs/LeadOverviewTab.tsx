@@ -201,15 +201,13 @@ export function LeadOverviewTab({ lead, onEditRequest }: LeadOverviewTabProps) {
   // const getInitials = ...; // No longer needed
 
   return (
-    // Use a more flexible grid that attempts 2 columns, but can shrink to 1 if necessary.
-    // Adjust gap and padding for smaller screens.
     <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 md:gap-6">
       {/* Lead Summary Card */}
-      <Card className="shadow-sm card">
-        <CardHeader className="pb-3 pt-4 px-4 sm:px-6">
-          <CardTitle className="text-md sm:text-lg">Lead Summary</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 px-4 pb-4 sm:px-6 sm:pb-5">
+      <div className="group relative rounded-xl overflow-hidden border border-white/30">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#162016] to-[#0a0a0a]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent" />
+        <div className="relative z-10 p-6 space-y-4">
+          <h3 className="text-lg font-medium">Lead Summary</h3>
           <div className="space-y-2">
             <div className="space-y-0.5">
               <p className="text-xs sm:text-sm font-medium text-muted-foreground">Created</p>
@@ -260,81 +258,69 @@ export function LeadOverviewTab({ lead, onEditRequest }: LeadOverviewTabProps) {
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
       
       {/* Contact Information Card */}
-      <Card className="shadow-sm card">
-        <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-6">
-          <CardTitle className="text-md sm:text-lg">Contact Information</CardTitle>
-          {onEditRequest && (
-            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7" onClick={() => onEditRequest('contact')}>
-              <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-              <span className="sr-only">Edit Contact Information</span>
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent className="space-y-3 px-4 pb-4 sm:px-6 sm:pb-5">
-          <div>
-            <p className="font-medium text-sm sm:text-base">{fullName}</p>
-            <div className="flex items-center gap-1.5">
-              <p className="text-xs sm:text-sm text-muted-foreground break-all">{lead.email || "No email"}</p>
-              {lead.email && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-5 w-5 rounded-full hover:bg-lime-500/10 text-lime-500 hover:text-lime-600"
-                  onClick={() => handleEmailClick(lead.email!)}
-                >
-                  <Mail className="h-3 w-3 text-lime-500" />
-                  <span className="sr-only">Send email</span>
-                </Button>
-              )}
+      <div className="group relative rounded-xl overflow-hidden border border-white/30">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#162016] to-[#0a0a0a]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent" />
+        <div className="relative z-10 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium">Contact Information</h3>
+            {onEditRequest && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7" onClick={() => onEditRequest('contact')}>
+                <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                <span className="sr-only">Edit Contact Information</span>
+              </Button>
+            )}
+          </div>
+          <div className="space-y-3">
+            <div>
+              <p className="font-medium text-sm sm:text-base">{fullName}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs sm:text-sm text-muted-foreground break-all">{lead.email || "No email"}</p>
+                {lead.email && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 rounded-full hover:bg-lime-500/10 text-lime-500 hover:text-lime-600"
+                    onClick={() => handleEmailClick(lead.email!)}
+                  >
+                    <Mail className="h-3 w-3 text-lime-500" />
+                    <span className="sr-only">Send email</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-1.5 pt-1">
+              <ContactItem label="Phone" value={lead.phone} type="phone" />
+              <ContactItem label="Address" value={addressDisplay !== "No address provided" ? addressDisplay : null} type="address" />
             </div>
           </div>
-          
-          <div className="grid grid-cols-1 gap-1.5 pt-1">
-            <ContactItem
-              label="Phone"
-              value={lead.phone}
-              type="phone"
-            />
-            <ContactItem
-              label="Address"
-              value={addressDisplay !== "No address provided" ? addressDisplay : null}
-              type="address"
-            />
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
       
       {/* Insurance Information Card */}
-      <Card className="shadow-sm card">
-        <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-6">
-          <CardTitle className="text-md sm:text-lg">Insurance Details</CardTitle>
-          {onEditRequest && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8 sm:h-7 sm:w-7" 
-              onClick={() => onEditRequest?.('insurance')}
-            >
-              <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-              <span className="sr-only">Edit Insurance Details</span>
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent className="space-y-3 px-4 pb-4 sm:px-6 sm:pb-5">
+      <div className="group relative rounded-xl overflow-hidden border border-white/30">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#162016] to-[#0a0a0a]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent" />
+        <div className="relative z-10 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium">Insurance Details</h3>
+            {onEditRequest && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7" onClick={() => onEditRequest('insurance')}>
+                <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                <span className="sr-only">Edit Insurance Details</span>
+              </Button>
+            )}
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-2">
             <div className="space-y-0.5">
               <p className="text-xs sm:text-sm font-medium text-muted-foreground">Company</p>
               <p className="text-xs sm:text-sm">{lead.insuranceCompany || "N/A"}</p>
             </div>
-            <ContactItem
-              label="Ins. Phone"
-              value={lead.insurancePhone}
-              type="phone"
-            />
+            <ContactItem label="Ins. Phone" value={lead.insurancePhone} type="phone" />
             <div className="space-y-0.5">
               <p className="text-xs sm:text-sm font-medium text-muted-foreground">Damage Type</p>
               <p className="text-xs sm:text-sm">{lead.damageType || "N/A"}</p>
@@ -344,42 +330,30 @@ export function LeadOverviewTab({ lead, onEditRequest }: LeadOverviewTabProps) {
               <p className="text-xs sm:text-sm">{lead.claimNumber || "N/A"}</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
       
       {/* Adjuster Information Card */}
-      <Card className="shadow-sm card">
-        <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4 sm:px-6">
-          <CardTitle className="text-md sm:text-lg">Adjuster Details</CardTitle>
-          {onEditRequest && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8 sm:h-7 sm:w-7" 
-              onClick={() => onEditRequest?.('adjuster')}
-            >
-              <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
-              <span className="sr-only">Edit Adjuster Details</span>
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent className="space-y-3 px-4 pb-4 sm:px-6 sm:pb-5">
+      <div className="group relative rounded-xl overflow-hidden border border-white/30">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#162016] to-[#0a0a0a]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent" />
+        <div className="relative z-10 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium">Adjuster Details</h3>
+            {onEditRequest && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-7 sm:w-7" onClick={() => onEditRequest('adjuster')}>
+                <Pencil className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                <span className="sr-only">Edit Adjuster Details</span>
+              </Button>
+            )}
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-4 gap-y-2">
             <div className="space-y-0.5">
               <p className="text-xs sm:text-sm font-medium text-muted-foreground">Adjuster Name</p>
               <p className="text-xs sm:text-sm">{lead.insuranceAdjusterName || "N/A"}</p>
             </div>
-            <ContactItem
-              label="Adjuster Phone"
-              value={lead.insuranceAdjusterPhone}
-              type="phone"
-            />
-            <ContactItem
-              label="Adjuster Email"
-              value={lead.insuranceAdjusterEmail}
-              type="email"
-              className="col-span-1 sm:col-span-2"
-            />
+            <ContactItem label="Adjuster Phone" value={lead.insuranceAdjusterPhone} type="phone" />
+            <ContactItem label="Adjuster Email" value={lead.insuranceAdjusterEmail} type="email" className="col-span-1 sm:col-span-2" />
             <div className="space-y-0.5 col-span-1 sm:col-span-2">
               <p className="text-xs sm:text-sm font-medium text-muted-foreground">Next Appointment</p>
               <p className="text-xs sm:text-sm">
@@ -392,8 +366,8 @@ export function LeadOverviewTab({ lead, onEditRequest }: LeadOverviewTabProps) {
               </p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 } 

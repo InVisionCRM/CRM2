@@ -85,8 +85,8 @@ export function LeadDetailTabs({ lead, activeTab, onTabChange }: LeadDetailTabsP
   };
 
   return (
-    <Card className="border shadow-sm">
-      <CardContent className="p-4 sm:p-6 min-h-[400px]">
+    <Card className="border-0 shadow-none bg-transparent">
+      <CardContent className="p-4 sm:p-6 min-h-[400px] bg-transparent">
         {formToEdit === 'contact' ? (
           <ContactForm
             leadId={lead.id}
