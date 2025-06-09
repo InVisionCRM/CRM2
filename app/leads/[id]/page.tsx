@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useSearchParams } from "next/navigation" // Use next/navigation for App Router
 import { LeadStatus } from "@prisma/client"
-import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image } from "lucide-react" // Added Image icon
+import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy } from "lucide-react" // Added Copy icon
 import { StatusChangeDrawer } from "@/components/leads/StatusChangeDrawer"
 import { LeadDetailTabs } from "@/components/leads/LeadDetailTabs" // Corrected path
 import { ActivityFeed } from "@/components/leads/ActivityFeed" // Corrected path
@@ -35,38 +35,37 @@ interface QuickActionButtonProps {
 
 const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, icon, label, disabled }) => {
   const commonProps = {
-    className: "btn flex flex-col items-center justify-center gap-1.5 p-3 sm:p-4 rounded-lg hover:bg-muted/80 shadow-sm transition-all h-full text-sm",
-    disabled: disabled,
+    className: cn(
+      "relative flex h-24 flex-1 flex-col items-center justify-center bg-black p-2 text-md font-bold text-white",
+      "border-l border-lime-500 first:border-l-0",
+      "transition-colors hover:bg-slate-800",
+      disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+    ),
   };
 
-  if (href && !onClick) {
-    return (
-      <a href={disabled ? undefined : href} target="_blank" rel="noopener noreferrer" {...commonProps}>
-        {icon}
-        <span>{label}</span>
-      </a>
-    );
-  }
+  const Tag = href && !onClick ? 'a' : 'button';
+  const tagProps = {
+    ...commonProps,
+    ...(href && !onClick ? { href: disabled ? undefined : href, target: "_blank", rel: "noopener noreferrer" } : { onClick, type: "button" as const, disabled }),
+  };
 
   return (
-    <Button variant="outline" onClick={onClick} {...commonProps} asChild={!onClick && !!href}>
-      <div className="flex flex-col items-center justify-center gap-1.5 h-full">
-        {icon}
-        <span>{label}</span>
-      </div>
-    </Button>
+    <Tag {...tagProps}>
+      {icon}
+      <span>{label}</span>
+    </Tag>
   );
 };
 
 export default function LeadDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams(); // Get search params
-  const id = typeof params.id === 'string' ? params.id : undefined;
+  const id = typeof params?.id === 'string' ? params.id : undefined;
   
   const { lead, isLoading: isLeadLoading, error, mutate } = useLead(id) // useLead hook handles undefined id
   
   // Determine initial tab: from URL query or default to "overview"
-  const initialTab = searchParams.get("tab") === "files" ? "files" : "overview";
+  const initialTab = searchParams?.get("tab") === "files" ? "files" : "overview";
   const [activeTab, setActiveTab] = useState<string>(initialTab)
 
   const { toast } = useToast()
@@ -88,10 +87,10 @@ export default function LeadDetailPage() {
 
   // Effect to update activeTab if query parameter changes after initial load (optional, but good practice)
   useEffect(() => {
-    const tabFromQuery = searchParams.get("tab");
+    const tabFromQuery = searchParams?.get("tab");
     if (tabFromQuery === "files" && activeTab !== "files") {
       setActiveTab("files");
-    } else if (!tabFromQuery && activeTab !== "overview" && !searchParams.has("tab")) {
+    } else if (!tabFromQuery && activeTab !== "overview" && !searchParams?.has("tab")) {
       // If no tab query param and current tab is not overview, reset to overview (or keep current based on preference)
       // For now, let's be explicit: if 'files' is in query, switch to it. Otherwise, initialTab handles default.
     }
@@ -171,6 +170,8 @@ export default function LeadDetailPage() {
   const [streetViewUrl, setStreetViewUrl] = useState<string>("")
   const [isStreetViewLoading, setIsStreetViewLoading] = useState(true)
   const [streetViewError, setStreetViewError] = useState<string | null>(null)
+  const [isCloningContract, setIsCloningContract] = useState(false);
+  const [showLoadingDialog, setShowLoadingDialog] = useState(false);
 
   useEffect(() => {
     if (lead?.address) {
@@ -181,6 +182,79 @@ export default function LeadDetailPage() {
       setStreetViewUrl(url)
     }
   }, [lead?.address])
+
+  const handleCopyMessage = () => {
+    if (!lead) return;
+
+    const message = `Hello ${lead.firstName ?? 'Valued Customer'},
+
+The general agreement for the property at ${lead.address ?? 'your property'} is ready.
+Please review the document and, when everything looks correct, click the "Sign" button at the top of the page to add your electronic signature.
+
+You'll receive a confirmation email as soon as the signature is recorded, and then, we'll be able to move forward with scheduling.
+
+If you have any questions about the agreement, just reply to this message for the quickest response.
+
+Thank you for choosing In-Vision Construction!`;
+
+    navigator.clipboard.writeText(message).then(() => {
+      toast({
+        title: "Message Copied!",
+        description: "The e-sign message has been copied to your clipboard.",
+      });
+    }).catch(err => {
+      toast({
+        title: "Error",
+        description: "Could not copy message to clipboard.",
+        variant: "destructive",
+      });
+      console.error('Failed to copy message: ', err);
+    });
+  };
+
+  const handleSendForSignature = async () => {
+    if (!id) return;
+
+    setIsCloningContract(true);
+    setShowLoadingDialog(true);
+    try {
+      const response = await fetch('/api/contracts/clone', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ leadId: id }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to create contract.');
+      }
+
+      console.log("Contract clone API response:", result);
+
+      if (!result.url) {
+        console.error("API response is missing the 'url' property.");
+        throw new Error("Failed to get contract URL from the server.");
+      }
+
+      window.open(result.url, '_blank');
+      toast({
+        title: "Contract Ready",
+        description: 'Click "File ▸ Request eSignature" in Google Docs.',
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "An unknown error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCloningContract(false);
+      setShowLoadingDialog(false);
+    }
+  };
 
   if (isLeadLoading && !lead) { // Show skeleton only on initial load
     return <LeadDetailSkeleton />
@@ -285,25 +359,25 @@ export default function LeadDetailPage() {
         {/* Street View Section */}
         {lead?.address && (
           <Card className="w-full overflow-hidden">
-            <CardHeader className="p-4 border-b">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{lead.address}</span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(lead.address)}`, '_blank', 'noopener,noreferrer')}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  Open in Maps
-                </Button>
-              </div>
-            </CardHeader>
             <CardContent className="p-0">
               {streetViewUrl && (
                 <div className="relative w-full h-[400px]">
+                  {/* Address Overlay */}
+                  <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between bg-slate-900/70 p-2 backdrop-blur-sm">
+                    <div className="flex items-center space-x-2 overflow-hidden">
+                      <MapPin className="h-4 w-4 flex-shrink-0 text-gray-300" />
+                      <span className="truncate text-sm font-medium text-gray-100">{lead.address}</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(lead.address || '')}`, '_blank', 'noopener,noreferrer')}
+                      className="flex-shrink-0 text-blue-400 hover:text-blue-300"
+                    >
+                      Open in Maps
+                    </Button>
+                  </div>
+                  
                   <img
                     src={streetViewUrl}
                     alt={`Street view of ${lead.address}`}
@@ -324,8 +398,29 @@ export default function LeadDetailPage() {
                       <p>{streetViewError}</p>
                     </div>
                   )}
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-2">
-                    Street View
+                  <div className="absolute bottom-0 left-0 right-0 flex w-full border-t border-b-[3px] border-lime-500">
+                    <QuickActionButton
+                      icon={<FileSignature className="h-5 w-5" />}
+                      label={isCloningContract ? "Creating..." : "E-Sign"}
+                      onClick={handleSendForSignature}
+                      disabled={isCloningContract}
+                    />
+                    <QuickActionButton
+                      icon={<Copy className="h-5 w-5" />}
+                      label="E-Sign Message"
+                      onClick={handleCopyMessage}
+                      disabled={!lead?.address || !lead?.firstName}
+                    />
+                    <QuickActionButton 
+                      onClick={handleOpenFilesDialog} 
+                      icon={<FileArchive className="h-5 w-5" />} 
+                      label="Files" 
+                    />
+                    <QuickActionButton 
+                      onClick={handleOpenPhotosDialog} 
+                      icon={<Image className="h-5 w-5" />} 
+                      label="Photos" 
+                    />
                   </div>
                 </div>
               )}
@@ -336,68 +431,7 @@ export default function LeadDetailPage() {
       
       {/* Divider */}
       <div className="w-full h-px bg-gradient-to-r from-transparent via-lime-500/50 to-transparent my-2 sm:my-3" />
-      
-      <div className="flex items-center justify-center w-full mb-6 overflow-x-auto scrollbar-hide">
-        <div className="flex items-center justify-between w-full max-w-[1200px] px-2 sm:px-4 md:px-6">
-          <Button
-            variant="ghost"
-            size="default"
-            onClick={() => leadAddress ? window.location.href = `https://maps.google.com/?q=${encodeURIComponent(leadAddress)}` : undefined}
-            disabled={!leadAddress}
-            className={cn(
-              "bg-transparent text-white hover:bg-lime-500/10 hover:text-white",
-              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[12px] sm:text-sm md:text-base font-medium transition-all duration-200",
-              "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent",
-              "relative group whitespace-nowrap flex-1"
-            )}
-          >
-            Map
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-[2px] bg-gray-300/20" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="default"
-            onClick={handleOpenPhotosDialog}
-            className={cn(
-              "bg-transparent text-white hover:bg-lime-500/10 hover:text-white",
-              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[12px] sm:text-sm md:text-base font-medium transition-all duration-200",
-              "relative group whitespace-nowrap flex-1"
-            )}
-          >
-            Photos
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-[2px] bg-gray-300/20" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="default"
-            onClick={handleOpenFilesDialog}
-            className={cn(
-              "bg-transparent text-white hover:bg-lime-500/10 hover:text-white",
-              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[12px] sm:text-sm md:text-base font-medium transition-all duration-200",
-              "relative group whitespace-nowrap flex-1"
-            )}
-          >
-            Files
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-[2px] bg-gray-300/20" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="default"
-            onClick={handleOpenContractsDialog}
-            className={cn(
-              "bg-transparent text-white hover:bg-lime-500/10 hover:text-white",
-              "h-7 sm:h-8 md:h-10 px-2 sm:px-3 md:px-6 text-[12px] sm:text-sm md:text-base font-medium transition-all duration-200",
-              "relative group whitespace-nowrap flex-1"
-            )}
-          >
-            Contracts
-          </Button>
-        </div>
-      </div>
-      
+            
       {/* Divider under quick action tabs */}
       <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500/50 to-transparent" />
       
@@ -455,6 +489,20 @@ export default function LeadDetailPage() {
             <DialogTitle>Contracts</DialogTitle>
           </DialogHeader>
           <LeadContractsTab leadId={lead.id} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
+        <DialogContent className="sm:max-w-md flex flex-col items-center justify-center p-6 gap-4">
+          <div className="w-16 h-16 relative">
+            <div className="absolute inset-0 rounded-full border-4 border-lime-500/30 animate-[spin_3s_linear_infinite]"></div>
+            <div className="absolute inset-[6px] rounded-full border-4 border-lime-500/40 animate-[spin_2s_linear_infinite]"></div>
+            <div className="absolute inset-[12px] rounded-full border-4 border-lime-500/60 animate-[spin_1.5s_linear_infinite]"></div>
+          </div>
+          <h2 className="text-xl font-semibold text-center mt-4">Preparing E-Sign Document</h2>
+          <p className="text-center text-muted-foreground">
+            Creating a new contract for electronic signature...
+          </p>
         </DialogContent>
       </Dialog>
     </div>

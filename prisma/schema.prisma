@@ -48,6 +48,16 @@ model VerificationToken {
 }
 
 // Application Models
+model ApiClient {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  clientId      String    @unique
+  clientSecret  String
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+}
+
 model User {
   id            String    @id @default(uuid()) @db.Uuid
   name          String    @db.VarChar(255)

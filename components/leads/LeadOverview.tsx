@@ -15,7 +15,6 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
 import { updateLeadAssigneeAction } from "@/app/actions/lead-actions"
 import { getAssignableUsersAction } from "@/app/actions/user-actions"
 import { useToast } from "@/components/ui/use-toast"
@@ -28,7 +27,7 @@ interface User {
   role: string;
 }
 
-interface LeadOverviewTabProps {
+interface LeadOverviewProps {
   lead: (Lead & { assignedTo?: { name?: string | null } | null }) | null;
   onEditRequest?: (section: 'contact' | 'insurance' | 'adjuster') => void;
 }
@@ -88,7 +87,7 @@ const ContactItem = ({ label, value, type, className }: ContactItemProps) => {
   );
 };
 
-export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) => {
+export function LeadOverview({ lead, onEditRequest }: LeadOverviewProps) {
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -202,145 +201,119 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
   // const getInitials = ...; // No longer needed
 
   return (
-    <Card className="shadow-lg w-full border-0">
-      <CardContent className="space-y-4 p-4">
-        {/* Lead Summary Section */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium text-white">Lead Summary</h3>
+    <Card className="shadow-sm card w-full">
+      <CardContent className="p-4 sm:p-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {/* Lead Summary Section */}
           <div className="space-y-3">
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium text-muted-foreground">Created</p>
-              {createdDate && isValid(createdDate) ? (
-                <>
-                  <p className="text-sm" title={createdDate.toISOString()}>{format(createdDate, "MMM d, yyyy")}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(createdDate, { addSuffix: true })}
-                  </p>
-                </>
-              ) : <p className="text-sm text-muted-foreground">Invalid date</p>}
-            </div>
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium text-muted-foreground">SalesPerson</p>
-              <div className="relative max-w-sm">
-                <Select 
-                  value={selectedAssignee} 
-                  onValueChange={handleAssigneeChange}
-                  disabled={isLoadingUsers || isUpdatingAssignee}
-                >
-                  <SelectTrigger className="h-9 text-sm w-full">
-                    <SelectValue placeholder="Select salesperson">
-                      {isLoadingUsers ? "Loading..." : isUpdatingAssignee ? "Updating..." : (selectedAssignee === "unassigned" ? "Unassigned" : users.find(user => user.id === selectedAssignee)?.name || 'Unassigned')}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {users.map(user => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name || user.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {isUpdatingAssignee && (
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  </div>
-                )}
+            <h3 className="text-sm font-medium text-muted-foreground">Summary</h3>
+            <div className="space-y-2">
+              <div className="space-y-0.5">
+                <p className="text-xs font-medium text-muted-foreground">Created</p>
+                {createdDate && isValid(createdDate) ? (
+                  <>
+                    <p className="text-xs">{format(createdDate, "MMM d, yyyy")}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {formatDistanceToNow(createdDate, { addSuffix: true })}
+                    </p>
+                  </>
+                ) : <p className="text-xs text-muted-foreground">Invalid date</p>}
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-xs font-medium text-muted-foreground">SalesPerson</p>
+                <div className="relative">
+                  <Select 
+                    value={selectedAssignee} 
+                    onValueChange={handleAssigneeChange}
+                    disabled={isLoadingUsers || isUpdatingAssignee}
+                  >
+                    <SelectTrigger className="h-7 text-xs w-full">
+                      <SelectValue placeholder="Select salesperson">
+                        {isLoadingUsers ? "Loading..." : isUpdatingAssignee ? "Updating..." : (selectedAssignee === "unassigned" ? "Unassigned" : users.find(user => user.id === selectedAssignee)?.name || 'Unassigned')}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {users.map(user => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name || user.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isUpdatingAssignee && (
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <Separator />
-
-        {/* Contact Information Section */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium text-white">Contact Information</h3>
-            {onEditRequest && (
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditRequest('contact')}>
-                <Pencil className="h-4 w-4" />
-                <span className="sr-only">Edit Contact</span>
-              </Button>
-            )}
-          </div>
+          
+          {/* Contact Information Section */}
           <div className="space-y-3">
-            <div>
-              <p className="font-medium text-base">{fullName}</p>
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm text-muted-foreground break-all">{lead.email || "No email"}</p>
-                {lead.email && (
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEmailClick(lead.email!)}>
-                    <Mail className="h-3 w-3" />
-                    <span className="sr-only">Email</span>
-                  </Button>
-                )}
+            <h3 className="text-sm font-medium text-muted-foreground">Contact</h3>
+            <div className="space-y-2">
+              <div>
+                <p className="font-medium text-sm">{fullName}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs text-muted-foreground break-all">{lead.email || "No email"}</p>
+                  {lead.email && (
+                    <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full hover:bg-lime-500/10 text-lime-500 hover:text-lime-600" onClick={() => handleEmailClick(lead.email!)}>
+                      <Mail className="h-3 w-3 text-lime-500" />
+                      <span className="sr-only">Send email</span>
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-1 pt-1">
+                <ContactItem label="Phone" value={lead.phone} type="phone" />
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-2 pt-1">
-              <ContactItem label="Phone" value={lead.phone} type="phone" />
-              <ContactItem label="Address" value={addressDisplay !== "No address provided" ? addressDisplay : null} type="address" />
+          </div>
+          
+          {/* Insurance Information Section */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-muted-foreground">Insurance</h3>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+              <div className="space-y-0.5">
+                <p className="text-xs font-medium text-muted-foreground">Company</p>
+                <p className="text-xs">{lead.insuranceCompany || "N/A"}</p>
+              </div>
+              <ContactItem label="Ins. Phone" value={lead.insurancePhone} type="phone" />
+              <div className="space-y-0.5">
+                <p className="text-xs font-medium text-muted-foreground">Damage Type</p>
+                <p className="text-xs">{lead.damageType || "N/A"}</p>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-xs font-medium text-muted-foreground">Claim Number</p>
+                <p className="text-xs">{lead.claimNumber || "N/A"}</p>
+              </div>
             </div>
           </div>
-        </div>
-
-        <Separator />
-
-        {/* Insurance Details Section */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium text-white">Insurance Details</h3>
-            {onEditRequest && (
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditRequest('insurance')}>
-                <Pencil className="h-4 w-4" />
-                <span className="sr-only">Edit Insurance</span>
-              </Button>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium text-muted-foreground">Company</p>
-              <p className="text-sm">{lead.insuranceCompany || "N/A"}</p>
-            </div>
-            <ContactItem label="Ins. Phone" value={lead.insurancePhone} type="phone" />
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium text-muted-foreground">Damage Type</p>
-              <p className="text-sm">{lead.damageType || "N/A"}</p>
-            </div>
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium text-muted-foreground">Claim Number</p>
-              <p className="text-sm">{lead.claimNumber || "N/A"}</p>
-            </div>
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* Adjuster Details Section */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium text-white">Adjuster Details</h3>
-            {onEditRequest && (
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditRequest('adjuster')}>
-                <Pencil className="h-4 w-4" />
-                <span className="sr-only">Edit Adjuster</span>
-              </Button>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium text-muted-foreground">Adjuster Name</p>
-              <p className="text-sm">{lead.insuranceAdjusterName || "N/A"}</p>
-            </div>
-            <ContactItem label="Adjuster Phone" value={lead.insuranceAdjusterPhone} type="phone" />
-            <ContactItem label="Adjuster Email" value={lead.insuranceAdjusterEmail} type="email" className="col-span-2" />
-            <div className="space-y-0.5 col-span-2">
-              <p className="text-sm font-medium text-muted-foreground">Next Appointment</p>
-              <p className="text-sm">
-                {lead.adjusterAppointmentDate && isValid(new Date(lead.adjusterAppointmentDate)) 
-                  ? format(new Date(lead.adjusterAppointmentDate), "MMM d, yyyy") + (lead.adjusterAppointmentTime ? ` at ${format(parse(lead.adjusterAppointmentTime, "HH:mm", new Date()), "h:mm a")}` : '')
-                  : "No appointment"}
-              </p>
+          
+          {/* Adjuster Information Section */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-muted-foreground">Adjuster</h3>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+              <div className="space-y-0.5">
+                <p className="text-xs font-medium text-muted-foreground">Adjuster Name</p>
+                <p className="text-xs">{lead.insuranceAdjusterName || "N/A"}</p>
+              </div>
+              <ContactItem label="Adjuster Phone" value={lead.insuranceAdjusterPhone} type="phone" />
+              <ContactItem label="Adjuster Email" value={lead.insuranceAdjusterEmail} type="email" className="col-span-2" />
+              <div className="space-y-0.5 col-span-2">
+                <p className="text-xs font-medium text-muted-foreground">Next Appointment</p>
+                <p className="text-xs">
+                  {lead.adjusterAppointmentDate && isValid(new Date(lead.adjusterAppointmentDate)) 
+                    ? format(new Date(lead.adjusterAppointmentDate), "MMM d, yyyy") +
+                      (lead.adjusterAppointmentTime 
+                        ? ` at ${format(parse(lead.adjusterAppointmentTime || "", "HH:mm", new Date()), "h:mm a")}`
+                        : '')
+                    : "No appointment"}
+                </p>
+              </div>
             </div>
           </div>
         </div>

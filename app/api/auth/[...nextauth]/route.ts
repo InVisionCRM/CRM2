@@ -83,10 +83,10 @@ export const authOptions: AuthOptions = {
       name: process.env.NODE_ENV === 'production' ? `__Secure-next-auth.session-token` : `next-auth.session-token`,
       options: {
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: "none",
         path: "/",
-        secure: process.env.NODE_ENV === "production",
-        // domain: process.env.NODE_ENV === 'production' ? '.yourdomain.com' : undefined, // Set if using subdomains
+        secure: true,
+        domain: process.env.NODE_ENV === 'production' ? '.purlin.pro' : undefined, // This allows sharing across subdomains
       },
     },
   },
