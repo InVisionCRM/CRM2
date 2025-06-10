@@ -41,6 +41,49 @@ export const authOptions: AuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
+    async signIn({ user, account, profile, email, credentials }) {
+      // Auto-link accounts with the same email address
+      if (account?.provider === "google" && user?.email) {
+        try {
+          // Check if a user with this email already exists
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email },
+            include: { accounts: true }
+          });
+
+          if (existingUser) {
+            // Check if this Google account is already linked
+            const existingGoogleAccount = existingUser.accounts.find(
+              acc => acc.provider === "google" && acc.providerAccountId === account.providerAccountId
+            );
+
+            if (!existingGoogleAccount) {
+              // Link the Google account to the existing user
+              await prisma.account.create({
+                data: {
+                  userId: existingUser.id,
+                  type: account.type,
+                  provider: account.provider,
+                  providerAccountId: account.providerAccountId,
+                  refresh_token: account.refresh_token,
+                  access_token: account.access_token,
+                  expires_at: account.expires_at,
+                  token_type: account.token_type,
+                  scope: account.scope,
+                  id_token: account.id_token,
+                  session_state: account.session_state,
+                  refresh_token_expires_in: account.refresh_token_expires_in,
+                }
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Error linking accounts:", error);
+          return false;
+        }
+      }
+      return true;
+    },
     async jwt({ token, account, user }) {
       if (account) {
         token.accessToken = account.access_token;
@@ -76,7 +119,7 @@ export const authOptions: AuthOptions = {
   },
   pages: {
     signIn: '/auth/signin',
-    // error: '/auth/error', // Optional: specify a custom error page
+    error: '/auth/error', // Custom error page for better UX
   },
   cookies: {
     sessionToken: {
