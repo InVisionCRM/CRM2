@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'MANAGER', 'USER');
+-- CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'MANAGER', 'USER');
 
 -- CreateEnum
 CREATE TYPE "LeadStatus" AS ENUM ('signed_contract', 'scheduled', 'colors', 'acv', 'job', 'completed_jobs', 'zero_balance', 'denied', 'follow_ups');

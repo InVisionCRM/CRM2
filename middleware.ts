@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
 import type { NextRequest as NextRequestType } from 'next/server'
 import { withAuth } from "next-auth/middleware"
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from "@/lib/db/prisma"
 
 // Verify API key for contract system requests
 async function validateApiCredentials(request: NextRequestType) {
@@ -71,13 +69,16 @@ export async function middleware(request: NextRequestType) {
 
     // The matcher in `config` should ideally handle these exclusions.
     // This check is an additional safeguard.
-    if (pathname.startsWith("/auth/signin") || 
-        pathname.startsWith("/api/auth") || 
-        pathname.startsWith("/_next/") ||
-        pathname.includes(".") // Generally ignore paths with extensions (assets)
-       ) {
+    if (
+      pathname.startsWith("/auth/signin") || 
+      pathname.startsWith("/api/auth") || 
+      pathname.startsWith("/_next/") ||
+      pathname.includes(".") ||
+      pathname.startsWith("/signed-out") // ✅ add this
+    ) {
       return NextResponse.next()
     }
+    
 
     // If the user is not authenticated and trying to access protected routes
     if (!token) {
