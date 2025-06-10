@@ -22,8 +22,8 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
 
   return (
     <>
-      <FixedWavyBackground />
-      <div className="min-h-screen bg-transparent relative z-[1]">
+      {/* <FixedWavyBackground /> */}
+      <div className="min-h-screen bg-gray-900 relative z-[1]">
         {/* Main content area */}
         <div 
           className={cn(

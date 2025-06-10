@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import LayoutClientWrapper from "@/components/LayoutClientWrapper"
 import { AuthProvider } from "./auth-provider"
+import ErrorBoundary from "@/components/ErrorBoundary"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -49,9 +50,11 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.className} h-screen`}>
-        <AuthProvider>
-          <LayoutClientWrapper>{children}</LayoutClientWrapper>
-        </AuthProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <LayoutClientWrapper>{children}</LayoutClientWrapper>
+          </AuthProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )

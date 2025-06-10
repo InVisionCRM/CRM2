@@ -7,9 +7,19 @@ import type { SortField, SortOrder } from "@/app/leads/page"
 
 export async function GET(request: Request) {
   try {
+    console.log('=== GET /api/leads - Starting ===');
+    
     // Get session
     const session = await getServerSession(authOptions);
+    console.log('Session data:', {
+      session: !!session,
+      user: !!session?.user,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email
+    });
+    
     if (!session?.user?.id) {
+      console.log('Unauthorized: No session or user ID found');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -21,7 +31,10 @@ export async function GET(request: Request) {
     const sort = url.searchParams.get("sort") as SortField | undefined
     const order = url.searchParams.get("order") as SortOrder | undefined
 
+    console.log('Query parameters:', { status, assignedTo, search, sort, order });
+
     // Fetch leads from the database with filters
+    console.log('Calling getLeads with userId:', session.user.id);
     const leads = await getLeads({
       status,
       assignedTo: assignedTo || undefined,
@@ -31,8 +44,7 @@ export async function GET(request: Request) {
       userId: session.user.id, // Pass the user ID
     })
 
-    // Log the raw leads data received from the database function
-    console.log("Raw leads fetched from DB:", JSON.stringify(leads, null, 2));
+    console.log(`Successfully fetched ${leads.length} leads`);
 
     // Filter by status if provided, with added safety check
     const filteredLeads = status
@@ -43,13 +55,17 @@ export async function GET(request: Request) {
         )
       : leads;
       
-    // Log the filtered leads before sending
-    console.log(`Filtered leads for status '${status || 'all'}':`, JSON.stringify(filteredLeads, null, 2));
+    console.log(`Returning ${filteredLeads.length} filtered leads`);
 
     return NextResponse.json(filteredLeads)
   } catch (error) {
-    console.error("Error in GET /api/leads:", error) // Log the specific error location
-    return NextResponse.json({ error: "Failed to fetch leads" }, { status: 500 })
+    console.error("=== ERROR in GET /api/leads ===");
+    console.error("Error details:", error);
+    console.error("Stack trace:", error instanceof Error ? error.stack : 'No stack trace');
+    return NextResponse.json({ 
+      error: "Failed to fetch leads", 
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
 

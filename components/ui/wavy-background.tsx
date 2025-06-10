@@ -48,18 +48,29 @@ export const WavyBackground = ({
   };
 
   const init = () => {
+    // Safety check for window availability
+    if (typeof window === 'undefined') return;
+    
     canvas = canvasRef.current;
+    if (!canvas) return;
+    
     ctx = canvas.getContext("2d");
-    w = ctx.canvas.width = window.innerWidth;
-    h = ctx.canvas.height = window.innerHeight;
-    ctx.filter = `blur(${blur}px)`;
-    nt = 0;
-    window.onresize = function () {
+    if (!ctx) return;
+    
+    try {
       w = ctx.canvas.width = window.innerWidth;
       h = ctx.canvas.height = window.innerHeight;
       ctx.filter = `blur(${blur}px)`;
-    };
-    render();
+      nt = 0;
+      window.onresize = function () {
+        w = ctx.canvas.width = window.innerWidth;
+        h = ctx.canvas.height = window.innerHeight;
+        ctx.filter = `blur(${blur}px)`;
+      };
+      render();
+    } catch (error) {
+      console.error('WavyBackground init error:', error);
+    }
   };
 
   const waveColors = colors ?? [
