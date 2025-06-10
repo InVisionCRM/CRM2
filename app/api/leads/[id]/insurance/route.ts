@@ -12,7 +12,7 @@ const insuranceUpdateSchema = z.object({
   insuranceDeductible: z.string().optional().or(z.literal("")),
   insuranceSecondaryPhone: z.string().optional().or(z.literal("")),
   dateOfLoss: z.string().optional().or(z.literal("")),
-  damageType: z.enum(["HAIL", "WIND", "FIRE"]).optional().or(z.literal("")),
+  damageType: z.enum(["HAIL", "WIND", "FIRE", "WIND_AND_HAIL"]).optional().or(z.literal("")),
   claimNumber: z.string().optional().or(z.literal(""))
 })
 
