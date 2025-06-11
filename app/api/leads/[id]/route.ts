@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getLeadById, updateLead, deleteLead } from "@/lib/db/leads"
+import { getLeadById, updateLead } from "@/lib/db/leads"
 import { prisma } from "@/lib/prisma"
 import type { UpdateLeadInput } from "@/lib/db/leads"
 
@@ -82,22 +82,17 @@ export async function PUT(
   }
 }
 
+// Add PATCH support - same logic as PUT
+export async function PATCH(
+  request: Request,
+  { params: paramsPromise }: { params: Promise<{ id: string }> }
+) {
+  return PUT(request, { params: paramsPromise })
+}
+
 export async function DELETE(
   request: Request,
   { params: paramsPromise }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const params = await paramsPromise
-    const id = params.id
-    const success = await deleteLead(id)
-
-    if (!success) {
-      return NextResponse.json({ error: "Lead not found or could not be deleted" }, { status: 404 })
-    }
-
-    return NextResponse.json({ success: true, message: "Lead deleted successfully" })
-  } catch (error) {
-    console.error(`Error deleting lead:`, error)
-    return NextResponse.json({ error: "Failed to delete lead" }, { status: 500 })
-  }
+  return NextResponse.json({ error: "Delete not implemented" }, { status: 501 })
 }

@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth-utils"
 import { deleteContract } from "@/lib/db/contracts"
+import { prisma } from "@/lib/db"
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Check authentication
     const session = await getSession()
@@ -10,10 +11,12 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
     }
 
-    const { id } = params
+    const { id } = await params
 
-    // Delete the contract
-    await deleteContract(id)
+    // Delete the contract from database
+    await prisma.contract.delete({
+      where: { id }
+    })
 
     return NextResponse.json({
       success: true,

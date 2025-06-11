@@ -4,6 +4,9 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { LeadStatus } from "@prisma/client"
 import type { SortField, SortOrder } from "@/app/leads/page"
+import { PrismaClient } from "@prisma/client"
+
+const prisma = new PrismaClient()
 
 export async function GET(request: Request) {
   try {
@@ -23,6 +26,24 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Find user by email if ID lookup fails
+    let userId = session.user.id;
+    const userCheck = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true }
+    });
+    
+    if (!userCheck && session.user.email) {
+      const userByEmail = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true }
+      });
+      if (userByEmail) {
+        userId = userByEmail.id;
+        console.log('Using email-based user ID:', userId);
+      }
+    }
+
     // Get query parameters
     const url = new URL(request.url)
     const status = url.searchParams.get("status") as LeadStatus | null
@@ -34,14 +55,14 @@ export async function GET(request: Request) {
     console.log('Query parameters:', { status, assignedTo, search, sort, order });
 
     // Fetch leads from the database with filters
-    console.log('Calling getLeads with userId:', session.user.id);
+    console.log('Calling getLeads with userId:', userId);
     const leads = await getLeads({
       status,
       assignedTo: assignedTo || undefined,
       search: search || undefined,
       sort,
       order,
-      userId: session.user.id, // Pass the user ID
+      userId: userId, // Pass the user ID
     })
 
     console.log(`Successfully fetched ${leads.length} leads`);
@@ -81,6 +102,20 @@ export async function POST(request: Request) {
     console.log("Extracted userId from session:", userId, "Type:", typeof userId);
 
     const body = await request.json()
+    console.log("Received request body:", body);
+
+    // Handle dateOfLoss conversion from string to Date
+    let dateOfLoss: Date | null = null;
+    if (body.dateOfLoss && body.dateOfLoss.trim() !== '') {
+      // Try to parse MM/DD/YY format
+      const dateStr = body.dateOfLoss.trim();
+      const parsedDate = new Date(dateStr);
+      if (!isNaN(parsedDate.getTime())) {
+        dateOfLoss = parsedDate;
+      } else {
+        console.warn("Invalid date format for dateOfLoss:", dateStr);
+      }
+    }
 
     // Transform the incoming data to match our function parameters
     const leadData = {
@@ -93,6 +128,15 @@ export async function POST(request: Request) {
       assignedToId: userId, // Automatically assign to current user
       notes: body.notes || null,
       userId: userId, // Pass the fetched user ID
+      // Insurance fields
+      insuranceCompany: body.insuranceCompany || null,
+      insurancePolicyNumber: body.insurancePolicyNumber || null,
+      insurancePhone: body.insurancePhone || null,
+      insuranceSecondaryPhone: body.insuranceSecondaryPhone || null,
+      insuranceDeductible: body.insuranceDeductible || null,
+      dateOfLoss: dateOfLoss,
+      damageType: body.damageType || null,
+      claimNumber: body.claimNumber || null,
     }
 
     console.log("Creating lead with data:", leadData)

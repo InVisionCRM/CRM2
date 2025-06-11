@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useSearchParams } from "next/navigation" // Use next/navigation for App Router
 import { LeadStatus } from "@prisma/client"
-import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy } from "lucide-react" // Added Copy icon
+import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy, Loader2, NotebookPen } from "lucide-react" // Added NotebookPen icon
 import { StatusChangeDrawer } from "@/components/leads/StatusChangeDrawer"
 import { LeadDetailTabs } from "@/components/leads/LeadDetailTabs" // Corrected path
 import { ActivityFeed } from "@/components/leads/ActivityFeed" // Corrected path
@@ -36,9 +36,9 @@ interface QuickActionButtonProps {
 const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, icon, label, disabled }) => {
   const commonProps = {
     className: cn(
-      "relative flex h-24 flex-1 flex-col items-center justify-center bg-black p-2 text-md font-bold text-white",
+      "relative flex h-24 flex-1 flex-col items-center justify-center bg-gradient-to-b from-black/40 via-black/30 via-black/20 to-lime-500/30 backdrop-blur-lg p-2 text-md font-bold text-white",
       "border-l border-lime-500 first:border-l-0",
-      "transition-colors hover:bg-slate-800",
+      "transition-colors hover:from-slate-800/30 hover:via-slate-800/20 hover:to-lime-500/30",
       disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
     ),
   };
@@ -77,6 +77,7 @@ export default function LeadDetailPage() {
 
   // Add a reference to the activity feed for refreshing
   const activityFeedRef = useRef<HTMLDivElement>(null);
+  const addNoteRef = useRef<HTMLDivElement>(null);
   const [refreshActivities, setRefreshActivities] = useState(0);
   
   // Function to refresh activities when new note is added
@@ -172,6 +173,9 @@ export default function LeadDetailPage() {
   const [streetViewError, setStreetViewError] = useState<string | null>(null)
   const [isCloningContract, setIsCloningContract] = useState(false);
   const [showLoadingDialog, setShowLoadingDialog] = useState(false);
+  const [isSendingContract, setIsSendingContract] = useState(false);
+  const [sendContractDialog, setSendContractDialog] = useState(false);
+  const [contractSuccessData, setContractSuccessData] = useState<any>(null);
 
   useEffect(() => {
     if (lead?.address) {
@@ -256,6 +260,83 @@ Thank you for choosing In-Vision Construction!`;
     }
   };
 
+  const handleSendContract = async () => {
+    if (!lead) return;
+    
+    setIsSendingContract(true);
+    setSendContractDialog(true);
+    
+    try {
+      const response = await fetch('/api/send-contract', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ lead }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send contract');
+      }
+
+      const result = await response.json();
+      
+      // Close loading dialog immediately
+      setSendContractDialog(false);
+      
+      // Trigger confetti celebration
+      setContractSuccessData(result[0]);
+      setShowSuccessMessage(true);
+      setTimeout(() => {
+        setShowSuccessMessage(false);
+        setContractSuccessData(null);
+      }, 5000);
+      
+      // Show success toast with details
+      toast({
+        title: "🎉 Contract Sent Successfully!",
+        description: `DocuSeal contract sent to ${lead.email}. Submission ID: ${result[0]?.id || 'Generated'}. They will receive an email with signing instructions and can access the contract at the provided link.`,
+      });
+      
+      console.log('Contract sent result:', result);
+    } catch (error) {
+      console.error('Error sending contract:', error);
+      
+      // Close loading dialog
+      setSendContractDialog(false);
+      
+      // Show detailed error message
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "An unexpected error occurred while sending the contract.";
+      
+      toast({
+        title: "❌ Contract Send Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingContract(false);
+    }
+  };
+
+  const handleScrollToAddNote = () => {
+    if (addNoteRef.current) {
+      addNoteRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+      // Optional: focus on the textarea after scrolling
+      setTimeout(() => {
+        const textarea = addNoteRef.current?.querySelector('textarea');
+        if (textarea) {
+          textarea.focus();
+        }
+      }, 500);
+    }
+  };
+
   if (isLeadLoading && !lead) { // Show skeleton only on initial load
     return <LeadDetailSkeleton />
   }
@@ -306,7 +387,7 @@ Thank you for choosing In-Vision Construction!`;
             <CardHeader className="p-0 mb-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-2xl text-green-600 dark:text-green-500">
-                  <CheckCircle2 className="h-8 w-8" /> Congratulations!
+                  <CheckCircle2 className="h-8 w-8" /> {contractSuccessData ? "Contract Sent!" : "Congratulations!"}
                 </CardTitle>
                 <Button variant="ghost" size="icon" onClick={() => setShowSuccessMessage(false)} className="text-muted-foreground hover:text-foreground">
                   <XIcon className="h-5 w-5" />
@@ -314,8 +395,20 @@ Thank you for choosing In-Vision Construction!`;
               </div>
             </CardHeader>
             <CardContent className="p-0 text-center">
-              <p className="text-lg mb-1">Lead status successfully updated to</p>
-              <p className="text-xl font-semibold text-green-500 mb-4">{lead.status ? formatStatusLabel(lead.status) : "the new status"}!</p>
+              {contractSuccessData ? (
+                <>
+                  <p className="text-lg mb-1">📄 Contract successfully sent to</p>
+                  <p className="text-xl font-semibold text-blue-600 mb-2">{contractSuccessData.email}</p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Submission ID: {contractSuccessData.id} • Status: {contractSuccessData.status}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-lg mb-1">Lead status successfully updated to</p>
+                  <p className="text-xl font-semibold text-green-500 mb-4">{lead.status ? formatStatusLabel(lead.status) : "the new status"}!</p>
+                </>
+              )}
               <Button onClick={() => setShowSuccessMessage(false)} className="w-full text-black sm:w-auto">Close</Button>
             </CardContent>
           </Card>
@@ -398,19 +491,7 @@ Thank you for choosing In-Vision Construction!`;
                       <p>{streetViewError}</p>
                     </div>
                   )}
-                  <div className="absolute bottom-0 left-0 right-0 flex w-full border-t border-b-[3px] border-lime-500">
-                    <QuickActionButton
-                      icon={<FileSignature className="h-5 w-5" />}
-                      label={isCloningContract ? "Creating..." : "E-Sign"}
-                      onClick={handleSendForSignature}
-                      disabled={isCloningContract}
-                    />
-                    <QuickActionButton
-                      icon={<Copy className="h-5 w-5" />}
-                      label="E-Sign Message"
-                      onClick={handleCopyMessage}
-                      disabled={!lead?.address || !lead?.firstName}
-                    />
+                  <div className="absolute bottom-0 left-0 right-0 flex w-full border-t border-b-[2px] border-lime-500">
                     <QuickActionButton 
                       onClick={handleOpenFilesDialog} 
                       icon={<FileArchive className="h-5 w-5" />} 
@@ -420,6 +501,17 @@ Thank you for choosing In-Vision Construction!`;
                       onClick={handleOpenPhotosDialog} 
                       icon={<Image className="h-5 w-5" />} 
                       label="Photos" 
+                    />
+                    <QuickActionButton
+                      onClick={handleScrollToAddNote}
+                      icon={<NotebookPen className="h-5 w-5" />}
+                      label="Add Note"
+                    />
+                    <QuickActionButton
+                      onClick={handleSendContract}
+                      icon={<FileSignature className="mb-2 h-6 w-6" />}
+                      label={isSendingContract ? "Sending..." : "Send Contract"}
+                      disabled={!lead || isSendingContract}
                     />
                   </div>
                 </div>
@@ -448,7 +540,7 @@ Thank you for choosing In-Vision Construction!`;
             {/* Divider under lead overview tab */}
             <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500/50 to-transparent" />
           </div>
-          <div className="w-full">
+          <div className="w-full" ref={addNoteRef}>
             <AddNote leadId={lead.id} onSuccess={handleNoteAdded} />
           </div>
         </div>
@@ -503,6 +595,33 @@ Thank you for choosing In-Vision Construction!`;
           <p className="text-center text-muted-foreground">
             Creating a new contract for electronic signature...
           </p>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Contract Loading Dialog */}
+      <Dialog open={sendContractDialog} onOpenChange={setSendContractDialog}>
+        <DialogContent className="sm:max-w-md flex flex-col items-center justify-center p-8 gap-6">
+          <div className="w-20 h-20 relative">
+            <div className="absolute inset-0 rounded-full border-4 border-blue-500/20 animate-[spin_3s_linear_infinite]"></div>
+            <div className="absolute inset-[4px] rounded-full border-4 border-blue-500/40 animate-[spin_2s_linear_infinite_reverse]"></div>
+            <div className="absolute inset-[8px] rounded-full border-4 border-blue-500/60 animate-[spin_1.5s_linear_infinite]"></div>
+            <div className="absolute inset-[12px] rounded-full border-4 border-blue-500/80 animate-[spin_1s_linear_infinite_reverse]"></div>
+            <div className="absolute inset-[16px] rounded-full bg-blue-500/10 animate-pulse"></div>
+          </div>
+          <div className="text-center space-y-3">
+            <h2 className="text-2xl font-bold text-blue-600">📄 Sending Contract</h2>
+            <div className="space-y-2">
+              <p className="text-lg font-semibold">Preparing DocuSeal contract...</p>
+              <p className="text-sm text-muted-foreground">
+                Creating personalized contract for <span className="font-medium text-blue-600">{lead?.email}</span>
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 mt-4">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -15,7 +15,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Trash } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { LeadSummary } from "@/types/dashboard"
@@ -31,15 +30,32 @@ function QuickAction({
   value,
   imageUrl,
 }: QuickActionProps) {
+  const router = useRouter()
+
+  const handleClick = () => {
+    console.log(`QuickAction clicked: ${value}`)
+    if (value === "quick-links") {
+      router.push("/quick-links")
+    } else if (value === "invoice") {
+      // This will be handled by the parent component
+    } else if (value === "purlin-vision") {
+      router.push("/map")
+    } else if (value === "leads") {
+      router.push("/leads")
+    } else if (value === "contract") {
+      window.open('https://contracts.purlin.pro', '_blank')
+    }
+  }
+
   return (
     <div className="relative w-full pb-[40.25%]"> {/* 16:9 aspect ratio */}
-      <TabsTrigger
-        value={value}
+      <Button
+        onClick={handleClick}
         className={cn(
-          "absolute inset-0 w-full h-full",
+          "absolute inset-0 w-full h-full p-0",
           "overflow-hidden rounded-lg border-2 border-lime-500/30",
           "transition-all duration-300",
-          "hover:brightness-110 data-[state=active]:bg-primary",
+          "hover:brightness-110 bg-transparent hover:bg-transparent",
         )}
         style={{
           backgroundImage: imageUrl ? `url(${imageUrl})` : undefined,
@@ -51,7 +67,7 @@ function QuickAction({
         <div className="relative z-10 flex flex-col items-center justify-center h-full">
           <span className="text-lg font-medium text-white text-center">{label}</span>
         </div>
-      </TabsTrigger>
+      </Button>
     </div>
   )
 }
@@ -188,51 +204,29 @@ function InvoiceForm() {
 
 export function QuickActions() {
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false)
-  const router = useRouter()
-
-  const handleTabChange = (value: string) => {
-    console.log(`Tab changed: ${value}`)
-    if (value === "quick-links") {
-      router.push("/quick-links")
-    } else if (value === "invoice") {
-      setInvoiceDialogOpen(true)
-    } else if (value === "purlin-vision") {
-      router.push("/map")
-    } else if (value === "leads") {
-      router.push("/leads")
-    } else if (value === "contract") {
-      window.open('https://contracts.purlin.pro', '_blank')
-    }
-  }
 
   return (
     <>
       <div className="w-100%] mx-auto">
-        <Tabs
-          defaultValue="leads"
-          onValueChange={handleTabChange}
-          className="w-full"
-        >
-          <TabsList className="grid grid-cols-3 gap-1 h-auto bg-transparent p-0">
-            <QuickAction
-              label="Leads"
-              value="leads"
-              imageUrl="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Quick%20Actions/All_Leads-SEk2NEYpt4fARvrhTSLgiBsCi68m7Y.png"
-            />
+        <div className="grid grid-cols-3 gap-1 h-auto bg-transparent p-0">
+          <QuickAction
+            label="Leads"
+            value="leads"
+            imageUrl="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Quick%20Actions/All_Leads-SEk2NEYpt4fARvrhTSLgiBsCi68m7Y.png"
+          />
 
-            <QuickAction
-              label="Map"
-              value="purlin-vision"
-              imageUrl="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Screenshot%202025-04-21%20at%2011.20.34%E2%80%AFAM-AtE0adjEctfQKxvUQsj3mL2NZtkzAt.png"
-            />
+          <QuickAction
+            label="Map"
+            value="purlin-vision"
+            imageUrl="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/Screenshot%202025-04-21%20at%2011.20.34%E2%80%AFAM-AtE0adjEctfQKxvUQsj3mL2NZtkzAt.png"
+          />
 
-            <QuickAction
-              label="Contracts"
-              value="contract"
-              imageUrl="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/dashboard-images/contracts.png"
-            />
-          </TabsList>
-        </Tabs>
+          <QuickAction
+            label="Contracts"
+            value="contract"
+            imageUrl="https://ehjgnin9yr7pmzsk.public.blob.vercel-storage.com/dashboard-images/contracts.png"
+          />
+        </div>
       </div>
 
       {/* Invoice Dialog */}

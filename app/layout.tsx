@@ -51,9 +51,9 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} h-screen`}>
         <ErrorBoundary>
-          <AuthProvider>
-            <LayoutClientWrapper>{children}</LayoutClientWrapper>
-          </AuthProvider>
+        <AuthProvider>
+          <LayoutClientWrapper>{children}</LayoutClientWrapper>
+        </AuthProvider>
         </ErrorBoundary>
       </body>
     </html>

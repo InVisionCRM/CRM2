@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server"
 import type { CalendarAppointment } from "@/types/appointments"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { prisma } from "@/lib/prisma"
 
 // Access the storedAppointments from the parent API handlers
 declare global {
@@ -12,57 +15,62 @@ if (typeof global.storedAppointments === 'undefined') {
   global.storedAppointments = [];
 }
 
+// Get appointments for a lead
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const leadId = params.id;
-    
-    if (!leadId) {
-      return NextResponse.json(
-        { message: "Lead ID is required" },
-        { status: 400 }
-      );
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    
-    // Get appointments for this lead
-    const appointments = global.storedAppointments.filter(a => a.leadId === leadId);
-    
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    
-    return NextResponse.json(appointments);
-  } catch (error: unknown) {
-    console.error("Error fetching lead appointments:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+
+    const { id } = await params
+
+    const appointments = await prisma.appointment.findMany({
+      where: { leadId: id },
+      orderBy: { scheduledFor: 'asc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    })
+
+    return NextResponse.json(appointments)
+  } catch (error) {
+    console.error('Error fetching appointments:', error)
     return NextResponse.json(
-      { message: "Failed to fetch lead appointments", error: errorMessage },
+      { error: 'Failed to fetch appointments' },
       { status: 500 }
-    );
+    )
   }
 }
 
+// Create appointment for a lead
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const leadId = params.id;
-    
-    if (!leadId) {
-      return NextResponse.json(
-        { message: "Lead ID is required" },
-        { status: 400 }
-      );
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    
+
+    const { id } = await params
+
     // Get appointment data from request
     const data = await request.json();
-    console.log(`Received appointment data for lead ${leadId}:`, JSON.stringify(data));
+    console.log(`Received appointment data for lead ${id}:`, JSON.stringify(data));
     
     // Ensure the appointment is associated with this lead
-    data.clientId = leadId;
+    data.clientId = id;
     
     // Forward to the main appointments endpoint
     const response = await fetch(new URL('/api/appointments', request.url).toString(), {

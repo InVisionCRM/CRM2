@@ -5,7 +5,8 @@ import { useState, useEffect } from "react"
 import type { Lead } from "@prisma/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Pencil, Check, Loader2, Phone, Mail, MapPin } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Pencil, Check, Loader2, Phone, Mail, MapPin, CheckCircle2, Clock, XCircle, AlertTriangle, ExternalLink, FileText } from "lucide-react"
 import { formatStatusLabel } from "@/lib/utils"
 // import { Avatar, AvatarFallback } from "@/components/ui/avatar" // Avatar removed
 import { 
@@ -26,6 +27,19 @@ interface User {
   name: string | null;
   email: string | null;
   role: string;
+}
+
+interface ContractStatus {
+  id: number;
+  status: string;
+  template: {
+    name: string;
+  };
+  created_at: string;
+  submitters: Array<{
+    email: string;
+    status: string;
+  }>;
 }
 
 interface LeadOverviewTabProps {
@@ -88,12 +102,79 @@ const ContactItem = ({ label, value, type, className }: ContactItemProps) => {
   );
 };
 
+// Utility functions for contract status
+const getContractStatusColor = (status: string) => {
+  switch (status) {
+    case 'completed':
+      return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
+    case 'pending':
+    case 'sent':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800'
+    case 'declined':
+      return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
+    case 'expired':
+      return 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800'
+    case 'opened':
+      return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800'
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800'
+  }
+}
+
+const getContractStatusIcon = (status: string) => {
+  switch (status) {
+    case 'completed':
+      return <CheckCircle2 className="h-3 w-3" />
+    case 'pending':
+    case 'sent':
+      return <Clock className="h-3 w-3" />
+    case 'declined':
+      return <XCircle className="h-3 w-3" />
+    case 'expired':
+      return <AlertTriangle className="h-3 w-3" />
+    case 'opened':
+      return <ExternalLink className="h-3 w-3" />
+    default:
+      return <FileText className="h-3 w-3" />
+  }
+}
+
 export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) => {
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isUpdatingAssignee, setIsUpdatingAssignee] = useState(false);
   const [selectedAssignee, setSelectedAssignee] = useState<string>(lead?.assignedToId || "unassigned");
+  const [contractStatus, setContractStatus] = useState<ContractStatus | null>(null);
+  const [isLoadingContract, setIsLoadingContract] = useState(false);
+
+  // Fetch contract status for this lead
+  useEffect(() => {
+    const fetchContractStatus = async () => {
+      if (!lead?.email) return;
+      
+      setIsLoadingContract(true);
+      try {
+        const response = await fetch(`/api/docuseal/submissions?email=${encodeURIComponent(lead.email)}`);
+        if (response.ok) {
+          const data = await response.json();
+          // Get the most recent submission for this email
+          if (data.length > 0) {
+            const mostRecent = data.sort((a: ContractStatus, b: ContractStatus) => 
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            )[0];
+            setContractStatus(mostRecent);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching contract status:', error);
+      } finally {
+        setIsLoadingContract(false);
+      }
+    };
+
+    fetchContractStatus();
+  }, [lead?.email]);
 
   // Fetch users that can be assigned
   useEffect(() => {
@@ -203,9 +284,9 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
 
   return (
     <Card className="shadow-lg w-full border-0">
-      <CardContent className="space-y-4 p-4">
+      <CardContent className="space-y-1 p-1">
         {/* Lead Summary Section */}
-        <div className="space-y-4">
+        <div className="space-y-2">
           <h3 className="text-lg font-medium text-white">Lead Summary</h3>
           <div className="space-y-3">
             <div className="space-y-0.5">
@@ -227,7 +308,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                   onValueChange={handleAssigneeChange}
                   disabled={isLoadingUsers || isUpdatingAssignee}
                 >
-                  <SelectTrigger className="h-9 text-sm w-full">
+                  <SelectTrigger className="h-9 text-sm w-1/2">
                     <SelectValue placeholder="Select salesperson">
                       {isLoadingUsers ? "Loading..." : isUpdatingAssignee ? "Updating..." : (selectedAssignee === "unassigned" ? "Unassigned" : users.find(user => user.id === selectedAssignee)?.name || 'Unassigned')}
                     </SelectValue>
@@ -248,6 +329,25 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                 )}
               </div>
             </div>
+            {/* Contract Status */}
+            {(contractStatus || isLoadingContract) && (
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium text-muted-foreground">Contract</p>
+                {isLoadingContract ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span className="text-sm text-muted-foreground">Loading...</span>
+                  </div>
+                ) : contractStatus ? (
+                  <Badge className={`border w-fit ${getContractStatusColor(contractStatus.status)}`}>
+                    {getContractStatusIcon(contractStatus.status)}
+                    <span className="ml-1 capitalize">
+                      {contractStatus.status === 'sent' ? 'pending' : contractStatus.status}
+                    </span>
+                  </Badge>
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
 
@@ -277,7 +377,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-1 gap-2 pt-1">
+            <div className="grid grid-cols-2 gap-1 pt-1">
               <ContactItem label="Phone" value={lead.phone} type="phone" />
               <ContactItem label="Address" value={addressDisplay !== "No address provided" ? addressDisplay : null} type="address" />
             </div>

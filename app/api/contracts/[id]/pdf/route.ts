@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth-utils"
 import { updateContractPdfUrl } from "@/lib/db/contracts"
+import { prisma } from "@/lib/db"
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // Check authentication
     const session = await getSession()
@@ -10,33 +11,23 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 })
     }
 
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
-    const { pdf_url } = body
+    const { pdfUrl } = body
 
-    if (!pdf_url) {
-      return NextResponse.json(
-        { success: false, message: "Missing required field: pdf_url" },
-        { status: 400 },
-      )
+    if (!pdfUrl) {
+      return NextResponse.json({ error: 'PDF URL is required' }, { status: 400 })
     }
 
-    // Update the contract's PDF URL
-    const contract = await updateContractPdfUrl(id, pdf_url)
-
-    return NextResponse.json({
-      success: true,
-      message: "Contract PDF URL updated successfully",
-      contract,
+    // Update the contract with the PDF URL
+    const contract = await prisma.contract.update({
+      where: { id },
+      data: { pdfUrl }
     })
+
+    return NextResponse.json(contract)
   } catch (error) {
-    console.error("Error updating contract PDF URL:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        message: `Failed to update contract PDF URL: ${error instanceof Error ? error.message : "Unknown error"}`,
-      },
-      { status: 500 },
-    )
+    console.error('Error updating contract PDF:', error)
+    return NextResponse.json({ error: 'Failed to update contract PDF' }, { status: 500 })
   }
 } 

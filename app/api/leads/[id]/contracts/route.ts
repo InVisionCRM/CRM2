@@ -4,14 +4,14 @@ import { GoogleDriveService } from '@/lib/services/googleDrive'
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const leadId = params.id
+    const { id } = await params
     
     // Get the lead to verify it exists and get the Google Drive folder ID
     const lead = await prisma.lead.findUnique({
-      where: { id: leadId },
+      where: { id },
       select: { 
         id: true,
         googleDriveFolderId: true,
@@ -47,7 +47,7 @@ export async function POST(
       const folder = await googleDrive.createFolder(`${lead.firstName} ${lead.lastName} - Documents`)
       folderId = folder.id
       await prisma.lead.update({
-        where: { id: leadId },
+        where: { id },
         data: { googleDriveFolderId: folderId }
       })
     }
@@ -63,7 +63,7 @@ export async function POST(
     // Save contract to database
     const contract = await prisma.contract.create({
       data: {
-        leadId,
+        leadId: id,
         contractType,
         signatures,
         dates,
@@ -84,19 +84,23 @@ export async function POST(
 // Get all contracts for a lead
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const leadId = params.id
+    const { id } = await params
     
+    // Get contracts for this lead
     const contracts = await prisma.contract.findMany({
-      where: { leadId },
+      where: { leadId: id },
       orderBy: { createdAt: 'desc' }
     })
-
+    
     return NextResponse.json(contracts)
   } catch (error) {
     console.error('Error fetching contracts:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to fetch contracts' },
+      { status: 500 }
+    )
   }
 } 

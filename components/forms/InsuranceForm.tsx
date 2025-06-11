@@ -433,18 +433,25 @@ export function InsuranceForm({
     setError(null)
     setSuccessMessage(null)
 
-    const finalData = {
-      ...data,
-      insuranceCompany: data.insuranceCompany === "Not Listed" ? data.customInsuranceCompany : data.insuranceCompany,
-    };
-    delete (finalData as { customInsuranceCompany?: string }).customInsuranceCompany;
-    
     try {
+      // Prepare data for submission
+      const submissionData = {
+        ...data,
+        // Use custom company name if provided, otherwise use selected company
+        insuranceCompany: data.customInsuranceCompany || data.insuranceCompany
+      }
+      
+      // Remove customInsuranceCompany as it's not part of the API schema
+      delete submissionData.customInsuranceCompany
+
+      // Call API route to update insurance information
       const response = await fetch(`/api/leads/${leadId}/insurance`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(finalData),
-      });
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(submissionData)
+      })
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -454,7 +461,7 @@ export function InsuranceForm({
       setSuccessMessage("Insurance information updated successfully")
       sessionStorage.removeItem(storageKey)
       setIsDirty(false)
-      reset(finalData as InsuranceFormValues)
+      reset(submissionData as InsuranceFormValues)
       onSuccess?.()
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred")

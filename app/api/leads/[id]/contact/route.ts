@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { LeadStatus, ActivityType } from '@prisma/client'
@@ -17,35 +17,35 @@ const contactUpdateSchema = z.object({
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
-    const data = await request.json();
-    
-    console.log("Contact update request for lead:", id);
-    console.log("Contact data:", data);
-    
-    // If it's a temporary ID, handle it properly
-    const isTemporaryId = id.startsWith("temp-");
-    
-    // 1. Auth check
+    // Verify authentication
     const session = await getServerSession(authOptions)
-    if (!session) {
+    if (!session?.user?.id) {
       return new NextResponse(
         JSON.stringify({ message: 'Unauthorized' }),
         { status: 401 }
       )
     }
 
-    // 2. Extract and validate ID
-    if (!id) {
+    // Get the lead ID from params
+    const { id: leadId } = await params
+    if (!leadId) {
       return new NextResponse(
         JSON.stringify({ message: 'Lead ID is required' }),
         { status: 400 }
       )
     }
 
+    const data = await request.json();
+    
+    console.log("Contact update request for lead:", leadId);
+    console.log("Contact data:", data);
+    
+    // If it's a temporary ID, handle it properly
+    const isTemporaryId = leadId.startsWith("temp-");
+    
     // 3. Parse & validate body
     const result = contactUpdateSchema.safeParse(data)
     if (!result.success) {
@@ -81,7 +81,6 @@ export async function PATCH(
           phone:        data.phone,
           address:      data.address,
           status:       LeadStatus.follow_ups,
-          assignedToId: session.user.id,
         }
       })
 
@@ -112,7 +111,7 @@ export async function PATCH(
     }
 
     // 5. Update existing
-    const existing = await prisma.lead.findUnique({ where: { id } })
+    const existing = await prisma.lead.findUnique({ where: { id: leadId } })
     if (!existing) {
       return new NextResponse(
         JSON.stringify({ message: 'Lead not found' }),
@@ -121,7 +120,7 @@ export async function PATCH(
     }
 
     const updated = await prisma.lead.update({
-      where: { id },
+      where: { id: leadId },
       data: {
         firstName: data.firstName,
         lastName:  data.lastName,
@@ -138,7 +137,7 @@ export async function PATCH(
         title:       'Contact information updated',
         description: `Updated contact for ${data.firstName} ${data.lastName}`,
         userId:      session.user.id,
-        leadId:      id,
+        leadId:      leadId,
       }
     })
 

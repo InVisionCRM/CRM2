@@ -78,7 +78,7 @@ export default function LeadsPage() {
 
       <Button
         onClick={() => setOpenCreateForm(true)}
-        className="fixed top-[15px] right-[10px] bg-[#59ff00] text-black hover:bg-[#59ff00]/90 whitespace-nowrap z-50 
+        className="fixed top-4 right-10 bg-[#59ff00] text-black hover:bg-[#59ff00]/90 whitespace-nowrap z-50 
           text-sm sm:text-base 
           px-2 sm:px-3 
           py-1 sm:py-2
@@ -87,7 +87,7 @@ export default function LeadsPage() {
       >
         <Plus className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
         <span className="hidden sm:inline">Create Lead</span>
-        <span className="sm:hidden">New</span>
+        <span className="sm:hidden">New Lead</span>
       </Button>
 
       <LeadsClient 

@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useSession, signIn, signOut } from "next-auth/react"
-import { User, LogIn, LogOut, Plus, MoreHorizontal } from "lucide-react"
+import { User, LogIn, LogOut, Plus, MoreHorizontal, FileSignature } from "lucide-react"
 import { IconUserBolt, IconHomeHeart, IconMap, IconLink, IconCalendar, IconFolder } from "@tabler/icons-react"
 import {
   DropdownMenu,
@@ -65,6 +65,11 @@ export default function AppSidebar({ className }: SidebarProps) {
       label: "Drive",
       href: "/drive",
       icon: <IconFolder className="h-5 w-5" />,
+    },
+    {
+      label: "Submissions",
+      href: "/submissions",
+      icon: <FileSignature className="h-5 w-5" />,
     },
     {
       label: "Links",

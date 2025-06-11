@@ -58,16 +58,16 @@ export const WavyBackground = ({
     if (!ctx) return;
     
     try {
+    w = ctx.canvas.width = window.innerWidth;
+    h = ctx.canvas.height = window.innerHeight;
+    ctx.filter = `blur(${blur}px)`;
+    nt = 0;
+    window.onresize = function () {
       w = ctx.canvas.width = window.innerWidth;
       h = ctx.canvas.height = window.innerHeight;
       ctx.filter = `blur(${blur}px)`;
-      nt = 0;
-      window.onresize = function () {
-        w = ctx.canvas.width = window.innerWidth;
-        h = ctx.canvas.height = window.innerHeight;
-        ctx.filter = `blur(${blur}px)`;
-      };
-      render();
+    };
+    render();
     } catch (error) {
       console.error('WavyBackground init error:', error);
     }

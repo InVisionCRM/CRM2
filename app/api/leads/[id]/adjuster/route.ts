@@ -1,27 +1,32 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { prisma } from '@/lib/db/prisma'
 import { z } from 'zod'
 
 // Schema for validation
 const adjusterUpdateSchema = z.object({
-  insuranceAdjusterName: z.string().optional().or(z.literal("")),
-  insuranceAdjusterPhone: z.string().optional().or(z.literal("")),
-  insuranceAdjusterEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
-  adjusterAppointmentDate: z.string().optional().or(z.literal("")),
-  adjusterAppointmentTime: z.string().optional().or(z.literal("")),
-  adjusterAppointmentNotes: z.string().optional().or(z.literal(""))
+  insuranceAdjusterName: z.string().nullable().optional(),
+  insuranceAdjusterPhone: z.string().nullable().optional(),
+  insuranceAdjusterEmail: z
+    .string()
+    .email()
+    .or(z.literal(''))
+    .nullable()
+    .optional(),
+  adjusterAppointmentDate: z.string().nullable().optional(),
+  adjusterAppointmentTime: z.string().nullable().optional(),
+  adjusterAppointmentNotes: z.string().nullable().optional(),
 })
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify authentication
     const session = await getServerSession(authOptions)
-    if (!session) {
+    if (!session?.user?.id) {
       return new NextResponse(
         JSON.stringify({ message: 'Unauthorized' }),
         { status: 401 }
@@ -29,8 +34,8 @@ export async function PATCH(
     }
 
     // Get the lead ID from params
-    const { id } = params
-    if (!id) {
+    const { id: leadId } = await params
+    if (!leadId) {
       return new NextResponse(
         JSON.stringify({ message: 'Lead ID is required' }),
         { status: 400 }
@@ -53,36 +58,43 @@ export async function PATCH(
 
     const data = validationResult.data
 
-    // Check if lead exists
-    const existingLead = await prisma.lead.findUnique({
-      where: { id }
-    })
-
-    if (!existingLead) {
-      return new NextResponse(
-        JSON.stringify({ message: 'Lead not found' }),
-        { status: 404 }
-      )
-    }
-
     // Convert appointment date string to DateTime if provided
-    let appointmentDate = undefined
-    if (data.adjusterAppointmentDate && data.adjusterAppointmentDate.trim() !== '') {
-      appointmentDate = new Date(data.adjusterAppointmentDate)
+    let adjusterAppointmentDate: Date | null | undefined
+    if (data.adjusterAppointmentDate !== undefined) {
+      if (
+        data.adjusterAppointmentDate === null ||
+        data.adjusterAppointmentDate.trim() === ''
+      ) {
+        adjusterAppointmentDate = null
+      } else {
+        const parsedDate = new Date(data.adjusterAppointmentDate)
+        if (isNaN(parsedDate.getTime())) {
+          return new NextResponse(
+            JSON.stringify({
+              message: 'Invalid date format for adjusterAppointmentDate',
+            }),
+            { status: 400 },
+          )
+        }
+        adjusterAppointmentDate = parsedDate
+      }
     }
 
     // Update the lead adjuster information
     const updatedLead = await prisma.lead.update({
-      where: { id },
+      where: { id: leadId },
       data: {
         insuranceAdjusterName: data.insuranceAdjusterName,
         insuranceAdjusterPhone: data.insuranceAdjusterPhone,
-        insuranceAdjusterEmail: data.insuranceAdjusterEmail,
-        adjusterAppointmentDate: appointmentDate,
+        insuranceAdjusterEmail:
+          data.insuranceAdjusterEmail === ''
+            ? null
+            : data.insuranceAdjusterEmail,
+        adjusterAppointmentDate,
         adjusterAppointmentTime: data.adjusterAppointmentTime,
         adjusterAppointmentNotes: data.adjusterAppointmentNotes,
-        updatedAt: new Date()
-      }
+        updatedAt: new Date(),
+      },
     })
 
     // Create activity log for this update
@@ -90,9 +102,9 @@ export async function PATCH(
       data: {
         type: 'LEAD_UPDATED',
         title: 'Adjuster information updated',
-        description: `Adjuster information updated for lead ${id}`,
+        description: `Adjuster information updated for lead ${leadId}`,
         userId: session.user.id,
-        leadId: id,
+        leadId: leadId,
       }
     })
 
@@ -111,7 +123,10 @@ export async function PATCH(
   } catch (error) {
     console.error('Error updating adjuster information:', error)
     return new NextResponse(
-      JSON.stringify({ message: 'Internal server error' }),
+      JSON.stringify({ 
+        message: 'Internal server error',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }),
       { status: 500 }
     )
   }

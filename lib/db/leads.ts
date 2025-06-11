@@ -15,14 +15,20 @@ interface GetLeadsOptions {
 
 export async function getLeads(options: GetLeadsOptions): Promise<Lead[]> {
   try {
+    console.log('getLeads called with userId:', options.userId, 'type:', typeof options.userId);
+    
     // Get user role
     const user = await prisma.user.findUnique({
       where: { id: options.userId },
       select: { role: true },
     });
 
+    console.log('User found:', !!user, 'for ID:', options.userId);
+
     if (!user) {
-      throw new Error("User not found");
+      //Try to find user by different ID format or return empty array for now
+      console.error("User not found with ID:", options.userId);
+      return []; // Return empty array instead of throwing error
     }
 
     // Build where clause
@@ -138,6 +144,15 @@ interface CreateLeadInput {
   assignedToId?: string | null
   notes?: string | null
   userId: string // Required for activity creation
+  // Insurance fields
+  insuranceCompany?: string | null
+  insurancePolicyNumber?: string | null
+  insurancePhone?: string | null
+  insuranceSecondaryPhone?: string | null
+  insuranceDeductible?: string | null
+  dateOfLoss?: Date | null
+  damageType?: string | null
+  claimNumber?: string | null
 }
 
 export async function createLead(data: CreateLeadInput): Promise<Lead> {
@@ -154,7 +169,16 @@ export async function createLead(data: CreateLeadInput): Promise<Lead> {
         address: data.address,
         status: data.status,
         assignedToId: data.assignedToId,
-        notes: data.notes
+        notes: data.notes,
+        // Insurance fields
+        insuranceCompany: data.insuranceCompany,
+        insurancePolicyNumber: data.insurancePolicyNumber,
+        insurancePhone: data.insurancePhone,
+        insuranceSecondaryPhone: data.insuranceSecondaryPhone,
+        insuranceDeductible: data.insuranceDeductible,
+        dateOfLoss: data.dateOfLoss,
+        damageType: data.damageType as any, // Cast to handle enum
+        claimNumber: data.claimNumber
       }
     })
 
