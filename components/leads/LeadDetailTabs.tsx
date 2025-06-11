@@ -25,7 +25,7 @@ export function LeadDetailTabs({ lead, activeTab, onTabChange }: LeadDetailTabsP
   if (!lead) {
     return (
       <Card className="w-full">
-        <CardContent className="p-6">
+        <CardContent className="p-5">
           <div className="h-10 bg-muted rounded w-1/2 mb-4 animate-pulse"></div>
           <div className="h-40 bg-muted rounded animate-pulse"></div>
         </CardContent>
