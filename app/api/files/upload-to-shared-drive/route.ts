@@ -1,46 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { prisma } from '@/lib/db/prisma';
 import { Readable } from 'stream';
 
-export async function POST(request: NextRequest) {
-  console.log('📁 Uploading file to shared Google Drive (legacy API)');
+export async function POST(req: Request) {
+  console.log('📁 Uploading file to shared Google Drive');
   
   try {
-    const formData = await request.formData();
+    const formData = await req.formData();
     const file = formData.get('file') as File;
     const leadId = formData.get('leadId') as string;
-    const fileType = formData.get('fileType') as string || 'file';
-    
-    // Legacy support: if folderId is provided but no leadId, try to extract leadId
-    const folderId = formData.get('folderId') as string;
-    if (!leadId && folderId) {
-      // Try to find lead by googleDriveFolderId (for backward compatibility)
-      const lead = await prisma.lead.findFirst({
-        where: { googleDriveFolderId: folderId },
-        select: { id: true }
-      });
-      
-      if (lead) {
-        // Redirect to new shared drive upload
-        const newFormData = new FormData();
-        newFormData.append('file', file);
-        newFormData.append('leadId', lead.id);
-        newFormData.append('fileType', fileType);
-        
-        const response = await fetch(`${new URL(request.url).origin}/api/files/upload-to-shared-drive`, {
-          method: 'POST',
-          body: newFormData
-        });
-        
-        return response;
-      }
-    }
+    const fileType = formData.get('fileType') as string; // 'file' or 'photo'
     
     if (!file || !leadId) {
       return NextResponse.json({ 
-        success: false, 
-        message: "File and lead ID are required" 
+        error: 'File and lead ID are required' 
       }, { status: 400 });
     }
 
@@ -56,8 +30,7 @@ export async function POST(request: NextRequest) {
 
     if (!lead) {
       return NextResponse.json({ 
-        success: false, 
-        message: "Lead not found" 
+        error: 'Lead not found' 
       }, { status: 404 });
     }
 
@@ -67,16 +40,14 @@ export async function POST(request: NextRequest) {
     if (!GOOGLE_SA_EMAIL || !GOOGLE_SA_PRIVATE_KEY) {
       console.error('❌ Google Service Account credentials not configured');
       return NextResponse.json({ 
-        success: false, 
-        message: "Google Service Account not configured" 
+        error: 'Google Service Account not configured' 
       }, { status: 500 });
     }
 
     if (!SHARED_DRIVE_ID) {
       console.error('❌ SHARED_DRIVE_ID not configured');
       return NextResponse.json({ 
-        success: false, 
-        message: "Google Drive not configured" 
+        error: 'Google Drive not configured' 
       }, { status: 500 });
     }
 
@@ -137,7 +108,6 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ File uploaded to Shared Drive:', driveFileId);
 
-    // Return success with file information
     return NextResponse.json({
       success: true,
       file: {
@@ -154,11 +124,11 @@ export async function POST(request: NextRequest) {
       }
     });
 
-  } catch (error: any) {
-    console.error("❌ Error in upload-drive-file API:", error);
+  } catch (error) {
+    console.error('❌ Error uploading file to shared drive:', error);
     return NextResponse.json({ 
-      success: false,
-      message: error.message || "An unexpected error occurred"  
+      error: 'Failed to upload file',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
-}
+} 

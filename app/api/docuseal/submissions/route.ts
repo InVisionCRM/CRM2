@@ -26,6 +26,7 @@ export async function GET(req: Request) {
     const limit = url.searchParams.get('limit') || '50'; // Default limit
     const q = url.searchParams.get('q');
     const archived = url.searchParams.get('archived');
+    const email = url.searchParams.get('email'); // Add email filtering
     
     if (status) searchParams.append('status', status);
     if (templateId) searchParams.append('template_id', templateId);
@@ -67,12 +68,33 @@ export async function GET(req: Request) {
     }
 
     const data = await response.json();
+    
+    // Filter by email if provided (since DocuSeal API might not support email filtering directly)
+    let filteredData = data;
+    if (email) {
+      console.log('🔍 Filtering submissions by email:', email);
+      const emailLower = email.toLowerCase();
+      filteredData = {
+        ...data,
+        data: data.data?.filter((submission: any) => 
+          submission.submitters?.some((submitter: any) => 
+            submitter.email?.toLowerCase() === emailLower
+          )
+        ) || []
+      };
+      console.log('📊 Email filter results:', {
+        originalCount: data.data?.length || 0,
+        filteredCount: filteredData.data?.length || 0,
+        email: email
+      });
+    }
+    
     console.log('✅ DocuSeal submissions fetched successfully:', {
-      count: data.data?.length || 0,
-      totalPages: data.pagination?.count || 0
+      count: filteredData.data?.length || 0,
+      totalPages: filteredData.pagination?.count || 0
     });
     
-    return NextResponse.json(data);
+    return NextResponse.json(filteredData);
 
   } catch (error) {
     console.error('💥 Error fetching DocuSeal submissions:', {

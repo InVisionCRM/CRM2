@@ -1,12 +1,12 @@
 "use client"
 
 import { formatDistanceToNow, format, isValid, parse } from "date-fns"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import type { Lead } from "@prisma/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Pencil, Check, Loader2, Phone, Mail, MapPin, CheckCircle2, Clock, XCircle, AlertTriangle, ExternalLink, FileText } from "lucide-react"
+import { Pencil, Check, Loader2, Phone, Mail, MapPin, CheckCircle2, Clock, XCircle, AlertTriangle, ExternalLink, FileText, Eye, Upload } from "lucide-react"
 import { formatStatusLabel } from "@/lib/utils"
 // import { Avatar, AvatarFallback } from "@/components/ui/avatar" // Avatar removed
 import { 
@@ -36,10 +36,17 @@ interface ContractStatus {
     name: string;
   };
   created_at: string;
+  audit_log_url: string | null;
   submitters: Array<{
     email: string;
     status: string;
   }>;
+}
+
+interface UploadedContract {
+  url: string;
+  name: string;
+  uploadedAt: string;
 }
 
 interface LeadOverviewTabProps {
@@ -147,6 +154,9 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
   const [selectedAssignee, setSelectedAssignee] = useState<string>(lead?.assignedToId || "unassigned");
   const [contractStatus, setContractStatus] = useState<ContractStatus | null>(null);
   const [isLoadingContract, setIsLoadingContract] = useState(false);
+  const [uploadedContract, setUploadedContract] = useState<UploadedContract | null>(null);
+  const [isUploadingContract, setIsUploadingContract] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch contract status for this lead
   useEffect(() => {
@@ -158,9 +168,9 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
         const response = await fetch(`/api/docuseal/submissions?email=${encodeURIComponent(lead.email)}`);
         if (response.ok) {
           const data = await response.json();
-          // Get the most recent submission for this email
-          if (data.length > 0) {
-            const mostRecent = data.sort((a: ContractStatus, b: ContractStatus) => 
+          // Handle the correct DocuSeal API response structure
+          if (data.data && data.data.length > 0) {
+            const mostRecent = data.data.sort((a: ContractStatus, b: ContractStatus) => 
               new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
             )[0];
             setContractStatus(mostRecent);
@@ -257,6 +267,120 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
     window.location.href = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}`;
   };
 
+  const handleViewContract = async () => {
+    if (!contractStatus || !lead) return;
+    
+    try {
+      // First, try to get detailed submission info to find the document
+      const detailsResponse = await fetch(`/api/docuseal/submissions/${contractStatus.id}`);
+      if (detailsResponse.ok) {
+        const details = await detailsResponse.json();
+        
+        // Check if documents are embedded in the submission details
+        if (details.documents && details.documents.length > 0) {
+          const documentUrl = details.documents[0].url;
+          window.open(documentUrl, '_blank');
+          return;
+        }
+      }
+      
+      // Fallback: Try the documents endpoint
+      const documentsResponse = await fetch(`/api/docuseal/submissions/${contractStatus.id}/documents`);
+      if (documentsResponse.ok) {
+        const documents = await documentsResponse.json();
+        if (documents && documents.length > 0) {
+          const documentUrl = documents[0].url;
+          window.open(documentUrl, '_blank');
+          return;
+        }
+      }
+      
+      // If no document found, show audit log
+      if (contractStatus.audit_log_url) {
+        window.open(contractStatus.audit_log_url, '_blank');
+      } else {
+        toast({
+          title: "Contract not available",
+          description: "Unable to retrieve the contract document.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error viewing contract:', error);
+      toast({
+        title: "Error",
+        description: "Failed to open contract document.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUploadContract = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !lead) return;
+
+    setIsUploadingContract(true);
+    
+    try {
+      // Upload file to shared drive
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('leadId', lead.id);
+      formData.append('fileType', 'file'); // This will go to the Files section
+
+      const response = await fetch('/api/files/upload-to-shared-drive', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // Set uploaded contract state
+        setUploadedContract({
+          url: result.file?.webViewLink || result.file?.url || '#',
+          name: file.name,
+          uploadedAt: new Date().toISOString()
+        });
+
+        toast({
+          title: "Success",
+          description: "Contract uploaded successfully!",
+        });
+      } else {
+        throw new Error(result.error || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Error uploading contract:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload contract. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingContract(false);
+      // Clear the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleViewUploadedContract = () => {
+    if (uploadedContract?.url) {
+      window.open(uploadedContract.url, '_blank');
+    }
+  };
+
   if (!lead) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-2 gap-6">
@@ -330,7 +454,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
               </div>
             </div>
             {/* Contract Status */}
-            {(contractStatus || isLoadingContract) && (
+            {(contractStatus || isLoadingContract || uploadedContract) && (
               <div className="space-y-0.5">
                 <p className="text-sm font-medium text-muted-foreground">Contract</p>
                 {isLoadingContract ? (
@@ -339,13 +463,75 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                     <span className="text-sm text-muted-foreground">Loading...</span>
                   </div>
                 ) : contractStatus ? (
-                  <Badge className={`border w-fit ${getContractStatusColor(contractStatus.status)}`}>
-                    {getContractStatusIcon(contractStatus.status)}
-                    <span className="ml-1 capitalize">
-                      {contractStatus.status === 'sent' ? 'pending' : contractStatus.status}
-                    </span>
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge className={`border w-fit ${getContractStatusColor(contractStatus.status)}`}>
+                      {getContractStatusIcon(contractStatus.status)}
+                      <span className="ml-1 capitalize">
+                        {contractStatus.status === 'sent' ? 'pending' : contractStatus.status}
+                      </span>
+                    </Badge>
+                    {contractStatus.status === 'completed' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleViewContract}
+                        className="h-6 px-2 text-xs"
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        View Contract
+                      </Button>
+                    )}
+                  </div>
+                ) : uploadedContract ? (
+                  <div className="flex items-center gap-2">
+                    <Badge className={`border w-fit ${getContractStatusColor('completed')}`}>
+                      {getContractStatusIcon('completed')}
+                      <span className="ml-1 capitalize">completed</span>
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleViewUploadedContract}
+                      className="h-6 px-2 text-xs"
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      View Contract
+                    </Button>
+                  </div>
                 ) : null}
+              </div>
+            )}
+            {/* Upload Contract Button - Show only when no contract exists */}
+            {!contractStatus && !uploadedContract && !isLoadingContract && (
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium text-muted-foreground">Contract</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleUploadContract}
+                  disabled={isUploadingContract}
+                  className="h-8 px-3 text-xs"
+                >
+                  {isUploadingContract ? (
+                    <>
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-3 w-3 mr-1" />
+                      Upload Contract
+                    </>
+                  )}
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handleFileChange}
+                  accept=".pdf,.doc,.docx"
+                  className="hidden"
+                  aria-label="Upload contract file"
+                />
               </div>
             )}
           </div>

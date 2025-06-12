@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useSearchParams } from "next/navigation" // Use next/navigation for App Router
 import { LeadStatus } from "@prisma/client"
-import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy, Loader2, NotebookPen } from "lucide-react" // Added NotebookPen icon
+import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy, Loader2, NotebookPen, PenTool } from "lucide-react" // Added NotebookPen and PenTool icons
 import { StatusChangeDrawer } from "@/components/leads/StatusChangeDrawer"
 import { LeadDetailTabs } from "@/components/leads/LeadDetailTabs" // Corrected path
 import { ActivityFeed } from "@/components/leads/ActivityFeed" // Corrected path
@@ -176,6 +176,11 @@ export default function LeadDetailPage() {
   const [isSendingContract, setIsSendingContract] = useState(false);
   const [sendContractDialog, setSendContractDialog] = useState(false);
   const [contractSuccessData, setContractSuccessData] = useState<any>(null);
+  const [isSigningInPerson, setIsSigningInPerson] = useState(false);
+  const [showContractSaveDialog, setShowContractSaveDialog] = useState(false);
+  const [completedContracts, setCompletedContracts] = useState<any[]>([]);
+  const [isSavingToDrive, setIsSavingToDrive] = useState(false);
+  const [dialogDismissed, setDialogDismissed] = useState(false);
 
   useEffect(() => {
     if (lead?.address) {
@@ -186,6 +191,90 @@ export default function LeadDetailPage() {
       setStreetViewUrl(url)
     }
   }, [lead?.address])
+
+  // Check for completed contracts that need to be saved to Google Drive
+  useEffect(() => {
+    const checkCompletedContracts = async () => {
+      if (!lead?.email || dialogDismissed) {
+        console.log('ℹ️ Skipping contract check:', { 
+          hasEmail: !!lead?.email, 
+          dialogDismissed 
+        });
+        return;
+      }
+
+      try {
+        console.log('🔍 Checking completed contracts for lead:', lead.email);
+        
+        // Get DocuSeal submissions for this lead
+        const response = await fetch(`/api/docuseal/submissions?email=${encodeURIComponent(lead.email)}`);
+        if (!response.ok) {
+          console.error('❌ Failed to fetch submissions:', response.statusText);
+          return;
+        }
+
+        const data = await response.json();
+        const submissions = data.data || [];
+        
+        console.log(`📋 Found ${submissions.length} total submissions for ${lead.email}`);
+
+        // Filter for completed submissions
+        const completed = submissions.filter((submission: any) => {
+          const isCompleted = submission.status === 'completed';
+          console.log(`📄 Submission ${submission.id}: status=${submission.status}, completed=${isCompleted}`);
+          return isCompleted;
+        });
+
+        console.log(`✅ Found ${completed.length} completed submissions`);
+
+        if (completed.length > 0) {
+          setCompletedContracts(completed);
+          
+          // Check if any completed contracts are not saved to Google Drive yet
+          console.log('🔍 Checking Google Drive for existing contracts...');
+          
+          // Since we're searching by lead ID, we only need to check once for all contracts
+          try {
+            console.log(`🔍 Checking Google Drive for lead ${lead.id} contracts`);
+            const checkResponse = await fetch(`/api/google-drive/check-contract?leadId=${lead.id}`);
+            const checkData = await checkResponse.json();
+            
+            if (!checkResponse.ok) {
+              console.error(`❌ Google Drive check failed for lead ${lead.id}:`, checkData.error);
+              // If Google Drive check fails, assume contracts need saving
+              console.log('🔔 Showing contract save dialog (Google Drive check failed)');
+              setShowContractSaveDialog(true);
+            } else {
+              const exists = checkData.exists;
+              console.log(`${exists ? '✅' : '❌'} Lead ${lead.id} contracts ${exists ? 'exist' : 'not found'} in Google Drive`);
+              
+              if (checkData.files && checkData.files.length > 0) {
+                console.log('📄 Found contract files:', checkData.files.map((f: any) => f.name));
+              }
+              
+              if (!exists) {
+                console.log('🔔 Showing contract save dialog (no contracts found in Drive)');
+                setShowContractSaveDialog(true);
+              } else {
+                console.log('✅ All completed contracts are already saved to Google Drive');
+              }
+            }
+          } catch (error) {
+            console.error(`❌ Error checking Google Drive for lead ${lead.id}:`, error);
+            // If check fails, show dialog to be safe
+            console.log('🔔 Showing contract save dialog (error during check)');
+            setShowContractSaveDialog(true);
+          }
+        } else {
+          console.log('ℹ️ No completed contracts found - dialog will not show');
+        }
+      } catch (error) {
+        console.error('❌ Error checking completed contracts:', error);
+      }
+    };
+
+    checkCompletedContracts();
+  }, [lead?.email, dialogDismissed]);
 
   const handleCopyMessage = () => {
     if (!lead) return;
@@ -264,60 +353,68 @@ Thank you for choosing In-Vision Construction!`;
     if (!lead) return;
     
     setIsSendingContract(true);
-    setSendContractDialog(true);
-    
     try {
-      const response = await fetch('/api/send-contract', {
+      const response = await fetch('/api/docuseal/send-contract', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ lead }),
+        body: JSON.stringify({ leadId: lead.id }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to send contract');
+      const data = await response.json();
+
+      if (response.ok) {
+        setContractSuccessData(data);
+        setSendContractDialog(false);
+        setShowLoadingDialog(true);
+        
+        // Refresh the page after a short delay to show updated contract status
+        setTimeout(() => {
+          window.location.reload();
+        }, 3000);
+      } else {
+        console.error('Failed to send contract:', data);
+        alert(`Failed to send contract: ${data.error || 'Unknown error'}`);
       }
-
-      const result = await response.json();
-      
-      // Close loading dialog immediately
-      setSendContractDialog(false);
-      
-      // Trigger confetti celebration
-      setContractSuccessData(result[0]);
-      setShowSuccessMessage(true);
-      setTimeout(() => {
-        setShowSuccessMessage(false);
-        setContractSuccessData(null);
-      }, 5000);
-      
-      // Show success toast with details
-      toast({
-        title: "🎉 Contract Sent Successfully!",
-        description: `DocuSeal contract sent to ${lead.email}. Submission ID: ${result[0]?.id || 'Generated'}. They will receive an email with signing instructions and can access the contract at the provided link.`,
-      });
-      
-      console.log('Contract sent result:', result);
     } catch (error) {
       console.error('Error sending contract:', error);
-      
-      // Close loading dialog
-      setSendContractDialog(false);
-      
-      // Show detailed error message
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : "An unexpected error occurred while sending the contract.";
-      
-      toast({
-        title: "❌ Contract Send Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      alert('Failed to send contract. Please try again.');
     } finally {
       setIsSendingContract(false);
+    }
+  };
+
+  const handleSignInPerson = async () => {
+    if (!lead) return;
+    
+    setIsSigningInPerson(true);
+    try {
+      const response = await fetch('/api/docuseal/sign-in-person', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ leadId: lead.id }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Open the signing URL directly in a new tab
+        window.open(data.signingUrl, '_blank', 'noopener,noreferrer');
+        
+        // Show a simple success message
+        alert(`In-person signing opened in new tab for ${lead.firstName} ${lead.lastName}. Hand the device to the customer to complete signing.`);
+      } else {
+        console.error('Failed to create in-person signing:', data);
+        alert(`Failed to create in-person signing: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error creating in-person signing:', error);
+      alert('Failed to create in-person signing. Please try again.');
+    } finally {
+      setIsSigningInPerson(false);
     }
   };
 
@@ -334,6 +431,53 @@ Thank you for choosing In-Vision Construction!`;
           textarea.focus();
         }
       }, 500);
+    }
+  };
+
+  const handleSaveContractsToDrive = async () => {
+    if (!lead) return;
+    
+    setIsSavingToDrive(true);
+    try {
+      const response = await fetch('/api/docuseal/auto-save-contracts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ leadEmail: lead.email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Success!",
+          description: `${data.savedCount || 0} contract(s) saved to Google Drive.`,
+        });
+        setShowContractSaveDialog(false);
+        setDialogDismissed(true); // Prevent dialog from showing again
+        
+        // Refresh the page to update contract status
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        console.error('Failed to save contracts:', data);
+        toast({
+          title: "Error",
+          description: data.error || 'Failed to save contracts to Google Drive.',
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error saving contracts:', error);
+      toast({
+        title: "Error",
+        description: 'Failed to save contracts. Please try again.',
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingToDrive(false);
     }
   };
 
@@ -493,9 +637,9 @@ Thank you for choosing In-Vision Construction!`;
                   )}
                   <div className="absolute bottom-0 left-0 right-0 flex w-full border-t border-b-[2px] border-lime-500">
                     <QuickActionButton 
-                      onClick={handleOpenFilesDialog} 
+                      href={`/leads/${id}/files`}
                       icon={<FileArchive className="h-5 w-5" />} 
-                      label="Files" 
+                      label="File Manager" 
                     />
                     <QuickActionButton 
                       onClick={handleOpenPhotosDialog} 
@@ -512,6 +656,12 @@ Thank you for choosing In-Vision Construction!`;
                       icon={<FileSignature className="mb-2 h-6 w-6" />}
                       label={isSendingContract ? "Sending..." : "Send Contract"}
                       disabled={!lead || isSendingContract}
+                    />
+                    <QuickActionButton
+                      onClick={handleSignInPerson}
+                      icon={<PenTool className="h-5 w-5" />}
+                      label={isSigningInPerson ? "Creating..." : "Sign in Person"}
+                      disabled={!lead || isSigningInPerson}
                     />
                   </div>
                 </div>
@@ -586,40 +736,72 @@ Thank you for choosing In-Vision Construction!`;
 
       <Dialog open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
         <DialogContent className="sm:max-w-md flex flex-col items-center justify-center p-6 gap-4">
-          <div className="w-16 h-16 relative">
-            <div className="absolute inset-0 rounded-full border-4 border-lime-500/30 animate-[spin_3s_linear_infinite]"></div>
-            <div className="absolute inset-[6px] rounded-full border-4 border-lime-500/40 animate-[spin_2s_linear_infinite]"></div>
-            <div className="absolute inset-[12px] rounded-full border-4 border-lime-500/60 animate-[spin_1.5s_linear_infinite]"></div>
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+            <span className="text-lg font-medium">Processing...</span>
           </div>
-          <h2 className="text-xl font-semibold text-center mt-4">Preparing E-Sign Document</h2>
           <p className="text-center text-muted-foreground">
-            Creating a new contract for electronic signature...
+            Your contract is being sent. This may take a few moments.
           </p>
         </DialogContent>
       </Dialog>
 
-      {/* Send Contract Loading Dialog */}
-      <Dialog open={sendContractDialog} onOpenChange={setSendContractDialog}>
-        <DialogContent className="sm:max-w-md flex flex-col items-center justify-center p-8 gap-6">
-          <div className="w-20 h-20 relative">
-            <div className="absolute inset-0 rounded-full border-4 border-blue-500/20 animate-[spin_3s_linear_infinite]"></div>
-            <div className="absolute inset-[4px] rounded-full border-4 border-blue-500/40 animate-[spin_2s_linear_infinite_reverse]"></div>
-            <div className="absolute inset-[8px] rounded-full border-4 border-blue-500/60 animate-[spin_1.5s_linear_infinite]"></div>
-            <div className="absolute inset-[12px] rounded-full border-4 border-blue-500/80 animate-[spin_1s_linear_infinite_reverse]"></div>
-            <div className="absolute inset-[16px] rounded-full bg-blue-500/10 animate-pulse"></div>
-          </div>
-          <div className="text-center space-y-3">
-            <h2 className="text-2xl font-bold text-blue-600">📄 Sending Contract</h2>
-            <div className="space-y-2">
-              <p className="text-lg font-semibold">Preparing DocuSeal contract...</p>
-              <p className="text-sm text-muted-foreground">
-                Creating personalized contract for <span className="font-medium text-blue-600">{lead?.email}</span>
-              </p>
+      {/* Contract Save to Drive Dialog */}
+      <Dialog open={showContractSaveDialog} onOpenChange={setShowContractSaveDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSignature className="h-5 w-5 text-green-600" />
+              Contract Ready to Save
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
+                <div>
+                  <h3 className="font-medium text-green-900">Contract Completed!</h3>
+                  <p className="text-sm text-green-700 mt-1">
+                    {lead?.firstName} {lead?.lastName} has completed signing their contract.
+                  </p>
+                  {completedContracts.length > 0 && (
+                    <p className="text-xs text-green-600 mt-2">
+                      {completedContracts.length} completed contract{completedContracts.length > 1 ? 's' : ''} found
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="flex items-center justify-center gap-2 mt-4">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            
+            <p className="text-sm text-muted-foreground">
+              Would you like to save the signed contract to your Google Drive shared folder?
+            </p>
+            
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowContractSaveDialog(false);
+                  setDialogDismissed(true); // Don't show again this session
+                }}
+                disabled={isSavingToDrive}
+              >
+                Not Now
+              </Button>
+              <Button
+                onClick={handleSaveContractsToDrive}
+                disabled={isSavingToDrive}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isSavingToDrive ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save to Drive'
+                )}
+              </Button>
             </div>
           </div>
         </DialogContent>

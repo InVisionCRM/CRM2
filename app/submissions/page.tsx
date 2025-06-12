@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Filter, Download, Eye, RefreshCw, FileText, CheckCircle2, Clock, XCircle, AlertTriangle, ExternalLink } from "lucide-react"
+import { Search, Filter, Download, Eye, RefreshCw, FileText, CheckCircle2, Clock, XCircle, AlertTriangle, ExternalLink, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -119,6 +119,7 @@ export default function SubmissionsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [pagination, setPagination] = useState<SubmissionsResponse['pagination'] | null>(null)
+  const [autoSavingContracts, setAutoSavingContracts] = useState<Set<number>>(new Set())
   const router = useRouter()
   const { toast } = useToast()
 
@@ -194,15 +195,139 @@ export default function SubmissionsPage() {
     })
   }
 
-  const openSubmissionDetails = (submission: Submission) => {
-    // You can implement a detailed view modal or navigate to a details page
+  const openSubmissionDetails = async (submission: Submission) => {
+    console.log('Opening submission details:', {
+      id: submission.id,
+      status: submission.status,
+      combined_document_url: submission.combined_document_url,
+      audit_log_url: submission.audit_log_url
+    })
+
+    // For completed contracts, prioritize the signed document
+    if (submission.status === 'completed' && submission.combined_document_url) {
+      console.log('Opening completed contract:', submission.combined_document_url)
+      window.open(submission.combined_document_url, '_blank')
+      return
+    }
+
+    // Handle completed submissions without combined document - fetch from documents endpoint
+    if (submission.status === 'completed' && !submission.combined_document_url) {
+      console.log('Fetching documents for completed submission:', submission.id)
+      
+      try {
+        // First, get detailed submission info to see what's available
+        const detailsResponse = await fetch(`/api/docuseal/submissions/${submission.id}`)
+        if (detailsResponse.ok) {
+          const details = await detailsResponse.json()
+          console.log('Detailed submission info:', details)
+          
+          // Check if documents are embedded in the submission details
+          if (details.documents && details.documents.length > 0) {
+            console.log('Found documents in submission details:', details.documents)
+            const documentUrl = details.documents[0].url
+            console.log('Opening document from submission details:', documentUrl)
+            window.open(documentUrl, '_blank')
+            return
+          }
+        }
+        
+        // Fallback: Try the documents endpoint
+        const response = await fetch(`/api/docuseal/submissions/${submission.id}/documents`)
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch documents')
+        }
+        
+        const documents = await response.json()
+        console.log('Fetched documents from documents endpoint:', documents)
+        
+        if (documents && documents.length > 0) {
+          // Open the first document (usually the signed contract)
+          const documentUrl = documents[0].url
+          console.log('Opening signed document:', documentUrl)
+          window.open(documentUrl, '_blank')
+          return
+        } else {
+          throw new Error('No documents found in either endpoint')
+        }
+        
+      } catch (error) {
+        console.error('Error fetching documents:', error)
+        toast({
+          title: "Signed contract not available",
+          description: "Unable to retrieve the signed contract. The document may still be processing or there may be a configuration issue.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
+    
+    // For pending/other statuses, show audit log if available
     if (submission.audit_log_url) {
+      console.log('Opening audit log:', submission.audit_log_url)
       window.open(submission.audit_log_url, '_blank')
-    } else {
+      return
+    }
+    
+    // Handle cases where neither URL is available
+    const message = submission.status === 'completed' 
+      ? "Signed contract document is not available yet"
+      : "Audit log is not available yet"
+    
+    console.log('No document available:', message)
+    toast({
+      title: "Document not available",
+      description: message,
+      variant: "destructive",
+    })
+  }
+
+  const canViewSubmission = (submission: Submission) => {
+    // Can view if we have audit log, regardless of status
+    // For completed submissions, we show a message if no combined document
+    return submission.audit_log_url !== null
+  }
+
+  const getViewButtonLabel = (submission: Submission) => {
+    return submission.status === 'completed' ? 'View Contract' : 'View Details'
+  }
+
+  const handleAutoSaveContract = async (submission: Submission) => {
+    if (autoSavingContracts.has(submission.id)) return
+    
+    setAutoSavingContracts(prev => new Set(prev).add(submission.id))
+    
+    try {
+      const response = await fetch('/api/docuseal/auto-save-contracts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ submissionId: submission.id })
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok) {
+        toast({
+          title: "✅ Contract Auto-Saved",
+          description: `Signed contract saved to lead successfully! Lead ID: ${result.leadId}`,
+        })
+      } else {
+        throw new Error(result.error || 'Failed to auto-save contract')
+      }
+    } catch (error) {
+      console.error('Error auto-saving contract:', error)
       toast({
-        title: "No audit log available",
-        description: "This submission doesn't have an audit log URL.",
+        title: "❌ Auto-Save Failed",
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
         variant: "destructive",
+      })
+    } finally {
+      setAutoSavingContracts(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(submission.id)
+        return newSet
       })
     }
   }
@@ -383,11 +508,22 @@ export default function SubmissionsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => openSubmissionDetails(submission)}
-                      disabled={!submission.audit_log_url}
+                      disabled={!canViewSubmission(submission)}
                     >
                       <Eye className="h-4 w-4 mr-1" />
-                      View
+                      {getViewButtonLabel(submission)}
                     </Button>
+                    {submission.status === 'completed' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAutoSaveContract(submission)}
+                        disabled={autoSavingContracts.has(submission.id)}
+                      >
+                        <Save className={cn("h-4 w-4 mr-1", autoSavingContracts.has(submission.id) && "animate-spin")} />
+                        {autoSavingContracts.has(submission.id) ? 'Saving...' : 'Save to Lead'}
+                      </Button>
+                    )}
                     {submission.combined_document_url && (
                       <Button
                         variant="outline"
