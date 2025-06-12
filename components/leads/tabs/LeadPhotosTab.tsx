@@ -775,7 +775,6 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
         description: p.description,
         createdAt: p.createdAt.toISOString(),
         leadId: p.leadId,
-        uploadedBy: p.uploadedBy // This might be null if not included in return
       }));
 
       setPhotos(prev => [...newPhotos, ...prev]);

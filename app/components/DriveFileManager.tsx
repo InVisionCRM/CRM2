@@ -306,8 +306,8 @@ export function DriveFileManager() {
         <Button variant="ghost" size="icon" onClick={() => { /* Navigate to next, if history is kept */ }} disabled className="mr-2 disabled:opacity-50">
           <ChevronRight className="h-5 w-5" />
         </Button>
-        <span onClick={() => navigateToFolder({ id: process.env.SHARED_DRIVE_ID || 'root', name: 'Shared Drive', mimeType: 'application/vnd.google-apps.folder'} as DriveFile)} className="hover:underline cursor-pointer">
-          Shared Drive
+        <span onClick={() => navigateToFolder({ id: process.env.NEXT_PUBLIC_GOOGLE_DRIVE_FOLDER_ID_DEFAULT || 'root', name: 'My Drive', mimeType: 'application/vnd.google-apps.folder'} as DriveFile)} className="hover:underline cursor-pointer">
+          My Drive
         </span>
         {folderPath.map((folder, index) => (
           <span key={folder.id} className="flex items-center">

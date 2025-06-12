@@ -26,13 +26,13 @@ export function useGoogleDrive(options?: UseGoogleDriveOptions) {
   };
 
   const swrKey = session?.accessToken 
-    ? `${SWR_KEY_PREFIX}?folderId=${currentFolderId || process.env.SHARED_DRIVE_ID || ''}&mimeTypes=${(mimeTypes || []).join(',')}` 
+    ? `${SWR_KEY_PREFIX}?folderId=${currentFolderId || process.env.NEXT_PUBLIC_GOOGLE_DRIVE_FOLDER_ID_DEFAULT || ''}&mimeTypes=${(mimeTypes || []).join(',')}` 
     : null;
 
   const fetcher = async (): Promise<ServiceResult<DriveFile[]>> => {
     try {
       const service = getService();
-      return await service.listFiles({ folderId: folderId || process.env.SHARED_DRIVE_ID, mimeTypes });
+      return await service.listFiles({ folderId, mimeTypes });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to fetch files from hook";
       console.error("useGoogleDrive fetcher error:", error);
@@ -58,7 +58,7 @@ export function useGoogleDrive(options?: UseGoogleDriveOptions) {
   const fetchFiles = async (opts?: { folderId?: string; mimeTypes?: string[] }): Promise<ServiceResult<DriveFile[]>> => {
     try {
       const service = getService();
-      const currentFolderId = opts?.folderId || folderId || process.env.SHARED_DRIVE_ID;
+      const currentFolderId = opts?.folderId || folderId || process.env.NEXT_PUBLIC_GOOGLE_DRIVE_FOLDER_ID_DEFAULT;
       const currentMimeTypes = opts?.mimeTypes || mimeTypes;
       const result = await service.listFiles({ folderId: currentFolderId, mimeTypes: currentMimeTypes });
       if (result.success && swrKey) {
@@ -82,7 +82,7 @@ export function useGoogleDrive(options?: UseGoogleDriveOptions) {
     try {
       const service = getService();
       const result = await service.uploadFile(file, { 
-        folderId: opts?.folderId || folderId || process.env.SHARED_DRIVE_ID 
+        folderId: opts?.folderId || folderId || process.env.NEXT_PUBLIC_GOOGLE_DRIVE_FOLDER_ID_DEFAULT 
       });
       if (result.success) {
         revalidateFiles(); // Revalidate the list of files after successful upload
@@ -144,7 +144,7 @@ export function useGoogleDrive(options?: UseGoogleDriveOptions) {
     try {
       const service = getService();
       const result = await service.createFolder(name, {
-        parentId: opts?.parentId || folderId || process.env.SHARED_DRIVE_ID
+        parentId: opts?.parentId || folderId || process.env.NEXT_PUBLIC_GOOGLE_DRIVE_FOLDER_ID_DEFAULT
       });
       if (result.success) {
         revalidateFiles(); // Revalidate the list of files after successful folder creation

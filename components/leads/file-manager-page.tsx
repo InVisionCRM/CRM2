@@ -634,9 +634,6 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
       if (activeFilter === 'files' && file.type !== 'document') {
         return false
       }
-      if (activeFilter === 'contracts' && !isContractFile(file.name)) {
-        return false
-      }
     }
     
     // Search filter
@@ -650,7 +647,6 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
   // Get counts for tabs
   const photosCount = unifiedFiles.filter(f => f.type === 'photo').length
   const filesCount = unifiedFiles.filter(f => f.type === 'document').length
-  const contractsCount = unifiedFiles.filter(f => isContractFile(f.name)).length
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -1190,7 +1186,6 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
           <TabsTrigger value="all">All ({unifiedFiles.length})</TabsTrigger>
           <TabsTrigger value="photos">📷 Photos ({photosCount})</TabsTrigger>
           <TabsTrigger value="files">📄 Files ({filesCount})</TabsTrigger>
-          <TabsTrigger value="contracts">📋 Contracts ({contractsCount})</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeFilter} className="mt-6">
