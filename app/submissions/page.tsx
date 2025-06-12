@@ -513,17 +513,6 @@ export default function SubmissionsPage() {
                       <Eye className="h-4 w-4 mr-1" />
                       {getViewButtonLabel(submission)}
                     </Button>
-                    {submission.status === 'completed' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleAutoSaveContract(submission)}
-                        disabled={autoSavingContracts.has(submission.id)}
-                      >
-                        <Save className={cn("h-4 w-4 mr-1", autoSavingContracts.has(submission.id) && "animate-spin")} />
-                        {autoSavingContracts.has(submission.id) ? 'Saving...' : 'Save to Lead'}
-                      </Button>
-                    )}
                     {submission.combined_document_url && (
                       <Button
                         variant="outline"
