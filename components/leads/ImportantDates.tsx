@@ -190,13 +190,15 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
 
     setIsCreating(true)
     try {
-      // Combine date and time
+      // Combine date and time (this is the user's selected time)
       const [hours, minutes] = selectedTime.split(':').map(Number)
       const startDateTime = new Date(selectedDate)
       startDateTime.setHours(hours, minutes, 0, 0)
       
       const endDateTime = addHours(startDateTime, 1) // Default 1 hour duration
 
+      // Note: The API will subtract 4 hours from this time before creating the Google Calendar event
+      // This ensures the event appears at the correct time in the user's timezone
       const response = await fetch('/api/calendar/create-event', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -215,12 +217,25 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
       if (response.ok) {
         const result = await response.json()
         console.log('Calendar event created:', result) // Debug logging
+        console.log('Time verification:', {
+          userSelectedTime: selectedTime,
+          originalStartTime: result.originalStartTime,
+          adjustedStartTime: result.adjustedStartTime,
+          googleCalendarUrl: result.eventUrl
+        })
         setLastCreatedEventUrl(result.eventUrl)
         
-        // Show success toast
+        // Format the original time the user selected (not the adjusted time)
+        const userSelectedTime = selectedTime
+        const [hours, minutes] = userSelectedTime.split(':').map(Number)
+        const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+        const ampm = hours >= 12 ? 'PM' : 'AM'
+        const formattedUserTime = `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`
+        
+        // Show success toast with the original user-selected time
         toast({
           title: "✅ Event Created Successfully!",
-          description: `${selectedEventType.label} scheduled for ${format(selectedDate, "MMM d")} at ${selectedTime}. ${result.eventUrl ? 'Check your Google Calendar or click the link below.' : ''}`,
+          description: `${selectedEventType.label} scheduled for ${format(selectedDate, "MMM d")} at ${formattedUserTime}. Event created in Google Calendar with 4-hour timezone adjustment.`,
           duration: 3000
         })
         
@@ -278,9 +293,8 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
     <>
       <Card className="w-full">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5" />
-            Schedule To Google Calendar 
+          <CardTitle className="text-lg flex flex-col items-center gap-2">
+            <span>Schedule To Google Calendar</span>
             {userEmail && (
               <span className="text-sm text-muted-foreground font-normal">
                 ({userEmail})
@@ -289,7 +303,7 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             {calendarEvents.map((eventData, index) => {
               const scheduledEvent = getRecentEvent(scheduledEvents[eventData.type])
               const scheduledDate = scheduledEvent ? formatEventDate(scheduledEvent) : null
@@ -309,32 +323,34 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                   key={index}
                   variant="outline"
                   onClick={() => handleEventButtonClick(eventData)}
-                  className={`h-24 p-4 flex flex-col items-center justify-center gap-1 hover:shadow-md transition-all duration-200 ${borderClass}`}
+                  className={`h-20 sm:h-24 p-2 sm:p-4 flex flex-col items-center justify-center gap-0.5 sm:gap-1 hover:shadow-md transition-all duration-200 disabled:opacity-100 ${borderClass}`}
                   disabled={!userEmail || isLoading || isCreating}
                 >
-                  {eventData.icon}
-                  <span className="text-[10px] font-medium text-center leading-tight text-muted-foreground">
+                  <div className="flex-shrink-0">
+                    {eventData.icon}
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] font-medium text-center leading-tight text-white disabled:text-white px-1">
                     {eventData.label}
                   </span>
                   {scheduledDate && (
-                    <span className="text-xs text-center leading-tight mt-1 font-semibold">
+                    <span className="text-sm sm:text-base text-white disabled:text-white text-center leading-tight mt-0.5 sm:mt-1 font-semibold">
                       {scheduledDate}
                     </span>
                   )}
                   {eventCount > 0 && !scheduledDate && (
-                    <span className="text-[10px] text-blue-600 text-center leading-tight mt-1">
+                    <span className="text-[9px] sm:text-[10px] text-white disabled:text-white text-center leading-tight mt-0.5 sm:mt-1">
                       {eventCount} scheduled
                     </span>
                   )}
                   {eventCount > 1 && scheduledDate && (
-                    <span className="text-[10px] text-blue-600 text-center leading-tight">
+                    <span className="text-[9px] sm:text-[10px] text-white disabled:text-white text-center leading-tight">
                       +{eventCount - 1} more
                     </span>
                   )}
                   {(isLoading || isCreating) && (
                     <div className="flex items-center gap-1">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
-                      <span className="text-[10px] text-muted-foreground">
+                      <div className="animate-spin rounded-full h-2 w-2 sm:h-3 sm:w-3 border-b-2 border-primary"></div>
+                      <span className="text-[8px] sm:text-[10px] text-muted-foreground">
                         {isCreating ? "Creating..." : "Loading..."}
                       </span>
                     </div>
@@ -396,29 +412,31 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                   <DrawerHeader>
                     <DrawerTitle>Select Date & Time</DrawerTitle>
                   </DrawerHeader>
-                  <div className="flex justify-center pb-6 px-4">
-                    <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-center lg:items-start w-full max-w-4xl">
+                  <div className="flex justify-center pb-4 px-4">
+                    <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-center lg:items-start w-full max-w-3xl">
                       <div className="flex flex-col items-center w-full lg:w-auto">
-                        <h3 className="text-base font-medium mb-4">Date</h3>
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          captionLayout="dropdown"
-                          onSelect={(date) => {
-                            setSelectedDate(date)
-                          }}
-                          disabled={(date: Date) => date < new Date()}
-                          classNames={{
-                            day_selected: "bg-blue-50 text-white font-medium hover:bg-blue-100 hover:text-black focus:bg-blue-50 focus:text-black"
-                          }}
-                        />
+                        <h3 className="text-sm font-medium mb-3">Date</h3>
+                        <div className="scale-90">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            captionLayout="dropdown"
+                            onSelect={(date) => {
+                              setSelectedDate(date)
+                            }}
+                            disabled={(date: Date) => date < new Date()}
+                            classNames={{
+                              day_selected: "bg-blue-50 text-white font-medium hover:bg-blue-100 hover:text-black focus:bg-blue-50 focus:text-black"
+                            }}
+                          />
+                        </div>
                       </div>
                       <div className="flex flex-col items-center w-full lg:w-auto">
-                        <h3 className="text-base font-medium mb-4">Time</h3>
-                        <div className="space-y-4 w-full max-w-md">
-                          <div className="bg-black border rounded-lg p-4 sm:p-6 shadow-sm">
-                            <div className="text-center mb-6">
-                              <div className="text-xl sm:text-2xl text-lime-400 font-medium">
+                        <h3 className="text-sm font-medium mb-3">Time</h3>
+                        <div className="space-y-3 w-full max-w-xs">
+                          <div className="bg-black border rounded-lg p-3 shadow-sm">
+                            <div className="text-center mb-4">
+                              <div className="text-lg text-lime-400 font-medium">
                                 {(() => {
                                   const [hours, minutes] = selectedTime.split(':').map(Number)
                                   const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
@@ -427,7 +445,7 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                                 })()}
                               </div>
                               <button 
-                                className="text-lime-500 text-base font-medium mt-2 px-4 py-2 rounded hover:bg-lime-500/10 transition-colors"
+                                className="text-lime-500 text-sm font-medium mt-1 px-3 py-1 rounded hover:bg-lime-500/10 transition-colors"
                                 onClick={() => {
                                   const now = new Date()
                                   const hours = now.getHours().toString().padStart(2, '0')
@@ -439,12 +457,12 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                               </button>
                             </div>
                             
-                            <div className="flex justify-center items-center gap-3 sm:gap-6">
+                            <div className="flex justify-center items-center gap-2 sm:gap-4">
                               {/* Hours */}
                               <div className="flex flex-col items-center">
-                                <div className="text-base sm:text-lg text-white mb-3">Hour</div>
-                                <div className="h-40 w-16 sm:w-20 overflow-y-auto scrollbar-hide">
-                                  <div className="py-3">
+                                <div className="text-sm text-white mb-2">Hour</div>
+                                <div className="h-28 w-12 sm:w-14 overflow-y-auto scrollbar-hide">
+                                  <div className="py-2">
                                     {Array.from({ length: 12 }, (_, i) => i + 1).map((hour) => {
                                       const currentHour = parseInt(selectedTime.split(':')[0])
                                       const hour24 = currentHour === 0 ? 12 : currentHour > 12 ? currentHour - 12 : currentHour
@@ -452,7 +470,7 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                                       return (
                                         <div
                                           key={hour}
-                                          className={`text-center py-3 sm:py-4 cursor-pointer hover:bg-gray-800 text-white font-semibold transition-colors min-h-[48px] flex items-center justify-center text-base sm:text-lg ${
+                                          className={`text-center py-2 cursor-pointer hover:bg-gray-800 text-white font-semibold transition-colors min-h-[36px] flex items-center justify-center text-sm ${
                                             isSelected ? 'bg-black text-lime-500 border border-lime-500 rounded-lg font-bold' : ''
                                           }`}
                                           onClick={() => {
@@ -477,17 +495,17 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                               
                               {/* Minutes */}
                               <div className="flex flex-col items-center">
-                                <div className="text-base sm:text-lg text-white mb-3">Minute</div>
-                                <div className="h-40 w-16 sm:w-20 overflow-y-auto scrollbar-hide">
-                                  <div className="py-3">
+                                <div className="text-sm text-white mb-2">Minute</div>
+                                <div className="h-28 w-12 sm:w-14 overflow-y-auto scrollbar-hide">
+                                  <div className="py-2">
                                     {Array.from({ length: 60 }, (_, i) => i).map((minute) => {
                                       const currentMinute = parseInt(selectedTime.split(':')[1])
                                       const isSelected = currentMinute === minute
                                       return (
                                         <div
                                           key={minute}
-                                          className={`text-center py-2 sm:py-3 cursor-pointer hover:bg-gray-800 text-sm sm:text-base text-white transition-colors min-h-[40px] flex items-center justify-center ${
-                                            isSelected ? 'bg-black text-white border border-lime-500 rounded-lg font-semibold text-lg sm:text-xl' : ''
+                                          className={`text-center py-1.5 cursor-pointer hover:bg-gray-800 text-xs text-white transition-colors min-h-[32px] flex items-center justify-center ${
+                                            isSelected ? 'bg-black text-white border border-lime-500 rounded-lg font-semibold text-sm' : ''
                                           }`}
                                           onClick={() => {
                                             const currentHour = selectedTime.split(':')[0]
@@ -506,9 +524,9 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                               
                               {/* AM/PM */}
                               <div className="flex flex-col items-center">
-                                <div className="text-base sm:text-lg text-white mb-3">AM/PM</div>
-                                <div className="h-40 w-16 sm:w-20 overflow-y-auto scrollbar-hide">
-                                  <div className="py-3">
+                                <div className="text-sm text-white mb-2">AM/PM</div>
+                                <div className="h-28 w-12 sm:w-14 overflow-y-auto scrollbar-hide">
+                                  <div className="py-2">
                                     {['AM', 'PM'].map((period) => {
                                       const currentHour = parseInt(selectedTime.split(':')[0])
                                       const isCurrentlyPM = currentHour >= 12
@@ -516,8 +534,8 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                                       return (
                                         <div
                                           key={period}
-                                          className={`text-center py-4 sm:py-6 cursor-pointer hover:bg-gray-800 text-white transition-colors min-h-[52px] flex items-center justify-center text-base sm:text-lg ${
-                                            isSelected ? 'bg-black text-white border border-lime-500 rounded-lg font-medium text-xl sm:text-2xl' : ''
+                                          className={`text-center py-3 cursor-pointer hover:bg-gray-800 text-white transition-colors min-h-[40px] flex items-center justify-center text-sm ${
+                                            isSelected ? 'bg-black text-white border border-lime-500 rounded-lg font-medium text-base' : ''
                                           }`}
                                           onClick={() => {
                                             const [hours, minutes] = selectedTime.split(':').map(Number)

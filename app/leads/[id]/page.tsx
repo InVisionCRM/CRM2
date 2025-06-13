@@ -30,15 +30,14 @@ import { ImportantDates } from "@/components/leads/ImportantDates"
 interface QuickActionButtonProps {
   onClick?: () => void;
   href?: string;
-  icon: React.ReactNode;
   label: string;
   disabled?: boolean;
 }
 
-const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, icon, label, disabled }) => {
+const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, label, disabled }) => {
   const commonProps = {
     className: cn(
-      "relative flex h-24 flex-1 flex-col items-center justify-center bg-gradient-to-b from-black/40 via-black/30 via-black/20 to-lime-500/30 backdrop-blur-lg p-2 text-md font-bold text-white",
+      "relative flex h-16 flex-1 items-center justify-center bg-gradient-to-b from-black/40 via-black/30 via-black/20 to-lime-500/30 backdrop-blur-lg p-1 text-md font-bold text-white",
       "border-l border-lime-500 first:border-l-0",
       "transition-colors hover:from-slate-800/30 hover:via-slate-800/20 hover:to-lime-500/30",
       disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
@@ -53,7 +52,6 @@ const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, ic
 
   return (
     <Tag {...tagProps}>
-      {icon}
       <span>{label}</span>
     </Tag>
   );
@@ -562,114 +560,111 @@ Thank you for choosing In-Vision Construction!`;
       )}
 
       <div className="w-full flex flex-col gap-4 sm:gap-6">
-        {/* Top section with name, status, and claim number */}
-        <div className="w-full grid grid-cols-3 items-start">
-          {/* Name on the left */}
-          <div className="text-left">
-            <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold">
-              {lead.firstName && lead.lastName ? `${lead.firstName} ${lead.lastName}` : lead.email || lead.phone || "Lead Details"}
-            </h1>
-          </div>
-
-          {/* Status in the middle */}
-          <div className="flex flex-col items-center justify-center">
-            <Badge variant={lead.status as any} className="text-sm px-2 py-1">
-              {formatStatusLabel(lead.status)}
-            </Badge>
-            <div className="mt-2">
-              <StatusChangeDrawer
-                currentStatus={lead.status}
-                onStatusChange={handleStatusChange}
-                isLoading={isStatusUpdating}
-                loadingStatus={statusBeingUpdated}
-              />
-            </div>
-          </div>
-
-          {/* Claim number on the right */}
-          {lead.claimNumber && (
-            <div className="flex flex-col items-end">
-              <span className="text-gray-500 text-[8px] sm:text-[10px] leading-none">Claim #</span>
-              <span className="text-green-500 text-xs sm:text-sm font-medium leading-none">{lead.claimNumber}</span>
-            </div>
-          )}
-        </div>
-
         {/* Street View Section */}
         {lead?.address && (
-          <Card className="w-full overflow-hidden">
-            <CardContent className="p-0">
-              {streetViewUrl && (
-                <div className="relative w-full h-[400px]">
-                  {/* Address Overlay */}
-                  <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between bg-slate-900/70 p-2 backdrop-blur-sm">
-                    <div className="flex items-center space-x-2 overflow-hidden">
-                      <MapPin className="h-4 w-4 flex-shrink-0 text-gray-300" />
-                      <span className="truncate text-sm font-medium text-gray-100">{lead.address}</span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(lead.address || '')}`, '_blank', 'noopener,noreferrer')}
-                      className="flex-shrink-0 text-blue-400 hover:text-blue-300"
-                    >
-                      Open in Maps
-                    </Button>
-                  </div>
-                  
-                  <img
-                    src={streetViewUrl}
-                    alt={`Street view of ${lead.address}`}
-                    className="w-full h-full object-cover"
-                    onLoad={() => setIsStreetViewLoading(false)}
-                    onError={() => {
-                      setIsStreetViewLoading(false)
-                      setStreetViewError("Failed to load Street View image")
-                    }}
+          <div className="w-full">
+            {/* Status and Claim Number - 1px above street view */}
+            <div className="w-full flex justify-between items-center mb-px">
+              {/* Status on the left */}
+              <div className="flex flex-col items-start justify-start">
+                <Badge variant={lead.status as any} className="text-lg px-8">
+                  {formatStatusLabel(lead.status)}
+                </Badge>
+                <div className="font-small mt-1 py-1">
+                  <StatusChangeDrawer
+                    currentStatus={lead.status}
+                    onStatusChange={handleStatusChange}
+                    isLoading={isStatusUpdating}
+                    loadingStatus={statusBeingUpdated}
                   />
-                  {isStreetViewLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                      <Skeleton className="w-full h-full" />
-                    </div>
-                  )}
-                  {streetViewError && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-500">
-                      <p>{streetViewError}</p>
-                    </div>
-                  )}
-                  <div className="absolute bottom-0 left-0 right-0 flex w-full border-t border-b-[2px] border-lime-500">
-                    <QuickActionButton 
-                      href={`/leads/${id}/files`}
-                      icon={<FileArchive className="h-5 w-5" />} 
-                      label="File Manager" 
-                    />
-                    <QuickActionButton 
-                      onClick={handleOpenPhotosDialog} 
-                      icon={<Image className="h-5 w-5" />} 
-                      label="Photos" 
-                    />
-                    <QuickActionButton
-                      onClick={handleScrollToAddNote}
-                      icon={<NotebookPen className="h-5 w-5" />}
-                      label="Add Note"
-                    />
-                    <QuickActionButton
-                      onClick={handleSendContract}
-                      icon={<FileSignature className="mb-2 h-6 w-6" />}
-                      label={isSendingContract ? "Sending..." : "Send Contract"}
-                      disabled={!lead || isSendingContract}
-                    />
-                    <QuickActionButton
-                      onClick={handleSignInPerson}
-                      icon={<PenTool className="h-5 w-5" />}
-                      label={isSigningInPerson ? "Creating..." : "Sign in Person"}
-                      disabled={!lead || isSigningInPerson}
-                    />
-                  </div>
+                </div>
+              </div>
+
+              {/* Claim number on the right */}
+              {lead.claimNumber && (
+                <div className="flex flex-col items-end">
+                  <span className="text-gray-500 text-[8px] sm:text-[10px]">Claim #</span>
+                  <span className="text-green-500 text-lg sm:text-xl font-medium pb-1">{lead.claimNumber}</span>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+
+            {/* Name - 3px above street view */}
+            <div className="w-full flex justify-center mb-[3px]">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-center">
+                {lead.firstName && lead.lastName ? `${lead.firstName} ${lead.lastName}` : lead.email || lead.phone || "Lead Details"}
+              </h1>
+            </div>
+
+            <Card className="w-full overflow-hidden">
+              <CardContent className="p-0">
+                {streetViewUrl && (
+                  <div className="relative w-full h-[400px]">
+                    {/* Address Overlay */}
+                    <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between bg-slate-900/70 p-2 backdrop-blur-sm">
+                      <div className="flex items-center space-x-2 overflow-hidden">
+                        <MapPin className="h-4 w-4 flex-shrink-0 text-gray-300" />
+                        <span className="truncate text-sm font-medium text-gray-100">{lead.address}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(lead.address || '')}`, '_blank', 'noopener,noreferrer')}
+                        className="flex-shrink-0 text-blue-400 hover:text-blue-300"
+                      >
+                        Open in Maps
+                      </Button>
+                    </div>
+                    
+                    <img
+                      src={streetViewUrl}
+                      alt={`Street view of ${lead.address}`}
+                      className="w-full h-full object-cover"
+                      onLoad={() => setIsStreetViewLoading(false)}
+                      onError={() => {
+                        setIsStreetViewLoading(false)
+                        setStreetViewError("Failed to load Street View image")
+                      }}
+                    />
+                    {isStreetViewLoading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                        <Skeleton className="w-full h-full" />
+                      </div>
+                    )}
+                    {streetViewError && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-500">
+                        <p>{streetViewError}</p>
+                      </div>
+                    )}
+                    <div className="absolute bottom-2 left-0 right-0 flex w-full border-t border-b-[2px] text-center border-lime-500">
+                      <QuickActionButton 
+                        href={`/leads/${id}/files`}
+                        label="File Manager" 
+                      />
+                      <QuickActionButton 
+                        onClick={handleOpenPhotosDialog} 
+                        label="Photos" 
+                      />
+                      <QuickActionButton
+                        onClick={handleScrollToAddNote}
+                        label="Add Note"
+                      />
+                      <QuickActionButton
+                        onClick={handleSendContract}
+                        label={isSendingContract ? "Sending..." : "Send Contract"}
+                        disabled={!lead || isSendingContract}
+                      />
+                      <QuickActionButton
+                        onClick={handleSignInPerson}
+                        label={isSigningInPerson ? "Creating..." : "Sign in Person"}
+                        disabled={!lead || isSigningInPerson}
+                      />
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
       

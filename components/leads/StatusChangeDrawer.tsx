@@ -40,12 +40,13 @@ export function StatusChangeDrawer({
       <SheetTrigger asChild>
         <Button 
           variant="link" 
-          className="text-[#59ff00] hover:text-[#59ff00]/80 p-0 h-auto font-normal"
+          className="p-0 h-auto font-thin text-xm"
+          style={{ color: '#3b82f6' }}
         >
           Change Status
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-[400px] sm:w-[540px] bg-black/25 backdrop-blur-lg border-white/20">
+      <SheetContent className="w-[400px] text-white sm:w-[540px] bg-black/25 backdrop-blur-lg border-white/20">
         <SheetHeader>
           <SheetTitle className="text-[#59ff00] text-center">Change Lead Status</SheetTitle>
         </SheetHeader>

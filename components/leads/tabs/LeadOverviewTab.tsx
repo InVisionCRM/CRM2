@@ -713,7 +713,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
             {/* Column 1 – Existing details */}
             <div className="space-y-3">
               <div className="space-y-0.5">
-                <p className="text-sm font-medium text-muted-foreground">Created</p>
+                <p className="text-sm font-medium text-blue-400">Created</p>
                 {createdDate && isValid(createdDate) ? (
                   <>
                     <p className="text-sm" title={createdDate.toISOString()}>{format(createdDate, "MMM d, yyyy")}</p>
@@ -724,7 +724,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                 ) : <p className="text-sm text-muted-foreground">Invalid date</p>}
               </div>
               <div className="space-y-0.5">
-                <p className="text-sm font-medium text-muted-foreground">SalesPerson</p>
+                <p className="text-sm font-medium text-blue-400">SalesPerson</p>
                 <div className="relative max-w-sm">
                   <Select 
                     value={selectedAssignee} 
@@ -755,14 +755,14 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
               {/* Contract Status */}
               {(contractStatus || isLoadingContract || uploadedContract) && (
                 <div className="space-y-0.5">
-                  <p className="text-sm font-medium text-muted-foreground">Contract</p>
+                  <p className="text-sm font-medium text-blue-400">Contract</p>
                   {isLoadingContract ? (
                     <div className="flex items-center gap-2">
                       <Loader2 className="h-3 w-3 animate-spin" />
                       <span className="text-sm text-muted-foreground">Loading...</span>
                     </div>
                   ) : contractStatus ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2">
                       <Badge className={`border w-fit ${getContractStatusColor(contractStatus.status)}`}>
                         {getContractStatusIcon(contractStatus.status)}
                         <span className="ml-1 capitalize">
@@ -774,7 +774,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                           variant="outline"
                           size="sm"
                           onClick={handleViewContract}
-                          className="h-6 px-2 text-xs"
+                          className="h-6 px-2 text-xs w-fit"
                         >
                           <Eye className="h-3 w-3 mr-1" />
                           View Contract
@@ -782,7 +782,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                       )}
                     </div>
                   ) : uploadedContract ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2">
                       <Badge className={`border w-fit ${getContractStatusColor('completed')}`}>
                         {getContractStatusIcon('completed')}
                         <span className="ml-1 capitalize">completed</span>
@@ -791,7 +791,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                         variant="outline"
                         size="sm"
                         onClick={handleViewUploadedContract}
-                        className="h-6 px-2 text-xs"
+                        className="h-6 px-2 text-xs w-fit"
                       >
                         <Eye className="h-3 w-3 mr-1" />
                         View Contract
@@ -803,7 +803,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
               {/* Upload Contract Button - Show only when no contract exists */}
               {!contractStatus && !uploadedContract && !isLoadingContract && (
                 <div className="space-y-0.5">
-                  <p className="text-sm font-medium text-muted-foreground">Contract</p>
+                  <p className="text-sm font-medium text-blue-400">Contract</p>
                   <Button
                     variant="outline"
                     size="sm"
@@ -837,8 +837,8 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
 
             {/* Column 2 – Additional document uploads */}
             <div className="space-y-3">
-              <p className="text-sm font-medium text-muted-foreground mb-2">Documents</p>
-              <div className="grid grid-cols-2 gap-2">
+              <p className="text-sm font-medium text-blue-400 mb-2">Upload to Drive</p>
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
                 {[
                   { key: "estimate", label: "Estimate" },
                   { key: "acv", label: "ACV" },
@@ -853,30 +853,28 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                       size="sm"
                       onClick={() => handleUploadFile(key)}
                       disabled={isUploadingFile}
-                      className={`h-10 px-2 text-xs w-full rounded-xl border-gray-300/40 bg-black text-white hover:bg-gray-800 flex items-center justify-between gap-1 transition-all duration-200 ${
-                        uploadedFileStatus[key] ? 'border-green-500/20' : ''
+                      className={`h-12 sm:h-10 px-1 sm:px-2 text-[10px] sm:text-md w-full rounded-xl border-gray-300/40 bg-black text-white hover:bg-gray-800 flex flex-col sm:flex-row items-center pt-4 justify-center gap-0.5 sm:gap-1 transition-all duration-200 ${
+                        uploadedFileStatus[key] ? 'border-lime-500/70' : ''
                       }`}
                     >
-                      <div className="flex items-center gap-1 flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1 flex-1 min-w-0">
                         {isUploadingFile && currentUploadType === key ? (
                           <Loader2 className="h-3 w-3 animate-spin flex-shrink-0" />
                         ) : isCheckingFiles[key] ? (
                           <Loader2 className="h-3 w-3 animate-spin text-blue-500 flex-shrink-0" />
-                        ) : (
-                          <Upload className="h-3 w-3 absolute end-2 flex-shrink-0" />
-                        )}
-                        <span className="truncate text-center">{label}</span>
+                        ) : null}
+                        <span className="truncate text-center sm:text-left text-[9px] sm:text-xs leading-tight">{label}</span>
                       </div>
                       
                       {/* Green checkmark on the right when uploaded */}
                       {uploadedFileStatus[key] && (
-                        <CheckCircle2 className="h-3 w-3 text-green-500/50 flex-shrink-0" />
+                        <CheckCircle2 className="h-3 w-3 text-green-500 absolute top-1 right-1 flex-shrink-0" />
                       )}
                     </Button>
                     
                     {/* Hover overlay with View and Delete buttons */}
                     {uploadedFileStatus[key] && (
-                      <div className="absolute inset-0 bg-black/80 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-1 z-10">
+                      <div className="absolute inset-0 bg-black/80 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-1 sm:gap-2 z-10">
                         {uploadedFileUrls[key] && (
                           <Button
                             variant="ghost"
@@ -885,10 +883,10 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                               e.stopPropagation();
                               window.open(uploadedFileUrls[key], '_blank');
                             }}
-                            className="h-7 px-2 text-xs text-blue-400 hover:text-blue-300 hover:bg-black/20"
+                            className="h-8 sm:h-7 px-2 sm:px-2 text-[10px] sm:text-xs text-blue-400 hover:text-blue-300 hover:bg-black/20"
                           >
-                            <Eye className="h-3 w-3 mr-1" />
-                            View
+                            <Eye className="h-3 w-3 mr-0.5 sm:mr-1" />
+                            <span className="hidden sm:inline">View</span>
                           </Button>
                         )}
                         <Button
@@ -899,14 +897,14 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                             handleDeleteFile(key);
                           }}
                           disabled={isDeletingFile[key]}
-                          className="h-7 px-2 text-xs text-red-400 hover:text-red-300 hover:bg-black/20"
+                          className="h-8 sm:h-7 px-2 sm:px-2 text-[10px] sm:text-xs text-red-400 hover:text-red-300 hover:bg-black/20"
                         >
                           {isDeletingFile[key] ? (
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            <Loader2 className="h-3 w-3 mr-0.5 sm:mr-1 animate-spin" />
                           ) : (
-                            <Trash2 className="h-3 w-3 mr-1" />
+                            <Trash2 className="h-3 w-3 mr-0.5 sm:mr-1" />
                           )}
-                          {isDeletingFile[key] ? 'Deleting...' : 'Delete'}
+                          <span className="hidden sm:inline">{isDeletingFile[key] ? 'Deleting...' : 'Delete'}</span>
                         </Button>
                       </div>
                     )}
@@ -974,7 +972,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
               </Button>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="space-y-0.5">
               <p className="text-sm font-medium text-muted-foreground">Company</p>
               <p className="text-sm">{lead.insuranceCompany || "N/A"}</p>
@@ -1005,13 +1003,13 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
               </Button>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="space-y-0.5">
               <p className="text-sm font-medium text-muted-foreground">Adjuster Name</p>
               <p className="text-sm">{lead.insuranceAdjusterName || "N/A"}</p>
             </div>
             <ContactItem label="Adjuster Phone" value={lead.insuranceAdjusterPhone} type="phone" />
-            <ContactItem label="Adjuster Email" value={lead.insuranceAdjusterEmail} type="email" className="col-span-2" />
+            <ContactItem label="Adjuster Email" value={lead.insuranceAdjusterEmail} type="email" className="sm:col-span-2" />
           </div>
         </div>
       </CardContent>

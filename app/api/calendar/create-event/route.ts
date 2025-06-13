@@ -153,6 +153,12 @@ export async function POST(request: NextRequest) {
     const adjustedStartDate = addHours(originalStartDate, -4);
     const adjustedEndDate = addHours(originalEndDate, -4);
 
+    console.log('Time adjustment:', {
+      originalTime: originalStartDate.toISOString(),
+      adjustedTime: adjustedStartDate.toISOString(),
+      difference: '4 hours subtracted'
+    });
+
     const appointment: CalendarAppointment = {
       id: '',
       title,
@@ -182,13 +188,17 @@ export async function POST(request: NextRequest) {
     console.log('Google Calendar event created:', {
       eventId: event.id,
       htmlLink: event.htmlLink,
-      summary: event.summary
+      summary: event.summary,
+      originalStartTime: originalStartDate.toISOString(),
+      adjustedStartTime: adjustedStartDate.toISOString()
     });
 
     return NextResponse.json({ 
       success: true, 
       event,
       eventUrl: event.htmlLink,
+      originalStartTime: originalStartDate.toISOString(),
+      adjustedStartTime: adjustedStartDate.toISOString(),
       message: 'Event created successfully'
     });
 
