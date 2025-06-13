@@ -61,23 +61,27 @@ export async function GET(req: Request) {
       q: searchQuery,
       supportsAllDrives: true,
       includeItemsFromAllDrives: true,
-      fields: 'files(id, name, appProperties)',
+      fields: 'files(id, name, webViewLink, appProperties)',
       pageSize: 1 // We only need to know if at least one exists
     });
 
     const files = response.data.files || [];
     const exists = files.length > 0;
+    const fileUrl = exists ? files[0].webViewLink : null;
+    const fileId = exists ? files[0].id : null;
     
     console.log(`📁 Search results:`, {
       query: searchQuery,
       filesFound: files.length,
       exists,
-      files: files.map(f => ({ id: f.id, name: f.name, appProperties: f.appProperties }))
+      fileUrl,
+      fileId,
+      files: files.map(f => ({ id: f.id, name: f.name, webViewLink: f.webViewLink, appProperties: f.appProperties }))
     });
     
     console.log(`📁 File exists check for ${fileType}/${leadId}: ${exists}`);
     if (exists) {
-      console.log(`📄 Found file: ${files[0].name}`);
+      console.log(`📄 Found file: ${files[0].name} at ${fileUrl} with ID ${fileId}`);
     }
 
     const responseData = {
@@ -85,6 +89,8 @@ export async function GET(req: Request) {
       exists,
       fileType,
       leadId,
+      fileUrl,
+      fileId,
       searchQuery,
       filesFound: files.length
     };

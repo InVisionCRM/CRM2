@@ -124,3 +124,33 @@ export function getMarkerColor(status?: string): string {
       return markerColors.DEFAULT;
   }
 }
+
+/**
+ * Get subtle background gradient classes for activity types
+ */
+export function getActivityColorClasses(activityType: string) {
+  switch (activityType) {
+    case 'LEAD_CREATED':
+      return 'bg-gradient-to-r from-emerald-50/50 to-green-50/50 border-l-4 border-emerald-200'
+    case 'LEAD_UPDATED':
+      return 'bg-gradient-to-r from-blue-50/50 to-indigo-50/50 border-l-4 border-blue-200'
+    case 'NOTE_ADDED':
+      return 'bg-gradient-to-r from-amber-50/50 to-yellow-50/50 border-l-4 border-amber-200'
+    case 'MEETING_SCHEDULED':
+      return 'bg-gradient-to-r from-purple-50/50 to-violet-50/50 border-l-4 border-purple-200'
+    case 'DOCUMENT_UPLOADED':
+      return 'bg-gradient-to-r from-slate-50/50 to-gray-50/50 border-l-4 border-slate-200'
+    case 'ESTIMATE_CREATED':
+      return 'bg-gradient-to-r from-cyan-50/50 to-teal-50/50 border-l-4 border-cyan-200'
+    case 'CONTRACT_CREATED':
+      return 'bg-gradient-to-r from-rose-50/50 to-pink-50/50 border-l-4 border-rose-200'
+    case 'STATUS_CHANGED':
+      return 'bg-gradient-to-r from-orange-50/50 to-red-50/50 border-l-4 border-orange-200'
+    case 'APPOINTMENT_CREATED':
+      return 'bg-gradient-to-r from-fuchsia-50/50 to-purple-50/50 border-l-4 border-fuchsia-200'
+    case 'APPOINTMENT_UPDATED':
+      return 'bg-gradient-to-r from-sky-50/50 to-blue-50/50 border-l-4 border-sky-200'
+    default:
+      return 'bg-gradient-to-r from-gray-50/50 to-slate-50/50 border-l-4 border-gray-200'
+  }
+}

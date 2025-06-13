@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { formatDistanceToNow } from "date-fns"
-import { ActivityType, type Activity as PrismaActivity } from "@prisma/client"
+import { ActivityType, LeadStatus, type Activity as PrismaActivity } from "@prisma/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { cn } from "@/lib/utils"
+import { cn, getActivityColorClasses, formatStatusLabel } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
 
 interface ActivityFeedProps {
@@ -22,6 +23,66 @@ interface ActivityWithUser extends PrismaActivity {
     name?: string | null;
     image?: string | null;
   } | null;
+}
+
+// Helper function to extract status from title and description
+function extractStatusFromTitle(title: string, description: string | null): { oldStatus: LeadStatus | null, newStatus: LeadStatus | null } {
+  // Try to extract from description first
+  if (description) {
+    const descMatch = description.match(/Lead status changed from (.*?) to (.*)/)
+    if (descMatch) {
+      const oldStatusLabel = descMatch[1]
+      const newStatusLabel = descMatch[2]
+      
+      // Convert status labels back to enum values
+      const oldStatus = Object.values(LeadStatus).find(
+        status => formatStatusLabel(status).toLowerCase() === oldStatusLabel.toLowerCase()
+      ) || null
+      
+      const newStatus = Object.values(LeadStatus).find(
+        status => formatStatusLabel(status).toLowerCase() === newStatusLabel.toLowerCase()
+      ) || null
+
+      return { oldStatus, newStatus }
+    }
+  }
+  
+  // Fallback to title
+  const titleMatch = title.match(/Status changed to (.*)/)
+  if (titleMatch) {
+    const newStatusLabel = titleMatch[1]
+    const newStatus = Object.values(LeadStatus).find(
+      status => formatStatusLabel(status).toLowerCase() === newStatusLabel.toLowerCase()
+    ) || null
+    
+    return { 
+      oldStatus: null,
+      newStatus
+    }
+  }
+
+  return { oldStatus: null, newStatus: null }
+}
+
+function ActivityContent({ activity }: { activity: ActivityWithUser }) {
+  if (activity.type === ActivityType.STATUS_CHANGED) {
+    const { oldStatus, newStatus } = extractStatusFromTitle(activity.title, activity.description)
+    if (newStatus) {
+      return (
+        <div className="flex items-center gap-2 flex-wrap">
+          {oldStatus && (
+            <>
+              <Badge variant={oldStatus as any}>{formatStatusLabel(oldStatus)}</Badge>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </>
+          )}
+          <Badge variant={newStatus as any}>{formatStatusLabel(newStatus)}</Badge>
+        </div>
+      )
+    }
+  }
+  
+  return <span className="font-medium text-card-foreground">{activity.title}</span>
 }
 
 export function ActivityFeed({ leadId, limit = 5 }: ActivityFeedProps) {
@@ -107,9 +168,15 @@ export function ActivityFeed({ leadId, limit = 5 }: ActivityFeedProps) {
         ) : (
           <div className="space-y-4">
             {displayedActivities.map((activity) => (
-              <div key={activity.id} className="border-b border-border/40 pb-3 last:border-0 last:pb-0">
+              <div 
+                key={activity.id} 
+                className={cn(
+                  "border-b border-border/40 pb-3 last:border-0 last:pb-0 p-3 rounded-lg -mx-3",
+                  getActivityColorClasses(activity.type)
+                )}
+              >
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-card-foreground">{activity.title}</span>
+                  <ActivityContent activity={activity} />
                   <span className="text-xs text-muted-foreground" title={new Date(activity.createdAt).toLocaleString()}>
                     {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
                   </span>

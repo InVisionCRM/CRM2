@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ChevronLeft, ChevronRight, RefreshCw, ExternalLink, ArrowRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { formatStatusLabel } from "@/lib/utils"
+import { formatStatusLabel, cn, getActivityColorClasses } from "@/lib/utils"
 
 // Helper function to extract status from title and description
 function extractStatusFromTitle(title: string, description: string | null): { oldStatus: LeadStatus | null, newStatus: LeadStatus | null } {
@@ -242,7 +242,13 @@ export function RecentActivities() {
           <>
             <div className="space-y-4">
               {activities.map((activity) => (
-                <div key={activity.id} className="border-b border-border/40 pb-3 last:pb-0">
+                <div 
+                  key={activity.id} 
+                  className={cn(
+                    "border-b border-border/40 pb-3 last:pb-0 p-3 rounded-lg -mx-3",
+                    getActivityColorClasses(activity.type)
+                  )}
+                >
                   <div className="flex items-center justify-between text-sm">
                     <ActivityContent activity={activity} />
                     <span className="text-xs text-muted-foreground" title={new Date(activity.createdAt).toLocaleString()}>

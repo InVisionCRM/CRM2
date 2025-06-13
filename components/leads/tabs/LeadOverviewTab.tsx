@@ -6,8 +6,10 @@ import type { Lead } from "@prisma/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Pencil, Check, Loader2, Phone, Mail, MapPin, CheckCircle2, Clock, XCircle, AlertTriangle, ExternalLink, FileText, Eye, Upload } from "lucide-react"
+import { Pencil, Check, Loader2, Phone, Mail, MapPin, CheckCircle2, Clock, XCircle, AlertTriangle, ExternalLink, FileText, Eye, Upload, Trash2, Calendar as CalendarIcon } from "lucide-react"
 import { formatStatusLabel } from "@/lib/utils"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 // import { Avatar, AvatarFallback } from "@/components/ui/avatar" // Avatar removed
 import { 
   Select, 
@@ -21,6 +23,10 @@ import { updateLeadAssigneeAction } from "@/app/actions/lead-actions"
 import { getAssignableUsersAction } from "@/app/actions/user-actions"
 import { useToast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Progress } from "@/components/ui/progress"
+import { useWindowSize } from "@/hooks/use-window-size"
+import ReactConfetti from "react-confetti"
 
 interface User {
   id: string;
@@ -58,7 +64,7 @@ interface LeadOverviewTabProps {
 interface ContactItemProps {
   label: string;
   value: string | null;
-  type: 'phone' | 'email' | 'address';
+  type: 'phone' | 'email' | 'address' | 'date';
   className?: string;
 }
 
@@ -81,13 +87,17 @@ const ContactItem = ({ label, value, type, className }: ContactItemProps) => {
       case 'address':
         window.location.href = `https://maps.google.com/?q=${encodeURIComponent(value)}`;
         break;
+      case 'date':
+        // Date type doesn't need navigation
+        break;
     }
   };
 
   const icon = {
     phone: <Phone className="h-3 w-3 text-lime-500" />,
     email: <Mail className="h-3 w-3 text-lime-500" />,
-    address: <MapPin className="h-3 w-3 text-lime-500" />
+    address: <MapPin className="h-3 w-3 text-lime-500" />,
+    date: null
   }[type];
 
   return (
@@ -95,15 +105,17 @@ const ContactItem = ({ label, value, type, className }: ContactItemProps) => {
       <p className="text-xs sm:text-sm font-medium text-muted-foreground">{label}</p>
       <div className="flex items-center gap-1.5">
         <p className="text-xs sm:text-sm">{value}</p>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-5 w-5 rounded-full hover:bg-lime-500/10 text-lime-500 hover:text-lime-600"
-          onClick={handleClick}
-        >
-          {icon}
-          <span className="sr-only">Contact via {type}</span>
-        </Button>
+        {icon && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 rounded-full hover:bg-lime-500/10 text-lime-500 hover:text-lime-600"
+            onClick={handleClick}
+          >
+            {icon}
+            <span className="sr-only">Contact via {type}</span>
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -148,6 +160,7 @@ const getContractStatusIcon = (status: string) => {
 
 export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) => {
   const { toast } = useToast();
+  const { width, height } = useWindowSize();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isUpdatingAssignee, setIsUpdatingAssignee] = useState(false);
@@ -164,6 +177,14 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
   // Track uploaded files status for each category
   const [uploadedFileStatus, setUploadedFileStatus] = useState<Record<string, boolean>>({});
   const [isCheckingFiles, setIsCheckingFiles] = useState<Record<string, boolean>>({});
+  const [uploadedFileUrls, setUploadedFileUrls] = useState<Record<string, string>>({});
+  const [isDeletingFile, setIsDeletingFile] = useState<Record<string, boolean>>({});
+  
+  // New state for enhanced upload experience
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [currentUploadFileName, setCurrentUploadFileName] = useState<string>("");
+  const [showConfetti, setShowConfetti] = useState(false);
 
   // Fetch contract status for this lead
   useEffect(() => {
@@ -396,20 +417,73 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
     genericFileInputRef.current?.click();
   };
 
+  // Delete file function
+  const handleDeleteFile = async (fileType: string) => {
+    if (!lead?.id) return;
+    
+    setIsDeletingFile(prev => ({ ...prev, [fileType]: true }));
+    
+    try {
+      // Get the file ID first by checking what files exist
+      const response = await fetch(`/api/files/check-file-exists?leadId=${lead.id}&fileType=${fileType}`);
+      if (!response.ok) {
+        throw new Error('Failed to find file');
+      }
+      
+      const checkData = await response.json();
+      if (!checkData.exists || !checkData.fileId) {
+        throw new Error('File not found');
+      }
+      
+      // Delete the file using the actual Google Drive file ID
+      const deleteResponse = await fetch(`/api/files/delete-from-shared-drive?driveFileId=${checkData.fileId}`, {
+        method: 'DELETE'
+      });
+      
+      if (!deleteResponse.ok) {
+        const errorData = await deleteResponse.json();
+        throw new Error(errorData.error || 'Failed to delete file');
+      }
+      
+      // Update local state
+      setUploadedFileStatus(prev => ({ ...prev, [fileType]: false }));
+      setUploadedFileUrls(prev => {
+        const newUrls = { ...prev };
+        delete newUrls[fileType];
+        return newUrls;
+      });
+      
+      toast({
+        title: "Success",
+        description: `${fileType} deleted successfully!`,
+      });
+      
+    } catch (error) {
+      console.error(`Error deleting ${fileType}:`, error);
+      toast({
+        title: "Error",
+        description: `Failed to delete ${fileType}. Please try again.`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingFile(prev => ({ ...prev, [fileType]: false }));
+    }
+  };
+
   // Check if files exist for each category
   const checkFileExists = async (fileType: string) => {
-    if (!lead?.id) return false;
+    if (!lead?.id) return { exists: false, fileUrl: null, fileId: null };
     
     try {
       const response = await fetch(`/api/files/check-file-exists?leadId=${lead.id}&fileType=${fileType}`);
       if (response.ok) {
         const data = await response.json();
-        return data.exists;
+        return { exists: data.exists, fileUrl: data.fileUrl, fileId: data.fileId };
       }
     } catch (error) {
       console.error(`Error checking ${fileType} file:`, error);
     }
-    return false;
+    return { exists: false, fileUrl: null, fileId: null };
   };
 
   // Check all file types on component mount and when lead changes
@@ -420,17 +494,22 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
       const fileTypes = ['estimate', 'acv', 'supplement', 'eagleview', 'scope_of_work', 'warrenty'];
       const statusChecks = await Promise.all(
         fileTypes.map(async (fileType) => {
-          const exists = await checkFileExists(fileType);
-          return { fileType, exists };
+          const result = await checkFileExists(fileType);
+          return { fileType, exists: result.exists, fileUrl: result.fileUrl, fileId: result.fileId };
         })
       );
       
       const newStatus: Record<string, boolean> = {};
-      statusChecks.forEach(({ fileType, exists }) => {
+      const newUrls: Record<string, string> = {};
+      statusChecks.forEach(({ fileType, exists, fileUrl }) => {
         newStatus[fileType] = exists;
+        if (exists && fileUrl) {
+          newUrls[fileType] = fileUrl;
+        }
       });
       
       setUploadedFileStatus(newStatus);
+      setUploadedFileUrls(newUrls);
     };
 
     checkAllFiles();
@@ -448,6 +527,10 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
       leadName: [lead.firstName, lead.lastName].filter(Boolean).join("_")
     });
 
+    // Show upload dialog and reset progress
+    setCurrentUploadFileName(file.name);
+    setUploadProgress(0);
+    setShowUploadDialog(true);
     setIsUploadingFile(true);
     setIsCheckingFiles(prev => ({ ...prev, [currentUploadType]: false }));
 
@@ -483,27 +566,64 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
         customFileName: newFileName
       });
 
-      const response = await fetch("/api/files/upload-to-shared-drive", {
-        method: "POST",
-        body: formData,
+      // Create XMLHttpRequest for accurate progress tracking
+      const xhr = new XMLHttpRequest();
+      
+      const uploadPromise = new Promise<any>((resolve, reject) => {
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded / event.total) * 100);
+            setUploadProgress(percentComplete);
+          }
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const result = JSON.parse(xhr.responseText);
+              resolve(result);
+            } catch (e) {
+              reject(new Error('Invalid response format'));
+            }
+          } else {
+            try {
+              const errorData = JSON.parse(xhr.responseText);
+              reject(new Error(errorData.error || `HTTP ${xhr.status}`));
+            } catch (e) {
+              reject(new Error(`HTTP ${xhr.status}`));
+            }
+          }
+        });
+
+        xhr.addEventListener('error', () => {
+          reject(new Error('Network error'));
+        });
+
+        xhr.open('POST', '/api/files/upload-to-shared-drive');
+        xhr.send(formData);
       });
 
-      console.log('📥 API Response status:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ API Error:', errorData);
-        throw new Error(errorData.error || "Upload failed");
-      }
-
-      const result = await response.json();
+      const result = await uploadPromise;
       console.log('✅ API Success:', result);
 
       if (result.success) {
+        // Store the file URL for link preview
+        if (result.file?.webViewLink) {
+          setUploadedFileUrls(prev => ({ 
+            ...prev, 
+            [currentUploadType]: result.file.webViewLink 
+          }));
+        }
+
+        // Show success message
         toast({
           title: "Success",
           description: `${currentUploadType} uploaded successfully!`,
         });
+        
+        // Show confetti animation
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 3000);
         
         // Start checking for file confirmation
         setIsCheckingFiles(prev => ({ ...prev, [currentUploadType]: true }));
@@ -513,10 +633,13 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
         const maxRetries = 10;
         const checkInterval = setInterval(async () => {
           console.log(`🔍 Checking file existence (attempt ${retryCount + 1}/${maxRetries})`);
-          const exists = await checkFileExists(currentUploadType);
-          console.log(`📁 File exists: ${exists}`);
-          if (exists) {
+          const result = await checkFileExists(currentUploadType);
+          console.log(`📁 File exists: ${result.exists}`);
+          if (result.exists) {
             setUploadedFileStatus(prev => ({ ...prev, [currentUploadType]: true }));
+            if (result.fileUrl) {
+              setUploadedFileUrls(prev => ({ ...prev, [currentUploadType]: result.fileUrl }));
+            }
             setIsCheckingFiles(prev => ({ ...prev, [currentUploadType]: false }));
             clearInterval(checkInterval);
           } else if (retryCount >= maxRetries) {
@@ -541,6 +664,13 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
       setIsUploadingFile(false);
       setCurrentUploadType(null);
       if (genericFileInputRef.current) genericFileInputRef.current.value = "";
+      
+      // Hide upload dialog after a short delay
+      setTimeout(() => {
+        setShowUploadDialog(false);
+        setUploadProgress(0);
+        setCurrentUploadFileName("");
+      }, 2000);
     }
   };
 
@@ -570,13 +700,16 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
   // const getInitials = ...; // No longer needed
 
   return (
+    <>
     <Card className="shadow-lg w-full border-0">
       <CardContent className="space-y-1 p-1">
         {/* Lead Summary Section */}
-        <div className="space-y-2">
-          <h3 className="text-lg font-medium text-white">Lead Summary</h3>
+        <div className="space-y-2 pb-4">
+          <div className="flex justify-center items-center">
+            <h3 className="text-lg font-medium text-white">Lead Summary</h3>
+          </div>
           {/* Two-column layout: details (col 1) + upload buttons (col 2) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             {/* Column 1 – Existing details */}
             <div className="space-y-3">
               <div className="space-y-0.5">
@@ -703,37 +836,83 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
             </div>
 
             {/* Column 2 – Additional document uploads */}
-            <div className="space-y-2">
-              {[
-                { key: "estimate", label: "Estimate" },
-                { key: "acv", label: "ACV" },
-                { key: "supplement", label: "Supplement" },
-                { key: "eagleview", label: "EagleView" },
-                { key: "scope_of_work", label: "Scope of Work" },
-                { key: "warrenty", label: "Warrenty" },
-              ].map(({ key, label }) => (
-                <Button
-                  key={key}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleUploadFile(key)}
-                  disabled={isUploadingFile}
-                  className={`h-8 px-3 text-xs w-full flex items-center justify-center gap-1 ${
-                    uploadedFileStatus[key] ? 'border-green-500 bg-green-50 text-green-700' : ''
-                  }`}
-                >
-                  {isUploadingFile && currentUploadType === key ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : isCheckingFiles[key] ? (
-                    <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
-                  ) : uploadedFileStatus[key] ? (
-                    <CheckCircle2 className="h-3 w-3 text-green-500" />
-                  ) : (
-                    <Upload className="h-3 w-3" />
-                  )}
-                  {label}
-                </Button>
-              ))}
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-muted-foreground mb-2">Documents</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { key: "estimate", label: "Estimate" },
+                  { key: "acv", label: "ACV" },
+                  { key: "supplement", label: "Supplement" },
+                  { key: "eagleview", label: "EagleView" },
+                  { key: "scope_of_work", label: "SOW" },
+                  { key: "warrenty", label: "Warranty" },
+                ].map(({ key, label }) => (
+                  <div key={key} className="relative group">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleUploadFile(key)}
+                      disabled={isUploadingFile}
+                      className={`h-10 px-2 text-xs w-full rounded-xl border-gray-300/40 bg-black text-white hover:bg-gray-800 flex items-center justify-between gap-1 transition-all duration-200 ${
+                        uploadedFileStatus[key] ? 'border-green-500/20' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-1 flex-1 min-w-0">
+                        {isUploadingFile && currentUploadType === key ? (
+                          <Loader2 className="h-3 w-3 animate-spin flex-shrink-0" />
+                        ) : isCheckingFiles[key] ? (
+                          <Loader2 className="h-3 w-3 animate-spin text-blue-500 flex-shrink-0" />
+                        ) : (
+                          <Upload className="h-3 w-3 absolute end-2 flex-shrink-0" />
+                        )}
+                        <span className="truncate text-center">{label}</span>
+                      </div>
+                      
+                      {/* Green checkmark on the right when uploaded */}
+                      {uploadedFileStatus[key] && (
+                        <CheckCircle2 className="h-3 w-3 text-green-500/50 flex-shrink-0" />
+                      )}
+                    </Button>
+                    
+                    {/* Hover overlay with View and Delete buttons */}
+                    {uploadedFileStatus[key] && (
+                      <div className="absolute inset-0 bg-black/80 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-1 z-10">
+                        {uploadedFileUrls[key] && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(uploadedFileUrls[key], '_blank');
+                            }}
+                            className="h-7 px-2 text-xs text-blue-400 hover:text-blue-300 hover:bg-black/20"
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteFile(key);
+                          }}
+                          disabled={isDeletingFile[key]}
+                          className="h-7 px-2 text-xs text-red-400 hover:text-red-300 hover:bg-black/20"
+                        >
+                          {isDeletingFile[key] ? (
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3 w-3 mr-1" />
+                          )}
+                          {isDeletingFile[key] ? 'Deleting...' : 'Delete'}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
 
               {/* Generic hidden input for uploads */}
               <input
@@ -747,25 +926,25 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
             </div>
           </div>
         </div>
-
-        <Separator />
-
-        {/* Contact Information Section */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium text-white">Contact Information</h3>
+      
+        {/* Custom gradient divider */}
+        <div className="h-px bg-gradient-to-r from-black via-lime-400 to-black my-4"></div>
+        
+        <div className="space-y-2 pb-4">
+          <div className="flex justify-center items-center relative">
+            <h3 className="text-lg mt-4 font-medium text-white">Contact Information</h3>
             {onEditRequest && (
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditRequest('contact')}>
+              <Button variant="ghost" size="icon" className="h-8 w-8 absolute right-0" onClick={() => onEditRequest('contact')}>
                 <Pencil className="h-4 w-4" />
                 <span className="sr-only">Edit Contact</span>
               </Button>
             )}
           </div>
-          <div className="space-y-3">
+          <div className="space-y-1">
             <div>
               <p className="font-medium text-base">{fullName}</p>
               <div className="flex items-center gap-1.5">
-                <p className="text-sm text-muted-foreground break-all">{lead.email || "No email"}</p>
+                <p className="text-sm text- break-all">{lead.email || "No email"}</p>
                 {lead.email && (
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEmailClick(lead.email!)}>
                     <Mail className="h-3 w-3" />
@@ -774,21 +953,22 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-1 pt-1">
+            <div className="grid grid-cols-1 gap-1 pt-1">
               <ContactItem label="Phone" value={lead.phone} type="phone" />
               <ContactItem label="Address" value={addressDisplay !== "No address provided" ? addressDisplay : null} type="address" />
             </div>
           </div>
         </div>
 
-        <Separator />
+        {/* Custom gradient divider */}
+        <div className="h-px bg-gradient-to-r from-black via-lime-400 to-black my-6"></div>
 
         {/* Insurance Details Section */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium text-white">Insurance Details</h3>
+        <div className="space-y-4 pb-4">
+          <div className="flex justify-center items-center relative">
+            <h3 className="text-lg mt-4 font-medium text-white">Insurance Details</h3>
             {onEditRequest && (
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditRequest('insurance')}>
+              <Button variant="ghost" size="icon" className="h-8 w-8 absolute right-0" onClick={() => onEditRequest('insurance')}>
                 <Pencil className="h-4 w-4" />
                 <span className="sr-only">Edit Insurance</span>
               </Button>
@@ -811,14 +991,15 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
           </div>
         </div>
 
-        <Separator />
+        {/* Custom gradient divider */}
+        <div className="h-px bg-gradient-to-r from-black via-lime-400 to-black my-6"></div>
 
         {/* Adjuster Details Section */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium text-white">Adjuster Details</h3>
+        <div className="space-y-4 pb-4">
+          <div className="flex justify-center items-center relative">
+            <h3 className="text-lg mt-4 font-medium text-white">Adjuster Details</h3>
             {onEditRequest && (
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditRequest('adjuster')}>
+              <Button variant="ghost" size="icon" className="h-8 w-8 absolute right-0" onClick={() => onEditRequest('adjuster')}>
                 <Pencil className="h-4 w-4" />
                 <span className="sr-only">Edit Adjuster</span>
               </Button>
@@ -831,17 +1012,41 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
             </div>
             <ContactItem label="Adjuster Phone" value={lead.insuranceAdjusterPhone} type="phone" />
             <ContactItem label="Adjuster Email" value={lead.insuranceAdjusterEmail} type="email" className="col-span-2" />
-            <div className="space-y-0.5 col-span-2">
-              <p className="text-sm font-medium text-muted-foreground">Next Appointment</p>
-              <p className="text-sm">
-                {lead.adjusterAppointmentDate && isValid(new Date(lead.adjusterAppointmentDate)) 
-                  ? format(new Date(lead.adjusterAppointmentDate), "MMM d, yyyy") + (lead.adjusterAppointmentTime ? ` at ${format(parse(lead.adjusterAppointmentTime, "HH:mm", new Date()), "h:mm a")}` : '')
-                  : "No appointment"}
-              </p>
-            </div>
           </div>
         </div>
       </CardContent>
     </Card>
+    
+    {/* Upload Progress Dialog */}
+    <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Uploading File</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground mb-2">
+              Uploading: {currentUploadFileName}
+            </p>
+            <Progress value={uploadProgress} className="w-full" />
+            <p className="text-xs text-muted-foreground mt-1">
+              {uploadProgress}% complete
+            </p>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Confetti Animation */}
+    {showConfetti && (
+      <ReactConfetti
+        width={width}
+        height={height}
+        numberOfPieces={100}
+        recycle={false}
+        gravity={0.3}
+      />
+    )}
+    </>
   )
 } 

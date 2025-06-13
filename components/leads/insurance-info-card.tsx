@@ -4,12 +4,10 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Shield, Edit, Save, X, CalendarDays, Phone, Mail, DollarSign } from "lucide-react"
+import { Shield, Edit, Save, X, Phone, Mail } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
-import { AdjusterAppointmentScheduler } from "@/components/adjuster-appointment-scheduler"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { updateInsuranceInfoAction } from "@/app/actions/lead-actions"
 
 // Top Insurance Companies in Michigan with their phone numbers:
@@ -59,9 +57,6 @@ interface InsuranceInfo {
 export interface InsuranceInfoCardProps {
   leadId: string
   initialInsuranceInfo?: InsuranceInfo
-  appointmentDate?: Date | null
-  appointmentTime?: string | null
-  appointmentNotes?: string | null
   onInsuranceInfoUpdate?: (info: InsuranceInfo) => void
   previewMode?: boolean
   onLeadCreated?: (leadId: string) => void
@@ -71,9 +66,6 @@ export interface InsuranceInfoCardProps {
 export function InsuranceInfoCard({
   leadId,
   initialInsuranceInfo,
-  appointmentDate,
-  appointmentTime,
-  appointmentNotes,
   onInsuranceInfoUpdate,
   previewMode,
   onLeadCreated,
@@ -82,7 +74,6 @@ export function InsuranceInfoCard({
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(!initialInsuranceInfo)
   const [isSaving, setIsSaving] = useState(false)
-  const [appointmentDialogOpen, setAppointmentDialogOpen] = useState(false)
 
   const [insuranceInfo, setInsuranceInfo] = useState<InsuranceInfo>(
     initialInsuranceInfo || {
@@ -167,20 +158,8 @@ export function InsuranceInfoCard({
           Insurance Information
         </CardTitle>
 
-        {/* Appointment + Edit/Save Buttons */}
+        {/* Edit/Save Buttons */}
         <div className="flex flex-wrap gap-2 mt-2 sm:mt-0">
-          <Button
-            variant="outline"
-            size="sm"
-            className={
-              appointmentDate ? "bg-green-600 text-white hover:bg-green-700" : "bg-red-600 text-white hover:bg-red-700"
-            }
-            onClick={() => setAppointmentDialogOpen(true)}
-          >
-            <CalendarDays className="h-4 w-4 mr-2" />
-            {appointmentDate ? "View Appointment" : "Schedule Appointment"}
-          </Button>
-
           {!isEditing ? (
             <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
               <Edit className="h-4 w-4 mr-2" /> Edit
@@ -390,26 +369,6 @@ export function InsuranceInfoCard({
           </>
         )}
       </CardContent>
-
-      {/* Dialog for scheduling adjuster appointment */}
-      <Dialog open={appointmentDialogOpen} onOpenChange={setAppointmentDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-gray-900 border-gray-800 text-purlin-white">
-          <DialogHeader>
-            <DialogTitle className="text-purlin-white">Adjuster Appointment</DialogTitle>
-            <DialogDescription className="text-gray-400">Schedule or manage the adjuster appointment</DialogDescription>
-          </DialogHeader>
-          <AdjusterAppointmentScheduler
-            leadId={leadId}
-            initialDate={appointmentDate ? new Date(appointmentDate) : null}
-            initialTime={appointmentTime}
-            initialNotes={appointmentNotes || ""}
-            onScheduled={() => {
-              setAppointmentDialogOpen(false)
-              router.refresh()
-            }}
-          />
-        </DialogContent>
-      </Dialog>
     </Card>
   )
 }

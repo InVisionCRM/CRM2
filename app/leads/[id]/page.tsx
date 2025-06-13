@@ -5,9 +5,9 @@ import { useParams, useSearchParams } from "next/navigation" // Use next/navigat
 import { LeadStatus } from "@prisma/client"
 import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy, Loader2, NotebookPen, PenTool } from "lucide-react" // Added NotebookPen and PenTool icons
 import { StatusChangeDrawer } from "@/components/leads/StatusChangeDrawer"
-import { LeadDetailTabs } from "@/components/leads/LeadDetailTabs" // Corrected path
-import { ActivityFeed } from "@/components/leads/ActivityFeed" // Corrected path
-import { AddNote } from "@/components/leads/AddNote" // New import
+import { LeadDetailTabs } from "@/components/leads/LeadDetailTabs"
+import { ActivityFeed } from "@/components/leads/ActivityFeed"
+import { AddNote } from "@/components/leads/AddNote"
 import { Button } from "@/components/ui/button"
 import { useLead } from "@/hooks/use-lead" // Corrected path
 import { Skeleton } from "@/components/ui/skeleton"
@@ -23,6 +23,8 @@ import { LeadContractsTab } from "@/components/leads/tabs/LeadContractsTab";
 import { LeadPhotosTab } from "@/components/leads/tabs/LeadPhotosTab"; // Import the new Photos tab component
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
+import { LeadOverviewTab } from "@/components/leads/tabs/LeadOverviewTab"
+import { ImportantDates } from "@/components/leads/ImportantDates"
 
 // Quick Actions Button component
 interface QuickActionButtonProps {
@@ -676,6 +678,9 @@ Thank you for choosing In-Vision Construction!`;
             
       {/* Divider under quick action tabs */}
       <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500/50 to-transparent" />
+      
+      {/* Important Dates Section */}
+      <ImportantDates lead={lead} />
       
       {/* Main content area - Two column layout on desktop */}
       <div className="grid grid-cols-1 md:grid-cols-[2fr,1fr] gap-6">
