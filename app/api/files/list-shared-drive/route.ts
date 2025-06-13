@@ -49,7 +49,7 @@ export async function GET(req: Request) {
 
     // Search for files containing the lead ID in the name (excluding contracts)
     // We exclude contracts since they have their own management system
-    const searchQuery = `name contains 'ID ${leadId}' and parents in '${SHARED_DRIVE_ID}' and trashed=false and not name contains 'Signed Contract'`;
+    const searchQuery = `(name contains 'ID ${leadId}' or name contains '/${leadId}.') and parents in '${SHARED_DRIVE_ID}' and trashed=false and not name contains 'Signed Contract'`;
     
     console.log('🔍 Searching Google Drive with query:', searchQuery);
     
@@ -57,7 +57,7 @@ export async function GET(req: Request) {
       q: searchQuery,
       supportsAllDrives: true,
       includeItemsFromAllDrives: true,
-      fields: 'files(id, name, mimeType, size, createdTime, modifiedTime, webViewLink, webContentLink, thumbnailLink, iconLink)',
+      fields: 'files(id, name, mimeType, size, createdTime, modifiedTime, webViewLink, webContentLink, thumbnailLink, iconLink, appProperties)',
       orderBy: 'modifiedTime desc' // Most recent first
     });
 
@@ -78,8 +78,35 @@ export async function GET(req: Request) {
       thumbnailLink: file.thumbnailLink,
       iconLink: file.iconLink,
       source: 'shared-drive' as const,
-      // Determine if it's a photo or file based on filename prefix
-      fileType: file.name?.startsWith('Photo -') ? 'photo' : 'file'
+      // Determine fileType from the new naming convention or fallback to old logic
+      fileType: (() => {
+        const fileName = file.name || '';
+        
+        // First, check if fileType is stored in Google Drive properties
+        if (file.appProperties && file.appProperties.fileType) {
+          console.log(`📋 Found fileType in appProperties: ${file.appProperties.fileType} for file: ${fileName}`);
+          return file.appProperties.fileType;
+        }
+        
+        // New naming convention: fileType/LeadName/leadId.extension
+        if (fileName.includes('/')) {
+          const fileTypeFromPath = fileName.split('/')[0];
+          // Check if it's one of our known document types
+          if (['estimate', 'acv', 'supplement', 'eagleview', 'scope_of_work', 'warrenty', 'contract'].includes(fileTypeFromPath)) {
+            console.log(`📋 Found fileType from path: ${fileTypeFromPath} for file: ${fileName}`);
+            return fileTypeFromPath;
+          }
+        }
+        
+        // Fallback to old logic for existing files
+        if (fileName.startsWith('Photo -')) {
+          return 'photo';
+        }
+        
+        // Default to 'file' for other documents
+        console.log(`📋 Using default fileType 'file' for: ${fileName}`);
+        return 'file';
+      })()
     }));
 
     return NextResponse.json({

@@ -16,4 +16,5 @@ export interface LeadFile {
   size: number
   category: string
   uploadedAt: string | Date
+  fileType?: string
 }

@@ -17,7 +17,7 @@ interface SharedDriveFile {
   thumbnailLink?: string
   iconLink?: string
   source: 'shared-drive'
-  fileType: 'photo' | 'file'
+  fileType: string // Can be 'photo', 'file', 'estimate', 'acv', 'supplement', etc.
 }
 
 export function useLeadFiles(leadId: string) {
@@ -57,7 +57,8 @@ export function useLeadFiles(leadId: string) {
         thumbnailLink: file.thumbnailLink,
         iconLink: file.iconLink,
         driveFileId: file.id,
-        source: 'shared-drive' as const
+        source: 'shared-drive' as const,
+        fileType: file.fileType // Pass through the fileType for categorization
       }))
 
       setFiles(transformedFiles)
@@ -82,9 +83,16 @@ export function useLeadFiles(leadId: string) {
         method: 'DELETE'
       })
 
-      if (!response.ok) {
+      if (!response.ok && response.status !== 404) {
         const errorData = await response.json()
         throw new Error(errorData.error || "Failed to delete file")
+      }
+
+      // If file was not found (404), still remove it from local state
+      if (response.status === 404) {
+        console.log('File not found in Google Drive, removing from local state');
+        setFiles((prevFiles) => prevFiles.filter((file) => file.id !== fileId))
+        return { success: true, message: "File removed from local state (not found in Drive)" }
       }
 
       // Remove file from local state

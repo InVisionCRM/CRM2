@@ -157,6 +157,13 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
   const [uploadedContract, setUploadedContract] = useState<UploadedContract | null>(null);
   const [isUploadingContract, setIsUploadingContract] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Additional upload handling for other lead summary documents
+  const [currentUploadType, setCurrentUploadType] = useState<string | null>(null);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const genericFileInputRef = useRef<HTMLInputElement>(null);
+  // Track uploaded files status for each category
+  const [uploadedFileStatus, setUploadedFileStatus] = useState<Record<string, boolean>>({});
+  const [isCheckingFiles, setIsCheckingFiles] = useState<Record<string, boolean>>({});
 
   // Fetch contract status for this lead
   useEffect(() => {
@@ -381,6 +388,162 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
     }
   };
 
+  /* ---------------------------------
+   * Generic file upload for summary docs
+   * ---------------------------------*/
+  const handleUploadFile = (fileType: string) => {
+    setCurrentUploadType(fileType);
+    genericFileInputRef.current?.click();
+  };
+
+  // Check if files exist for each category
+  const checkFileExists = async (fileType: string) => {
+    if (!lead?.id) return false;
+    
+    try {
+      const response = await fetch(`/api/files/check-file-exists?leadId=${lead.id}&fileType=${fileType}`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.exists;
+      }
+    } catch (error) {
+      console.error(`Error checking ${fileType} file:`, error);
+    }
+    return false;
+  };
+
+  // Check all file types on component mount and when lead changes
+  useEffect(() => {
+    const checkAllFiles = async () => {
+      if (!lead?.id) return;
+      
+      const fileTypes = ['estimate', 'acv', 'supplement', 'eagleview', 'scope_of_work', 'warrenty'];
+      const statusChecks = await Promise.all(
+        fileTypes.map(async (fileType) => {
+          const exists = await checkFileExists(fileType);
+          return { fileType, exists };
+        })
+      );
+      
+      const newStatus: Record<string, boolean> = {};
+      statusChecks.forEach(({ fileType, exists }) => {
+        newStatus[fileType] = exists;
+      });
+      
+      setUploadedFileStatus(newStatus);
+    };
+
+    checkAllFiles();
+  }, [lead?.id]);
+
+  const handleGenericFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !lead || !currentUploadType) return;
+
+    console.log('🚀 Starting upload process:', {
+      fileName: file.name,
+      fileType: file.type,
+      currentUploadType,
+      leadId: lead.id,
+      leadName: [lead.firstName, lead.lastName].filter(Boolean).join("_")
+    });
+
+    setIsUploadingFile(true);
+    setIsCheckingFiles(prev => ({ ...prev, [currentUploadType]: false }));
+
+    try {
+      // Get file extension
+      const fileExtension = file.name.split('.').pop();
+      
+      // Create lead name from first and last name, or use ID if names not available
+      const leadName = [lead.firstName, lead.lastName]
+        .filter(Boolean)
+        .join("_")
+        .replace(/[^a-zA-Z0-9_]/g, "") || lead.id;
+      
+      // Create new filename in the format: ButtonName/LeadName/LeadId.extension
+      const newFileName = `${currentUploadType}/${leadName}/${lead.id}.${fileExtension}`;
+
+      console.log('📝 Generated filename:', newFileName);
+
+      const formData = new FormData();
+      // Create a new File object with the new name
+      const renamedFile = new File([file], newFileName, { type: file.type });
+      formData.append("file", renamedFile);
+      formData.append("leadId", lead.id);
+      formData.append("fileType", currentUploadType);
+      // Add the custom filename to be used server-side
+      formData.append("customFileName", newFileName);
+
+      console.log('📤 Sending to API:', {
+        originalFileName: file.name,
+        renamedFileName: newFileName,
+        leadId: lead.id,
+        fileType: currentUploadType,
+        customFileName: newFileName
+      });
+
+      const response = await fetch("/api/files/upload-to-shared-drive", {
+        method: "POST",
+        body: formData,
+      });
+
+      console.log('📥 API Response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ API Error:', errorData);
+        throw new Error(errorData.error || "Upload failed");
+      }
+
+      const result = await response.json();
+      console.log('✅ API Success:', result);
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: `${currentUploadType} uploaded successfully!`,
+        });
+        
+        // Start checking for file confirmation
+        setIsCheckingFiles(prev => ({ ...prev, [currentUploadType]: true }));
+        
+        // Check if file exists in Google Drive (with retry logic)
+        let retryCount = 0;
+        const maxRetries = 10;
+        const checkInterval = setInterval(async () => {
+          console.log(`🔍 Checking file existence (attempt ${retryCount + 1}/${maxRetries})`);
+          const exists = await checkFileExists(currentUploadType);
+          console.log(`📁 File exists: ${exists}`);
+          if (exists) {
+            setUploadedFileStatus(prev => ({ ...prev, [currentUploadType]: true }));
+            setIsCheckingFiles(prev => ({ ...prev, [currentUploadType]: false }));
+            clearInterval(checkInterval);
+          } else if (retryCount >= maxRetries) {
+            console.log('⏰ Max retries reached, stopping check');
+            setIsCheckingFiles(prev => ({ ...prev, [currentUploadType]: false }));
+            clearInterval(checkInterval);
+          }
+          retryCount++;
+        }, 2000); // Check every 2 seconds
+      } else {
+        throw new Error(result.error || "Upload failed");
+      }
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast({
+        title: "Error",
+        description: `Failed to upload ${currentUploadType}. Please try again.`,
+        variant: "destructive",
+      });
+      setIsCheckingFiles(prev => ({ ...prev, [currentUploadType]: false }));
+    } finally {
+      setIsUploadingFile(false);
+      setCurrentUploadType(null);
+      if (genericFileInputRef.current) genericFileInputRef.current.value = "";
+    }
+  };
+
   if (!lead) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-2 gap-6">
@@ -412,128 +575,176 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
         {/* Lead Summary Section */}
         <div className="space-y-2">
           <h3 className="text-lg font-medium text-white">Lead Summary</h3>
-          <div className="space-y-3">
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium text-muted-foreground">Created</p>
-              {createdDate && isValid(createdDate) ? (
-                <>
-                  <p className="text-sm" title={createdDate.toISOString()}>{format(createdDate, "MMM d, yyyy")}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(createdDate, { addSuffix: true })}
-                  </p>
-                </>
-              ) : <p className="text-sm text-muted-foreground">Invalid date</p>}
-            </div>
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium text-muted-foreground">SalesPerson</p>
-              <div className="relative max-w-sm">
-                <Select 
-                  value={selectedAssignee} 
-                  onValueChange={handleAssigneeChange}
-                  disabled={isLoadingUsers || isUpdatingAssignee}
-                >
-                  <SelectTrigger className="h-9 text-sm w-1/2">
-                    <SelectValue placeholder="Select salesperson">
-                      {isLoadingUsers ? "Loading..." : isUpdatingAssignee ? "Updating..." : (selectedAssignee === "unassigned" ? "Unassigned" : users.find(user => user.id === selectedAssignee)?.name || 'Unassigned')}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {users.map(user => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name || user.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {isUpdatingAssignee && (
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-            </div>
-            {/* Contract Status */}
-            {(contractStatus || isLoadingContract || uploadedContract) && (
+          {/* Two-column layout: details (col 1) + upload buttons (col 2) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Column 1 – Existing details */}
+            <div className="space-y-3">
               <div className="space-y-0.5">
-                <p className="text-sm font-medium text-muted-foreground">Contract</p>
-                {isLoadingContract ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span className="text-sm text-muted-foreground">Loading...</span>
-                  </div>
-                ) : contractStatus ? (
-                  <div className="flex items-center gap-2">
-                    <Badge className={`border w-fit ${getContractStatusColor(contractStatus.status)}`}>
-                      {getContractStatusIcon(contractStatus.status)}
-                      <span className="ml-1 capitalize">
-                        {contractStatus.status === 'sent' ? 'pending' : contractStatus.status}
-                      </span>
-                    </Badge>
-                    {contractStatus.status === 'completed' && (
+                <p className="text-sm font-medium text-muted-foreground">Created</p>
+                {createdDate && isValid(createdDate) ? (
+                  <>
+                    <p className="text-sm" title={createdDate.toISOString()}>{format(createdDate, "MMM d, yyyy")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(createdDate, { addSuffix: true })}
+                    </p>
+                  </>
+                ) : <p className="text-sm text-muted-foreground">Invalid date</p>}
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium text-muted-foreground">SalesPerson</p>
+                <div className="relative max-w-sm">
+                  <Select 
+                    value={selectedAssignee} 
+                    onValueChange={handleAssigneeChange}
+                    disabled={isLoadingUsers || isUpdatingAssignee}
+                  >
+                    <SelectTrigger className="h-9 text-sm w-1/2">
+                      <SelectValue placeholder="Select salesperson">
+                        {isLoadingUsers ? "Loading..." : isUpdatingAssignee ? "Updating..." : (selectedAssignee === "unassigned" ? "Unassigned" : users.find(user => user.id === selectedAssignee)?.name || 'Unassigned')}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {users.map(user => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name || user.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isUpdatingAssignee && (
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* Contract Status */}
+              {(contractStatus || isLoadingContract || uploadedContract) && (
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium text-muted-foreground">Contract</p>
+                  {isLoadingContract ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span className="text-sm text-muted-foreground">Loading...</span>
+                    </div>
+                  ) : contractStatus ? (
+                    <div className="flex items-center gap-2">
+                      <Badge className={`border w-fit ${getContractStatusColor(contractStatus.status)}`}>
+                        {getContractStatusIcon(contractStatus.status)}
+                        <span className="ml-1 capitalize">
+                          {contractStatus.status === 'sent' ? 'pending' : contractStatus.status}
+                        </span>
+                      </Badge>
+                      {contractStatus.status === 'completed' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleViewContract}
+                          className="h-6 px-2 text-xs"
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          View Contract
+                        </Button>
+                      )}
+                    </div>
+                  ) : uploadedContract ? (
+                    <div className="flex items-center gap-2">
+                      <Badge className={`border w-fit ${getContractStatusColor('completed')}`}>
+                        {getContractStatusIcon('completed')}
+                        <span className="ml-1 capitalize">completed</span>
+                      </Badge>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleViewContract}
+                        onClick={handleViewUploadedContract}
                         className="h-6 px-2 text-xs"
                       >
                         <Eye className="h-3 w-3 mr-1" />
                         View Contract
                       </Button>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+              {/* Upload Contract Button - Show only when no contract exists */}
+              {!contractStatus && !uploadedContract && !isLoadingContract && (
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium text-muted-foreground">Contract</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleUploadContract}
+                    disabled={isUploadingContract}
+                    className="h-8 px-3 text-xs"
+                  >
+                    {isUploadingContract ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-3 w-3 mr-1" />
+                        Upload Contract
+                      </>
                     )}
-                  </div>
-                ) : uploadedContract ? (
-                  <div className="flex items-center gap-2">
-                    <Badge className={`border w-fit ${getContractStatusColor('completed')}`}>
-                      {getContractStatusIcon('completed')}
-                      <span className="ml-1 capitalize">completed</span>
-                    </Badge>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleViewUploadedContract}
-                      className="h-6 px-2 text-xs"
-                    >
-                      <Eye className="h-3 w-3 mr-1" />
-                      View Contract
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-            )}
-            {/* Upload Contract Button - Show only when no contract exists */}
-            {!contractStatus && !uploadedContract && !isLoadingContract && (
-              <div className="space-y-0.5">
-                <p className="text-sm font-medium text-muted-foreground">Contract</p>
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileChange}
+                    accept=".pdf,.doc,.docx"
+                    className="hidden"
+                    aria-label="Upload contract file"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Column 2 – Additional document uploads */}
+            <div className="space-y-2">
+              {[
+                { key: "estimate", label: "Estimate" },
+                { key: "acv", label: "ACV" },
+                { key: "supplement", label: "Supplement" },
+                { key: "eagleview", label: "EagleView" },
+                { key: "scope_of_work", label: "Scope of Work" },
+                { key: "warrenty", label: "Warrenty" },
+              ].map(({ key, label }) => (
                 <Button
+                  key={key}
                   variant="outline"
                   size="sm"
-                  onClick={handleUploadContract}
-                  disabled={isUploadingContract}
-                  className="h-8 px-3 text-xs"
+                  onClick={() => handleUploadFile(key)}
+                  disabled={isUploadingFile}
+                  className={`h-8 px-3 text-xs w-full flex items-center justify-center gap-1 ${
+                    uploadedFileStatus[key] ? 'border-green-500 bg-green-50 text-green-700' : ''
+                  }`}
                 >
-                  {isUploadingContract ? (
-                    <>
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                      Uploading...
-                    </>
+                  {isUploadingFile && currentUploadType === key ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : isCheckingFiles[key] ? (
+                    <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+                  ) : uploadedFileStatus[key] ? (
+                    <CheckCircle2 className="h-3 w-3 text-green-500" />
                   ) : (
-                    <>
-                      <Upload className="h-3 w-3 mr-1" />
-                      Upload Contract
-                    </>
+                    <Upload className="h-3 w-3" />
                   )}
+                  {label}
                 </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  onChange={handleFileChange}
-                  accept=".pdf,.doc,.docx"
-                  className="hidden"
-                  aria-label="Upload contract file"
-                />
-              </div>
-            )}
+              ))}
+
+              {/* Generic hidden input for uploads */}
+              <input
+                ref={genericFileInputRef}
+                type="file"
+                onChange={handleGenericFileChange}
+                accept=".pdf,.doc,.docx"
+                className="hidden"
+                aria-label="Upload document"
+              />
+            </div>
           </div>
         </div>
 

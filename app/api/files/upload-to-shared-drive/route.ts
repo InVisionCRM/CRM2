@@ -11,8 +11,20 @@ export async function POST(req: Request) {
     const file = formData.get('file') as File;
     const leadId = formData.get('leadId') as string;
     const fileType = formData.get('fileType') as string; // 'file' or 'photo'
+    const customFileName = formData.get('customFileName') as string; // New custom filename from LeadOverviewTab
+    
+    console.log('📥 Received upload request:', {
+      fileName: file?.name,
+      fileSize: file?.size,
+      fileType: file?.type,
+      leadId,
+      fileTypeParam: fileType,
+      customFileName,
+      hasCustomFileName: !!customFileName
+    });
     
     if (!file || !leadId) {
+      console.error('❌ Missing required fields:', { hasFile: !!file, leadId });
       return NextResponse.json({ 
         error: 'File and lead ID are required' 
       }, { status: 400 });
@@ -29,10 +41,17 @@ export async function POST(req: Request) {
     });
 
     if (!lead) {
+      console.error('❌ Lead not found:', leadId);
       return NextResponse.json({ 
         error: 'Lead not found' 
       }, { status: 404 });
     }
+
+    console.log('👤 Found lead:', {
+      id: lead.id,
+      firstName: lead.firstName,
+      lastName: lead.lastName
+    });
 
     // Use the same environment variables as contracts
     const { GOOGLE_SA_EMAIL, GOOGLE_SA_PRIVATE_KEY, SHARED_DRIVE_ID } = process.env;
@@ -66,15 +85,34 @@ export async function POST(req: Request) {
     const drive = google.drive({ version: 'v3', auth });
 
     // Create filename with lead information (similar to contracts)
-    const leadName = `${lead.firstName || 'Unknown'} ${lead.lastName || 'Lead'}`.trim();
-    const fileExtension = file.name.split('.').pop() || '';
-    const baseFileName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
-    const uploadDate = new Date().toLocaleDateString();
+    let fileName: string;
     
-    const prefix = fileType === 'photo' ? 'Photo' : 'File';
-    const fileName = `${prefix} - ${leadName} (ID ${lead.id}) - ${baseFileName} - ${uploadDate}.${fileExtension}`;
+    if (customFileName) {
+      // Use the custom filename from LeadOverviewTab (format: fileType/LeadName/leadId.extension)
+      fileName = customFileName;
+      console.log('📝 Using custom filename:', fileName);
+    } else {
+      // Fallback to old naming convention for regular uploads
+      const leadName = `${lead.firstName || 'Unknown'} ${lead.lastName || 'Lead'}`.trim();
+      const fileExtension = file.name.split('.').pop() || '';
+      const baseFileName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+      const uploadDate = new Date().toLocaleDateString();
+      
+      const prefix = fileType === 'photo' ? 'Photo' : 'File';
+      fileName = `${prefix} - ${leadName} (ID ${lead.id}) - ${baseFileName} - ${uploadDate}.${fileExtension}`;
+      console.log('📝 Using fallback filename:', fileName);
+    }
     
     console.log('⬆️ Uploading to Shared Drive:', fileName);
+
+    // Log the metadata that will be stored
+    const metadata = {
+      leadId: leadId,
+      fileType: fileType,
+      originalName: file.name,
+      uploadedBy: 'leadOverviewTab'
+    };
+    console.log('🏷️ Storing metadata:', metadata);
 
     // Convert file to buffer and create readable stream
     const fileBuffer = Buffer.from(await file.arrayBuffer());
@@ -87,13 +125,14 @@ export async function POST(req: Request) {
       requestBody: {
         name: fileName,
         parents: [SHARED_DRIVE_ID],
-        mimeType: file.type
+        mimeType: file.type,
+        appProperties: metadata
       },
       media: {
         mimeType: file.type,
         body: stream
       },
-      fields: 'id,webViewLink,webContentLink,thumbnailLink',
+      fields: 'id,webViewLink,webContentLink,thumbnailLink,appProperties',
       supportsAllDrives: true // Required for shared drives
     });
 
@@ -102,13 +141,21 @@ export async function POST(req: Request) {
     const webContentLink = driveResult.data.webContentLink;
     const thumbnailLink = driveResult.data.thumbnailLink;
 
+    console.log('📤 Google Drive response:', {
+      driveFileId,
+      webViewLink,
+      webContentLink,
+      thumbnailLink,
+      appProperties: driveResult.data.appProperties
+    });
+
     if (!driveFileId || !webViewLink) {
       throw new Error('Failed to upload file to Shared Drive');
     }
 
     console.log('✅ File uploaded to Shared Drive:', driveFileId);
 
-    return NextResponse.json({
+    const responseData = {
       success: true,
       file: {
         id: driveFileId, // Use drive file ID as the main ID
@@ -120,9 +167,14 @@ export async function POST(req: Request) {
         webContentLink,
         thumbnailLink,
         driveFileId,
+        fileType: fileType, // Include fileType in response
         uploadedAt: new Date()
       }
-    });
+    };
+
+    console.log('📤 Sending response:', responseData);
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('❌ Error uploading file to shared drive:', error);

@@ -62,10 +62,11 @@ interface UnifiedFile {
   size: number
   uploadedAt: string
   mimeType: string
+  fileType?: string
 }
 
 type ViewMode = 'grid' | 'list'
-type FilterType = 'all' | 'photos' | 'files' | 'contracts'
+type FilterType = 'all' | 'photos' | 'files' | 'estimate' | 'acv' | 'supplement' | 'eagleview' | 'scope_of_work' | 'warrenty' | 'contract'
 
 interface FileManagerPageProps {
   lead: Lead
@@ -611,17 +612,21 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
       mimeType: photo.mimeType
     })),
     // Files from Google Drive
-    ...files.map(file => ({
-      id: file.id,
-      name: file.name,
-      type: 'document' as const, // All Drive files are documents
-      source: 'drive' as const,
-      url: file.url,
-      thumbnailUrl: (file as any).thumbnailLink, // Use thumbnailLink from the extended properties
-      size: file.size,
-      uploadedAt: file.uploadedAt.toString(),
-      mimeType: file.type
-    }))
+    ...files.map(file => {
+      console.log(`🔍 Processing file: ${file.name}, fileType: ${(file as any).fileType}`);
+      return {
+        id: file.id,
+        name: file.name,
+        type: 'document' as const, // All Drive files are documents
+        source: 'drive' as const,
+        url: file.url,
+        thumbnailUrl: (file as any).thumbnailLink, // Use thumbnailLink from the extended properties
+        size: file.size,
+        uploadedAt: file.uploadedAt.toString(),
+        mimeType: file.type,
+        fileType: (file as any).fileType || 'file' // Get fileType from file metadata
+      };
+    })
   ]
 
   // Filter and search files
@@ -633,6 +638,12 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
       }
       if (activeFilter === 'files' && file.type !== 'document') {
         return false
+      }
+      // Filter by specific document categories
+      if (['estimate', 'acv', 'supplement', 'eagleview', 'scope_of_work', 'warrenty', 'contract'].includes(activeFilter)) {
+        if (file.type !== 'document' || file.fileType !== activeFilter) {
+          return false
+        }
       }
     }
     
@@ -647,6 +658,27 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
   // Get counts for tabs
   const photosCount = unifiedFiles.filter(f => f.type === 'photo').length
   const filesCount = unifiedFiles.filter(f => f.type === 'document').length
+  const estimateCount = unifiedFiles.filter(f => f.fileType === 'estimate').length
+  const acvCount = unifiedFiles.filter(f => f.fileType === 'acv').length
+  const supplementCount = unifiedFiles.filter(f => f.fileType === 'supplement').length
+  const eagleviewCount = unifiedFiles.filter(f => f.fileType === 'eagleview').length
+  const scopeOfWorkCount = unifiedFiles.filter(f => f.fileType === 'scope_of_work').length
+  const warrentyCount = unifiedFiles.filter(f => f.fileType === 'warrenty').length
+  const contractCount = unifiedFiles.filter(f => f.fileType === 'contract' || f.fileType === 'file').length
+
+  // Debug logging for counts
+  console.log('📊 File counts:', {
+    total: unifiedFiles.length,
+    photos: photosCount,
+    files: filesCount,
+    estimate: estimateCount,
+    acv: acvCount,
+    supplement: supplementCount,
+    eagleview: eagleviewCount,
+    scope_of_work: scopeOfWorkCount,
+    warrenty: warrentyCount,
+    contract: contractCount
+  });
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -851,10 +883,19 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
       } else {
         const result = await deleteFile(file.id)
         if (result.success) {
+          // Refresh the files list to update the UI
+          await refreshFiles()
           toast({ title: "File deleted successfully" })
+        } else {
+          toast({
+            title: "Delete failed",
+            description: result.error || "Failed to delete file",
+            variant: "destructive"
+          })
         }
       }
     } catch (error) {
+      console.error("Error deleting file:", error)
       toast({
         title: "Delete failed",
         description: "Failed to delete file",
@@ -1126,6 +1167,13 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
     setIsPhotoDialogOpen(true)
   }
 
+  // Add effect to refresh files when component mounts or lead changes
+  useEffect(() => {
+    if (lead?.id) {
+      refreshFiles();
+    }
+  }, [lead?.id, refreshFiles]);
+
   return (
     <div className="space-y-6">
       {showConfetti && <ReactConfetti width={width} height={height} numberOfPieces={100} recycle={false} />}
@@ -1182,11 +1230,20 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
 
       {/* Tabs */}
       <Tabs value={activeFilter} onValueChange={(value) => setActiveFilter(value as FilterType)}>
-        <TabsList>
-          <TabsTrigger value="all">All ({unifiedFiles.length})</TabsTrigger>
-          <TabsTrigger value="photos">📷 Photos ({photosCount})</TabsTrigger>
-          <TabsTrigger value="files">📄 Files ({filesCount})</TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto">
+          <TabsList className="w-max min-w-full justify-start">
+            <TabsTrigger value="all">All ({unifiedFiles.length})</TabsTrigger>
+            <TabsTrigger value="photos">📷 Photos ({photosCount})</TabsTrigger>
+            <TabsTrigger value="files">📄 Files ({filesCount})</TabsTrigger>
+            <TabsTrigger value="estimate">📊 Estimate ({estimateCount})</TabsTrigger>
+            <TabsTrigger value="acv">💰 ACV ({acvCount})</TabsTrigger>
+            <TabsTrigger value="supplement">📋 Supplement ({supplementCount})</TabsTrigger>
+            <TabsTrigger value="eagleview">🦅 EagleView ({eagleviewCount})</TabsTrigger>
+            <TabsTrigger value="scope_of_work">📝 Scope of Work ({scopeOfWorkCount})</TabsTrigger>
+            <TabsTrigger value="warrenty">🛡️ Warranty ({warrentyCount})</TabsTrigger>
+            <TabsTrigger value="contract">📄 Contract ({contractCount})</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value={activeFilter} className="mt-6">
           {isLoadingFiles || isLoadingPhotos ? (
@@ -1207,7 +1264,21 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
                     ? 'No photos found.' 
                     : activeFilter === 'files' 
                       ? 'No files found.'
-                      : 'No files found.'}
+                      : activeFilter === 'estimate'
+                        ? 'No estimates found.'
+                        : activeFilter === 'acv'
+                          ? 'No ACV documents found.'
+                          : activeFilter === 'supplement'
+                            ? 'No supplements found.'
+                            : activeFilter === 'eagleview'
+                              ? 'No EagleView reports found.'
+                              : activeFilter === 'scope_of_work'
+                                ? 'No scope of work documents found.'
+                                : activeFilter === 'warrenty'
+                                  ? 'No warranty documents found.'
+                                  : activeFilter === 'contract'
+                                    ? 'No contracts found.'
+                                    : 'No files found.'}
                 </p>
                 {(activeFilter === 'photos' || activeFilter === 'files') && (
                   <Button 

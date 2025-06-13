@@ -40,28 +40,45 @@ export async function DELETE(req: Request) {
 
     console.log('🗑️ Deleting file from Google Drive:', driveFileId);
 
-    // Delete from Google Drive
-    await drive.files.delete({
-      fileId: driveFileId,
-      supportsAllDrives: true
-    });
+    try {
+      // Delete from Google Drive
+      await drive.files.delete({
+        fileId: driveFileId,
+        supportsAllDrives: true
+      });
 
-    console.log('✅ File deleted from Google Drive');
+      console.log('✅ File deleted from Google Drive');
 
-    return NextResponse.json({
-      success: true,
-      message: 'File deleted successfully'
-    });
+      return NextResponse.json({
+        success: true,
+        message: 'File deleted successfully'
+      });
 
-  } catch (error) {
+    } catch (driveError: any) {
+      // Handle Google Drive API specific errors
+      if (driveError.code === 404 || driveError.status === 404) {
+        console.log('📝 File not found in Google Drive (already deleted), treating as success');
+        return NextResponse.json({
+          success: true,
+          message: 'File not found (already deleted)'
+        });
+      }
+      
+      // Re-throw other Google Drive errors
+      throw driveError;
+    }
+
+  } catch (error: any) {
     console.error('❌ Error deleting file from shared drive:', error);
     
-    // Handle specific Google Drive errors
-    if (error instanceof Error && error.message.includes('File not found')) {
-      return NextResponse.json({ 
-        error: 'File not found in Google Drive',
-        details: error.message
-      }, { status: 404 });
+    // Handle specific Google Drive errors that might not be caught above
+    if (error.code === 404 || error.status === 404 || 
+        (error.message && error.message.includes('File not found'))) {
+      console.log('📝 File not found in Google Drive (fallback check), treating as success');
+      return NextResponse.json({
+        success: true,
+        message: 'File not found (already deleted)'
+      });
     }
 
     return NextResponse.json({ 

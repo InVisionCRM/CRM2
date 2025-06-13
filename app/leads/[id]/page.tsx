@@ -354,12 +354,12 @@ Thank you for choosing In-Vision Construction!`;
     
     setIsSendingContract(true);
     try {
-      const response = await fetch('/api/docuseal/send-contract', {
+      const response = await fetch('/api/send-contract', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ leadId: lead.id }),
+        body: JSON.stringify(lead),
       });
 
       const data = await response.json();
