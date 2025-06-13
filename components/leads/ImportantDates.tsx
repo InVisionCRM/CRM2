@@ -197,8 +197,6 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
       
       const endDateTime = addHours(startDateTime, 1) // Default 1 hour duration
 
-      // Note: The API will subtract 4 hours from this time before creating the Google Calendar event
-      // This ensures the event appears at the correct time in the user's timezone
       const response = await fetch('/api/calendar/create-event', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -235,7 +233,7 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
         // Show success toast with the original user-selected time
         toast({
           title: "✅ Event Created Successfully!",
-          description: `${selectedEventType.label} scheduled for ${format(selectedDate, "MMM d")} at ${formattedUserTime}. Event created in Google Calendar with 4-hour timezone adjustment.`,
+          description: `${selectedEventType.label} scheduled for ${format(selectedDate, "MMM d")} at ${formattedUserTime}. Event created in Google Calendar.`,
           duration: 3000
         })
         

@@ -149,22 +149,18 @@ export async function POST(request: NextRequest) {
     const originalStartDate = new Date(startDateTime);
     const originalEndDate = endDateTime ? new Date(endDateTime) : addHours(originalStartDate, 1);
 
-    // Subtract 4 hours from the times before sending to Google Calendar API
-    const adjustedStartDate = addHours(originalStartDate, -4);
-    const adjustedEndDate = addHours(originalEndDate, -4);
-
-    console.log('Time adjustment:', {
-      originalTime: originalStartDate.toISOString(),
-      adjustedTime: adjustedStartDate.toISOString(),
-      difference: '4 hours subtracted'
+    // Use original times directly for Google Calendar API (no timezone adjustment)
+    console.log('Using original times for Google Calendar:', {
+      startTime: originalStartDate.toISOString(),
+      endTime: originalEndDate.toISOString()
     });
 
     const appointment: CalendarAppointment = {
       id: '',
       title,
-      date: adjustedStartDate, // Use adjusted time for Google Calendar API
-      startTime: format(adjustedStartDate, 'HH:mm'),
-      endTime: format(adjustedEndDate, 'HH:mm'),
+      date: originalStartDate, // Use original time for Google Calendar API
+      startTime: format(originalStartDate, 'HH:mm'),
+      endTime: format(originalEndDate, 'HH:mm'),
       notes: description || '',
       purpose: 'ADJUSTER',
       status: 'SCHEDULED',
@@ -190,7 +186,7 @@ export async function POST(request: NextRequest) {
       htmlLink: event.htmlLink,
       summary: event.summary,
       originalStartTime: originalStartDate.toISOString(),
-      adjustedStartTime: adjustedStartDate.toISOString()
+      adjustedStartTime: originalStartDate.toISOString()
     });
 
     return NextResponse.json({ 
@@ -198,7 +194,7 @@ export async function POST(request: NextRequest) {
       event,
       eventUrl: event.htmlLink,
       originalStartTime: originalStartDate.toISOString(),
-      adjustedStartTime: adjustedStartDate.toISOString(),
+      adjustedStartTime: originalStartDate.toISOString(),
       message: 'Event created successfully'
     });
 

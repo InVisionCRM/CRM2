@@ -78,31 +78,10 @@ async function makeCalendarRequest(url: string, options: RequestInit, accessToke
   return response.json();
 }
 
-// Function to adjust event times back to what user originally picked
-function adjustEventTimesForUI(event: RawGCalEvent): RawGCalEvent {
-  const adjustedEvent = { ...event };
-  
-  // Add 4 hours back to start time
-  if (event.start?.dateTime) {
-    const originalStartTime = new Date(event.start.dateTime);
-    const adjustedStartTime = addHours(originalStartTime, 4);
-    adjustedEvent.start = {
-      ...event.start,
-      dateTime: adjustedStartTime.toISOString()
-    };
-  }
-  
-  // Add 4 hours back to end time
-  if (event.end?.dateTime) {
-    const originalEndTime = new Date(event.end.dateTime);
-    const adjustedEndTime = addHours(originalEndTime, 4);
-    adjustedEvent.end = {
-      ...event.end,
-      dateTime: adjustedEndTime.toISOString()
-    };
-  }
-  
-  return adjustedEvent;
+// Function to process events without time adjustment (events now stored with original user times)
+function processEventForUI(event: RawGCalEvent): RawGCalEvent {
+  // Return event as-is since times are now stored correctly
+  return { ...event };
 }
 
 export async function GET(request: NextRequest) {
@@ -171,8 +150,8 @@ export async function GET(request: NextRequest) {
       return false;
     });
 
-    // Adjust event times back to what user originally picked (add 4 hours)
-    const adjustedLeadEvents = leadEvents.map(adjustEventTimesForUI);
+    // Process events (no time adjustment needed - events stored with original user times)
+    const processedLeadEvents = leadEvents.map(processEventForUI);
 
     // Categorize events by type based on title keywords
     const categorizedEvents: {
@@ -187,7 +166,7 @@ export async function GET(request: NextRequest) {
       rcv: []
     };
 
-    adjustedLeadEvents.forEach(event => {
+    processedLeadEvents.forEach(event => {
       const title = event.summary?.toLowerCase() || '';
       if (title.includes('adjuster')) {
         categorizedEvents.adjuster.push(event);
