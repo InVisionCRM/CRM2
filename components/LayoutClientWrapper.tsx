@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import AppSidebar from '@/components/AppSidebar';
 import { cn } from '@/lib/utils';
 import { FixedWavyBackground } from '@/components/ui/fixed-wavy-background';
+import { Toaster } from '@/components/ui/toaster';
 
 interface LayoutClientWrapperProps {
   children: ReactNode;
@@ -40,6 +41,7 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
         {/* Render AppSidebar for all pages except map and auth pages */}
         {!isMapPage && !isAuthPage && <AppSidebar />}
       </div>
+      <Toaster />
     </>
   );
 } 

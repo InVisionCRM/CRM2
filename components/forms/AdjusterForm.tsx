@@ -131,7 +131,7 @@ export function AdjusterForm({
 
       // Save adjuster information to database
       const response = await fetch(`/api/leads/${leadId}/adjuster`, {
-        method: "PUT",
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
@@ -144,8 +144,24 @@ export function AdjusterForm({
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || "Failed to save adjuster information")
+        let errorMessage = "Failed to save adjuster information"
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.message || errorMessage
+        } catch (jsonError) {
+          // If response is not JSON, use status text or generic message
+          errorMessage = response.statusText || `HTTP ${response.status}: ${errorMessage}`
+        }
+        throw new Error(errorMessage)
+      }
+
+      // Try to parse success response
+      let responseData
+      try {
+        responseData = await response.json()
+      } catch (jsonError) {
+        // If success response is not JSON, that's okay - we'll use default success message
+        console.warn("Success response was not JSON:", jsonError)
       }
 
       setSuccessMessage("Adjuster information updated successfully")

@@ -179,9 +179,16 @@ export async function POST(request: NextRequest) {
       refreshToken
     );
 
+    console.log('Google Calendar event created:', {
+      eventId: event.id,
+      htmlLink: event.htmlLink,
+      summary: event.summary
+    });
+
     return NextResponse.json({ 
       success: true, 
       event,
+      eventUrl: event.htmlLink,
       message: 'Event created successfully'
     });
 

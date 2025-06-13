@@ -10,9 +10,9 @@ import { Drawer, DrawerContent, DrawerTrigger, DrawerHeader, DrawerTitle } from 
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Calendar as CalendarIcon, Clock, DollarSign, Building2, CalendarPlus, ChevronDownIcon } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, DollarSign, Building2, CalendarPlus, ChevronDownIcon, ExternalLink } from "lucide-react"
 import { format, addHours } from "date-fns"
-import { toast } from "sonner"
+import { useToast } from "@/hooks/use-toast"
 import type { Lead } from "@prisma/client"
 import type { RawGCalEvent } from "@/types/appointments"
 
@@ -38,6 +38,7 @@ interface EventCreationData {
 
 export function ImportantDates({ lead }: ImportantDatesProps) {
   const { data: session } = useSession()
+  const { toast } = useToast()
   const [scheduledEvents, setScheduledEvents] = useState<CategorizedEvents>({
     adjuster: [],
     build: [],
@@ -52,6 +53,7 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
   const [eventTitle, setEventTitle] = useState("")
   const [eventDescription, setEventDescription] = useState("")
   const [isCreating, setIsCreating] = useState(false)
+  const [lastCreatedEventUrl, setLastCreatedEventUrl] = useState<string | null>(null)
 
   if (!lead) return null
 
@@ -158,7 +160,12 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
 
   const handleEventButtonClick = (eventData: EventCreationData) => {
     if (!userEmail) {
-      toast.error("Please log in to create calendar events")
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to create calendar events",
+        variant: "destructive",
+        duration: 3000
+      })
       return
     }
 
@@ -172,7 +179,12 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
 
   const handleCreateEvent = async () => {
     if (!selectedEventType || !selectedDate || !eventTitle) {
-      toast.error("Please fill in all required fields")
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+        duration: 3000
+      })
       return
     }
 
@@ -202,17 +214,61 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
 
       if (response.ok) {
         const result = await response.json()
-        toast.success(`✅ ${selectedEventType.label} scheduled successfully for ${format(selectedDate, "MMM d")} at ${selectedTime}!`)
+        console.log('Calendar event created:', result) // Debug logging
+        setLastCreatedEventUrl(result.eventUrl)
+        
+        // Show success toast
+        toast({
+          title: "✅ Event Created Successfully!",
+          description: `${selectedEventType.label} scheduled for ${format(selectedDate, "MMM d")} at ${selectedTime}. ${result.eventUrl ? 'Check your Google Calendar or click the link below.' : ''}`,
+          duration: 3000
+        })
+        
+        // Show Google Calendar link if available
+        if (result.eventUrl) {
+          console.log('Google Calendar URL:', result.eventUrl) // Debug logging
+          setTimeout(() => {
+            toast({
+              title: "📅 View Event",
+              description: (
+                <div className="flex items-center gap-2">
+                  <span>Open event in Google Calendar</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => window.open(result.eventUrl, '_blank', 'noopener,noreferrer')}
+                    className="ml-2"
+                  >
+                    <ExternalLink className="h-3 w-3 mr-1" />
+                    View
+                  </Button>
+                </div>
+              ),
+              duration: 8000
+            })
+          }, 1000)
+        }
+        
         setIsEventModalOpen(false)
         // Refresh the events list
         await fetchScheduledEvents()
       } else {
         const error = await response.json()
-        toast.error(`Failed to create event: ${error.error}`)
+        toast({
+          title: "Failed to Create Event",
+          description: error.error || "Failed to create calendar event",
+          variant: "destructive",
+          duration: 3000
+        })
       }
     } catch (error) {
       console.error('Error creating event:', error)
-      toast.error('Failed to create calendar event')
+      toast({
+        title: "Error",
+        description: "Failed to create calendar event",
+        variant: "destructive",
+        duration: 3000
+      })
     } finally {
       setIsCreating(false)
     }
@@ -224,7 +280,7 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <CalendarIcon className="h-5 w-5" />
-            Important Dates
+            Schedule To Google Calendar 
             {userEmail && (
               <span className="text-sm text-muted-foreground font-normal">
                 ({userEmail})
@@ -239,12 +295,21 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
               const scheduledDate = scheduledEvent ? formatEventDate(scheduledEvent) : null
               const eventCount = scheduledEvents[eventData.type]?.length || 0
               
+              // Determine border color based on event status
+              let borderClass = "border-border" // default no border
+              if (scheduledEvent) {
+                const eventDate = new Date(scheduledEvent.start?.dateTime || scheduledEvent.start?.date || '')
+                const now = new Date()
+                const isPastEvent = eventDate < now
+                borderClass = isPastEvent ? "border-gray-500 border-2" : "border-lime-500 border-2"
+              }
+              
               return (
                 <Button
                   key={index}
                   variant="outline"
                   onClick={() => handleEventButtonClick(eventData)}
-                  className="h-24 p-4 flex flex-col items-center justify-center gap-1 hover:shadow-md transition-all duration-200"
+                  className={`h-24 p-4 flex flex-col items-center justify-center gap-1 hover:shadow-md transition-all duration-200 ${borderClass}`}
                   disabled={!userEmail || isLoading || isCreating}
                 >
                   {eventData.icon}
@@ -331,10 +396,10 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                   <DrawerHeader>
                     <DrawerTitle>Select Date & Time</DrawerTitle>
                   </DrawerHeader>
-                  <div className="flex justify-center pb-6">
-                    <div className="flex gap-8 items-start">
-                      <div className="flex flex-col items-center">
-                        <h3 className="text-sm font-medium mb-3">Date</h3>
+                  <div className="flex justify-center pb-6 px-4">
+                    <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-center lg:items-start w-full max-w-4xl">
+                      <div className="flex flex-col items-center w-full lg:w-auto">
+                        <h3 className="text-base font-medium mb-4">Date</h3>
                         <Calendar
                           mode="single"
                           selected={selectedDate}
@@ -348,12 +413,12 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                           }}
                         />
                       </div>
-                      <div className="flex flex-col items-center">
-                        <h3 className="text-sm font-medium mb-3">Time</h3>
-                        <div className="space-y-3">
-                          <div className="bg-black border rounded-lg p-4 shadow-sm">
-                            <div className="text-center mb-4">
-                              <div className="text-lg text-lime-400 font-medium">
+                      <div className="flex flex-col items-center w-full lg:w-auto">
+                        <h3 className="text-base font-medium mb-4">Time</h3>
+                        <div className="space-y-4 w-full max-w-md">
+                          <div className="bg-black border rounded-lg p-4 sm:p-6 shadow-sm">
+                            <div className="text-center mb-6">
+                              <div className="text-xl sm:text-2xl text-lime-400 font-medium">
                                 {(() => {
                                   const [hours, minutes] = selectedTime.split(':').map(Number)
                                   const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
@@ -362,7 +427,7 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                                 })()}
                               </div>
                               <button 
-                                className="text-lime-500 text-sm font-medium mt-1"
+                                className="text-lime-500 text-base font-medium mt-2 px-4 py-2 rounded hover:bg-lime-500/10 transition-colors"
                                 onClick={() => {
                                   const now = new Date()
                                   const hours = now.getHours().toString().padStart(2, '0')
@@ -374,12 +439,12 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                               </button>
                             </div>
                             
-                            <div className="flex justify-center items-center gap-4">
+                            <div className="flex justify-center items-center gap-3 sm:gap-6">
                               {/* Hours */}
                               <div className="flex flex-col items-center">
-                                <div className="text-lg text-white mb-2">Hour</div>
-                                <div className="h-32 w-12 overflow-y-auto scrollbar-hide">
-                                  <div className="py-2">
+                                <div className="text-base sm:text-lg text-white mb-3">Hour</div>
+                                <div className="h-40 w-16 sm:w-20 overflow-y-auto scrollbar-hide">
+                                  <div className="py-3">
                                     {Array.from({ length: 12 }, (_, i) => i + 1).map((hour) => {
                                       const currentHour = parseInt(selectedTime.split(':')[0])
                                       const hour24 = currentHour === 0 ? 12 : currentHour > 12 ? currentHour - 12 : currentHour
@@ -387,7 +452,7 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                                       return (
                                         <div
                                           key={hour}
-                                          className={`text-center py-2 cursor-pointer hover:bg-black text-white font-semibold ${
+                                          className={`text-center py-3 sm:py-4 cursor-pointer hover:bg-gray-800 text-white font-semibold transition-colors min-h-[48px] flex items-center justify-center text-base sm:text-lg ${
                                             isSelected ? 'bg-black text-lime-500 border border-lime-500 rounded-lg font-bold' : ''
                                           }`}
                                           onClick={() => {
@@ -408,21 +473,21 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                                 </div>
                               </div>
                               
-                              <div className="text-gray-400 text-lg">:</div>
+                              <div className="text-gray-400 text-xl">:</div>
                               
                               {/* Minutes */}
                               <div className="flex flex-col items-center">
-                                <div className="text-mg text-white mb-2">Minute</div>
-                                <div className="h-32 w-12 overflow-y-auto scrollbar-hide">
-                                  <div className="py-2">
+                                <div className="text-base sm:text-lg text-white mb-3">Minute</div>
+                                <div className="h-40 w-16 sm:w-20 overflow-y-auto scrollbar-hide">
+                                  <div className="py-3">
                                     {Array.from({ length: 60 }, (_, i) => i).map((minute) => {
                                       const currentMinute = parseInt(selectedTime.split(':')[1])
                                       const isSelected = currentMinute === minute
                                       return (
                                         <div
                                           key={minute}
-                                          className={`text-center py-1 cursor-pointer hover:bg-black text-sm text-white ${
-                                            isSelected ? 'bg-black text-white border border-lime-500 rounded-lg font-semibold text-xl' : ''
+                                          className={`text-center py-2 sm:py-3 cursor-pointer hover:bg-gray-800 text-sm sm:text-base text-white transition-colors min-h-[40px] flex items-center justify-center ${
+                                            isSelected ? 'bg-black text-white border border-lime-500 rounded-lg font-semibold text-lg sm:text-xl' : ''
                                           }`}
                                           onClick={() => {
                                             const currentHour = selectedTime.split(':')[0]
@@ -437,13 +502,13 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                                 </div>
                               </div>
                               
-                              <div className="text-gray-400 text-lg">:</div>
+                              <div className="text-gray-400 text-xl">:</div>
                               
                               {/* AM/PM */}
                               <div className="flex flex-col items-center">
-                                <div className="text-md text-white mb-2">AM/PM</div>
-                                <div className="h-32 w-12 overflow-y-auto scrollbar-hide">
-                                  <div className="py-2">
+                                <div className="text-base sm:text-lg text-white mb-3">AM/PM</div>
+                                <div className="h-40 w-16 sm:w-20 overflow-y-auto scrollbar-hide">
+                                  <div className="py-3">
                                     {['AM', 'PM'].map((period) => {
                                       const currentHour = parseInt(selectedTime.split(':')[0])
                                       const isCurrentlyPM = currentHour >= 12
@@ -451,8 +516,8 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                                       return (
                                         <div
                                           key={period}
-                                          className={`text-center py-4 cursor-pointer hover:bg-black text-white ${
-                                            isSelected ? 'bg-black text-white border border-lime-500 rounded-lg font-medium text-xl' : ''
+                                          className={`text-center py-4 sm:py-6 cursor-pointer hover:bg-gray-800 text-white transition-colors min-h-[52px] flex items-center justify-center text-base sm:text-lg ${
+                                            isSelected ? 'bg-black text-white border border-lime-500 rounded-lg font-medium text-xl sm:text-2xl' : ''
                                           }`}
                                           onClick={() => {
                                             const [hours, minutes] = selectedTime.split(':').map(Number)
