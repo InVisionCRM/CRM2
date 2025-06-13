@@ -167,8 +167,8 @@ export default function AppSidebar({ className }: SidebarProps) {
                 onClick={() => setIsCreateLeadOpen(true)}
                 className="flex flex-col items-center justify-center gap-1"
               >
-                <div className="w-12 h-12 rounded-full bg-[#59ff00] hover:bg-[#59ff00]/90 transition-colors flex items-center justify-center">
-                  <Plus className="h-7 w-7 text-black" />
+                <div className="w-15 h-15 rounded-full bg-[#59ff00] hover:bg-[#59ff00]/90 transition-colors flex items-center justify-center">
+                  <Plus className="h-10 w-10 text-black" />
                 </div>
                 <span className="text-xs font-medium text-white">Add Lead</span>
               </button>
