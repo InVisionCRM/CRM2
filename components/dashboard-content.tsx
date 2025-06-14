@@ -4,12 +4,23 @@ import { QuickActions } from "@/components/dashboard/quick-actions"
 import { DynamicHero } from "@/components/dynamic-components"
 import { RecentActivities } from "@/components/dashboard/recent-activities"
 import { WeatherForecast } from "@/components/dashboard/weather-forecast"
+import { PWAInstallSection } from "@/components/PWAInstallSection"
 
 export function DashboardContent() {
   return (
     <div className="flex-1 h-full overflow-hidden">
       {/* Hero Section */}
       <DynamicHero />
+      
+      {/* Gradient Divider */}
+      <div className="container mx-auto px-4">
+        <div className="h-px bg-gradient-to-r from-transparent via-[#59ff00]/50 to-transparent" />
+      </div>
+      
+      {/* PWA Install Section */}
+      <div className="container mx-auto px-4 py-6">
+        <PWAInstallSection />
+      </div>
       
       {/* Gradient Divider */}
       <div className="container mx-auto px-4">

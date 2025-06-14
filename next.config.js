@@ -1,11 +1,14 @@
+const withPWA = require('@ducanh2912/next-pwa').default({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+  register: true,
+  skipWaiting: true,
+})
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '100mb'
-    }
-  },
+  serverExternalPackages: ['@prisma/client', 'bcryptjs'],
   env: {
     NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN,
   },
@@ -17,6 +20,7 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+    domains: ['lh3.googleusercontent.com', 'avatars.githubusercontent.com'],
   },
   async headers() {
     return [
@@ -71,4 +75,4 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+module.exports = withPWA(nextConfig)

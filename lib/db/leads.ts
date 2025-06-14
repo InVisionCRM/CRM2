@@ -252,3 +252,27 @@ export async function updateLead(
     return null
   }
 }
+
+export async function deleteLead(id: string): Promise<boolean> {
+  try {
+    // Delete all related activities first
+    await prisma.activity.deleteMany({
+      where: { leadId: id }
+    })
+
+    // Delete all related files
+    await prisma.file.deleteMany({
+      where: { leadId: id }
+    })
+
+    // Delete the lead
+    await prisma.lead.delete({
+      where: { id }
+    })
+
+    return true
+  } catch (error) {
+    console.error(`Error deleting lead with ID ${id}:`, error)
+    return false
+  }
+}
