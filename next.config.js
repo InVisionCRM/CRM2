@@ -3,11 +3,37 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   disable: process.env.NODE_ENV === 'development',
   register: true,
   skipWaiting: true,
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/maps\.googleapis\.com\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'google-maps-cache',
+        expiration: {
+          maxEntries: 32,
+          maxAgeSeconds: 365 * 24 * 60 * 60 // 365 days
+        }
+      }
+    },
+    {
+      urlPattern: /^https:\/\/api\.mapbox\.com\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'mapbox-cache',
+        expiration: {
+          maxEntries: 32,
+          maxAgeSeconds: 365 * 24 * 60 * 60 // 365 days
+        }
+      }
+    }
+  ],
+  buildExcludes: [/middleware-manifest\.json$/]
 })
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
   serverExternalPackages: ['@prisma/client', 'bcryptjs'],
   env: {
     NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN,

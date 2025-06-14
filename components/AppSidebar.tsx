@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useSession, signIn, signOut } from "next-auth/react"
-import { User, LogIn, LogOut, Plus, MoreHorizontal, FileSignature } from "lucide-react"
-import { IconUserBolt, IconHomeHeart, IconMap, IconLink, IconCalendar, IconFolder } from "@tabler/icons-react"
+import { User, LogIn, LogOut, Plus, MoreHorizontal, FileSignature, Bot } from "lucide-react"
+import { IconUserBolt, IconHomeHeart, IconMap, IconLink, IconCalendar, IconFolder, IconRoute } from "@tabler/icons-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { CreateLeadForm } from "@/components/forms/CreateLeadForm"
+import { ConstructionChatDrawer } from "@/components/ConstructionChatDrawer"
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string
@@ -55,6 +56,11 @@ export default function AppSidebar({ className }: SidebarProps) {
       label: "Map",
       href: "/map",
       icon: <IconMap className="h-5 w-5" />,
+    },
+    {
+      label: "Route Planner",
+      href: "/route-planner",
+      icon: <IconRoute className="h-5 w-5" />,
     },
     {
       label: "Calendar",
@@ -165,12 +171,12 @@ export default function AppSidebar({ className }: SidebarProps) {
             <div className="flex flex-col items-center">
               <button
                 onClick={() => setIsCreateLeadOpen(true)}
-                className="flex flex-col items-center justify-center gap-1"
+                className="flex flex-col items-center justify-center gap-1 absolute bottom-2"
               >
                 <div className="w-15 h-15 rounded-full bg-[#59ff00] hover:bg-[#59ff00]/90 transition-colors flex items-center justify-center">
-                  <Plus className="h-10 w-10 text-black" />
+                  <Plus className="h-10 w-10 text-black overflow-visible" />
                 </div>
-                <span className="text-xs font-medium text-white">Add Lead</span>
+                <span className="text-sm font-medium text-white">Add Lead</span>
               </button>
             </div>
 
@@ -190,6 +196,19 @@ export default function AppSidebar({ className }: SidebarProps) {
                 align="end"
                 sideOffset={16}
               >
+                {/* AI Chat - Special treatment as it opens a drawer */}
+                <ConstructionChatDrawer>
+                  <DropdownMenuItem
+                    className="cursor-pointer hover:bg-white/10"
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    <Bot className="h-5 w-5" />
+                    <span className="ml-2">AI Assistant</span>
+                  </DropdownMenuItem>
+                </ConstructionChatDrawer>
+                
+                <DropdownMenuSeparator className="bg-white/10" />
+                
                 {moreLinks.map((link, idx) => (
                   <DropdownMenuItem
                     key={idx}
