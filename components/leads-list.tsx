@@ -11,7 +11,6 @@ import { LeadStatus } from "@prisma/client"
 import { Button } from "@/components/ui/button"
 import { InlineEditDialog } from "@/components/leads/inline-edit-dialog"
 import { StreetViewTooltip } from "@/components/leads/street-view-tooltip"
-import { StreetViewImage } from "@/components/map/street-view-image"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
 import { useSession } from "next-auth/react"
@@ -34,6 +33,7 @@ import {
 } from "@/components/ui/select"
 import { LeadFiles } from "@/components/leads/lead-files"
 import { LeadPhotosTab } from "@/components/leads/tabs/LeadPhotosTab"
+import { motion, AnimatePresence } from "framer-motion"
 
 interface LeadsListProps {
   leads: LeadSummary[]
@@ -178,39 +178,26 @@ const getStatusColorClasses = (status: LeadStatus | undefined): string => {
 // Helper to get Google Maps URL for navigation
 const getGoogleMapsUrl = (address: string) => {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
-}
-
-// Helper to format dates consistently
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return format(date, 'MMM d, yyyy');
 };
 
-// Helper to get salesperson initials for avatar
-const getSalespersonInitials = (name: string | null | undefined): string => {
-  if (!name) return "UN";
-  const parts = name.split(" ");
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
+// Helper to format dates consistently
+const formatDate = (date: Date | string | null): string => {
+  if (!date) return "Not set";
+  try {
+    const parsedDate = typeof date === "string" ? parseISO(date) : date;
+    return format(parsedDate, "MMM d, yyyy 'at' h:mm a");
+  } catch {
+    return "Invalid date";
   }
+};
+
+// Helper to get salesperson initials
+const getSalespersonInitials = (name: string | null | undefined): string => {
+  if (!name) return "N/A";
   return name.substring(0, 2).toUpperCase();
 };
 
-// Helper to get coordinates from address
-const getCoordinatesFromAddress = async (address: string): Promise<[number, number] | null> => {
-  try {
-    const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`);
-    const data = await response.json();
-    if (data.results && data.results.length > 0) {
-      const location = data.results[0].geometry.location;
-      return [location.lng, location.lat];
-    }
-    return null;
-  } catch (error) {
-    console.error('Error geocoding address:', error);
-    return null;
-  }
-};
+
 
 export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, onViewActivity: _onViewActivity, onViewFiles: _onViewFiles }: LeadsListProps) {
   const { toast } = useToast();
@@ -239,9 +226,6 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
   const [isDeletingFile, setIsDeletingFile] = useState<Record<string, Record<string, boolean>>>({});
   const [currentUploadType, setCurrentUploadType] = useState<string | null>(null);
   const [currentUploadLeadId, setCurrentUploadLeadId] = useState<string | null>(null);
-  
-  // Street view state
-  const [streetViewCoordinates, setStreetViewCoordinates] = useState<Record<string, [number, number] | null>>({});
   
   // Quick notes state
   const [quickNotes, setQuickNotes] = useState<Record<string, string>>({});
@@ -318,14 +302,6 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
       // Clear all expanded rows and add only the new one (only one expanded at a time)
       newExpanded.clear();
       newExpanded.add(leadId);
-      // Load street view coordinates if not already loaded
-      const lead = leads.find(l => l.id === leadId);
-      if (lead?.address && !streetViewCoordinates[leadId]) {
-        const coordinates = await getCoordinatesFromAddress(lead.address);
-        if (coordinates) {
-          setStreetViewCoordinates(prev => ({ ...prev, [leadId]: coordinates }));
-        }
-      }
       // Fetch scheduled events for this lead
       await fetchScheduledEventsForLead(leadId);
     }
@@ -898,618 +874,628 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
               </div>
             </div>
 
-            {/* Expanded Details */}
-            {isExpanded && (
-              <div className="border-t border-gray-700 bg-gradient-to-b from-green-900/20 via-blue-900/20 to-gray-900 p-4 space-y-4">
-                {/* Lead Detail Navigation Arrow */}
-                <div className="flex justify-end mb-2">
-                  <Link 
-                    href={`/leads/${lead.id}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#59ff00]/20 hover:bg-[#59ff00]/30 rounded-lg border border-[#59ff00]/50 transition-all duration-200 text-white hover:text-[#59ff00]"
-                  >
-                    <span className="font-bold text-sm">View Full Details</span>
-                    <ExternalLink className="h-5 w-5 font-bold" />
-                  </Link>
-                </div>
-                
-                {/* Top Row: Street View and Quick Note */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* Street View */}
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-white flex items-center">
-                   
-                      
-                    </h4>
-                    <div className="rounded-lg overflow-hidden bg-gray-800 h-48 border border-gray-700 relative">
-                      {lead.address && streetViewCoordinates[lead.id] ? (
-                        <StreetViewImage
-                          address={lead.address}
-                          position={streetViewCoordinates[lead.id]!}
-                          className="w-full h-full"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400">
-                          {lead.address ? "Loading street view..." : "No address available"}
-                        </div>
-                      )}
-                      
-                      {/* Location Overlay */}
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-                        <h4 className="font-medium text-white mb-2"></h4>
-                        <div className="space-y-1">
-                          <div className="flex items-start justify-between">
-                            <span className="text-sm text-gray-300"></span>
-                            <div className="flex-1 ml-2">
-                              {lead.address ? (
-                                <StreetViewTooltip address={lead.address}>
-                                  <div className="flex items-center cursor-help">
-                                    <span className="text-sm text-right text-white" title={lead.address}>
-                                      {parseAddressStreetAndCity(lead.address)}
-                                    </span>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      title="Open in Google Maps" 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        window.open(getGoogleMapsUrl(lead.address), "_blank", "noopener,noreferrer");
-                                      }}
-                                      className="h-6 w-6 text-gray-400 hover:text-green-400 hover:bg-green-900/20 rounded-full ml-1" 
-                                    >
-                                      <MapPin className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                </StreetViewTooltip>
-                              ) : (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenEditDialog(lead.id, "address");
-                                  }}
-                                  className="text-green-400 hover:text-green-300 flex items-center text-sm"
-                                >
-                                  <Plus className="h-3 w-3 mr-1" />
-                                  Add
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Date Created Overlay - Top Right */}
-                      <div className="absolute top-2 right-2 z-10">
-                        <div className="h-16 p-2 flex flex-col items-center justify-center gap-0.5 rounded-lg border border-gray-700 bg-black/60 transition-all duration-200 w-28">
-                          <div className="flex-shrink-0" style={{ color: '#51D6FF' }}>
-                            <CalendarDays className="h-4 w-4" />
-                          </div>
-                          <span className="text-xs font-semibold text-center leading-tight" style={{ color: '#51D6FF' }}>
-                            Created
-                          </span>
-                          <span className="text-xs text-white text-center leading-tight font-semibold">
-                            {format(parseISO(lead.createdAt), 'MMM d, yyyy')}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Claim Number Overlay - Top Left */}
-                      {lead.claimNumber && (
-                        <div className="absolute top-2 left-2 bg-black/80 px-2 py-1 rounded text-green-500 text-sm font-medium">
-                          Claim #: {lead.claimNumber}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Quick Action Tabs - Moved directly under street view */}
-                    <div className="mt-0">
-                      <h4 className="text-sm text-white mb-0 text-center"></h4>
-                      <div className="flex w-full text-sm text-center border-2 border-white overflow-hidden">
-                        <QuickActionButton
-                          onClick={() => handleSendContract(lead.id)}
-                          label={isSendingContract[lead.id] ? "Sending..." : "Send Contract"}
-                          disabled={!lead || isSendingContract[lead.id]}
-                          variant="contract"
-                        />
-                        <QuickActionButton
-                          onClick={() => handleSignInPerson(lead.id)}
-                          label={isSigningInPerson[lead.id] ? "Creating..." : "Sign Contract"}
-                          disabled={!lead || isSigningInPerson[lead.id]}
-                          variant="sign"
-                        />
-                      </div>
-                    </div>
+                        {/* Expanded Details */}
+            <AnimatePresence>
+              {isExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="overflow-hidden"
+                >
+                <div className="border-t border-gray-700 bg-gradient-to-b from-green-900/20 via-blue-900/20 to-gray-900 p-4 space-y-4">
+                  {/* Lead Detail Navigation Arrow */}
+                  <div className="flex justify-end mb-2">
+                    <Link 
+                      href={`/leads/${lead.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-2 px-4 py-2 bg-[#59ff00]/20 hover:bg-[#59ff00]/30 rounded-lg border border-[#59ff00]/50 transition-all duration-200 text-white hover:text-[#59ff00]"
+                    >
+                      <span className="font-bold text-sm">View Full Details</span>
+                      <ExternalLink className="h-5 w-5 font-bold" />
+                    </Link>
                   </div>
-
-                  {/* Quick Note */}
-                  <div className="space-y-2 justify-center flex flex-col w-full" data-lead-id={lead.id}>
-                    <h4 className="font-medium pt-0 text-white flex items-center">
+                  
+                  {/* Top Row: Street View and Quick Note */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Street View */}
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-white flex items-center">
                      
-                      
-                    </h4>
-                    <div className="relative w-full">
-                      <Textarea
-                        placeholder="Quick Note..."
-                        value={quickNotes[lead.id] || ""}
-                        onChange={(e) => setQuickNotes(prev => ({ ...prev, [lead.id]: e.target.value }))}
-                        className="min-h-[20px] w-full resize-none bg-transparent bg-black/60 border-white/20 border-1 text-white placeholder:text-gray-400 focus:border-black/60 focus:ring-green-400/20 pr-20 pb-12"
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => handleSaveNote(lead.id)}
-                        disabled={!quickNotes[lead.id]?.trim() || isSavingNote[lead.id]}
-                        className="absolute bottom-[2px] right-[2px] bg-green-500/70 hover:bg-green-700 text-white border-1 border-black/60 h-8 px-3"
-                      >
-                        {isSavingNote[lead.id] ? (
-                          <>
-                            <Loader2 className="h-3 w-3 mr-2 animate-spin" />
-                            Saving...
-                          </>
+                        
+                      </h4>
+                      <div className="rounded-lg overflow-hidden bg-gray-800 h-48 border border-gray-700 relative">
+                        {lead.address ? (
+                          <img
+                            src={`https://maps.googleapis.com/maps/api/streetview?size=600x400&location=${encodeURIComponent(lead.address)}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`}
+                            alt={`Street view of ${lead.address}`}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
-                          <>
-                            <Send className="h-3 w-3 mr-2" />
-                            Save Note
-                          </>
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            No address available
+                          </div>
                         )}
-                      </Button>
-                    </div>
-
-                    {/* Last Activity Section */}
-                    {lead.latestActivity && (
-                      <div className="mt-3 p-3 bg-black/30 rounded-lg border border-gray-700">
-                        <div className="flex items-start gap-2">
-                          <MessageSquare className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-xs font-medium text-blue-400">Last Activity</span>
-                              <span className="text-xs text-gray-400">
-                                {formatDistanceToNow(parseISO(lead.latestActivity.createdAt), { addSuffix: true })}
-                              </span>
+                        
+                        {/* Location Overlay */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                          <h4 className="font-medium text-white mb-2"></h4>
+                          <div className="space-y-1">
+                            <div className="flex items-start justify-between">
+                              <span className="text-sm text-gray-300"></span>
+                              <div className="flex-1 ml-2">
+                                {lead.address ? (
+                                  <StreetViewTooltip address={lead.address}>
+                                    <div className="flex items-center cursor-help">
+                                      <span className="text-sm text-right text-white" title={lead.address}>
+                                        {parseAddressStreetAndCity(lead.address)}
+                                      </span>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        title="Open in Google Maps" 
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          window.open(getGoogleMapsUrl(lead.address), "_blank", "noopener,noreferrer");
+                                        }}
+                                        className="h-6 w-6 text-gray-400 hover:text-green-400 hover:bg-green-900/20 rounded-full ml-1" 
+                                      >
+                                        <MapPin className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </StreetViewTooltip>
+                                ) : (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenEditDialog(lead.id, "address");
+                                    }}
+                                    className="text-green-400 hover:text-green-300 flex items-center text-sm"
+                                  >
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    Add
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                            <p className="text-sm text-white mt-1 line-clamp-2">{lead.latestActivity.title}</p>
-                            <span className="text-xs text-gray-400 capitalize">{lead.latestActivity.type}</span>
                           </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Divider between Note and Upload sections */}
-                <div className="border-t border-lime-600 border-1"></div>
-
-                {/* Contract Grid */}
-                <div className="space-y-1">
-                  <div className="grid grid-cols-1 gap-2">
-                    <div className="relative group">
-                      {!uploadedFileStatus[lead.id]?.[contractUploadType.key] ? (
-                        // No contract uploaded - show message and upload button
-                        <div className="text-center space-y-1">
-                          <div className="text-gray-300 text-sm">
-                            
+                        
+                        {/* Date Created Overlay - Top Right */}
+                        <div className="absolute top-2 right-2 z-10">
+                          <div className="h-16 p-2 flex flex-col items-center justify-center gap-0.5 rounded-lg border border-gray-700 bg-black/60 transition-all duration-200 w-28">
+                            <div className="flex-shrink-0" style={{ color: '#51D6FF' }}>
+                              <CalendarDays className="h-4 w-4" />
+                            </div>
+                            <span className="text-xs font-semibold text-center leading-tight" style={{ color: '#51D6FF' }}>
+                              Created
+                            </span>
+                            <span className="text-xs text-white text-center leading-tight font-semibold">
+                              {formatDate(lead.createdAt)}
+                            </span>
                           </div>
+                        </div>
+
+                        {/* Claim Number Overlay - Top Left */}
+                        {lead.claimNumber && (
+                          <div className="absolute top-2 left-2 bg-black/80 px-2 py-1 rounded text-green-500 text-sm font-medium">
+                            Claim #: {lead.claimNumber}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Quick Action Tabs - Moved directly under street view */}
+                      <div className="mt-0">
+                        <h4 className="text-sm text-white mb-0 text-center"></h4>
+                        <div className="flex w-full text-sm text-center border-2 border-white overflow-hidden">
+                          <QuickActionButton
+                            onClick={() => handleSendContract(lead.id)}
+                            label={isSendingContract[lead.id] ? "Sending..." : "Send Contract"}
+                            disabled={!lead || isSendingContract[lead.id]}
+                            variant="contract"
+                          />
+                          <QuickActionButton
+                            onClick={() => handleSignInPerson(lead.id)}
+                            label={isSigningInPerson[lead.id] ? "Creating..." : "Sign Contract"}
+                            disabled={!lead || isSigningInPerson[lead.id]}
+                            variant="sign"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quick Note */}
+                    <div className="space-y-2 justify-center flex flex-col w-full" data-lead-id={lead.id}>
+                      <h4 className="font-medium pt-0 text-white flex items-center">
+                       
+                        
+                      </h4>
+                      <div className="relative w-full">
+                        <Textarea
+                          placeholder="Quick Note..."
+                          value={quickNotes[lead.id] || ""}
+                          onChange={(e) => setQuickNotes(prev => ({ ...prev, [lead.id]: e.target.value }))}
+                          className="min-h-[20px] w-full resize-none bg-transparent bg-black/60 border-white/20 border-1 text-white placeholder:text-gray-400 focus:border-black/60 focus:ring-green-400/20 pr-20 pb-12"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleSaveNote(lead.id)}
+                          disabled={!quickNotes[lead.id]?.trim() || isSavingNote[lead.id]}
+                          className="absolute bottom-[2px] right-[2px] bg-green-500/70 hover:bg-green-700 text-white border-1 border-black/60 h-8 px-3"
+                        >
+                          {isSavingNote[lead.id] ? (
+                            <>
+                              <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="h-3 w-3 mr-2" />
+                              Save Note
+                            </>
+                          )}
+                        </Button>
+                      </div>
+
+                      {/* Last Activity Section */}
+                      {lead.latestActivity && (
+                        <div className="mt-3 p-3 bg-black/30 rounded-lg border border-gray-700">
+                          <div className="flex items-start gap-2">
+                            <MessageSquare className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-medium text-blue-400">Last Activity</span>
+                                <span className="text-xs text-gray-400">
+                                  {formatDistanceToNow(parseISO(lead.latestActivity.createdAt), { addSuffix: true })}
+                                </span>
+                              </div>
+                              <p className="text-sm text-white mt-1 line-clamp-2">{lead.latestActivity.title}</p>
+                              <span className="text-xs text-gray-400 capitalize">{lead.latestActivity.type}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Divider between Note and Upload sections */}
+                  <div className="border-t border-lime-600 border-1"></div>
+
+                  {/* Contract Grid */}
+                  <div className="space-y-1">
+                    <div className="grid grid-cols-1 gap-2">
+                      <div className="relative group">
+                        {!uploadedFileStatus[lead.id]?.[contractUploadType.key] ? (
+                          // No contract uploaded - show message and upload button
+                          <div className="text-center space-y-1">
+                            <div className="text-gray-300 text-sm">
+                              
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="lg"
+                              onClick={() => handleUploadFile(lead.id, contractUploadType.key)}
+                              disabled={isUploadingFile[lead.id]?.[contractUploadType.key]}
+                              className="h-20 px-6 text-xl w-full rounded-lg border-gray-700 bg-transparent bg-black/60 text-white hover:bg-gray-800/50 flex items-center justify-center gap-3 transition-all duration-200"
+                            >
+                              {isUploadingFile[lead.id]?.[contractUploadType.key] ? (
+                                <>
+                                  <Loader2 className="h-8 w-8 animate-spin text-green-400" />
+                                  <span className="text-lg font-semibold">Uploading...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="h-8 w-8 text-green-400" />
+                                  <span className="text-lg font-semibold">Upload {contractUploadType.label}</span>
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        ) : (
+                          // Contract uploaded - show uploaded status
                           <Button
                             variant="outline"
-                            size="lg"
+                            size="sm"
                             onClick={() => handleUploadFile(lead.id, contractUploadType.key)}
                             disabled={isUploadingFile[lead.id]?.[contractUploadType.key]}
-                            className="h-20 px-6 text-xl w-full rounded-lg border-gray-700 bg-transparent bg-black/60 text-white hover:bg-gray-800/50 flex items-center justify-center gap-3 transition-all duration-200"
+                            className="h-24 px-2 text-lg w-full rounded-lg border-green-500 bg-green-900/30 text-white hover:bg-gray-800/50 flex items-center justify-center gap-2 transition-all duration-200"
                           >
-                            {isUploadingFile[lead.id]?.[contractUploadType.key] ? (
-                              <>
-                                <Loader2 className="h-8 w-8 animate-spin text-green-400" />
-                                <span className="text-lg font-semibold">Uploading...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Upload className="h-8 w-8 text-green-400" />
-                                <span className="text-lg font-semibold">Upload {contractUploadType.label}</span>
-                              </>
-                            )}
+                            <CheckCircle2 className="h-6 w-6 text-green-400" />
+                            <span className="text-base font-semibold">{contractUploadType.label} Uploaded</span>
                           </Button>
-                        </div>
-                      ) : (
-                        // Contract uploaded - show uploaded status
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleUploadFile(lead.id, contractUploadType.key)}
-                          disabled={isUploadingFile[lead.id]?.[contractUploadType.key]}
-                          className="h-24 px-2 text-lg w-full rounded-lg border-green-500 bg-green-900/30 text-white hover:bg-gray-800/50 flex items-center justify-center gap-2 transition-all duration-200"
-                        >
-                          <CheckCircle2 className="h-6 w-6 text-green-400" />
-                          <span className="text-base font-semibold">{contractUploadType.label} Uploaded</span>
-                        </Button>
-                      )}
-                      
-                      {/* Hover overlay with View and Delete buttons - only show when uploaded */}
-                      {uploadedFileStatus[lead.id]?.[contractUploadType.key] && (
-                        <div className="absolute inset-0 bg-black/90 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-1 z-10">
-                          {uploadedFileUrls[lead.id]?.[contractUploadType.key] && (
+                        )}
+                        
+                        {/* Hover overlay with View and Delete buttons - only show when uploaded */}
+                        {uploadedFileStatus[lead.id]?.[contractUploadType.key] && (
+                          <div className="absolute inset-0 bg-black/90 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-1 z-10">
+                            {uploadedFileUrls[lead.id]?.[contractUploadType.key] && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(uploadedFileUrls[lead.id][contractUploadType.key], '_blank');
+                                }}
+                                className="h-7 px-2 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-900/20"
+                              >
+                                <Eye className="h-3 w-3" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                window.open(uploadedFileUrls[lead.id][contractUploadType.key], '_blank');
+                                handleDeleteFile(lead.id, contractUploadType.key);
                               }}
-                              className="h-7 px-2 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-900/20"
+                              disabled={isDeletingFile[lead.id]?.[contractUploadType.key]}
+                              className="h-7 px-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-900/20"
                             >
-                              <Eye className="h-3 w-3" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteFile(lead.id, contractUploadType.key);
-                            }}
-                            disabled={isDeletingFile[lead.id]?.[contractUploadType.key]}
-                            className="h-7 px-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                          >
-                            {isDeletingFile[lead.id]?.[contractUploadType.key] ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3 w-3" />
-                            )}
-                          </Button>
-                        </div>
-                      )}
-                      
-                      {/* Hidden file input */}
-                      <input
-                        ref={(el) => {
-                          if (el) {
-                            fileInputRefs.current[`${lead.id}-${contractUploadType.key}`] = el;
-                          }
-                        }}
-                        type="file"
-                        onChange={(e) => handleFileChange(e, lead.id, contractUploadType.key)}
-                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                        className="hidden"
-                        aria-label={`Upload ${contractUploadType.label}`}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Documents Dropdown */}
-                <div className="space-y-3">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="h-20 px-6 text-xl w-full rounded-lg border-gray-700 bg-transparent bg-black/60 text-white hover:bg-gray-800/50 flex items-center justify-center gap-3 transition-all duration-200"
-                      >
-                        <Upload className="h-5 w-5 text-green-400" />
-                        <span className="text-white font-semibold">Documents</span>
-                        <ChevronDown className="h-6 w-6" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="center" className="w-96 bg-gray-800 border-gray-700 p-4">
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {documentUploadTypes.map(({ key, label }) => (
-                          <div key={key} className="relative group">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleUploadFile(lead.id, key)}
-                              disabled={isUploadingFile[lead.id]?.[key]}
-                              className={`h-12 px-2 text-sm w-full rounded-lg border-gray-700 bg-transparent text-white hover:bg-gray-700 flex items-center justify-center gap-1 transition-all duration-200 ${
-                                uploadedFileStatus[lead.id]?.[key] ? 'border-green-500 bg-green-900/30' : ''
-                              }`}
-                            >
-                              {isUploadingFile[lead.id]?.[key] ? (
-                                <Loader2 className="h-4 w-4 animate-spin text-green-400" />
-                              ) : uploadedFileStatus[lead.id]?.[key] ? (
-                                <CheckCircle2 className="h-4 w-4 text-green-400" />
+                              {isDeletingFile[lead.id]?.[contractUploadType.key] ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
                               ) : (
-                                <>
-                                  <Upload className="h-4 w-4 text-green-400" />
-                                  <span className="text-xs font-medium">{label}</span>
-                                </>
+                                <Trash2 className="h-3 w-3" />
                               )}
                             </Button>
-                            
-                            {/* Hover overlay with View and Delete buttons */}
-                            {uploadedFileStatus[lead.id]?.[key] && (
-                              <div className="absolute inset-0 bg-black/90 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-1 z-10">
-                                {uploadedFileUrls[lead.id]?.[key] && (
+                          </div>
+                        )}
+                        
+                        {/* Hidden file input */}
+                        <input
+                          ref={(el) => {
+                            if (el) {
+                              fileInputRefs.current[`${lead.id}-${contractUploadType.key}`] = el;
+                            }
+                          }}
+                          type="file"
+                          onChange={(e) => handleFileChange(e, lead.id, contractUploadType.key)}
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          className="hidden"
+                          aria-label={`Upload ${contractUploadType.label}`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Documents Dropdown */}
+                  <div className="space-y-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="h-20 px-6 text-xl w-full rounded-lg border-gray-700 bg-transparent bg-black/60 text-white hover:bg-gray-800/50 flex items-center justify-center gap-3 transition-all duration-200"
+                        >
+                          <Upload className="h-5 w-5 text-green-400" />
+                          <span className="text-white font-semibold">Documents</span>
+                          <ChevronDown className="h-6 w-6" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="center" className="w-96 bg-gray-800 border-gray-700 p-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {documentUploadTypes.map(({ key, label }) => (
+                            <div key={key} className="relative group">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleUploadFile(lead.id, key)}
+                                disabled={isUploadingFile[lead.id]?.[key]}
+                                className={`h-12 px-2 text-sm w-full rounded-lg border-gray-700 bg-transparent text-white hover:bg-gray-700 flex items-center justify-center gap-1 transition-all duration-200 ${
+                                  uploadedFileStatus[lead.id]?.[key] ? 'border-green-500 bg-green-900/30' : ''
+                                }`}
+                              >
+                                {isUploadingFile[lead.id]?.[key] ? (
+                                  <Loader2 className="h-4 w-4 animate-spin text-green-400" />
+                                ) : uploadedFileStatus[lead.id]?.[key] ? (
+                                  <CheckCircle2 className="h-4 w-4 text-green-400" />
+                                ) : (
+                                  <>
+                                    <Upload className="h-4 w-4 text-green-400" />
+                                    <span className="text-xs font-medium">{label}</span>
+                                  </>
+                                )}
+                              </Button>
+                              
+                              {/* Hover overlay with View and Delete buttons */}
+                              {uploadedFileStatus[lead.id]?.[key] && (
+                                <div className="absolute inset-0 bg-black/90 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-1 z-10">
+                                  {uploadedFileUrls[lead.id]?.[key] && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        window.open(uploadedFileUrls[lead.id][key], '_blank');
+                                      }}
+                                      className="h-6 px-1 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-900/20"
+                                    >
+                                      <Eye className="h-3 w-3" />
+                                    </Button>
+                                  )}
                                   <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      window.open(uploadedFileUrls[lead.id][key], '_blank');
+                                      handleDeleteFile(lead.id, key);
                                     }}
-                                    className="h-6 px-1 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-900/20"
+                                    disabled={isDeletingFile[lead.id]?.[key]}
+                                    className="h-6 px-1 text-xs text-red-400 hover:text-red-300 hover:bg-red-900/20"
                                   >
-                                    <Eye className="h-3 w-3" />
+                                    {isDeletingFile[lead.id]?.[key] ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-3 w-3" />
+                                    )}
                                   </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteFile(lead.id, key);
-                                  }}
-                                  disabled={isDeletingFile[lead.id]?.[key]}
-                                  className="h-6 px-1 text-xs text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                                >
-                                  {isDeletingFile[lead.id]?.[key] ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="h-3 w-3" />
-                                  )}
-                                </Button>
+                                </div>
+                              )}
+                              
+                              {/* Hidden file inputs */}
+                              <input
+                                ref={(el) => {
+                                  if (el) {
+                                    fileInputRefs.current[`${lead.id}-${key}`] = el;
+                                  }
+                                }}
+                                type="file"
+                                onChange={(e) => handleFileChange(e, lead.id, key)}
+                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                className="hidden"
+                                aria-label={`Upload ${label}`}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  {/* Lead Information */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 text-white border-t border-lime-500/90">
+                    {/* Insurance Information */}
+                    <div className="space-y-3">
+                      <h4 className="font-bold text-lg text-white flex items-center gap-2">
+                        <Shield className="h-5 w-5 text-lime-400" />
+                        Insurance
+                      </h4>
+                      <div className="space-y-3 bg-black/30 rounded-lg p-3 border border-gray-700">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-lime-400" />
+                            <span className="text-sm font-medium text-gray-300">Co:</span>
+                          </div>
+                          {lead.insuranceCompany ? (
+                            <span className="text-base font-semibold text-white text-right flex-1 ml-2">
+                              {truncateString(lead.insuranceCompany, 20)}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditDialog(lead.id, "insuranceCompany");
+                              }}
+                              className="text-lime-400 hover:text-lime-300 flex items-center text-sm font-medium"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4 text-lime-400" />
+                            <span className="text-sm font-medium text-gray-300">Claim #:</span>
+                          </div>
+                          {lead.claimNumber ? (
+                            <span className="text-base font-semibold text-white text-right flex-1 ml-2">
+                              {lead.claimNumber}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditDialog(lead.id, "claimNumber");
+                              }}
+                              className="text-lime-400 hover:text-lime-300 flex items-center text-sm font-medium"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-lime-400" />
+                            <span className="text-sm font-medium text-gray-300">Phone:</span>
+                          </div>
+                          {lead.insurancePhone ? (
+                            <span className="text-base font-semibold text-white text-right flex-1 ml-2">
+                              {truncateString(lead.insurancePhone, 20)}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditDialog(lead.id, "insurancePhone");
+                              }}
+                              className="text-lime-400 hover:text-lime-300 flex items-center text-sm font-medium"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Adjuster Information */}
+                    <div className="space-y-3">
+                      <h4 className="font-bold text-lg text-white flex items-center gap-2">
+                        <User className="h-5 w-5 text-lime-400" />
+                        Adjuster
+                      </h4>
+                      <div className="space-y-3 bg-black/30 rounded-lg p-3 border border-gray-700">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-lime-400" />
+                            <span className="text-sm font-medium text-gray-300">Name:</span>
+                          </div>
+                          {lead.insuranceAdjusterName ? (
+                            <span className="text-base font-semibold text-white text-right flex-1 ml-2">
+                              {truncateString(lead.insuranceAdjusterName, 18)}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditDialog(lead.id, "adjusterName");
+                              }}
+                              className="text-lime-400 hover:text-lime-300 flex items-center text-sm font-medium"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-lime-400" />
+                            <span className="text-sm font-medium text-gray-300">Phone:</span>
+                          </div>
+                          {lead.insuranceAdjusterPhone ? (
+                            <span className="text-base font-semibold text-white text-right flex-1 ml-2">
+                              {lead.insuranceAdjusterPhone}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditDialog(lead.id, "adjusterPhone");
+                              }}
+                              className="text-lime-400 hover:text-lime-300 flex items-center text-sm font-medium"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-lime-400" />
+                            <span className="text-sm font-medium text-gray-300">Email:</span>
+                          </div>
+                          {lead.insuranceAdjusterEmail ? (
+                            <span className="text-base font-semibold text-white text-right flex-1 ml-2">
+                              {truncateString(lead.insuranceAdjusterEmail, 20)}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditDialog(lead.id, "adjusterEmail");
+                              }}
+                              className="text-lime-400 hover:text-lime-300 flex items-center text-sm font-medium"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Event Creation Buttons */}
+                  <div className="border-t border-lime-500/90 pt-4">
+                    <h4 className="font-medium text-white mb-3 text-center">Schedule Events</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {[
+                        {
+                          type: 'adjuster' as const,
+                          label: "Adjuster Appointment",
+                          icon: <Clock className="h-4 w-4" />
+                        },
+                        {
+                          type: 'build' as const,
+                          label: "Build Date",
+                          icon: <Building2 className="h-4 w-4" />
+                        },
+                        {
+                          type: 'acv' as const,
+                          label: "Pick up ACV",
+                          icon: <DollarSign className="h-4 w-4" />
+                        },
+                        {
+                          type: 'rcv' as const,
+                          label: "Pick up RCV",
+                          icon: <DollarSign className="h-4 w-4" />
+                        }
+                      ].map((eventData, index) => {
+                        const leadEvents = scheduledEvents[lead.id];
+                        const recentEvent = leadEvents && leadEvents[eventData.type] ? getRecentEvent(leadEvents[eventData.type]) : null;
+                        const scheduledDate = recentEvent ? formatEventDate(recentEvent) : null;
+                        const hasEvent = !!recentEvent;
+                        
+                        // Determine border color based on event status
+                        let borderClass = "border-gray-700";
+                        if (hasEvent) {
+                          const eventDate = new Date(recentEvent.start?.dateTime || recentEvent.start?.date || '');
+                          const now = new Date();
+                          const isPastEvent = eventDate < now;
+                          borderClass = isPastEvent ? "border-gray-500 border-2" : "border-lime-500 border-2";
+                        }
+                        
+                        return (
+                          <Button
+                            key={index}
+                            variant="outline"
+                            onClick={() => handleEventButtonClick({
+                              ...eventData,
+                              title: "",
+                              description: ""
+                            }, lead.id)}
+                            className={`h-16 p-2 flex flex-col items-center justify-center gap-1 hover:shadow-md transition-all duration-200 bg-transparent bg-black/60 text-white hover:bg-gray-800/50 ${borderClass}`}
+                            disabled={!session?.user?.email || isCreating || isLoadingEvents}
+                          >
+                            <div className="flex-shrink-0">
+                              {eventData.icon}
+                            </div>
+                            <span className="text-xs font-medium text-center leading-tight px-1">
+                              {eventData.label}
+                            </span>
+                            {scheduledDate && (
+                              <span className="text-xs text-white text-center leading-tight mt-0.5 font-semibold">
+                                {scheduledDate}
+                              </span>
+                            )}
+                            {!scheduledDate && !isLoadingEvents && (
+                              <span className="text-xs text-gray-400 text-center leading-tight mt-0.5">
+                                Click to schedule
+                              </span>
+                            )}
+                            {(isCreating || isLoadingEvents) && (
+                              <div className="flex items-center gap-1">
+                                <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-primary"></div>
+                                <span className="text-xs text-muted-foreground">
+                                  {isCreating ? "Creating..." : "Loading..."}
+                                </span>
                               </div>
                             )}
-                            
-                            {/* Hidden file inputs */}
-                            <input
-                              ref={(el) => {
-                                if (el) {
-                                  fileInputRefs.current[`${lead.id}-${key}`] = el;
-                                }
-                              }}
-                              type="file"
-                              onChange={(e) => handleFileChange(e, lead.id, key)}
-                              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                              className="hidden"
-                              aria-label={`Upload ${label}`}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                {/* Lead Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 text-white border-t border-lime-500/90">
-                  {/* Insurance Information */}
-                  <div className="space-y-3">
-                    <h4 className="font-bold text-lg text-white flex items-center gap-2">
-                      <Shield className="h-5 w-5 text-lime-400" />
-                      Insurance
-                    </h4>
-                    <div className="space-y-3 bg-black/30 rounded-lg p-3 border border-gray-700">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-lime-400" />
-                          <span className="text-sm font-medium text-gray-300">Co:</span>
-                        </div>
-                        {lead.insuranceCompany ? (
-                          <span className="text-base font-semibold text-white text-right flex-1 ml-2">
-                            {truncateString(lead.insuranceCompany, 20)}
-                          </span>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEditDialog(lead.id, "insuranceCompany");
-                            }}
-                            className="text-lime-400 hover:text-lime-300 flex items-center text-sm font-medium"
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Add
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-lime-400" />
-                          <span className="text-sm font-medium text-gray-300">Claim #:</span>
-                        </div>
-                        {lead.claimNumber ? (
-                          <span className="text-base font-semibold text-white text-right flex-1 ml-2">
-                            {lead.claimNumber}
-                          </span>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEditDialog(lead.id, "claimNumber");
-                            }}
-                            className="text-lime-400 hover:text-lime-300 flex items-center text-sm font-medium"
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Add
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-lime-400" />
-                          <span className="text-sm font-medium text-gray-300">Phone:</span>
-                        </div>
-                        {lead.insurancePhone ? (
-                          <span className="text-base font-semibold text-white text-right flex-1 ml-2">
-                            {truncateString(lead.insurancePhone, 20)}
-                          </span>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEditDialog(lead.id, "insurancePhone");
-                            }}
-                            className="text-lime-400 hover:text-lime-300 flex items-center text-sm font-medium"
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Add
-                          </button>
-                        )}
-                      </div>
+                          </Button>
+                        );
+                      })}
                     </div>
+                    {session?.user?.email && (
+                      <p className="text-xs text-gray-400 text-center mt-2">
+                        Events will be created in Google Calendar ({session.user.email})
+                      </p>
+                    )}
                   </div>
-
-                  {/* Adjuster Information */}
-                  <div className="space-y-3">
-                    <h4 className="font-bold text-lg text-white flex items-center gap-2">
-                      <User className="h-5 w-5 text-lime-400" />
-                      Adjuster
-                    </h4>
-                    <div className="space-y-3 bg-black/30 rounded-lg p-3 border border-gray-700">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-lime-400" />
-                          <span className="text-sm font-medium text-gray-300">Name:</span>
-                        </div>
-                        {lead.insuranceAdjusterName ? (
-                          <span className="text-base font-semibold text-white text-right flex-1 ml-2">
-                            {truncateString(lead.insuranceAdjusterName, 18)}
-                          </span>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEditDialog(lead.id, "adjusterName");
-                            }}
-                            className="text-lime-400 hover:text-lime-300 flex items-center text-sm font-medium"
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Add
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-lime-400" />
-                          <span className="text-sm font-medium text-gray-300">Phone:</span>
-                        </div>
-                        {lead.insuranceAdjusterPhone ? (
-                          <span className="text-base font-semibold text-white text-right flex-1 ml-2">
-                            {lead.insuranceAdjusterPhone}
-                          </span>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEditDialog(lead.id, "adjusterPhone");
-                            }}
-                            className="text-lime-400 hover:text-lime-300 flex items-center text-sm font-medium"
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Add
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-lime-400" />
-                          <span className="text-sm font-medium text-gray-300">Email:</span>
-                        </div>
-                        {lead.insuranceAdjusterEmail ? (
-                          <span className="text-base font-semibold text-white text-right flex-1 ml-2">
-                            {truncateString(lead.insuranceAdjusterEmail, 20)}
-                          </span>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEditDialog(lead.id, "adjusterEmail");
-                            }}
-                            className="text-lime-400 hover:text-lime-300 flex items-center text-sm font-medium"
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Add
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Event Creation Buttons */}
-                <div className="border-t border-lime-500/90 pt-4">
-                  <h4 className="font-medium text-white mb-3 text-center">Schedule Events</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {[
-                      {
-                        type: 'adjuster' as const,
-                        label: "Adjuster Appointment",
-                        icon: <Clock className="h-4 w-4" />
-                      },
-                      {
-                        type: 'build' as const,
-                        label: "Build Date",
-                        icon: <Building2 className="h-4 w-4" />
-                      },
-                      {
-                        type: 'acv' as const,
-                        label: "Pick up ACV",
-                        icon: <DollarSign className="h-4 w-4" />
-                      },
-                      {
-                        type: 'rcv' as const,
-                        label: "Pick up RCV",
-                        icon: <DollarSign className="h-4 w-4" />
-                      }
-                    ].map((eventData, index) => {
-                      const leadEvents = scheduledEvents[lead.id];
-                      const recentEvent = leadEvents && leadEvents[eventData.type] ? getRecentEvent(leadEvents[eventData.type]) : null;
-                      const scheduledDate = recentEvent ? formatEventDate(recentEvent) : null;
-                      const hasEvent = !!recentEvent;
-                      
-                      // Determine border color based on event status
-                      let borderClass = "border-gray-700";
-                      if (hasEvent) {
-                        const eventDate = new Date(recentEvent.start?.dateTime || recentEvent.start?.date || '');
-                        const now = new Date();
-                        const isPastEvent = eventDate < now;
-                        borderClass = isPastEvent ? "border-gray-500 border-2" : "border-lime-500 border-2";
-                      }
-                      
-                      return (
-                        <Button
-                          key={index}
-                          variant="outline"
-                          onClick={() => handleEventButtonClick({
-                            ...eventData,
-                            title: "",
-                            description: ""
-                          }, lead.id)}
-                          className={`h-16 p-2 flex flex-col items-center justify-center gap-1 hover:shadow-md transition-all duration-200 bg-transparent bg-black/60 text-white hover:bg-gray-800/50 ${borderClass}`}
-                          disabled={!session?.user?.email || isCreating || isLoadingEvents}
-                        >
-                          <div className="flex-shrink-0">
-                            {eventData.icon}
-                          </div>
-                          <span className="text-xs font-medium text-center leading-tight px-1">
-                            {eventData.label}
-                          </span>
-                          {scheduledDate && (
-                            <span className="text-xs text-white text-center leading-tight mt-0.5 font-semibold">
-                              {scheduledDate}
-                            </span>
-                          )}
-                          {!scheduledDate && !isLoadingEvents && (
-                            <span className="text-xs text-gray-400 text-center leading-tight mt-0.5">
-                              Click to schedule
-                            </span>
-                          )}
-                          {(isCreating || isLoadingEvents) && (
-                            <div className="flex items-center gap-1">
-                              <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-primary"></div>
-                              <span className="text-xs text-muted-foreground">
-                                {isCreating ? "Creating..." : "Loading..."}
-                              </span>
-                            </div>
-                          )}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                  {session?.user?.email && (
-                    <p className="text-xs text-gray-400 text-center mt-2">
-                      Events will be created in Google Calendar ({session.user.email})
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
+                                </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </Card>
         );
       })}

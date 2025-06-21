@@ -61,24 +61,24 @@ export default function AppSidebar({ className }: SidebarProps) {
   }, [])
 
   const navLinks = [
-    { label: "Home", href: "/", icon: <IconHomeHeart className="h-5 w-5" /> },
-    { label: "Leads", href: "/leads", icon: <IconUserBolt className="h-5 w-5 text-[#FF5400]" /> },
-    { label: "Map", href: "/map", icon: <IconMap className="h-5 w-5 text-[#52489C]" /> },
-    { label: "Add Lead", href: "#add-lead", icon: <Plus className="h-6 w-6 text-lime-400" />, onClick: () => setIsCreateLeadOpen(true) },
-    { label: "MySigner", href: "/submissions", icon: <FileSignature className="h-5 w-5 text-[#F2E8CF]" /> },
+    { label: "Home", href: "/", icon: <IconHomeHeart className="h-6 w-6" /> },
+    { label: "Leads", href: "/leads", icon: <IconUserBolt className="h-6 w-6 text-[#FF5400]" /> },
+    { label: "Map", href: "/map", icon: <IconMap className="h-6 w-6 text-[#52489C]" /> },
+    { label: "Add Lead", href: "#add-lead", icon: <Plus className="h-7 w-7 text-lime-400" />, onClick: () => setIsCreateLeadOpen(true) },
+    { label: "MySigner", href: "/submissions", icon: <FileSignature className="h-6 w-6 text-[#F2E8CF]" /> },
   ] as const;
 
   const googleLinks = [
-    { label: "Calendar", href: "/dashboard/calendar", icon: <IconCalendar className="h-5 w-5 text-[#FFBD00]" /> },
-    { label: "Drive", href: "/drive", icon: <IconFolder className="h-5 w-5 text-[#ea4335]" /> },
-    { label: "Gmail", href: "/gmail", icon: <Mail className="h-5 w-5 text-[#68B0AB]" /> },
+    { label: "Calendar", href: "/dashboard/calendar", icon: <IconCalendar className="h-6 w-6 text-[#FFBD00]" /> },
+    { label: "Drive", href: "/drive", icon: <IconFolder className="h-6 w-6 text-[#ea4335]" /> },
+    { label: "Gmail", href: "/gmail", icon: <Mail className="h-6 w-6 text-[#68B0AB]" /> },
   ] as const;
 
   const moreLinks = [
-    { label: "Quick Links", href: "/quick-links", icon: <IconLink className="h-5 w-5 text-[#337CA0] hover:text-[#FFC800]" /> },
-    { label: "Route Planner", href: "/route-planner", icon: <IconRoute className="h-5 w-5 text-[#16E0BD] hover:text-[#FFC800]" /> },
-    { label: "Team", href: "/team", icon: <User className="h-5 w-5 text-[#77CBB9] hover:text-[#FFC800]" /> },
-    { label: "Contracts", href: "/contracts/general", icon: <FileSignature className="h-5 w-5 text-[#E13700] hover:bg-white/10 hover:text-[#FFC800]" /> },
+    { label: "Quick Links", href: "/quick-links", icon: <IconLink className="h-6 w-6 text-[#337CA0] hover:text-[#FFC800]" /> },
+    { label: "Route Planner", href: "/route-planner", icon: <IconRoute className="h-6 w-6 text-[#16E0BD] hover:text-[#FFC800]" /> },
+    { label: "Team", href: "/team", icon: <User className="h-6 w-6 text-[#77CBB9] hover:text-[#FFC800]" /> },
+    { label: "Contracts", href: "/contracts/general", icon: <FileSignature className="h-6 w-6 text-[#E13700] hover:bg-white/10 hover:text-[#FFC800]" /> },
   ] as const;
 
   const renderAvatar = () => (
@@ -144,13 +144,15 @@ export default function AppSidebar({ className }: SidebarProps) {
         href={link.href}
         onClick={handleClick}
         className={cn(
-          "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all",
+          "flex flex-col items-center justify-center gap-2 p-3 rounded-lg transition-all min-w-[80px] flex-shrink-0",
           pathname === link.href ? "text-[#59ff00] bg-white/10" : "text-white hover:text-[#59ff00] hover:bg-white/5",
           className
         )}
       >
-        {link.icon}
-        <span className="text-xs font-medium text-center leading-tight">{link.label}</span>
+        <div className="text-lg">
+          {link.icon}
+        </div>
+        <span className="text-sm font-semibold text-center leading-tight">{link.label}</span>
       </a>
     );
   };
@@ -159,16 +161,18 @@ export default function AppSidebar({ className }: SidebarProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className={cn(
-          "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all",
+          "flex flex-col items-center justify-center gap-2 p-3 rounded-lg transition-all min-w-[80px] flex-shrink-0",
           googleLinks.some(link => pathname === link.href) ? "text-[#ea4335] bg-white/10" : "text-white hover:text-[#ea4335] hover:bg-white/5",
         )}>
-          <Image 
-            src="/icons/google-color.svg" 
-            alt="Google" 
-            width={20} 
-            height={20} 
-          />
-          <span className="text-xs font-medium text-center leading-tight">Google</span>
+          <div className="text-lg">
+            <Image 
+              src="/icons/google-color.svg" 
+              alt="Google" 
+              width={24} 
+              height={24} 
+            />
+          </div>
+          <span className="text-sm font-semibold text-center leading-tight">Google</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-40 bg-black/80 backdrop-blur-md border-white/20 text-white" align="center">
@@ -190,11 +194,13 @@ export default function AppSidebar({ className }: SidebarProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className={cn(
-          "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all",
+          "flex flex-col items-center justify-center gap-2 p-3 rounded-lg transition-all min-w-[80px] flex-shrink-0",
           moreLinks.some(link => pathname === link.href) ? "text-[#59ff00] bg-white/10" : "text-white hover:text-[#FFC800] hover:bg-white/5",
         )}>
-          <MoreHorizontal className="h-5 w-5" />
-          <span className="text-xs font-medium text-center leading-tight">More</span>
+          <div className="text-lg">
+            <MoreHorizontal className="h-6 w-6" />
+          </div>
+          <span className="text-sm font-semibold text-center leading-tight">More</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-40 bg-black/80 backdrop-blur-md border-white/20 text-white" align="center">
@@ -222,12 +228,14 @@ export default function AppSidebar({ className }: SidebarProps) {
         isHidden ? "translate-y-full" : "translate-y-0",
         className
       )}>
-        <div className="flex items-center justify-evenly h-20 px-2 pb-1">
-          {navLinks.map((link) => (
-            <NavLink key={link.href} link={link} />
-          ))}
-          <GoogleMenu />
-          <MoreMenu />
+        <div className="flex items-center justify-start h-27 px-2 pb-2.5 overflow-x-auto scrollbar-hide gap-2">
+          <div className="flex items-center gap-2 min-w-max">
+            {navLinks.map((link) => (
+              <NavLink key={link.href} link={link} />
+            ))}
+            <GoogleMenu />
+            <MoreMenu />
+          </div>
         </div>
       </div>
 

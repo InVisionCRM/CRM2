@@ -13,6 +13,7 @@ import {
 import { UserFilter, type UserOption } from "@/components/user-filter"
 import { getAssignableUsersAction } from "@/app/actions/user-actions"
 import { SearchBar } from "@/components/ui/search-bar"
+import { Hero } from "@/components/ui/hero"
 
 export type SortField = "name" | "status" | "createdAt";
 export type SortOrder = "asc" | "desc";
@@ -62,6 +63,8 @@ export default function LeadsPage() {
 
   return (
     <div className="w-full justify-center items-center px-4">
+      <Hero />
+      
       <div className="flex justify-center items-center gap-1 mt-2 mb-4 w-full">
         <SearchBar
           containerClassName="relative !transform-none !left-0 !top-0 !z-auto !w-80 !max-w-none !p-0"
