@@ -1,7 +1,7 @@
 "use client"
 
 import { QuickActions } from "@/components/dashboard/quick-actions"
-import { DynamicHero } from "@/components/dynamic-components"
+import { Hero } from "@/components/ui/hero"
 import { RecentActivities } from "@/components/dashboard/recent-activities"
 import { WeatherForecast } from "@/components/dashboard/weather-forecast"
 import { PWAInstallSection } from "@/components/PWAInstallSection"
@@ -14,7 +14,7 @@ export function DashboardContent() {
   return (
     <div className="flex-1 h-full overflow-hidden">
       {/* Hero Section */}
-      <DynamicHero />
+      <Hero />
       
       {/* PWA Install Section */}
       <div className="container mx-auto px-4 py-6">

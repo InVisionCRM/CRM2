@@ -60,21 +60,25 @@ export default function AppSidebar({ className }: SidebarProps) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const navLinks = [
+  // Main navigation items (4 items to fit nicely without scrolling)
+  const mainNavLinks = [
     { label: "Home", href: "/", icon: <IconHomeHeart className="h-6 w-6" /> },
     { label: "Leads", href: "/leads", icon: <IconUserBolt className="h-6 w-6 text-[#FF5400]" /> },
     { label: "Map", href: "/map", icon: <IconMap className="h-6 w-6 text-[#52489C]" /> },
     { label: "Add Lead", href: "#add-lead", icon: <Plus className="h-7 w-7 text-lime-400" />, onClick: () => setIsCreateLeadOpen(true) },
-    { label: "MySigner", href: "/submissions", icon: <FileSignature className="h-6 w-6 text-[#F2E8CF]" /> },
   ] as const;
 
+  // Google links for the More menu
   const googleLinks = [
     { label: "Calendar", href: "/dashboard/calendar", icon: <IconCalendar className="h-6 w-6 text-[#FFBD00]" /> },
     { label: "Drive", href: "/drive", icon: <IconFolder className="h-6 w-6 text-[#ea4335]" /> },
     { label: "Gmail", href: "/gmail", icon: <Mail className="h-6 w-6 text-[#68B0AB]" /> },
   ] as const;
 
+  // More links including MySigner and Google items
   const moreLinks = [
+    { label: "MySigner", href: "/submissions", icon: <FileSignature className="h-6 w-6 text-[#F2E8CF]" /> },
+    ...googleLinks,
     { label: "Quick Links", href: "/quick-links", icon: <IconLink className="h-6 w-6 text-[#337CA0] hover:text-[#FFC800]" /> },
     { label: "Route Planner", href: "/route-planner", icon: <IconRoute className="h-6 w-6 text-[#16E0BD] hover:text-[#FFC800]" /> },
     { label: "Team", href: "/team", icon: <User className="h-6 w-6 text-[#77CBB9] hover:text-[#FFC800]" /> },
@@ -144,7 +148,7 @@ export default function AppSidebar({ className }: SidebarProps) {
         href={link.href}
         onClick={handleClick}
         className={cn(
-          "flex flex-col items-center justify-center gap-2 p-3 rounded-lg transition-all min-w-[80px] flex-shrink-0",
+          "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all flex-1",
           pathname === link.href ? "text-[#59ff00] bg-white/10" : "text-white hover:text-[#59ff00] hover:bg-white/5",
           className
         )}
@@ -152,71 +156,57 @@ export default function AppSidebar({ className }: SidebarProps) {
         <div className="text-lg">
           {link.icon}
         </div>
-        <span className="text-sm font-semibold text-center leading-tight">{link.label}</span>
+        <span className="text-xs font-semibold text-center leading-tight">{link.label}</span>
       </a>
     );
   };
 
-  const GoogleMenu = () => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button className={cn(
-          "flex flex-col items-center justify-center gap-2 p-3 rounded-lg transition-all min-w-[80px] flex-shrink-0",
-          googleLinks.some(link => pathname === link.href) ? "text-[#ea4335] bg-white/10" : "text-white hover:text-[#ea4335] hover:bg-white/5",
-        )}>
-          <div className="text-lg">
-            <Image 
-              src="/icons/google-color.svg" 
-              alt="Google" 
-              width={24} 
-              height={24} 
-            />
-          </div>
-          <span className="text-sm font-semibold text-center leading-tight">Google</span>
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-40 bg-black/80 backdrop-blur-md border-white/20 text-white" align="center">
-        {googleLinks.map((link) => (
-          <DropdownMenuItem 
-            key={link.href}
-            className="cursor-pointer hover:bg-white/10 flex items-center gap-2"
-            onClick={() => window.location.href = link.href}
-          >
-            {link.icon}
-            {link.label}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-
-  const MoreMenu = () => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button className={cn(
-          "flex flex-col items-center justify-center gap-2 p-3 rounded-lg transition-all min-w-[80px] flex-shrink-0",
-          moreLinks.some(link => pathname === link.href) ? "text-[#59ff00] bg-white/10" : "text-white hover:text-[#FFC800] hover:bg-white/5",
-        )}>
-          <div className="text-lg">
-            <MoreHorizontal className="h-6 w-6" />
-          </div>
-          <span className="text-sm font-semibold text-center leading-tight">More</span>
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-40 bg-black/80 backdrop-blur-md border-white/20 text-white" align="center">
-        {moreLinks.map((link) => (
-          <DropdownMenuItem 
-            key={link.href}
-            className="cursor-pointer hover:bg-white/10 flex items-center gap-2"
-            onClick={() => window.location.href = link.href}
-          >
-            {link.icon}
-            {link.label}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
+  const MoreMenu = () => {
+    const isMoreActive = moreLinks.some(link => pathname === link.href);
+    
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className={cn(
+            "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all flex-1",
+            isMoreActive ? "text-[#59ff00] bg-white/10" : "text-white hover:text-[#FFC800] hover:bg-white/5",
+          )}>
+            <div className="text-lg">
+              <MoreHorizontal className="h-6 w-6" />
+            </div>
+            <span className="text-xs font-semibold text-center leading-tight">More</span>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-48 bg-black/80 backdrop-blur-md border-white/20 text-white mb-4" align="center">
+          <DropdownMenuLabel className="text-center">MySigner & Google</DropdownMenuLabel>
+          <DropdownMenuSeparator className="bg-white/10" />
+          {moreLinks.slice(0, 4).map((link) => (
+            <DropdownMenuItem 
+              key={link.href}
+              className="cursor-pointer hover:bg-white/10 flex items-center gap-2"
+              onClick={() => window.location.href = link.href}
+            >
+              {link.icon}
+              {link.label}
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator className="bg-white/10" />
+          <DropdownMenuLabel className="text-center">Other</DropdownMenuLabel>
+          <DropdownMenuSeparator className="bg-white/10" />
+          {moreLinks.slice(4).map((link) => (
+            <DropdownMenuItem 
+              key={link.href}
+              className="cursor-pointer hover:bg-white/10 flex items-center gap-2"
+              onClick={() => window.location.href = link.href}
+            >
+              {link.icon}
+              {link.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
 
   return (
     <>
@@ -228,14 +218,11 @@ export default function AppSidebar({ className }: SidebarProps) {
         isHidden ? "translate-y-full" : "translate-y-0",
         className
       )}>
-        <div className="flex items-center justify-start h-27 px-2 pb-2.5 overflow-x-auto scrollbar-hide gap-2">
-          <div className="flex items-center gap-2 min-w-max">
-            {navLinks.map((link) => (
-              <NavLink key={link.href} link={link} />
-            ))}
-            <GoogleMenu />
-            <MoreMenu />
-          </div>
+        <div className="flex items-center justify-between h-20 px-4 pb-safe">
+          {mainNavLinks.map((link) => (
+            <NavLink key={link.href} link={link} />
+          ))}
+          <MoreMenu />
         </div>
       </div>
 
