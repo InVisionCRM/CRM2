@@ -40,25 +40,64 @@ export default function AppSidebar({ className }: SidebarProps) {
   const { data: session, status } = useSession()
   const [isCreateLeadOpen, setIsCreateLeadOpen] = useState(false)
   const [isHidden, setIsHidden] = useState(false)
+  const [isPWA, setIsPWA] = useState(false)
   const prevScroll = useRef(0)
+  const scrollTimeout = useRef<NodeJS.Timeout>()
 
-  // Hide sidebar when scrolling down on mobile (<768px), show when scrolling up
+  // Detect PWA mode
+  useEffect(() => {
+    const checkPWA = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      const isAppleDevice = /iPad|iPhone|iPod/.test(navigator.userAgent)
+      const isApplePWA = isAppleDevice && window.navigator.standalone === true
+      setIsPWA(isStandalone || isApplePWA)
+    }
+    
+    checkPWA()
+    window.addEventListener('resize', checkPWA)
+    return () => window.removeEventListener('resize', checkPWA)
+  }, [])
+
+  // Improved scroll handling with PWA considerations
   useEffect(() => {
     const handleScroll = () => {
-      if (window.innerWidth >= 768) return // desktop – always visible
+      // Always show on desktop or in PWA mode
+      if (window.innerWidth >= 768 || isPWA) {
+        setIsHidden(false)
+        return
+      }
+
       const current = window.scrollY
-      if (current > prevScroll.current && current > 60) {
-        // scrolling down
+      
+      // Clear any existing timeout
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current)
+      }
+      
+      // Only hide if scrolling down significantly
+      if (current > prevScroll.current && current > 100) {
         setIsHidden(true)
-      } else {
-        // scrolling up
+      } else if (current < prevScroll.current - 20) {
+        // Show when scrolling up with some threshold
         setIsHidden(false)
       }
+      
+      // Auto-show after scroll stops
+      scrollTimeout.current = setTimeout(() => {
+        setIsHidden(false)
+      }, 2000)
+      
       prevScroll.current = current
     }
+
     window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current)
+      }
+    }
+  }, [isPWA])
 
   // Main navigation items (4 items to fit nicely without scrolling)
   const mainNavLinks = [
@@ -211,14 +250,22 @@ export default function AppSidebar({ className }: SidebarProps) {
   return (
     <>
       <div className={cn(
-        "fixed bottom-0 left-0 right-0 z-40",
-        "bg-black/75 backdrop-blur",
-        "border-t border-white/20 shadow-2xl",
-        "transform transition-transform duration-300",
-        isHidden ? "translate-y-full" : "translate-y-0",
+        "fixed bottom-0 left-0 right-0 z-50",
+        "bg-black/90 backdrop-blur-sm border-t border-white/20",
+        "transition-transform duration-300 ease-in-out",
+        // PWA-specific styles
+        isPWA && "pwa-bottom-nav ios-pwa-bottom-nav",
+        // Hide/show logic - always show in PWA mode
+        (!isPWA && isHidden) ? "translate-y-full" : "translate-y-0",
         className
       )}>
-        <div className="flex items-center justify-between h-20 px-4 pb-safe">
+        <div className={cn(
+          "flex items-center justify-between px-4",
+          // Standard height and padding
+          "h-20 pb-safe",
+          // Additional safe area for PWA
+          isPWA && "pb-safe-area-inset-bottom"
+        )}>
           {mainNavLinks.map((link) => (
             <NavLink key={link.href} link={link} />
           ))}

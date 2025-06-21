@@ -118,6 +118,25 @@ body { /* Added from styles/globals.css */
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }
+  .pb-safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 1rem);
+  }
+  
+  /* PWA-specific styles */
+  @supports (display-mode: standalone) {
+    .pwa-bottom-nav {
+      background-color: rgba(0, 0, 0, 0.95) !important;
+      border-top: 2px solid rgba(255, 255, 255, 0.2) !important;
+    }
+  }
+  
+  /* iOS PWA specific styles */
+  @media (display-mode: standalone) and (-webkit-appearance: none) {
+    .ios-pwa-bottom-nav {
+      padding-bottom: max(env(safe-area-inset-bottom), 1rem) !important;
+      background-color: rgba(0, 0, 0, 0.98) !important;
+    }
+  }
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */
