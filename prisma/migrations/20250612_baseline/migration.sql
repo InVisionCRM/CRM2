@@ -1,11 +1,11 @@
 -- CreateEnum
--- CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'MANAGER', 'USER');
+CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'MANAGER', 'USER');
 
 -- CreateEnum
 CREATE TYPE "LeadStatus" AS ENUM ('signed_contract', 'scheduled', 'colors', 'acv', 'job', 'completed_jobs', 'zero_balance', 'denied', 'follow_ups');
 
 -- CreateEnum
-CREATE TYPE "AppointmentPurpose" AS ENUM ('INITIAL_CONSULTATION', 'ESTIMATE', 'FOLLOW_UP', 'INSPECTION', 'CONTRACT_SIGNING', 'OTHER');
+CREATE TYPE "AppointmentPurpose" AS ENUM ('INSPECTION', 'FILE_CLAIM', 'FOLLOW_UP', 'ADJUSTER', 'BUILD_DAY', 'OTHER');
 
 -- CreateEnum
 CREATE TYPE "AppointmentStatus" AS ENUM ('SCHEDULED', 'COMPLETED', 'CANCELLED', 'RESCHEDULED', 'NO_SHOW');
@@ -14,13 +14,13 @@ CREATE TYPE "AppointmentStatus" AS ENUM ('SCHEDULED', 'COMPLETED', 'CANCELLED', 
 CREATE TYPE "ActivityType" AS ENUM ('LEAD_CREATED', 'LEAD_UPDATED', 'NOTE_ADDED', 'MEETING_SCHEDULED', 'DOCUMENT_UPLOADED', 'ESTIMATE_CREATED', 'CONTRACT_CREATED', 'STATUS_CHANGED', 'APPOINTMENT_CREATED', 'APPOINTMENT_UPDATED');
 
 -- CreateEnum
-CREATE TYPE "ActivityStatus" AS ENUM ('PENDING', 'COMPLETED', 'CANCELLED');
-
--- CreateEnum
 CREATE TYPE "KnockStatus" AS ENUM ('KNOCKED', 'NO_ANSWER', 'NOT_INTERESTED', 'FOLLOW_UP', 'INSPECTED', 'IN_CONTRACT');
 
 -- CreateEnum
-CREATE TYPE "DamageType" AS ENUM ('HAIL', 'WIND', 'FIRE');
+CREATE TYPE "DamageType" AS ENUM ('HAIL', 'WIND', 'FIRE', 'WIND_AND_HAIL');
+
+-- CreateEnum
+CREATE TYPE "SignatureRequestStatus" AS ENUM ('SENT', 'VIEWED', 'SIGNED', 'EXPIRED', 'CANCELLED');
 
 -- CreateTable
 CREATE TABLE "Account" (
@@ -36,6 +36,7 @@ CREATE TABLE "Account" (
     "scope" TEXT,
     "id_token" TEXT,
     "session_state" TEXT,
+    "refresh_token_expires_in" INTEGER,
 
     CONSTRAINT "Account_pkey" PRIMARY KEY ("id")
 );
@@ -102,6 +103,9 @@ CREATE TABLE "Lead" (
     "longitude" DECIMAL(10,7),
     "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "googleDriveFolderId" TEXT,
+    "googleDriveUrl" TEXT,
+    "metadata" JSONB,
 
     CONSTRAINT "Lead_pkey" PRIMARY KEY ("id")
 );
@@ -126,15 +130,15 @@ CREATE TABLE "Appointment" (
 
 -- CreateTable
 CREATE TABLE "Activity" (
-    "id" UUID NOT NULL,
+    "id" TEXT NOT NULL,
     "type" "ActivityType" NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT,
     "userId" UUID NOT NULL,
     "leadId" VARCHAR(255),
-    "status" "ActivityStatus",
-    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "imageUrl" TEXT,
 
     CONSTRAINT "Activity_pkey" PRIMARY KEY ("id")
 );
@@ -178,6 +182,23 @@ CREATE TABLE "Visit" (
 );
 
 -- CreateTable
+CREATE TABLE "Event" (
+    "id" TEXT NOT NULL,
+    "userId" UUID NOT NULL,
+    "googleId" TEXT,
+    "summary" TEXT NOT NULL,
+    "description" TEXT,
+    "location" TEXT,
+    "startTime" TIMESTAMP(3),
+    "endTime" TIMESTAMP(3),
+    "isAllDay" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Event_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "ClientIdSequence" (
     "id" SERIAL NOT NULL,
     "lastId" INTEGER NOT NULL DEFAULT 50000,
@@ -204,17 +225,65 @@ CREATE TABLE "File" (
 CREATE TABLE "Contract" (
     "id" UUID NOT NULL,
     "leadId" VARCHAR(255) NOT NULL,
-    "contractType" TEXT NOT NULL,
-    "signatures" JSONB NOT NULL,
-    "dates" JSONB NOT NULL,
-    "names" JSONB NOT NULL,
-    "addresses" JSONB NOT NULL,
-    "contactInfo" JSONB NOT NULL,
+    "contractType" TEXT,
+    "signatures" JSONB,
+    "dates" JSONB,
+    "names" JSONB,
+    "addresses" JSONB,
+    "contactInfo" JSONB,
     "pdfUrl" TEXT,
     "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "signedPdfUrl" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'pending',
+    "fileName" TEXT,
+    "googleDriveFileId" TEXT,
+    "googleDriveLink" TEXT,
+    "uploadedAt" TIMESTAMP(3),
 
     CONSTRAINT "Contract_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "RoutePoint" (
+    "id" TEXT NOT NULL,
+    "userId" UUID NOT NULL,
+    "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lat" DOUBLE PRECISION NOT NULL,
+    "lng" DOUBLE PRECISION NOT NULL,
+
+    CONSTRAINT "RoutePoint_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "LeadPhoto" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "url" TEXT NOT NULL,
+    "thumbnailUrl" TEXT NOT NULL,
+    "mimeType" TEXT,
+    "size" INTEGER,
+    "leadId" VARCHAR(255) NOT NULL,
+    "uploadedById" UUID,
+    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "driveFileId" TEXT,
+
+    CONSTRAINT "LeadPhoto_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ApiClient" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "clientId" TEXT NOT NULL,
+    "clientSecret" TEXT NOT NULL,
+    "active" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ApiClient_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -254,13 +323,10 @@ CREATE INDEX "Appointment_userId_idx" ON "Appointment"("userId");
 CREATE INDEX "Appointment_startTime_idx" ON "Appointment"("startTime");
 
 -- CreateIndex
-CREATE INDEX "Activity_userId_idx" ON "Activity"("userId");
-
--- CreateIndex
 CREATE INDEX "Activity_leadId_idx" ON "Activity"("leadId");
 
 -- CreateIndex
-CREATE INDEX "Activity_type_idx" ON "Activity"("type");
+CREATE INDEX "Activity_userId_idx" ON "Activity"("userId");
 
 -- CreateIndex
 CREATE INDEX "Activity_createdAt_idx" ON "Activity"("createdAt");
@@ -293,6 +359,12 @@ CREATE INDEX "Visit_userId_idx" ON "Visit"("userId");
 CREATE INDEX "Visit_status_idx" ON "Visit"("status");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Event_googleId_key" ON "Event"("googleId");
+
+-- CreateIndex
+CREATE INDEX "Event_userId_idx" ON "Event"("userId");
+
+-- CreateIndex
 CREATE INDEX "File_leadId_idx" ON "File"("leadId");
 
 -- CreateIndex
@@ -300,6 +372,30 @@ CREATE INDEX "File_category_idx" ON "File"("category");
 
 -- CreateIndex
 CREATE INDEX "Contract_leadId_idx" ON "Contract"("leadId");
+
+-- CreateIndex
+CREATE INDEX "RoutePoint_userId_idx" ON "RoutePoint"("userId");
+
+-- CreateIndex
+CREATE INDEX "RoutePoint_timestamp_idx" ON "RoutePoint"("timestamp");
+
+-- CreateIndex
+CREATE INDEX "LeadPhoto_leadId_idx" ON "LeadPhoto"("leadId");
+
+-- CreateIndex
+CREATE INDEX "LeadPhoto_uploadedById_idx" ON "LeadPhoto"("uploadedById");
+
+-- CreateIndex
+CREATE INDEX "LeadPhoto_createdAt_idx" ON "LeadPhoto"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "LeadPhoto_updatedAt_idx" ON "LeadPhoto"("updatedAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ApiClient_name_key" ON "ApiClient"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ApiClient_clientId_key" ON "ApiClient"("clientId");
 
 -- AddForeignKey
 ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -317,16 +413,16 @@ ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_leadId_fkey" FOREIGN KEY (
 ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Activity" ADD CONSTRAINT "Activity_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Activity" ADD CONSTRAINT "Activity_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "Lead"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "VisionMarker" ADD CONSTRAINT "VisionMarker_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Activity" ADD CONSTRAINT "Activity_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "VisionMarker" ADD CONSTRAINT "VisionMarker_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "Lead"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "VisionMarker" ADD CONSTRAINT "VisionMarker_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Visit" ADD CONSTRAINT "Visit_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "Lead"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -335,7 +431,20 @@ ALTER TABLE "Visit" ADD CONSTRAINT "Visit_leadId_fkey" FOREIGN KEY ("leadId") RE
 ALTER TABLE "Visit" ADD CONSTRAINT "Visit_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Event" ADD CONSTRAINT "Event_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "File" ADD CONSTRAINT "File_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "Lead"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Contract" ADD CONSTRAINT "Contract_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "Lead"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RoutePoint" ADD CONSTRAINT "RoutePoint_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LeadPhoto" ADD CONSTRAINT "LeadPhoto_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "Lead"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LeadPhoto" ADD CONSTRAINT "LeadPhoto_uploadedById_fkey" FOREIGN KEY ("uploadedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+

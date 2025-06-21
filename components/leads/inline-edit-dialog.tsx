@@ -11,7 +11,7 @@ import { Loader2 } from "lucide-react"
 
 interface InlineEditDialogProps {
   leadId: string
-  field: "claimNumber" | "address" | "insuranceCompany"
+  field: "claimNumber" | "address" | "insuranceCompany" | "insurancePhone" | "adjusterName" | "adjusterPhone" | "adjusterEmail"
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
@@ -27,8 +27,17 @@ export function InlineEditDialog({ leadId, field, isOpen, onClose, onSuccess }: 
     setIsLoading(true)
 
     try {
+      // Map field names to database field names
+      const fieldMapping: Record<string, string> = {
+        adjusterName: 'insuranceAdjusterName',
+        adjusterPhone: 'insuranceAdjusterPhone',
+        adjusterEmail: 'insuranceAdjusterEmail',
+      }
+      
+      const dbFieldName = fieldMapping[field] || field
+      
       const result = await updateLeadAction(leadId, {
-        [field]: value
+        [dbFieldName]: value
       })
 
       if (result.success) {
@@ -64,12 +73,21 @@ export function InlineEditDialog({ leadId, field, isOpen, onClose, onSuccess }: 
         return "Address"
       case "insuranceCompany":
         return "Insurance Company"
+      case "insurancePhone":
+        return "Insurance Phone"
+      case "adjusterName":
+        return "Adjuster Name"
+      case "adjusterPhone":
+        return "Adjuster Phone"
+      case "adjusterEmail":
+        return "Adjuster Email"
       default:
         return field
     }
   }
 
   const fieldLabel = getFieldLabel()
+  const inputType = field === "adjusterEmail" ? "email" : "text"
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -85,6 +103,7 @@ export function InlineEditDialog({ leadId, field, isOpen, onClose, onSuccess }: 
               </Label>
               <Input
                 id={field}
+                type={inputType}
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 className="col-span-3"

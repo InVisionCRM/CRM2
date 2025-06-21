@@ -176,7 +176,7 @@ export const Hero = () => {
         animate={{ opacity: 1, y: 0 }}
         style={{ opacity }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="h-[11.25rem] w-full bg-transparent flex flex-col items-center overflow-hidden rounded-md relative"
+        className="h-[4.25rem] w-full bg-transparent flex flex-col items-center overflow-hidden rounded-md relative"
       >
         {/* User Avatar in top right */}
         <motion.div
@@ -189,7 +189,7 @@ export const Hero = () => {
             <DropdownMenuTrigger asChild>
               <div className="cursor-pointer ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                 <div className="flex flex-col items-center">
-                  <Avatar className="h-10 w-10 border border-white/20 hover:border-white/40 transition-colors bg-black/50 backdrop-blur-sm">
+                  <Avatar className="h-10 w-10 bg-black/50 backdrop-blur-sm ring-2 ring-[#59ff00] ring-offset-2 ring-offset-black/50">
                     {session?.user?.image ? (
                       <AvatarImage src={session.user.image} alt={session.user.name || "User"} />
                     ) : (
@@ -198,13 +198,6 @@ export const Hero = () => {
                       </AvatarFallback>
                     )}
                   </Avatar>
-                  {isAdmin && (
-                    <div className="mt-1">
-                      <Badge variant="secondary" className="bg-[#59ff00] text-black hover:bg-[#59ff00]/90 text-xs">
-                        Admin
-                      </Badge>
-                    </div>
-                  )}
                 </div>
               </div>
             </DropdownMenuTrigger>
@@ -331,38 +324,37 @@ export const Hero = () => {
         )}
 
         {/* Main content container with flex layout */}
-        <div className="w-full h-full flex flex-col items-center">
-          {/* PURLIN text at top */}
-          <motion.h1 
+        <div className="w-full h-full flex flex-col items-start">
+          {/* PURLIN text now positioned in the top-left */}
+          <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-            className="text-4xl md:text-5xl lg:text-7xl font-bold text-center z-20 mt-[50px]"
+            className="absolute top-4 left-8 z-20"
           >
-            <span className="text-white">PURL</span>
-            <span style={{ color: "#59ff00" }} className="drop-shadow-[0_0_8px_rgba(89,255,0,0.8)]">
-              IN
-            </span>
-          </motion.h1>
-
-          {/* Glowing line */}
-          <div className="relative w-[20rem] h-4">
-            <motion.div 
-              initial={{ scaleX: 0 }}
-              whileInView={{ scaleX: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.2, delay: 0.8, ease: "easeOut" }}
-              className="absolute inset-x-10 top-0 bg-gradient-to-r from-transparent via-[#59ff00] to-transparent h-[2px] w-3/4 blur-sm" 
-            />
-            <motion.div 
-              initial={{ scaleX: 0 }}
-              whileInView={{ scaleX: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.2, delay: 0.8, ease: "easeOut" }}
-              className="absolute inset-x-10 top-0 bg-gradient-to-r from-transparent via-[#59ff00] to-transparent h-px w-3/4" 
-            />
-          </div>
+            <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold text-left relative">
+              <span className="text-white">PURL</span>
+              <span style={{ color: "#59ff00" }} className="drop-shadow-[0_0_8px_rgba(89,255,0,0.8)]">
+                IN
+              </span>
+              {/* Neon line under PURLIN */}
+              <div className="absolute -bottom-2 left-0 w-[12rem]">
+                <motion.div 
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: 1.2, ease: "easeOut" }}
+                  className="h-[2px] w-full bg-gradient-to-r from-[#59ff00] to-transparent blur-[1px]"
+                />
+                <motion.div 
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: 1.2, ease: "easeOut" }}
+                  className="h-px w-full bg-gradient-to-r from-[#59ff00] to-transparent -mt-[1px]"
+                />
+              </div>
+            </h1>
+          </motion.div>
         </div>
       </motion.div>
     </>

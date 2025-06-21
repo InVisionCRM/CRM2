@@ -98,7 +98,21 @@ export function useLeads(options: UseLeadsOptions = {}): UseLeadsResult {
             assignedTo: salesperson ? salesperson.name : null,
             assignedToId: lead.assignedToId || null,
             claimNumber: lead.claimNumber || null,
+            // Insurance fields
             insuranceCompany: lead.insuranceCompany || null,
+            insurancePolicyNumber: lead.insurancePolicyNumber || null,
+            insurancePhone: lead.insurancePhone || null,
+            insuranceSecondaryPhone: lead.insuranceSecondaryPhone || null,
+            insuranceDeductible: lead.insuranceDeductible || null,
+            dateOfLoss: lead.dateOfLoss || null,
+            damageType: lead.damageType || null,
+            // Adjuster fields
+            insuranceAdjusterName: lead.insuranceAdjusterName || null,
+            insuranceAdjusterPhone: lead.insuranceAdjusterPhone || null,
+            insuranceAdjusterEmail: lead.insuranceAdjusterEmail || null,
+            adjusterAppointmentDate: lead.adjusterAppointmentDate || null,
+            adjusterAppointmentTime: lead.adjusterAppointmentTime || null,
+            adjusterAppointmentNotes: lead.adjusterAppointmentNotes || null,
             createdAt: lead.createdAt,
             latestActivity
           }

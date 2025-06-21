@@ -79,7 +79,34 @@ export async function getLeads(options: GetLeadsOptions): Promise<Lead[]> {
     const leads = await prisma.lead.findMany({
       where,
       orderBy,
-      include: {
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        address: true,
+        status: true,
+        latitude: true,
+        longitude: true,
+        createdAt: true,
+        updatedAt: true,
+        // Insurance fields
+        insuranceCompany: true,
+        insurancePolicyNumber: true,
+        insurancePhone: true,
+        insuranceSecondaryPhone: true,
+        insuranceDeductible: true,
+        dateOfLoss: true,
+        damageType: true,
+        claimNumber: true,
+        // Adjuster fields
+        insuranceAdjusterName: true,
+        insuranceAdjusterPhone: true,
+        insuranceAdjusterEmail: true,
+        adjusterAppointmentDate: true,
+        adjusterAppointmentTime: true,
+        adjusterAppointmentNotes: true,
         assignedTo: {
           select: {
             id: true,
@@ -155,9 +182,37 @@ interface CreateLeadInput {
   claimNumber?: string | null
 }
 
+// Function to geocode address
+async function geocodeAddress(address: string) {
+  try {
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${process.env.GOOGLE_MAPS_API_KEY}`
+    );
+    const data = await response.json();
+    
+    if (data.results && data.results.length > 0) {
+      const location = data.results[0].geometry.location;
+      return {
+        latitude: location.lat,
+        longitude: location.lng
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error geocoding address:', error);
+    return null;
+  }
+}
+
 export async function createLead(data: CreateLeadInput): Promise<Lead> {
   try {
     const id = crypto.randomUUID()
+
+    // Get coordinates if address is provided
+    let coordinates = null;
+    if (data.address) {
+      coordinates = await geocodeAddress(data.address);
+    }
 
     const lead = await prisma.lead.create({
       data: {
@@ -170,6 +225,11 @@ export async function createLead(data: CreateLeadInput): Promise<Lead> {
         status: data.status,
         assignedToId: data.assignedToId,
         notes: data.notes,
+        // Add coordinates if available
+        ...(coordinates && {
+          latitude: coordinates.latitude,
+          longitude: coordinates.longitude
+        }),
         // Insurance fields
         insuranceCompany: data.insuranceCompany,
         insurancePolicyNumber: data.insurancePolicyNumber,
@@ -177,7 +237,7 @@ export async function createLead(data: CreateLeadInput): Promise<Lead> {
         insuranceSecondaryPhone: data.insuranceSecondaryPhone,
         insuranceDeductible: data.insuranceDeductible,
         dateOfLoss: data.dateOfLoss,
-        damageType: data.damageType as any, // Cast to handle enum
+        damageType: data.damageType as any,
         claimNumber: data.claimNumber
       }
     })

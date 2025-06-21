@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useSearchParams } from "next/navigation" // Use next/navigation for App Router
 import { LeadStatus } from "@prisma/client"
-import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy, Loader2, NotebookPen, PenTool } from "lucide-react" // Added NotebookPen and PenTool icons
+import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy, Loader2, NotebookPen, PenTool, CheckCircle, CalendarDays, Calendar, Palette, DollarSign, Hammer, ArrowRight, Paintbrush } from "lucide-react" // Added NotebookPen and PenTool icons
 import { StatusChangeDrawer } from "@/components/leads/StatusChangeDrawer"
 import { LeadDetailTabs } from "@/components/leads/LeadDetailTabs"
 import { ActivityFeed } from "@/components/leads/ActivityFeed"
@@ -14,7 +14,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { updateLeadAction } from "@/app/actions/lead-actions" // Changed import
 import { useToast } from "@/components/ui/use-toast" // Assuming useToast is in ui dir
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import ReactConfetti from 'react-confetti';
+import React from 'react'
+import ReactConfetti from 'react-confetti'
 import { useWindowSize } from 'react-use'; // For confetti dimensions
 import { formatStatusLabel } from "@/lib/utils"; // Import formatStatusLabel
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -25,6 +26,10 @@ import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { LeadOverviewTab } from "@/components/leads/tabs/LeadOverviewTab"
 import { ImportantDates } from "@/components/leads/ImportantDates"
+import { LeadEmailer } from "@/components/leads/LeadEmailer"
+import { JobCompletionCard } from "@/components/leads/JobCompletionCard"
+import { format, parseISO } from "date-fns"
+import UploadToDriveSection from '@/components/leads/UploadToDriveSection'
 
 // Quick Actions Button component
 interface QuickActionButtonProps {
@@ -32,14 +37,56 @@ interface QuickActionButtonProps {
   href?: string;
   label: string;
   disabled?: boolean;
+  variant?: 'default' | 'contract' | 'sign' | 'filemanager' | 'photos' | 'addnote' | 'email';
 }
 
-const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, label, disabled }) => {
+const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, label, disabled, variant = 'default' }) => {
+  const getVariantStyles = () => {
+    switch (variant) {
+      case 'contract':
+        return "bg-[#635380] border-l border-[#635380] hover:bg-white/10";
+      case 'sign':
+        return "bg-[#E8871E] border-l border-[#E8871E] hover:bg-white/10";
+      case 'filemanager':
+        return "bg-[#276FBF] border-l border-[#276FBF] hover:bg-white/10";
+      case 'photos':
+        return "bg-[#D64933] border-l border-[#D64933] hover:bg-white/10";
+      case 'addnote':
+        return "bg-[#14110F] border-l border-[#14110F] hover:bg-white/10";
+      case 'email':
+        return "bg-[#1D4ED8] border-l border-[#1D4ED8] hover:bg-white/10";
+      default:
+        return "bg-gradient-to-b from-black/40 via-black/30 via-black/20 to-white border-1 hover:from-slate-800/30 hover:via-slate-800/20 hover:to-white";
+    }
+  };
+
+  const getIcon = () => {
+    if (label.includes('Send Contract') || label.includes('Sending')) {
+      return <FileSignature className="h-4 w-4 mr-1" />;
+    }
+    if (label.includes('Sign in Person') || label.includes('Creating')) {
+      return <PenTool className="h-4 w-4 mr-1" />;
+    }
+    if (label.includes('Add Note')) {
+      return <NotebookPen className="h-4 w-4 mr-1" />;
+    }
+    if (label.includes('Photos')) {
+      return <Image className="h-4 w-4 mr-1" />;
+    }
+    if (label.includes('File Manager')) {
+      return <FileText className="h-4 w-4 mr-1" />;
+    }
+    if (label.includes('Send Email')) {
+      return <Mail className="h-4 w-4 mr-1" />;
+    }
+    return null;
+  };
+
   const commonProps = {
     className: cn(
-      "relative flex h-16 flex-1 items-center justify-center bg-gradient-to-b from-black/40 via-black/30 via-black/20 to-lime-500/30 backdrop-blur-lg p-1 text-md font-bold text-white",
-      "border-l border-lime-500 first:border-l-0",
-      "transition-colors hover:from-slate-800/30 hover:via-slate-800/20 hover:to-lime-500/30",
+      "relative flex h-16 flex-1 items-center justify-center backdrop-blur-lg p-1 text-sm font-bold text-white",
+      "first:border-l-0 transition-all duration-200",
+      getVariantStyles(),
       disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
     ),
   };
@@ -52,8 +99,221 @@ const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, la
 
   return (
     <Tag {...tagProps}>
-      <span>{label}</span>
+      <div className="flex flex-col items-center justify-center gap-1">
+        {getIcon()}
+        <span className="text-xs leading-tight">{label}</span>
+      </div>
     </Tag>
+  );
+};
+
+// Date Card Component for Lead Created and Job Completion
+interface DateCardProps {
+  title: string;
+  date: Date | string | null;
+  icon: React.ReactNode;
+  className?: string;
+  color?: string; // optional accent color for title & icon
+  onClick?: () => void;
+}
+
+const DateCard: React.FC<DateCardProps> = ({ title, date, icon, className, color, onClick }) => {
+  const formatDate = (dateValue: Date | string | null) => {
+    if (!dateValue) return 'N/A'
+    const date = typeof dateValue === 'string' ? parseISO(dateValue) : dateValue
+    return format(date, 'MMM d, yyyy')
+  }
+
+  const accentColor = color || '#FFFFFF';
+  const formattedDate = formatDate(date);
+  const dateObj = typeof date === 'string' ? parseISO(date as string) : date;
+  const isPastDate = dateObj && dateObj < new Date();
+  
+  // Determine border color based on date status
+  let borderClass = "border-gray-700";
+  if (formattedDate) {
+    borderClass = isPastDate ? "border-gray-500 border-2" : "border-lime-500 border-2";
+  }
+
+  return (
+    <div className={cn(
+      "h-16 p-2 flex flex-col items-center justify-center gap-0.5 rounded-lg border bg-black/60 transition-all duration-200",
+      borderClass,
+      className
+    )}>
+      <div className="flex-shrink-0" style={{ color: accentColor }}>
+        {icon}
+      </div>
+      <span className="text-xs font-semibold text-center leading-tight" style={{ color: accentColor }}>
+        {title}
+      </span>
+      {formattedDate && (
+        <span className="text-xs text-white text-center leading-tight font-semibold">
+          {formattedDate}
+        </span>
+      )}
+      {!formattedDate && (
+        <span className="text-xs text-gray-400 text-center leading-tight mt-0.5">
+          Not set
+        </span>
+      )}
+    </div>
+  );
+};
+
+
+
+// Status Progression Component
+interface StatusProgressionProps {
+  currentStatus: LeadStatus;
+  leadId: string;
+  onStatusChange: (status: LeadStatus) => void;
+  isLoading: boolean;
+  loadingStatus: LeadStatus | null;
+}
+
+const StatusProgression: React.FC<StatusProgressionProps> = ({
+  currentStatus,
+  leadId,
+  onStatusChange,
+  isLoading,
+  loadingStatus
+}) => {
+  // Define the status progression order as specified
+  const statusOrder: { status: LeadStatus; label: string; abbrev: string }[] = [
+    { status: LeadStatus.follow_ups, label: "Follow Up", abbrev: "F-UP" },
+    { status: LeadStatus.signed_contract, label: "Signed Contract", abbrev: "SIGN" },
+    { status: LeadStatus.scheduled, label: "Scheduled", abbrev: "SCHED" },
+    { status: LeadStatus.colors, label: "Colors", abbrev: "COLOR" },
+    { status: LeadStatus.acv, label: "ACV", abbrev: "ACV" },
+    { status: LeadStatus.job, label: "Job", abbrev: "JOB" },
+    { status: LeadStatus.completed_jobs, label: "Completed Job", abbrev: "DONE" },
+    { status: LeadStatus.zero_balance, label: "Zero Balance", abbrev: "PAID" },
+    { status: LeadStatus.denied, label: "Denied", abbrev: "DEN" }
+  ];
+
+  const currentIndex = statusOrder.findIndex(item => item.status === currentStatus);
+
+  // Map status to color and icon
+  const statusMeta: Record<LeadStatus, { color: string; icon: React.ReactNode }> = {
+    [LeadStatus.follow_ups]: { color: '#6B7280', icon: <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" /> },
+    [LeadStatus.signed_contract]: { color: '#635380', icon: <FileSignature className="h-3 w-3 sm:h-4 sm:w-4" /> },
+    [LeadStatus.scheduled]: { color: '#E8871E', icon: <Calendar className="h-3 w-3 sm:h-4 sm:w-4" /> },
+    [LeadStatus.colors]: { color: '#059669', icon: <Palette className="h-3 w-3 sm:h-4 sm:w-4" /> },
+    [LeadStatus.acv]: { color: '#2563EB', icon: <DollarSign className="h-3 w-3 sm:h-4 sm:w-4" /> },
+    [LeadStatus.job]: { color: '#F59E0B', icon: <Hammer className="h-3 w-3 sm:h-4 sm:w-4" /> },
+    [LeadStatus.completed_jobs]: { color: '#10B981', icon: <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" /> },
+    [LeadStatus.zero_balance]: { color: '#22C55E', icon: <DollarSign className="h-3 w-3 sm:h-4 sm:w-4" /> },
+    [LeadStatus.denied]: { color: '#EF4444', icon: <XIcon className="h-3 w-3 sm:h-4 sm:w-4" /> },
+  }
+
+  // Ref for auto-centering
+  const containerRef = useRef<HTMLDivElement>(null)
+  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([])
+
+  useEffect(() => {
+    const currentBtn = buttonRefs.current[currentIndex]
+    if (currentBtn && containerRef.current) {
+      currentBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+    }
+  }, [currentIndex])
+
+  const getStatusStyle = (status: LeadStatus, index: number) => {
+    const meta = statusMeta[status]
+    const isCurrent = status === currentStatus
+    const distance = Math.abs(index - currentIndex)
+
+    const base = "relative flex items-center justify-center text-white rounded-full transition-all duration-300 cursor-pointer select-none bg-gradient-to-b from-[#0f0f0f] via-[#1a1a1a] to-[#000] border border-lime-400/40 shadow-[inset_0_0_8px_rgba(0,255,160,0.25),0_0_6px_rgba(0,255,160,0.15)] hover:shadow-[inset_0_0_14px_rgba(0,255,160,0.5),0_0_12px_rgba(0,255,160,0.4)] hover:ring-2 hover:ring-lime-400/70 before:absolute before:inset-0 before:-z-10 before:bg-[radial-gradient(transparent,rgba(0,255,160,0.25))] before:opacity-0 hover:before:opacity-100"
+    const size = distance === 0 ? "w-12 h-12 sm:w-14 sm:h-14 text-[10px]" : distance === 1 ? "w-10 h-10 sm:w-12 sm:h-12 text-[9px]" : distance === 2 ? "w-8 h-8 sm:w-10 sm:h-10 text-[8px]" : "w-7 h-7 sm:w-8 sm:h-8 text-[6px]"
+    const opacity = distance === 0 ? "opacity-100" : distance === 1 ? "opacity-90" : distance === 2 ? "opacity-60" : "opacity-30"
+    const scale = distance === 0 ? "scale-110" : distance === 1 ? "scale-95" : distance === 2 ? "scale-85" : "scale-70"
+
+    return `${base} ${size} ${opacity} ${scale}`
+  }
+
+  return (
+    <div className="w-full px-2 sm:px-4">
+      <div 
+        ref={containerRef}
+        className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-4 scrollbar-hide scroll-smooth scroll-px-6"
+      >
+        {statusOrder.map((item, index) => {
+          const meta = statusMeta[item.status]
+          const isCurrent = item.status === currentStatus
+          const distance = Math.abs(index - currentIndex)
+          const isPast = index < currentIndex
+
+          return (
+            <div key={item.status} className="flex items-center">
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-[8px] sm:text-[10px] leading-none whitespace-nowrap">{item.abbrev}</span>
+                <button
+                  ref={el => {
+                    buttonRefs.current[index] = el;
+                  }}
+                  onClick={() => onStatusChange(item.status)}
+                  style={{ backgroundColor: meta.color, borderColor: meta.color }}
+                  className={`${getStatusStyle(item.status, index)} border-2`}
+                >
+                  {meta.icon}
+                  {isCurrent && (
+                     <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping absolute -bottom-1"/>
+                   )}
+                </button>
+              </div>
+              {/* connector */}
+              {index < statusOrder.length - 1 && (
+                <div
+                  className="h-0.5 w-4 sm:w-6 rounded-full"
+                  style={{ backgroundColor: isPast ? '#00ff7f' : '#4B5563', boxShadow: isPast ? '0 0 6px rgba(0,255,128,0.6)' : undefined }}
+                />
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// SectionNavButton component
+const SectionNavButton: React.FC<{ label: string; color: string; onClick: () => void }> = ({ label, color, onClick }) => (
+  <button
+    onClick={onClick}
+    className={cn(
+      'text-[11px] sm:text-xs font-semibold py-2 px-2 rounded-md bg-black/0 hover:bg-white/10',
+      color,
+      'w-full transition-colors duration-200 whitespace-nowrap'
+    )}
+  >
+    {label}
+  </button>
+);
+
+// Mobile top navigation bar (visible on screens < sm)
+const MobileNavBar: React.FC<{ onNavigate: (id: string) => void }> = ({ onNavigate }) => {
+  const buttons = [
+    { label: 'Schedule', id: 'schedule-info', color: 'text-white' },
+    { label: 'Contracts', id: 'contracts-info', color: 'text-white' },
+    { label: 'Upload', id: 'upload-info', color: 'text-white' },
+    { label: 'Summary', id: 'summary-info', color: 'text-white' },
+    { label: 'Contact', id: 'contact-info', color: 'text-white' },
+    { label: 'Insurance', id: 'insurance-info', color: 'text-white' },
+    { label: 'Adjuster', id: 'adjuster-info', color: 'text-white' },
+    { label: 'Activity', id: 'activity-info', color: 'text-white' },
+  ] as const;
+
+  return (
+    <div className="sm:hidden fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur border-b border-white/20">
+      <div className="flex overflow-x-auto no-scrollbar px-2 py-1 gap-2 items-center">
+        {buttons.map((b, idx) => (
+          <React.Fragment key={b.id}>
+            <SectionNavButton label={b.label} color={b.color} onClick={() => onNavigate(b.id)} />
+            {idx !== buttons.length - 1 && <span className="h-4 w-px bg-white/20" />}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
   );
 };
 
@@ -75,9 +335,31 @@ export default function LeadDetailPage() {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const { width, height } = useWindowSize(); // For confetti
 
+  // Street View related state
+  const [streetViewUrl, setStreetViewUrl] = useState<string>("")
+  const [isStreetViewLoading, setIsStreetViewLoading] = useState(true)
+  const [streetViewError, setStreetViewError] = useState<string | null>(null)
+
+  // Contract and dialog state
+  const [showLoadingDialog, setShowLoadingDialog] = useState(false);
+  const [isSendingContract, setIsSendingContract] = useState(false);
+  const [contractSuccessData, setContractSuccessData] = useState<any>(null);
+  const [isSigningInPerson, setIsSigningInPerson] = useState(false);
+  const [showContractSaveDialog, setShowContractSaveDialog] = useState(false);
+  const [completedContracts, setCompletedContracts] = useState<any[]>([]);
+  const [isSavingToDrive, setIsSavingToDrive] = useState(false);
+  const [dialogDismissed, setDialogDismissed] = useState(false);
+
   // Add a reference to the activity feed for refreshing
   const activityFeedRef = useRef<HTMLDivElement>(null);
   const addNoteRef = useRef<HTMLDivElement>(null);
+  // Refs for section navigation
+  const scheduleRef = useRef<HTMLDivElement>(null);
+  const contractsSectionRef = useRef<HTMLDivElement>(null);
+  const uploadSectionRef = useRef<HTMLDivElement>(null);
+  const summaryRef = useRef<HTMLDivElement>(null);
+  const activityRef = activityFeedRef; // reuse existing ref
+
   const [refreshActivities, setRefreshActivities] = useState(0);
   
   // Function to refresh activities when new note is added
@@ -85,6 +367,56 @@ export default function LeadDetailPage() {
     // Increment refresh counter to trigger useEffect in ActivityFeed
     setRefreshActivities(prev => prev + 1);
   };
+
+  // Street View URL generation
+  useEffect(() => {
+    if (lead?.address) {
+      setIsStreetViewLoading(true)
+      setStreetViewError(null)
+      
+      const url = `https://maps.googleapis.com/maps/api/streetview?size=600x400&location=${encodeURIComponent(lead.address)}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+      setStreetViewUrl(url)
+    }
+  }, [lead?.address])
+
+  // Check for completed contracts
+  const checkCompletedContracts = async () => {
+    if (!lead?.id) return;
+
+    try {
+      const response = await fetch(`/api/leads/${lead.id}/contracts/completed`);
+      if (response.ok) {
+        const data = await response.json();
+        const completed = data.contracts?.filter((contract: any) => 
+          contract.status === 'completed' || contract.status === 'signed'
+        ) || [];
+        
+        setCompletedContracts(completed);
+        
+        // Show save dialog if there are completed contracts and dialog hasn't been dismissed
+        if (completed.length > 0 && !dialogDismissed) {
+          // Add a small delay to ensure UI is ready
+          setTimeout(() => {
+            setShowContractSaveDialog(true);
+          }, 1000);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking completed contracts:', error);
+    }
+  };
+
+  // Check for completed contracts when component mounts or lead changes
+  useEffect(() => {
+    if (lead?.id && !dialogDismissed) {
+      // Add a delay to avoid showing immediately
+      const timer = setTimeout(() => {
+        checkCompletedContracts();
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [lead?.id, dialogDismissed]);
 
   // Effect to update activeTab if query parameter changes after initial load (optional, but good practice)
   useEffect(() => {
@@ -96,6 +428,12 @@ export default function LeadDetailPage() {
       // For now, let's be explicit: if 'files' is in query, switch to it. Otherwise, initialTab handles default.
     }
   }, [searchParams, activeTab]);
+
+  // Helper function to get important date from metadata
+  const getImportantDateFromMetadata = (dateKey: string): string | null => {
+    const metadata = lead?.metadata as Record<string, any> | null;
+    return metadata?.importantDates?.[dateKey] || null;
+  };
 
   const handleStatusChange = async (newStatus: LeadStatus) => {
     if (!id) {
@@ -112,12 +450,24 @@ export default function LeadDetailPage() {
       const result = await updateLeadAction(id, { status: newStatus }) 
       
       if (result.success) {
-        // toast({ // Can replace toast with the success card
-        //   title: "Status Updated",
-        //   description: `Lead status successfully changed to ${newStatus}.`,
-        // })
-        mutate() // Re-fetch data to confirm update and get latest state
+        // Automatically set jobCompletionDate if status is completed_jobs and date is not set
+        if (newStatus === LeadStatus.completed_jobs && !getImportantDateFromMetadata('jobCompletionDate')) {
+          try {
+            await fetch(`/api/leads/${id}/important-dates`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                dateType: 'jobCompletionDate',
+                date: new Date().toISOString()
+              })
+            })
+            mutate()
+          } catch (err) {
+            console.error('Failed to set job completion date:', err)
+          }
+        }
         setShowSuccessMessage(true);
+        mutate();
         // Optional: auto-hide success message
         setTimeout(() => setShowSuccessMessage(false), 5000); 
       } else {
@@ -152,234 +502,38 @@ export default function LeadDetailPage() {
     window.location.href = `/dashboard/calendar?leadId=${id}&leadName=${encodeURIComponent(leadName)}&returnUrl=${encodeURIComponent(`/leads/${id}`)}`;
   };
 
-  // Construct address string safely
-  const addressString = lead 
-    ? lead.address || "Address not available" // Use the single address field, provide fallback for null
-    : "Loading address...";
-
-  const [filesDialogOpen, setFilesDialogOpen] = useState(false);
-  const [contractsDialogOpen, setContractsDialogOpen] = useState(false);
-  const [photosDialogOpen, setPhotosDialogOpen] = useState(false);
-
-  const handleOpenFilesDialog = () => setFilesDialogOpen(true);
-  const handleCloseFilesDialog = () => setFilesDialogOpen(false);
-  const handleOpenContractsDialog = () => setContractsDialogOpen(true);
-  const handleCloseContractsDialog = () => setContractsDialogOpen(false);
-  const handleOpenPhotosDialog = () => setPhotosDialogOpen(true);
-  const handleClosePhotosDialog = () => setPhotosDialogOpen(false);
-
-  const [streetViewUrl, setStreetViewUrl] = useState<string>("")
-  const [isStreetViewLoading, setIsStreetViewLoading] = useState(true)
-  const [streetViewError, setStreetViewError] = useState<string | null>(null)
-  const [isCloningContract, setIsCloningContract] = useState(false);
-  const [showLoadingDialog, setShowLoadingDialog] = useState(false);
-  const [isSendingContract, setIsSendingContract] = useState(false);
-  const [sendContractDialog, setSendContractDialog] = useState(false);
-  const [contractSuccessData, setContractSuccessData] = useState<any>(null);
-  const [isSigningInPerson, setIsSigningInPerson] = useState(false);
-  const [showContractSaveDialog, setShowContractSaveDialog] = useState(false);
-  const [completedContracts, setCompletedContracts] = useState<any[]>([]);
-  const [isSavingToDrive, setIsSavingToDrive] = useState(false);
-  const [dialogDismissed, setDialogDismissed] = useState(false);
-
-  useEffect(() => {
-    if (lead?.address) {
-      setIsStreetViewLoading(true)
-      setStreetViewError(null)
-      const encodedAddress = encodeURIComponent(lead.address)
-      const url = `https://maps.googleapis.com/maps/api/streetview?size=800x400&location=${encodedAddress}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-      setStreetViewUrl(url)
-    }
-  }, [lead?.address])
-
-  // Check for completed contracts that need to be saved to Google Drive
-  useEffect(() => {
-    const checkCompletedContracts = async () => {
-      if (!lead?.email || dialogDismissed) {
-        console.log('ℹ️ Skipping contract check:', { 
-          hasEmail: !!lead?.email, 
-          dialogDismissed 
-        });
-        return;
-      }
-
-      try {
-        console.log('🔍 Checking completed contracts for lead:', lead.email);
-        
-        // Get DocuSeal submissions for this lead
-        const response = await fetch(`/api/docuseal/submissions?email=${encodeURIComponent(lead.email)}`);
-        if (!response.ok) {
-          console.error('❌ Failed to fetch submissions:', response.statusText);
-          return;
-        }
-
-        const data = await response.json();
-        const submissions = data.data || [];
-        
-        console.log(`📋 Found ${submissions.length} total submissions for ${lead.email}`);
-
-        // Filter for completed submissions
-        const completed = submissions.filter((submission: any) => {
-          const isCompleted = submission.status === 'completed';
-          console.log(`📄 Submission ${submission.id}: status=${submission.status}, completed=${isCompleted}`);
-          return isCompleted;
-        });
-
-        console.log(`✅ Found ${completed.length} completed submissions`);
-
-        if (completed.length > 0) {
-          setCompletedContracts(completed);
-          
-          // Check if any completed contracts are not saved to Google Drive yet
-          console.log('🔍 Checking Google Drive for existing contracts...');
-          
-          // Since we're searching by lead ID, we only need to check once for all contracts
-          try {
-            console.log(`🔍 Checking Google Drive for lead ${lead.id} contracts`);
-            const checkResponse = await fetch(`/api/google-drive/check-contract?leadId=${lead.id}`);
-            const checkData = await checkResponse.json();
-            
-            if (!checkResponse.ok) {
-              console.error(`❌ Google Drive check failed for lead ${lead.id}:`, checkData.error);
-              // If Google Drive check fails, assume contracts need saving
-              console.log('🔔 Showing contract save dialog (Google Drive check failed)');
-              setShowContractSaveDialog(true);
-            } else {
-              const exists = checkData.exists;
-              console.log(`${exists ? '✅' : '❌'} Lead ${lead.id} contracts ${exists ? 'exist' : 'not found'} in Google Drive`);
-              
-              if (checkData.files && checkData.files.length > 0) {
-                console.log('📄 Found contract files:', checkData.files.map((f: any) => f.name));
-              }
-              
-              if (!exists) {
-                console.log('🔔 Showing contract save dialog (no contracts found in Drive)');
-                setShowContractSaveDialog(true);
-              } else {
-                console.log('✅ All completed contracts are already saved to Google Drive');
-              }
-            }
-          } catch (error) {
-            console.error(`❌ Error checking Google Drive for lead ${lead.id}:`, error);
-            // If check fails, show dialog to be safe
-            console.log('🔔 Showing contract save dialog (error during check)');
-            setShowContractSaveDialog(true);
-          }
-        } else {
-          console.log('ℹ️ No completed contracts found - dialog will not show');
-        }
-      } catch (error) {
-        console.error('❌ Error checking completed contracts:', error);
-      }
-    };
-
-    checkCompletedContracts();
-  }, [lead?.email, dialogDismissed]);
-
-  const handleCopyMessage = () => {
-    if (!lead) return;
-
-    const message = `Hello ${lead.firstName ?? 'Valued Customer'},
-
-The general agreement for the property at ${lead.address ?? 'your property'} is ready.
-Please review the document and, when everything looks correct, click the "Sign" button at the top of the page to add your electronic signature.
-
-You'll receive a confirmation email as soon as the signature is recorded, and then, we'll be able to move forward with scheduling.
-
-If you have any questions about the agreement, just reply to this message for the quickest response.
-
-Thank you for choosing In-Vision Construction!`;
-
-    navigator.clipboard.writeText(message).then(() => {
-      toast({
-        title: "Message Copied!",
-        description: "The e-sign message has been copied to your clipboard.",
-      });
-    }).catch(err => {
-      toast({
-        title: "Error",
-        description: "Could not copy message to clipboard.",
-        variant: "destructive",
-      });
-      console.error('Failed to copy message: ', err);
-    });
-  };
-
-  const handleSendForSignature = async () => {
-    if (!id) return;
-
-    setIsCloningContract(true);
-    setShowLoadingDialog(true);
-    try {
-      const response = await fetch('/api/contracts/clone', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ leadId: id }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Failed to create contract.');
-      }
-
-      console.log("Contract clone API response:", result);
-
-      if (!result.url) {
-        console.error("API response is missing the 'url' property.");
-        throw new Error("Failed to get contract URL from the server.");
-      }
-
-      window.open(result.url, '_blank');
-      toast({
-        title: "Contract Ready",
-        description: 'Click "File ▸ Request eSignature" in Google Docs.',
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An unknown error occurred.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCloningContract(false);
-      setShowLoadingDialog(false);
-    }
-  };
-
   const handleSendContract = async () => {
     if (!lead) return;
     
     setIsSendingContract(true);
+    setShowLoadingDialog(true);
+    
     try {
-      const response = await fetch('/api/send-contract', {
+      const response = await fetch('/api/docuseal/send-contract', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(lead),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          leadId: lead.id,
+          templateId: 2 // Default to Scope of Work template
+        })
       });
-
-      const data = await response.json();
-
+      
       if (response.ok) {
+        const data = await response.json();
         setContractSuccessData(data);
-        setSendContractDialog(false);
-        setShowLoadingDialog(true);
-        
-        // Refresh the page after a short delay to show updated contract status
-        setTimeout(() => {
-          window.location.reload();
-        }, 3000);
+        setShowSuccessMessage(true);
+        mutate();
+        setShowLoadingDialog(false);
       } else {
-        console.error('Failed to send contract:', data);
-        alert(`Failed to send contract: ${data.error || 'Unknown error'}`);
+        throw new Error('Failed to send contract');
       }
     } catch (error) {
-      console.error('Error sending contract:', error);
-      alert('Failed to send contract. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to send contract. Please try again.",
+        variant: "destructive",
+      });
+      setShowLoadingDialog(false);
     } finally {
       setIsSendingContract(false);
     }
@@ -389,30 +543,29 @@ Thank you for choosing In-Vision Construction!`;
     if (!lead) return;
     
     setIsSigningInPerson(true);
+    
     try {
-      const response = await fetch('/api/docuseal/sign-in-person', {
+      const response = await fetch('/api/sign-in-person', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ leadId: lead.id }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId: lead.id })
       });
-
-      const data = await response.json();
-
+      
       if (response.ok) {
-        // Open the signing URL directly in a new tab
-        window.open(data.signingUrl, '_blank', 'noopener,noreferrer');
-        
-        // Show a simple success message
-        alert(`In-person signing opened in new tab for ${lead.firstName} ${lead.lastName}. Hand the device to the customer to complete signing.`);
+        const data = await response.json();
+        toast({
+          title: "Success",
+          description: "Contract created for in-person signing.",
+        });
       } else {
-        console.error('Failed to create in-person signing:', data);
-        alert(`Failed to create in-person signing: ${data.error || 'Unknown error'}`);
+        throw new Error('Failed to create contract');
       }
     } catch (error) {
-      console.error('Error creating in-person signing:', error);
-      alert('Failed to create in-person signing. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to create contract. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsSigningInPerson(false);
     }
@@ -420,49 +573,32 @@ Thank you for choosing In-Vision Construction!`;
 
   const handleScrollToAddNote = () => {
     if (addNoteRef.current) {
-      addNoteRef.current.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'center' 
-      });
-      // Optional: focus on the textarea after scrolling
-      setTimeout(() => {
-        const textarea = addNoteRef.current?.querySelector('textarea');
-        if (textarea) {
-          textarea.focus();
-        }
-      }, 500);
+      addNoteRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
   const handleSaveContractsToDrive = async () => {
-    if (!lead) return;
-    
+    if (!lead?.id || completedContracts.length === 0) return;
+
     setIsSavingToDrive(true);
+
     try {
-      const response = await fetch('/api/docuseal/auto-save-contracts', {
+      const response = await fetch(`/api/leads/${lead.id}/contracts/save-to-drive`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ leadEmail: lead.email }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contracts: completedContracts })
       });
 
-      const data = await response.json();
-
       if (response.ok) {
+        const data = await response.json();
         toast({
-          title: "Success!",
-          description: `${data.savedCount || 0} contract(s) saved to Google Drive.`,
+          title: "✅ Success!",
+          description: `${completedContracts.length} contract(s) saved to Google Drive`,
         });
         setShowContractSaveDialog(false);
         setDialogDismissed(true); // Prevent dialog from showing again
-        
-        // Refresh the page to update contract status
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
       } else {
-        console.error('Failed to save contracts:', data);
+        const data = await response.json();
         toast({
           title: "Error",
           description: data.error || 'Failed to save contracts to Google Drive.',
@@ -479,6 +615,29 @@ Thank you for choosing In-Vision Construction!`;
     } finally {
       setIsSavingToDrive(false);
     }
+  };
+
+  // Construct address string safely
+  const addressString = lead 
+    ? lead.address || "Address not available" // Use the single address field, provide fallback for null
+    : "Loading address...";
+
+  const [filesDialogOpen, setFilesDialogOpen] = useState(false);
+  const [contractsDialogOpen, setContractsDialogOpen] = useState(false);
+  const [photosDialogOpen, setPhotosDialogOpen] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+
+  const handleOpenFilesDialog = () => setFilesDialogOpen(true);
+  const handleCloseFilesDialog = () => setFilesDialogOpen(false);
+  const handleOpenContractsDialog = () => setContractsDialogOpen(true);
+  const handleCloseContractsDialog = () => setContractsDialogOpen(false);
+  const handleOpenPhotosDialog = () => setPhotosDialogOpen(true);
+  const handleClosePhotosDialog = () => setPhotosDialogOpen(false);
+  const handleOpenEmailDialog = () => setEmailDialogOpen(true);
+
+  const scrollToId = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
   };
 
   if (isLeadLoading && !lead) { // Show skeleton only on initial load
@@ -520,293 +679,269 @@ Thank you for choosing In-Vision Construction!`;
   const leadAddress = lead.address;
 
   return (
-    <div className="container mx-auto px-4 py-4 sm:px-6 sm:py-8 space-y-4 md:space-y-6 relative">
-      {showSuccessMessage && (
-        <>
-          <div className="fixed inset-0 z-[60]">
-            <ReactConfetti width={width} height={height} numberOfPieces={200} recycle={false} />
-          </div>
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" onClick={() => setShowSuccessMessage(false)}></div>
-          <Card className="fixed top-[500px] left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-11/12 max-w-md p-6 shadow-2xl bg-card animate-in fade-in duration-300 scale-in-center">
-            <CardHeader className="p-0 mb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-2xl text-green-600 dark:text-green-500">
-                  <CheckCircle2 className="h-8 w-8" /> {contractSuccessData ? "Contract Sent!" : "Congratulations!"}
-                </CardTitle>
-                <Button variant="ghost" size="icon" onClick={() => setShowSuccessMessage(false)} className="text-muted-foreground hover:text-foreground">
-                  <XIcon className="h-5 w-5" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0 text-center">
-              {contractSuccessData ? (
-                <>
-                  <p className="text-lg mb-1">📄 Contract successfully sent to</p>
-                  <p className="text-xl font-semibold text-blue-600 mb-2">{contractSuccessData.email}</p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Submission ID: {contractSuccessData.id} • Status: {contractSuccessData.status}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-lg mb-1">Lead status successfully updated to</p>
-                  <p className="text-xl font-semibold text-green-500 mb-4">{lead.status ? formatStatusLabel(lead.status) : "the new status"}!</p>
-                </>
-              )}
-              <Button onClick={() => setShowSuccessMessage(false)} className="w-full text-black sm:w-auto">Close</Button>
-            </CardContent>
-          </Card>
-        </>
-      )}
+    <>
+      {/* Mobile Navigation Bar */}
+      <MobileNavBar onNavigate={scrollToId} />
 
-      <div className="w-full flex flex-col gap-4 sm:gap-6">
-        {/* Street View Section */}
-        {lead?.address && (
-          <div className="w-full">
-            {/* Status and Claim Number - 1px above street view */}
-            <div className="w-full flex justify-between items-center mb-px">
-              {/* Status on the left */}
-              <div className="flex flex-col items-start justify-start">
-                <Badge variant={lead.status as any} className="text-lg px-8">
-                  {formatStatusLabel(lead.status)}
-                </Badge>
-                <div className="font-small mt-1 py-1">
-                  <StatusChangeDrawer
-                    currentStatus={lead.status}
-                    onStatusChange={handleStatusChange}
-                    isLoading={isStatusUpdating}
-                    loadingStatus={statusBeingUpdated}
-                  />
-                </div>
-              </div>
-
-              {/* Claim number on the right */}
-              {lead.claimNumber && (
-                <div className="flex flex-col items-end">
-                  <span className="text-gray-500 text-[8px] sm:text-[10px]">Claim #</span>
-                  <span className="text-green-500 text-lg sm:text-xl font-medium pb-1">{lead.claimNumber}</span>
-                </div>
-              )}
+      <div className="container mx-auto px-4 pt-20 sm:pt-4 pb-4 sm:px-6 sm:py-8 space-y-4 md:space-y-6 relative">
+        {showSuccessMessage && (
+          <>
+            <div className="fixed inset-0 z-[60]">
+              <ReactConfetti width={width} height={height} numberOfPieces={200} recycle={false} />
             </div>
-
-            {/* Name - 3px above street view */}
-            <div className="w-full flex justify-center mb-[3px]">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-center">
-                {lead.firstName && lead.lastName ? `${lead.firstName} ${lead.lastName}` : lead.email || lead.phone || "Lead Details"}
-              </h1>
-            </div>
-
-            <Card className="w-full overflow-hidden">
-              <CardContent className="p-0">
-                {streetViewUrl && (
-                  <div className="relative w-full h-[400px]">
-                    {/* Address Overlay */}
-                    <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between bg-slate-900/70 p-2 backdrop-blur-sm">
-                      <div className="flex items-center space-x-2 overflow-hidden">
-                        <MapPin className="h-4 w-4 flex-shrink-0 text-gray-300" />
-                        <span className="truncate text-sm font-medium text-gray-100">{lead.address}</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(lead.address || '')}`, '_blank', 'noopener,noreferrer')}
-                        className="flex-shrink-0 text-blue-400 hover:text-blue-300"
-                      >
-                        Open in Maps
-                      </Button>
-                    </div>
-                    
-                    <img
-                      src={streetViewUrl}
-                      alt={`Street view of ${lead.address}`}
-                      className="w-full h-full object-cover"
-                      onLoad={() => setIsStreetViewLoading(false)}
-                      onError={() => {
-                        setIsStreetViewLoading(false)
-                        setStreetViewError("Failed to load Street View image")
-                      }}
-                    />
-                    {isStreetViewLoading && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                        <Skeleton className="w-full h-full" />
-                      </div>
-                    )}
-                    {streetViewError && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-500">
-                        <p>{streetViewError}</p>
-                      </div>
-                    )}
-                    <div className="absolute bottom-2 left-0 right-0 flex w-full border-t border-b-[2px] text-center border-lime-500">
-                      <QuickActionButton 
-                        href={`/leads/${id}/files`}
-                        label="File Manager" 
-                      />
-                      <QuickActionButton 
-                        onClick={handleOpenPhotosDialog} 
-                        label="Photos" 
-                      />
-                      <QuickActionButton
-                        onClick={handleScrollToAddNote}
-                        label="Add Note"
-                      />
-                      <QuickActionButton
-                        onClick={handleSendContract}
-                        label={isSendingContract ? "Sending..." : "Send Contract"}
-                        disabled={!lead || isSendingContract}
-                      />
-                      <QuickActionButton
-                        onClick={handleSignInPerson}
-                        label={isSigningInPerson ? "Creating..." : "Sign in Person"}
-                        disabled={!lead || isSigningInPerson}
-                      />
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </div>
-      
-      {/* Divider */}
-      <div className="w-full h-px bg-gradient-to-r from-transparent via-lime-500/50 to-transparent my-2 sm:my-3" />
-            
-      {/* Divider under quick action tabs */}
-      <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500/50 to-transparent" />
-      
-      {/* Important Dates Section */}
-      <ImportantDates lead={lead} />
-      
-      {/* Main content area - Two column layout on desktop */}
-      <div className="grid grid-cols-1 md:grid-cols-[2fr,1fr] gap-6">
-        {/* Left column - Lead Detail Tabs and Add Note */}
-        <div className="flex flex-col gap-6">
-          <div className="space-y-4">
-            <LeadDetailTabs 
-              lead={lead}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-            />
-            {/* Divider under lead overview tab */}
-            <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500/50 to-transparent" />
-          </div>
-          <div className="w-full" ref={addNoteRef}>
-            <AddNote leadId={lead.id} onSuccess={handleNoteAdded} />
-          </div>
-        </div>
-
-        {/* Right column - Activity Feed only */}
-        <div className="w-full" ref={activityFeedRef}>
-          <ActivityFeed leadId={lead.id} key={refreshActivities} />
-        </div>
-      </div>
-
-      {/* Files Dialog */}
-      <Dialog open={filesDialogOpen} onOpenChange={setFilesDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Files</DialogTitle>
-          </DialogHeader>
-          <LeadFiles leadId={lead.id} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Photos Dialog */}
-      <Dialog open={photosDialogOpen} onOpenChange={setPhotosDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Photos</DialogTitle>
-          </DialogHeader>
-          <LeadPhotosTab 
-            leadId={lead.id}
-            claimNumber={lead.claimNumber || undefined}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Contracts Dialog */}
-      <Dialog open={contractsDialogOpen} onOpenChange={setContractsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Contracts</DialogTitle>
-          </DialogHeader>
-          <LeadContractsTab leadId={lead.id} />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
-        <DialogContent className="sm:max-w-md flex flex-col items-center justify-center p-6 gap-4">
-          <div className="flex items-center gap-3">
-            <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
-            <span className="text-lg font-medium">Processing...</span>
-          </div>
-          <p className="text-center text-muted-foreground">
-            Your contract is being sent. This may take a few moments.
-          </p>
-        </DialogContent>
-      </Dialog>
-
-      {/* Contract Save to Drive Dialog */}
-      <Dialog open={showContractSaveDialog} onOpenChange={setShowContractSaveDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileSignature className="h-5 w-5 text-green-600" />
-              Contract Ready to Save
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
-                <div>
-                  <h3 className="font-medium text-green-900">Contract Completed!</h3>
-                  <p className="text-sm text-green-700 mt-1">
-                    {lead?.firstName} {lead?.lastName} has completed signing their contract.
-                  </p>
-                  {completedContracts.length > 0 && (
-                    <p className="text-xs text-green-600 mt-2">
-                      {completedContracts.length} completed contract{completedContracts.length > 1 ? 's' : ''} found
-                    </p>
-                  )}
+            <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" onClick={() => setShowSuccessMessage(false)}></div>
+            <Card className="fixed top-[500px] left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-11/12 max-w-md p-6 shadow-2xl bg-card animate-in fade-in duration-300 scale-in-center">
+              <CardHeader className="p-0 mb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-2xl text-green-600 dark:text-green-500">
+                    <CheckCircle2 className="h-8 w-8" /> {contractSuccessData ? "Contract Sent!" : "Congratulations!"}
+                  </CardTitle>
+                  <Button variant="ghost" size="icon" onClick={() => setShowSuccessMessage(false)} className="text-muted-foreground hover:text-foreground">
+                    <XIcon className="h-5 w-5" />
+                  </Button>
                 </div>
-              </div>
-            </div>
-            
-            <p className="text-sm text-muted-foreground">
-              Would you like to save the signed contract to your Google Drive shared folder?
-            </p>
-            
-            <div className="flex gap-3 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowContractSaveDialog(false);
-                  setDialogDismissed(true); // Don't show again this session
-                }}
-                disabled={isSavingToDrive}
-              >
-                Not Now
-              </Button>
-              <Button
-                onClick={handleSaveContractsToDrive}
-                disabled={isSavingToDrive}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {isSavingToDrive ? (
+              </CardHeader>
+              <CardContent className="p-0 text-center">
+                {contractSuccessData ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Saving...
+                    <p className="text-lg mb-1">📄 Contract successfully sent to</p>
+                    <p className="text-xl font-semibold text-blue-600 mb-2">{contractSuccessData.email}</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Submission ID: {contractSuccessData.id} • Status: {contractSuccessData.status}
+                    </p>
                   </>
                 ) : (
-                  'Save to Drive'
+                  <>
+                    <p className="text-lg mb-1">Lead status successfully updated to</p>
+                    <p className="text-xl font-semibold text-green-500 mb-4">{lead.status ? formatStatusLabel(lead.status) : "the new status"}!</p>
+                  </>
                 )}
-              </Button>
+                <Button onClick={() => setShowSuccessMessage(false)} className="w-full text-black sm:w-auto">Close</Button>
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {/* Status Progression - Top of page */}
+        <div className="w-full mb-6">
+          <StatusProgression
+            currentStatus={lead.status}
+            leadId={lead.id}
+            onStatusChange={handleStatusChange}
+            isLoading={isStatusUpdating}
+            loadingStatus={statusBeingUpdated}
+          />
+        </div>
+
+        {/* Name and Claim Number Row */}
+        <div className="w-full flex justify-between items-center mb-4">
+          {/* Lead Name - Left */}
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold">
+            {lead.firstName && lead.lastName ? `${lead.firstName} ${lead.lastName}` : lead.email || lead.phone || "Lead Details"}
+          </h1>
+          
+          {/* Claim Number - Right, above streetview */}
+          {lead.claimNumber && (
+            <div className="flex flex-col items-end">
+              <span className="text-gray-500 text-[8px] sm:text-[10px]">Claim #</span>
+              <span className="text-green-500 text-lg sm:text-xl font-medium">{lead.claimNumber}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="w-full flex flex-col gap-4 sm:gap-6">
+          {/* Street View Section */}
+          {lead?.address && (
+            <div className="w-full">
+              <Card className="w-full overflow-hidden">
+                <CardContent className="p-0">
+                  {streetViewUrl && (
+                    <div className="relative w-full h-[400px]">
+                      {/* Address Overlay */}
+                      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between bg-slate-900/70 p-2 backdrop-blur-sm">
+                        <div className="flex items-center space-x-2 overflow-hidden">
+                          <MapPin className="h-4 w-4 flex-shrink-0 text-gray-300" />
+                          <span className="truncate text-sm font-medium text-gray-100">{lead.address}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(lead.address || '')}`, '_blank', 'noopener,noreferrer')}
+                          className="flex-shrink-0 text-blue-400 hover:text-blue-300"
+                        >
+                          Open in Maps
+                        </Button>
+                      </div>
+                      
+                      {/* Date Cards Overlay */}
+                      <div className="absolute top-14 left-2 z-10 flex gap-2">
+                        <DateCard
+                          title="Created"
+                          date={lead.createdAt}
+                          icon={<CalendarDays className="h-[25px] w-4" />}
+                          color="#51D6FF"
+                          className="w-28"
+                        />
+                        <div className="w-28">
+                          <JobCompletionCard lead={lead} />
+                        </div>
+                      </div>
+                      
+                      <img
+                        src={streetViewUrl}
+                        alt={`Street view of ${lead.address}`}
+                        className="w-full h-full object-cover"
+                        onLoad={() => setIsStreetViewLoading(false)}
+                        onError={() => {
+                          setIsStreetViewLoading(false)
+                          setStreetViewError("Failed to load Street View image")
+                        }}
+                      />
+                      {isStreetViewLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                          <Skeleton className="w-full h-full" />
+                        </div>
+                      )}
+                      {streetViewError && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-500">
+                          <p>{streetViewError}</p>
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 flex w-full text-center border-t-2 border-white rounded-t-xl shadow-inner shadow-black/40 bg-black/60 backdrop-blur">
+                        <QuickActionButton 
+                          href={`/leads/${id}/files`}
+                          label="File Manager" 
+                          variant="filemanager"
+                        />
+                        <QuickActionButton 
+                          onClick={handleOpenPhotosDialog} 
+                          label="Photos" 
+                          variant="photos"
+                        />
+                        <QuickActionButton
+                          onClick={handleScrollToAddNote}
+                          label="Add Note"
+                          variant="addnote"
+                        />
+                        <QuickActionButton
+                          onClick={handleSendContract}
+                          label={isSendingContract ? "Sending..." : "Send Contract"}
+                          disabled={!lead || isSendingContract}
+                          variant="contract"
+                        />
+                        <QuickActionButton
+                          onClick={handleSignInPerson}
+                          label={isSigningInPerson ? "Creating..." : "Sign in Person"}
+                          disabled={!lead || isSigningInPerson}
+                          variant="sign"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Important Dates & Scheduler */}
+              <div className="w-full mt-6" ref={scheduleRef} id="schedule-info">
+                <ImportantDates lead={lead} />
+              </div>
+
+              {/* Upload to Drive Section */}
+              <div className="w-full mt-6" ref={uploadSectionRef} id="upload-info">
+                 <UploadToDriveSection leadId={lead.id} />
+              </div>
+
+              {/* Contracts Section */}
+              <div className="w-full mt-6" id="contracts-info">
+                <div className="rounded-xl p-4 bg-gradient-to-b from-[#0f0f0f] via-[#1a1a1a] to-black border border-lime-400/20 shadow-inner shadow-lime-400/10">
+                  <LeadContractsTab leadId={lead.id} />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Divider */}
+        <div className="w-full h-px bg-gradient-to-r from-transparent via-lime-500/50 to-transparent my-2 sm:my-3" />
+              
+        {/* Divider under quick action tabs */}
+        <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500/50 to-transparent" />
+        
+        {/* Main content area - Two column layout on desktop */}
+        <div className="grid grid-cols-1 md:grid-cols-[2fr,1fr] gap-6">
+          {/* Left column - Lead Detail Tabs and Add Note */}
+          <div className="flex flex-col gap-6">
+            <div className="space-y-4" ref={summaryRef} id="summary-info">
+              <LeadDetailTabs 
+                lead={lead}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+              />
+              {/* Divider under lead overview tab */}
+              <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500/50 to-transparent" />
+            </div>
+            <div className="w-full" ref={addNoteRef}>
+              <AddNote leadId={lead.id} onSuccess={handleNoteAdded} />
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+
+          {/* Right column - Activity Feed only */}
+          <div className="w-full" ref={activityRef} id="activity-info">
+            <ActivityFeed leadId={lead.id} key={refreshActivities} />
+          </div>
+        </div>
+
+        {/* Files Dialog */}
+        <Dialog open={filesDialogOpen} onOpenChange={setFilesDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Files</DialogTitle>
+            </DialogHeader>
+            <LeadFiles leadId={lead.id} />
+          </DialogContent>
+        </Dialog>
+
+        {/* Photos Dialog */}
+        <Dialog open={photosDialogOpen} onOpenChange={setPhotosDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Photos</DialogTitle>
+            </DialogHeader>
+            <LeadPhotosTab 
+              leadId={lead.id}
+              claimNumber={lead.claimNumber || undefined}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* Contracts Dialog */}
+        <Dialog open={contractsDialogOpen} onOpenChange={setContractsDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Contracts</DialogTitle>
+            </DialogHeader>
+            <LeadContractsTab leadId={lead.id} />
+          </DialogContent>
+        </Dialog>
+
+        {/* Emailer Dialog */}
+        {lead && (
+          <LeadEmailer lead={lead} open={emailDialogOpen} onOpenChange={setEmailDialogOpen} />
+        )}
+
+        <Dialog open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
+          <DialogContent className="sm:max-w-md flex flex-col items-center justify-center p-6 gap-4">
+            <div className="flex items-center gap-3">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+              <span className="text-lg font-medium">Processing...</span>
+            </div>
+            <p className="text-center text-muted-foreground">
+              Your contract is being sent. This may take a few moments.
+            </p>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </>
   )
 }
 

@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useSession, signIn, signOut } from "next-auth/react"
-import { User, LogIn, LogOut, Plus, MoreHorizontal, FileSignature, Bot } from "lucide-react"
+import { User, LogIn, LogOut, Plus, MoreHorizontal, FileSignature, Bot, Mail } from "lucide-react"
+import Image from 'next/image'
 import { IconUserBolt, IconHomeHeart, IconMap, IconLink, IconCalendar, IconFolder, IconRoute } from "@tabler/icons-react"
 import {
   DropdownMenu,
@@ -26,6 +27,7 @@ interface NavLink {
   label: string
   href: string
   icon: React.ReactNode
+  onClick?: () => void
 }
 
 interface NavLinkProps {
@@ -37,52 +39,47 @@ export default function AppSidebar({ className }: SidebarProps) {
   const pathname = usePathname() || ''
   const { data: session, status } = useSession()
   const [isCreateLeadOpen, setIsCreateLeadOpen] = useState(false)
+  const [isHidden, setIsHidden] = useState(false)
+  const prevScroll = useRef(0)
+
+  // Hide sidebar when scrolling down on mobile (<768px), show when scrolling up
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerWidth >= 768) return // desktop – always visible
+      const current = window.scrollY
+      if (current > prevScroll.current && current > 60) {
+        // scrolling down
+        setIsHidden(true)
+      } else {
+        // scrolling up
+        setIsHidden(false)
+      }
+      prevScroll.current = current
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const navLinks = [
-    {
-      label: "Home",
-      href: "/",
-      icon: <IconHomeHeart className="h-5 w-5 shrink-0 text-[#ffffff]" />,
-    },
-    {
-      label: "Leads",
-      href: "/leads",
-      icon: <IconUserBolt className="h-5 w-5 shrink-0 text-[#ffffff]" />,
-    },
-  ]
+    { label: "Home", href: "/", icon: <IconHomeHeart className="h-5 w-5" /> },
+    { label: "Leads", href: "/leads", icon: <IconUserBolt className="h-5 w-5" /> },
+    { label: "Map", href: "/map", icon: <IconMap className="h-5 w-5" /> },
+    { label: "Add Lead", href: "#add-lead", icon: <Plus className="h-6 w-6 text-lime-400" />, onClick: () => setIsCreateLeadOpen(true) },
+    { label: "MySigner", href: "/submissions", icon: <FileSignature className="h-5 w-5" /> },
+  ] as const;
+
+  const googleLinks = [
+    { label: "Calendar", href: "/dashboard/calendar", icon: <IconCalendar className="h-5 w-5 text-[#ea4335]" /> },
+    { label: "Drive", href: "/drive", icon: <IconFolder className="h-5 w-5 text-[#ea4335]" /> },
+    { label: "Gmail", href: "/gmail", icon: <Mail className="h-5 w-5 text-[#ea4335]" /> },
+  ] as const;
 
   const moreLinks = [
-    {
-      label: "Map",
-      href: "/map",
-      icon: <IconMap className="h-5 w-5" />,
-    },
-    {
-      label: "Route Planner",
-      href: "/route-planner",
-      icon: <IconRoute className="h-5 w-5" />,
-    },
-    {
-      label: "Calendar",
-      href: "/dashboard/calendar",
-      icon: <IconCalendar className="h-5 w-5" />,
-    },
-    {
-      label: "Drive",
-      href: "/drive",
-      icon: <IconFolder className="h-5 w-5" />,
-    },
-    {
-      label: "Submissions",
-      href: "/submissions",
-      icon: <FileSignature className="h-5 w-5" />,
-    },
-    {
-      label: "Links",
-      href: "/quick-links",
-      icon: <IconLink className="h-5 w-5" />,
-    },
-  ]
+    { label: "Quick Links", href: "/quick-links", icon: <IconLink className="h-5 w-5" /> },
+    { label: "Route Planner", href: "/route-planner", icon: <IconRoute className="h-5 w-5" /> },
+    { label: "Team", href: "/team", icon: <User className="h-5 w-5" /> },
+    { label: "Contracts", href: "/contracts/general", icon: <FileSignature className="h-5 w-5" /> },
+  ] as const;
 
   const renderAvatar = () => (
     <DropdownMenu>
@@ -135,96 +132,102 @@ export default function AppSidebar({ className }: SidebarProps) {
     </DropdownMenu>
   )
 
-  const NavLink = ({ link, className = "" }: NavLinkProps) => (
-    <a
-      href={link.href}
-      className={cn(
-        "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all",
-        pathname === link.href ? "text-[#59ff00] bg-white/10" : "text-white hover:text-[#59ff00] hover:bg-white/5",
-        className
-      )}
-    >
-      {link.icon}
-      <span className="text-xs font-medium">{link.label}</span>
-    </a>
-  )
+  const NavLink = ({ link, className = "" }: NavLinkProps) => {
+    const handleClick = (e: React.MouseEvent) => {
+      if (link.onClick) {
+        e.preventDefault();
+        link.onClick();
+      }
+    };
+    return (
+      <a
+        href={link.href}
+        onClick={handleClick}
+        className={cn(
+          "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all",
+          pathname === link.href ? "text-[#59ff00] bg-white/10" : "text-white hover:text-[#59ff00] hover:bg-white/5",
+          className
+        )}
+      >
+        {link.icon}
+        <span className="text-xs font-medium text-center leading-tight">{link.label}</span>
+      </a>
+    );
+  };
+
+  const GoogleMenu = () => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className={cn(
+          "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all",
+          googleLinks.some(link => pathname === link.href) ? "text-[#ea4335] bg-white/10" : "text-white hover:text-[#ea4335] hover:bg-white/5",
+        )}>
+          <Image 
+            src="/icons/google-color.svg" 
+            alt="Google" 
+            width={20} 
+            height={20} 
+          />
+          <span className="text-xs font-medium text-center leading-tight">Google</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-40 bg-black/80 backdrop-blur-md border-white/20 text-white" align="center">
+        {googleLinks.map((link) => (
+          <DropdownMenuItem 
+            key={link.href}
+            className="cursor-pointer hover:bg-white/10 flex items-center gap-2"
+            onClick={() => window.location.href = link.href}
+          >
+            {link.icon}
+            {link.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const MoreMenu = () => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className={cn(
+          "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all",
+          moreLinks.some(link => pathname === link.href) ? "text-[#59ff00] bg-white/10" : "text-white hover:text-[#59ff00] hover:bg-white/5",
+        )}>
+          <MoreHorizontal className="h-5 w-5" />
+          <span className="text-xs font-medium text-center leading-tight">More</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-40 bg-black/80 backdrop-blur-md border-white/20 text-white" align="center">
+        {moreLinks.map((link) => (
+          <DropdownMenuItem 
+            key={link.href}
+            className="cursor-pointer hover:bg-white/10 flex items-center gap-2"
+            onClick={() => window.location.href = link.href}
+          >
+            {link.icon}
+            {link.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
     <>
       <div className={cn(
-        "fixed bottom-4 left-1/2 -translate-x-1/2 z-40",
-        "w-[420px] rounded-full",
-        "bg-black/80 backdrop-blur-xl",
-        "border border-white/20 shadow-2xl",
+        "fixed bottom-0 left-0 right-0 z-40",
+        "bg-black/90 backdrop-blur",
+        "border-t border-white/20 shadow-2xl",
+        "transform transition-transform duration-300",
+        isHidden ? "translate-y-full" : "translate-y-0",
         className
       )}>
-        <div className="flex items-center justify-between h-16 px-6">
-          {/* Navigation Links */}
-          <div className="flex items-center justify-between w-full gap-8">
-            {/* Home */}
-            <NavLink link={navLinks[0]} />
-            
-            {/* Leads */}
-            <NavLink link={navLinks[1]} />
-
-            {/* Add Lead Button */}
-            <div className="flex flex-col items-center">
-              <button
-                onClick={() => setIsCreateLeadOpen(true)}
-                className="flex flex-col items-center justify-center gap-1 absolute bottom-2"
-              >
-                <div className="w-15 h-15 rounded-full bg-[#59ff00] hover:bg-[#59ff00]/90 transition-colors flex items-center justify-center">
-                  <Plus className="h-10 w-10 text-black overflow-visible" />
-                </div>
-                <span className="text-sm font-medium text-white">Add Lead</span>
-              </button>
-            </div>
-
-            {/* More menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className={cn(
-                  "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all",
-                  moreLinks.some(link => pathname === link.href) ? "text-[#59ff00] bg-white/10" : "text-white hover:text-[#59ff00] hover:bg-white/5"
-                )}>
-                  <MoreHorizontal className="h-5 w-5" />
-                  <span className="text-xs font-medium">More</span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent 
-                className="w-56 bg-black/80 backdrop-blur-md border-white/20 text-white" 
-                align="end"
-                sideOffset={16}
-              >
-                {/* AI Chat - Special treatment as it opens a drawer */}
-                <ConstructionChatDrawer>
-                  <DropdownMenuItem
-                    className="cursor-pointer hover:bg-white/10"
-                    onSelect={(e) => e.preventDefault()}
-                  >
-                    <Bot className="h-5 w-5" />
-                    <span className="ml-2">AI Assistant</span>
-                  </DropdownMenuItem>
-                </ConstructionChatDrawer>
-                
-                <DropdownMenuSeparator className="bg-white/10" />
-                
-                {moreLinks.map((link, idx) => (
-                  <DropdownMenuItem
-                    key={idx}
-                    className="cursor-pointer hover:bg-white/10"
-                    onClick={() => window.location.href = link.href}
-                  >
-                    {link.icon}
-                    <span className="ml-2">{link.label}</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Avatar */}
-            {renderAvatar()}
-          </div>
+        <div className="flex items-center justify-evenly h-16 px-2">
+          {navLinks.map((link) => (
+            <NavLink key={link.href} link={link} />
+          ))}
+          <GoogleMenu />
+          <MoreMenu />
         </div>
       </div>
 

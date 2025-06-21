@@ -13,6 +13,18 @@ export interface LeadSummary {
   assignedToId?: string
   claimNumber?: string | null
   insuranceCompany?: string | null
+  insurancePolicyNumber?: string | null
+  insurancePhone?: string | null
+  insuranceSecondaryPhone?: string | null
+  insuranceDeductible?: string | null
+  dateOfLoss?: Date | null
+  damageType?: string | null
+  insuranceAdjusterName?: string | null
+  insuranceAdjusterPhone?: string | null
+  insuranceAdjusterEmail?: string | null
+  adjusterAppointmentDate?: Date | null
+  adjusterAppointmentTime?: string | null
+  adjusterAppointmentNotes?: string | null
   latestActivity?: {
     title: string
     createdAt: string

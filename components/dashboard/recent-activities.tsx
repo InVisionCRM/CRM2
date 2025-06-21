@@ -51,6 +51,23 @@ function extractStatusFromTitle(title: string, description: string | null): { ol
   return { oldStatus: null, newStatus: null }
 }
 
+interface ActivityWithUser {
+  id: string
+  type: ActivityType
+  title: string
+  description: string | null
+  userId: string
+  leadId: string | null
+  leadName?: string | null
+  createdAt: Date
+  updatedAt: Date
+  userName?: string
+  user?: {
+    name?: string | null
+    image?: string | null
+  } | null
+}
+
 function ActivityContent({ activity }: { activity: ActivityWithUser }) {
   if (activity.type === ActivityType.STATUS_CHANGED) {
     const { oldStatus, newStatus } = extractStatusFromTitle(activity.title, activity.description)
@@ -69,24 +86,8 @@ function ActivityContent({ activity }: { activity: ActivityWithUser }) {
     }
   }
   
+  // For non-status change activities, show the title
   return <span className="font-medium text-card-foreground">{activity.title}</span>
-}
-
-interface ActivityWithUser {
-  id: string
-  type: ActivityType
-  title: string
-  description: string | null
-  userId: string
-  leadId: string | null
-  createdAt: Date
-  updatedAt: Date
-  userName?: string
-  leadName?: string
-  user?: {
-    name?: string | null
-    image?: string | null
-  } | null
 }
 
 function PaginationButton({ 
@@ -114,24 +115,21 @@ export function RecentActivities() {
   const [activities, setActivities] = useState<ActivityWithUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const limit = 10
+  const limit = 25 // Show up to 25 activities in the scrollable container
 
-  const fetchActivities = async (pageNum: number) => {
+  const fetchActivities = async () => {
     setIsLoading(true)
     setError(null)
 
     try {
-      const response = await fetch(`/api/activities?page=${pageNum}&limit=${limit}`)
+      const response = await fetch(`/api/activities?limit=${limit}`)
       
       if (!response.ok) {
         throw new Error(`Failed to load activities: ${response.status}`)
       }
       
       const data = await response.json()
-      setActivities(data.items)
-      setTotalPages(Math.ceil(data.total / limit))
+      setActivities(data.items.slice(0, limit))
       
     } catch (err) {
       console.error("Error fetching activities:", err)
@@ -142,61 +140,8 @@ export function RecentActivities() {
   }
   
   useEffect(() => {
-    fetchActivities(currentPage)
-  }, [currentPage])
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page)
-    window.scrollTo(0, 0)
-  }
-
-  // Generate array of page numbers to display
-  const getPageNumbers = () => {
-    const pageNumbers = []
-    const maxPagesToShow = 5 // Show max 5 page numbers at a time
-
-    if (totalPages <= maxPagesToShow) {
-      // If total pages is less than max, show all pages
-      for (let i = 1; i <= totalPages; i++) {
-        pageNumbers.push(i)
-      }
-    } else {
-      // Always show first page
-      pageNumbers.push(1)
-
-      // Calculate start and end of page numbers to show
-      let start = Math.max(2, currentPage - 1)
-      let end = Math.min(totalPages - 1, currentPage + 1)
-
-      // Adjust if we're near the start or end
-      if (currentPage <= 2) {
-        end = 4
-      }
-      if (currentPage >= totalPages - 1) {
-        start = totalPages - 3
-      }
-
-      // Add ellipsis if needed
-      if (start > 2) {
-        pageNumbers.push('...')
-      }
-
-      // Add middle pages
-      for (let i = start; i <= end; i++) {
-        pageNumbers.push(i)
-      }
-
-      // Add ellipsis if needed
-      if (end < totalPages - 1) {
-        pageNumbers.push('...')
-      }
-
-      // Always show last page
-      pageNumbers.push(totalPages)
-    }
-
-    return pageNumbers
-  }
+    fetchActivities()
+  }, [])
 
   if (isLoading && activities.length === 0) {
     return <ActivityFeedSkeleton />
@@ -210,7 +155,7 @@ export function RecentActivities() {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => fetchActivities(currentPage)}
+            onClick={fetchActivities}
             className="h-8 px-2 text-xs"
           >
             Retry
@@ -223,109 +168,77 @@ export function RecentActivities() {
 
   return (
     <Card className="shadow-sm w-full">
-      <CardHeader className="pb-3 flex flex-row items-center justify-between">
-        <CardTitle className="text-lg">Recent Activities</CardTitle>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={() => fetchActivities(currentPage)} 
-          className="h-8 px-2"
-        >
-          <RefreshCw className="h-4 w-4 mr-1" />
-          Refresh
-        </Button>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg">
+          Recent Activities
+          {activities.length > 0 && (
+            <span className="text-sm font-normal text-muted-foreground ml-2">
+              ({activities.length} total)
+            </span>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent className="pt-4">
         {activities.length === 0 ? (
           <p className="text-muted-foreground text-center py-2">No activities recorded yet.</p>
         ) : (
-          <>
-            <div className="space-y-4">
-              {activities.map((activity) => (
-                <div 
-                  key={activity.id} 
-                  className={cn(
-                    "border-b border-border/40 pb-3 last:pb-0 p-3 rounded-lg -mx-3",
-                    getActivityColorClasses(activity.type)
-                  )}
-                >
-                  <div className="flex items-center justify-between text-sm">
-                    <ActivityContent activity={activity} />
-                    <span className="text-xs text-muted-foreground" title={new Date(activity.createdAt).toLocaleString()}>
-                      {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
-                    </span>
-                  </div>
-                  
-                  {activity.description && (
-                    <p className="text-sm text-muted-foreground leading-relaxed mt-1">{activity.description}</p>
-                  )}
-                  
-                  <div className="flex items-center justify-between mt-2">
-                    {(activity.user || activity.userName) && (
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Avatar className="h-4 w-4">
-                          {activity.user?.image && <AvatarImage src={activity.user.image} alt={activity.user?.name || activity.userName || 'User'} />}
-                          <AvatarFallback className="text-[8px]">
-                            {activity.user?.name ? activity.user.name.substring(0,1).toUpperCase() : 
-                             activity.userName ? activity.userName.substring(0,1).toUpperCase() : 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>{activity.user?.name || activity.userName || 'Unknown User'}</span>
+          <div className="relative">
+            <div className="overflow-x-auto pb-4 -mx-6">
+              <div className="flex gap-4 px-6 min-w-full w-max">
+                {activities.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className={cn(
+                      "w-[350px] shrink-0 border border-border/40 rounded-lg p-4",
+                      getActivityColorClasses(activity.type)
+                    )}
+                  >
+                    <div className="flex items-center justify-between text-sm">
+                      <ActivityContent activity={activity} />
+                      <span className="text-xs text-muted-foreground" title={new Date(activity.createdAt).toLocaleString()}>
+                        {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
+                      </span>
+                    </div>
+
+                    {activity.leadName && (
+                      <div className="mt-2 text-sm font-medium">
+                        {activity.leadName}
                       </div>
                     )}
-                    
-                    {activity.leadId && (
-                      <Link 
-                        href={`/leads/${activity.leadId}`}
-                        className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
-                      >
-                        <span>View {activity.leadName || 'Lead'}</span>
-                        <ExternalLink className="h-3 w-3" />
-                      </Link>
-                    )}
+
+                        {activity.description && (
+                      <p className="text-sm text-muted-foreground leading-relaxed mt-2">{activity.description}</p>
+                        )}
+
+                        <div className="flex items-center justify-between mt-2">
+                          {(activity.user || activity.userName) && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Avatar className="h-4 w-4">
+                                {activity.user?.image && <AvatarImage src={activity.user.image} alt={activity.user?.name || activity.userName || 'User'} />}
+                                <AvatarFallback className="text-[8px]">
+                                  {activity.user?.name ? activity.user.name.substring(0,1).toUpperCase() :
+                                   activity.userName ? activity.userName.substring(0,1).toUpperCase() : 'U'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span>{activity.user?.name || activity.userName || 'Unknown User'}</span>
+                            </div>
+                          )}
+
+                          {activity.leadId && (
+                            <Link
+                              href={`/leads/${activity.leadId}`}
+                              className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
+                            >
+                          <span>View Details</span>
+                              <ExternalLink className="h-3 w-3" />
+                            </Link>
+                          )}
+                        </div>
                   </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-6">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1 || isLoading}
-                  className="h-8 w-8 p-0"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-
-                {getPageNumbers().map((pageNum, index) => (
-                  pageNum === '...' ? (
-                    <span key={`ellipsis-${index}`} className="px-2">...</span>
-                  ) : (
-                    <PaginationButton
-                      key={pageNum}
-                      page={pageNum as number}
-                      currentPage={currentPage}
-                      onClick={handlePageChange}
-                    />
-                  )
                 ))}
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages || isLoading}
-                  className="h-8 w-8 p-0"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
               </div>
-            )}
-          </>
+            </div>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -338,23 +251,27 @@ function ActivityFeedSkeleton() {
       <CardHeader className="pb-3 border-b">
         <Skeleton className="h-6 w-36" />
       </CardHeader>
-      <CardContent className="pt-4 space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="border-b border-border/40 pb-3 last:border-0 last:pb-0">
-            <div className="flex items-center justify-between mb-2">
-              <Skeleton className="h-5 w-3/4" />
-              <Skeleton className="h-4 w-16" />
-            </div>
-            <Skeleton className="h-4 w-full" />
-            <div className="flex items-center justify-between mt-2">
-              <div className="flex items-center gap-1.5">
-                <Skeleton className="h-4 w-4 rounded-full" />
-                <Skeleton className="h-3 w-24" />
+      <CardContent className="pt-4">
+        <div className="flex gap-4 overflow-x-hidden">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="w-[350px] shrink-0 border border-border/40 rounded-lg p-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+                <Skeleton className="h-4 w-full" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Skeleton className="h-4 w-4 rounded-full" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <Skeleton className="h-3 w-16" />
+                </div>
               </div>
-              <Skeleton className="h-3 w-16" />
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </CardContent>
     </Card>
   )

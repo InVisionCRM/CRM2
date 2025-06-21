@@ -1,12 +1,22 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+interface SendContractRequest {
+  leadId: string
+  templateId?: number
+  additionalData?: {
+    insuranceCompany?: string
+    claimNumber?: string
+    [key: string]: any
+  }
+}
+
 export async function POST(req: Request) {
   console.log('🔵 [DocuSeal] /api/docuseal/send-contract request received')
 
   try {
-    // 1. Parse request body expecting { leadId: string }
-    const { leadId } = await req.json().catch(() => ({})) as { leadId?: string }
+    // 1. Parse request body
+    const { leadId, templateId, additionalData } = await req.json().catch(() => ({})) as SendContractRequest
 
     if (!leadId) {
       console.error('❌ Missing leadId in request body')
@@ -22,6 +32,8 @@ export async function POST(req: Request) {
         email: true,
         phone: true,
         address: true,
+        insuranceCompany: true,
+        claimNumber: true,
       },
     })
 
@@ -37,12 +49,11 @@ export async function POST(req: Request) {
     }
 
     // 3. Validate DocuSeal env vars
-    const { DOCUSEAL_URL, DOCUSEAL_API_KEY, DOCUSEAL_TEMPLATE_ID } = process.env
-    if (!DOCUSEAL_URL || !DOCUSEAL_API_KEY || !DOCUSEAL_TEMPLATE_ID) {
+    const { DOCUSEAL_URL, DOCUSEAL_API_KEY } = process.env
+    if (!DOCUSEAL_URL || !DOCUSEAL_API_KEY) {
       console.error('❌ Missing DocuSeal configuration', {
         DOCUSEAL_URL: !!DOCUSEAL_URL,
         DOCUSEAL_API_KEY: !!DOCUSEAL_API_KEY,
-        DOCUSEAL_TEMPLATE_ID: !!DOCUSEAL_TEMPLATE_ID,
       })
       return NextResponse.json(
         {
@@ -59,29 +70,35 @@ export async function POST(req: Request) {
       day: 'numeric',
     })
 
+    // Merge lead data with additional data
+    const values = {
+      firstName: lead.firstName,
+      lastName: lead.lastName,
+      phone: lead.phone || '',
+      address: lead.address || '',
+      email: lead.email,
+      current_date: today,
+      insuranceCompany: lead.insuranceCompany || additionalData?.insuranceCompany || '',
+      claimNumber: lead.claimNumber || additionalData?.claimNumber || '',
+      ...additionalData,
+    }
+
     const docusealBody = {
-      template_id: parseInt(DOCUSEAL_TEMPLATE_ID),
+      template_id: templateId || parseInt(process.env.DOCUSEAL_TEMPLATE_ID || '1'), // Default to template ID 1 if not specified
       send_email: true,
       submitters: [
         {
           role: 'First Party',
           email: lead.email,
           name: `${lead.firstName} ${lead.lastName}`.trim(),
-          values: {
-            firstName: lead.firstName,
-            lastName: lead.lastName,
-            phone: lead.phone || '',
-            address: lead.address || '',
-            email: lead.email,
-            current_date: today,
-          },
+          values,
         },
       ],
     }
 
     console.log('📤 Sending submission to DocuSeal', {
       url: `${DOCUSEAL_URL}/api/submissions`,
-      templateId: DOCUSEAL_TEMPLATE_ID,
+      templateId: docusealBody.template_id,
       signerEmail: lead.email,
     })
 

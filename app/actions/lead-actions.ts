@@ -143,6 +143,12 @@ interface UpdateLeadParams {
   phone?: string;
   address?: string;
   assignedToId?: string;
+  claimNumber?: string;
+  insuranceCompany?: string;
+  insurancePhone?: string;
+  insuranceAdjusterName?: string;
+  insuranceAdjusterPhone?: string;
+  insuranceAdjusterEmail?: string;
   // Add other fields as needed
 }
 
@@ -176,6 +182,11 @@ export async function updateLeadAction(
         newStatus: params.status,
       });
     }
+
+    // Revalidate paths to refresh data
+    revalidatePath("/leads");
+    revalidatePath(`/leads/${id}`);
+    revalidatePath("/dashboard");
 
     return { success: true, lead: updatedLead };
   } catch (error) {
@@ -255,6 +266,49 @@ export async function updateLeadStatus(
         },
       },
     });
+
+    // ---------- AUTO-SCHEDULER ----------
+    // Map certain status transitions to calendar event types
+    const statusToEvent: Record<LeadStatus, { type: 'acv' | 'rcv' | 'build'; label: string } | undefined> = {
+      [LeadStatus.acv]:   { type: 'acv',   label: 'Pick up ACV' },
+      [LeadStatus.job]:   { type: 'build', label: 'Build Date' },
+      [LeadStatus.zero_balance]: undefined,
+      [LeadStatus.completed_jobs]: undefined,
+      [LeadStatus.colors]: undefined,
+      [LeadStatus.denied]: undefined,
+      [LeadStatus.follow_ups]: undefined,
+      [LeadStatus.scheduled]: { type: 'build', label: 'Build Date' },
+      [LeadStatus.signed_contract]: undefined,
+    } as const;
+
+    const autoEvent = statusToEvent[status];
+
+    if (autoEvent) {
+      try {
+        // Build payload similar to /api/calendar/create-event
+        const leadInfo = await prisma.lead.findUnique({ where: { id } });
+        if (leadInfo && session?.accessToken) {
+          const body = {
+            title: `${autoEvent.label} - ${leadInfo.firstName || ''} ${leadInfo.lastName || ''}`.trim(),
+            description: `${autoEvent.label} scheduled automatically via status change.`,
+            startDateTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days out
+            endDateTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000 + 60*60*1000).toISOString(),
+            leadId: leadInfo.id,
+            leadName: `${leadInfo.firstName || ''} ${leadInfo.lastName || ''}`.trim(),
+            eventType: autoEvent.type,
+            location: leadInfo.address || '',
+          };
+
+          await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/calendar/create-event`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: '' },
+            body: JSON.stringify(body),
+          });
+        }
+      } catch (err) {
+        console.warn('Auto-scheduler: failed to create calendar event', err);
+      }
+    }
 
     revalidatePath("/leads");
     revalidatePath(`/leads/${id}`);

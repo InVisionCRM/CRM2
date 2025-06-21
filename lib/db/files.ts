@@ -95,4 +95,44 @@ export async function deleteFile(id: string): Promise<File | null> {
     console.error(`Error deleting file with ID ${id}:`, error)
     throw new Error(`Failed to delete file: ${error instanceof Error ? error.message : "Unknown error"}`)
   }
+}
+
+/**
+ * Gets the most recent files across all leads with pagination
+ */
+export async function getRecentFiles(page: number, limit: number) {
+  try {
+    const skip = (page - 1) * limit
+    const files = await prisma.file.findMany({
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
+      include: {
+        lead: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    })
+
+    return files
+  } catch (error) {
+    console.error('Error fetching recent files:', error)
+    throw new Error(`Failed to fetch recent files: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+}
+
+/**
+ * Gets the total count of files stored in the system
+ */
+export async function getTotalFilesCount() {
+  try {
+    return await prisma.file.count()
+  } catch (error) {
+    console.error('Error counting files:', error)
+    throw new Error(`Failed to count files: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
 } 

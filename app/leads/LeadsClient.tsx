@@ -23,14 +23,125 @@ import { AddNote } from "@/components/leads/AddNote"
 
 function LeadsLoading() {
   return (
-    <div className="space-y-3 py-4">
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="border rounded-lg p-4 bg-white shadow-sm">
-          <Skeleton className="h-6 w-3/4 mb-2" />
-          <Skeleton className="h-4 w-1/2 mb-1" />
-          <Skeleton className="h-4 w-2/3" />
+    <div className="space-y-2">
+      {[...Array(5)].map((_, i) => (
+        <div key={i} className="overflow-hidden border border-lime-700 bg-transparent bg-black/50 rounded-lg shadow-sm">
+          {/* Compact Row Skeleton */}
+          <div className="flex items-center justify-between p-4 bg-black/50">
+            <div className="flex items-center space-x-3 flex-1 min-w-0">
+              {/* Salesperson Avatar Skeleton */}
+              <div className="flex-shrink-0">
+                <Skeleton className="w-8 h-8 rounded-full bg-gray-600" />
+              </div>
+
+              {/* Lead Name Skeleton */}
+              <div className="flex-1 min-w-0">
+                <Skeleton className="h-5 w-32 sm:w-48 bg-gray-600" />
+              </div>
+
+              {/* Status Badge Skeleton */}
+              <div className="flex-shrink-0">
+                <Skeleton className="h-6 w-20 rounded-full bg-gray-600" />
+              </div>
+            </div>
+
+            {/* Expand Button Skeleton */}
+            <div className="flex items-center space-x-1 flex-shrink-0 ml-3">
+              <Skeleton className="h-8 w-8 rounded bg-gray-600" />
+            </div>
+          </div>
+
+          {/* Randomly show some expanded skeletons */}
+          {i % 3 === 0 && (
+            <div className="border-t border-gray-700 bg-gradient-to-b from-green-900/20 via-blue-900/20 to-gray-900 p-4 space-y-4">
+              {/* Street View and Quick Note Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Street View Skeleton */}
+                <div className="space-y-2">
+                  <Skeleton className="h-48 w-full rounded-lg bg-gray-700" />
+                </div>
+
+                {/* Quick Note Skeleton */}
+                <div className="space-y-2 justify-center flex flex-col w-full">
+                  <Skeleton className="h-20 w-full rounded bg-gray-700" />
+                  <Skeleton className="h-8 w-24 rounded bg-gray-700" />
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-lime-600"></div>
+
+              {/* Contract Upload Skeleton */}
+              <div className="space-y-1">
+                <Skeleton className="h-20 w-full rounded-lg bg-gray-700" />
+              </div>
+
+              {/* Documents Dropdown Skeleton */}
+              <div className="space-y-3">
+                <Skeleton className="h-20 w-full rounded-lg bg-gray-700" />
+              </div>
+
+              {/* Lead Information Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-lime-500/90">
+                {/* Insurance Information */}
+                <div className="space-y-3">
+                  <Skeleton className="h-6 w-20 bg-gray-600" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-full bg-gray-700" />
+                    <Skeleton className="h-4 w-3/4 bg-gray-700" />
+                  </div>
+                </div>
+
+                {/* Dates Information */}
+                <div className="space-y-3">
+                  <Skeleton className="h-6 w-24 bg-gray-600" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-full bg-gray-700" />
+                    <Skeleton className="h-4 w-2/3 bg-gray-700" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Action Tabs Skeleton */}
+              <div className="border-t border-lime-500/90 pt-4">
+                <Skeleton className="h-6 w-24 mx-auto mb-3 bg-gray-600" />
+                <div className="flex w-full border-t border-b-[2px] border-lime-500 rounded-lg overflow-hidden">
+                  {[...Array(5)].map((_, j) => (
+                    <Skeleton key={j} className="h-16 flex-1 bg-gray-700" />
+                  ))}
+                </div>
+              </div>
+
+              {/* Event Creation Buttons Skeleton */}
+              <div className="border-t border-lime-500/90 pt-4">
+                <Skeleton className="h-6 w-28 mx-auto mb-3 bg-gray-600" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[...Array(4)].map((_, j) => (
+                    <Skeleton key={j} className="h-16 rounded bg-gray-700" />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ))}
+
+      {/* Pagination Skeleton */}
+      <div className="flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-lg mt-4">
+        <div className="flex items-center space-x-2">
+          <Skeleton className="h-4 w-8 bg-gray-300" />
+          <Skeleton className="h-8 w-16 bg-gray-300" />
+          <Skeleton className="h-4 w-16 bg-gray-300" />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Skeleton className="h-4 w-20 bg-gray-300" />
+          <div className="flex items-center space-x-1">
+            {[...Array(4)].map((_, j) => (
+              <Skeleton key={j} className="h-8 w-8 bg-gray-300" />
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -44,8 +155,8 @@ interface LeadsClientProps {
   onUserChange: (user: string | null) => void;
   onSortChange: (sortOptions: SortOptions) => void;
   onSearchChange: (query: string) => void;
-  openCreateForm: boolean;
-  setOpenCreateForm: (open: boolean) => void;
+  openCreateForm?: boolean;
+  setOpenCreateForm?: (open: boolean) => void;
 }
 
 export default function LeadsClient({ 
@@ -168,7 +279,7 @@ export default function LeadsClient({
       variant: "default",
     })
     router.refresh()
-    setOpenCreateForm(false)
+    setOpenCreateForm?.(false)
   }
 
   const handleNoteAddedSuccessfully = () => {
@@ -199,8 +310,8 @@ export default function LeadsClient({
           isLoading={isLoadingUsers || isLoading}
         />
         <Select onValueChange={handleSortChange} defaultValue={`${sortOptions.field}_${sortOptions.order}`} disabled={isLoading}>
-          <SelectTrigger className="flex items-center gap-1.5 text-sm h-9 px-3 w-auto min-w-[130px]">
-            <span>Sort:</span>
+          <SelectTrigger className="flex items-center gap-1.5 text-sm h-9 px-3 w-auto min-w-[100px]">
+            <span></span>
             <span className="font-medium"><SelectValue placeholder="Sort by" /></span>
           </SelectTrigger>
           <SelectContent>
@@ -215,8 +326,8 @@ export default function LeadsClient({
       </div>
 
       <CreateLeadForm 
-        open={openCreateForm}
-        onOpenChange={setOpenCreateForm}
+        open={openCreateForm || false}
+        onOpenChange={setOpenCreateForm || (() => {})}
         onSuccess={handleLeadCreated}
       />
 

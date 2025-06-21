@@ -62,10 +62,11 @@ export async function GET(request: Request) {
       search: search || undefined,
       sort,
       order,
-      userId: userId, // Pass the user ID
+      userId: userId,
     })
 
     console.log(`Successfully fetched ${leads.length} leads`);
+    console.log('Sample lead data:', leads[0]);
 
     // Filter by status if provided, with added safety check
     const filteredLeads = status

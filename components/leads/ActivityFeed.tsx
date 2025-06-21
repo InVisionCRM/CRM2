@@ -106,13 +106,14 @@ function PaginationButton({
   )
 }
 
-export function ActivityFeed({ leadId, limit = 10 }: ActivityFeedProps) {
+export function ActivityFeed({ leadId, limit = 3 }: ActivityFeedProps) {
   const [activities, setActivities] = useState<ActivityWithUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalActivities, setTotalActivities] = useState(0)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
   
   const fetchActivities = useCallback(async (pageNum: number) => {
     if (!leadId) {
@@ -256,12 +257,19 @@ export function ActivityFeed({ leadId, limit = 10 }: ActivityFeedProps) {
           <>
             <div className="space-y-4">
               {activities.map((activity) => (
-                <div 
-                  key={activity.id} 
+                <div
+                  key={activity.id}
                   className={cn(
-                    "border-b border-border/40 pb-3 last:border-0 last:pb-0 p-3 rounded-lg -mx-3",
+                    "border-b border-border/40 pb-3 last:border-0 last:pb-0 p-3 rounded-lg -mx-3 cursor-pointer",
                     getActivityColorClasses(activity.type)
                   )}
+                  onClick={() => {
+                    setExpanded((prev)=>{
+                      const set=new Set(prev);
+                      set.has(activity.id) ? set.delete(activity.id) : set.add(activity.id);
+                      return set;
+                    })
+                  }}
                 >
                   <div className="flex items-center justify-between text-sm">
                     <ActivityContent activity={activity} />
@@ -269,21 +277,23 @@ export function ActivityFeed({ leadId, limit = 10 }: ActivityFeedProps) {
                       {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
                     </span>
                   </div>
-                  
-                  {activity.description && (
-                    <p className="text-sm text-muted-foreground leading-relaxed mt-1">{activity.description}</p>
-                  )}
-                  
-                  {activity.user && (
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-2">
-                      <Avatar className="h-4 w-4">
-                        {activity.user.image && <AvatarImage src={activity.user.image} alt={activity.user.name || 'User'} />}
-                        <AvatarFallback className="text-[8px]">
-                          {activity.user.name ? activity.user.name.substring(0,1).toUpperCase() : 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>{activity.user.name || 'Unknown User'}</span>
-                    </div>
+                  {expanded.has(activity.id) && (
+                    <>
+                      {activity.description && (
+                        <p className="text-sm text-muted-foreground leading-relaxed mt-1">{activity.description}</p>
+                      )}
+                      {activity.user && (
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-2">
+                          <Avatar className="h-4 w-4">
+                            {activity.user.image && <AvatarImage src={activity.user.image} alt={activity.user.name || 'User'} />}
+                            <AvatarFallback className="text-[8px]">
+                              {activity.user.name ? activity.user.name.substring(0,1).toUpperCase() : 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{activity.user.name || 'Unknown User'}</span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               ))}

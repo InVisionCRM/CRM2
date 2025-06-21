@@ -5,6 +5,10 @@ import { DynamicHero } from "@/components/dynamic-components"
 import { RecentActivities } from "@/components/dashboard/recent-activities"
 import { WeatherForecast } from "@/components/dashboard/weather-forecast"
 import { PWAInstallSection } from "@/components/PWAInstallSection"
+import { RecentUploads } from "@/components/dashboard/recent-uploads"
+import { RecentEmails } from "@/components/dashboard/recent-emails"
+import { MyLeads } from "@/components/dashboard/my-leads"
+import { UpcomingEvents } from "@/components/dashboard/upcoming-events"
 
 export function DashboardContent() {
   return (
@@ -12,24 +16,24 @@ export function DashboardContent() {
       {/* Hero Section */}
       <DynamicHero />
       
-      {/* Gradient Divider */}
-      <div className="container mx-auto px-4">
-        <div className="h-px bg-gradient-to-r from-transparent via-[#59ff00]/50 to-transparent" />
-      </div>
-      
       {/* PWA Install Section */}
       <div className="container mx-auto px-4 py-6">
         <PWAInstallSection />
       </div>
       
-      {/* Gradient Divider */}
-      <div className="container mx-auto px-4">
-        <div className="h-px bg-gradient-to-r from-transparent via-[#59ff00]/50 to-transparent" />
-      </div>
-      
-      {/* Quick Actions as Tabs */}
+      {/* Quick Actions and Upcoming Events Grid */}
       <div className="container mx-auto px-4 py-3">
-        <QuickActions />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Mobile: Upcoming Events first */}
+          <div className="space-y-4 lg:order-2">
+            <UpcomingEvents />
+          </div>
+          
+          {/* Mobile: Quick Actions second, Desktop: First column */}
+          <div className="space-y-4 lg:order-1">
+            <QuickActions />
+          </div>
+        </div>
       </div>
       
       {/* Gradient Divider */}
@@ -47,9 +51,39 @@ export function DashboardContent() {
         <div className="h-px bg-gradient-to-r from-transparent via-[#59ff00]/50 to-transparent" />
       </div>
       
+      {/* My Leads */}
+      <div className="container mx-auto px-4 py-3">
+        <MyLeads />
+      </div>
+      
+      {/* Gradient Divider */}
+      <div className="container mx-auto px-4">
+        <div className="h-px bg-gradient-to-r from-transparent via-[#59ff00]/50 to-transparent" />
+      </div>
+      
       {/* Recent Activities */}
       <div className="container mx-auto px-4 py-3">
         <RecentActivities />
+      </div>
+      
+      {/* Gradient Divider */}
+      <div className="container mx-auto px-4">
+        <div className="h-px bg-gradient-to-r from-transparent via-[#59ff00]/50 to-transparent" />
+      </div>
+      
+      {/* Recent Uploads */}
+      <div className="container mx-auto px-4 py-3">
+        <RecentUploads />
+      </div>
+
+      {/* Gradient Divider */}
+      <div className="container mx-auto px-4">
+        <div className="h-px bg-gradient-to-r from-transparent via-[#59ff00]/50 to-transparent" />
+      </div>
+      
+      {/* Recent Emails */}
+      <div className="container mx-auto px-4 py-3">
+        <RecentEmails />
       </div>
     </div>
   )

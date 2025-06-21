@@ -97,7 +97,8 @@ export async function getAllActivities(page = 1, limit = 50): Promise<ActivityWi
 
     return activities.map(activity => ({
       ...activity,
-      userName: activity.user.name
+      userName: activity.user?.name,
+      leadName: activity.lead ? `${activity.lead.firstName} ${activity.lead.lastName}`.trim() : undefined
     }))
   } catch (error) {
     console.error("Error fetching all activities:", error)

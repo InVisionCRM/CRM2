@@ -101,8 +101,8 @@ body { /* Added from styles/globals.css */
   .styled-container,
   .btn {
     background-color: hsla(var(--card-h), var(--card-s), var(--card-l), 0.8) !important;
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
     border: 1px solid hsla(var(--border-h), var(--border-s), 10%, 0.6) !important;
   }
 }
@@ -282,7 +282,7 @@ body {
   top: 0;
   left: 0;
   width: 100vw;
-  height: 100vh;
+  height: 80vh;
   z-index: 0;
   pointer-events: none;
   display: flex;
@@ -293,4 +293,21 @@ body {
 .fixed-wavy-background > div {
   width: 100%;
   height: 100%;
+}
+
+@keyframes border-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-border-flow {
+  animation: border-flow 3s ease infinite;
+  background-size: 300% 300%;
 }

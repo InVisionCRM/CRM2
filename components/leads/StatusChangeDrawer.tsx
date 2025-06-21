@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { LeadStatus } from "@prisma/client"
 import { formatStatusLabel } from "@/lib/utils"
-import { Loader2 } from "lucide-react"
+import { Loader2, ChevronDown } from "lucide-react"
 import {
   Sheet,
   SheetContent,
@@ -39,11 +39,11 @@ export function StatusChangeDrawer({
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         <Button 
-          variant="link" 
-          className="p-0 h-auto font-thin text-xm"
-          style={{ color: '#3b82f6' }}
+          variant="ghost" 
+          size="sm"
+          className="p-2 h-auto rounded-full bg-gray-800/50 hover:bg-gray-700/50 border border-gray-600/50"
         >
-          Change Status
+          <ChevronDown className="h-4 w-4 text-gray-400" />
         </Button>
       </SheetTrigger>
       <SheetContent className="w-[400px] text-white sm:w-[540px] bg-black/25 backdrop-blur-lg border-white/20">

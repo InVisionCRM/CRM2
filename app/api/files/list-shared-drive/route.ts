@@ -92,7 +92,7 @@ export async function GET(req: Request) {
         if (fileName.includes('/')) {
           const fileTypeFromPath = fileName.split('/')[0];
           // Check if it's one of our known document types
-          if (['estimate', 'acv', 'supplement', 'eagleview', 'scope_of_work', 'warrenty', 'contract'].includes(fileTypeFromPath)) {
+          if (['estimate', 'acv', 'supplement', 'eagleview', 'scope_of_work', 'warrenty', 'contract', 'general_contract'].includes(fileTypeFromPath)) {
             console.log(`📋 Found fileType from path: ${fileTypeFromPath} for file: ${fileName}`);
             return fileTypeFromPath;
           }

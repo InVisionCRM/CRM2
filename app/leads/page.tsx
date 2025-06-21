@@ -13,8 +13,6 @@ import {
 import { UserFilter, type UserOption } from "@/components/user-filter"
 import { getAssignableUsersAction } from "@/app/actions/user-actions"
 import { SearchBar } from "@/components/ui/search-bar"
-import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
 
 export type SortField = "name" | "status" | "createdAt";
 export type SortOrder = "asc" | "desc";
@@ -30,7 +28,6 @@ export default function LeadsPage() {
   const [users, setUsers] = useState<UserOption[]>([])
   const [isLoadingUsers, setIsLoadingUsers] = useState(true)
   const [selectedUser, setSelectedUser] = useState<string | null>(null)
-  const [openCreateForm, setOpenCreateForm] = useState(false)
 
   useEffect(() => {
     async function fetchUsers() {
@@ -64,31 +61,17 @@ export default function LeadsPage() {
   };
 
   return (
-    <div className="w-full px-4">
-      <div className="relative flex items-center gap-1 mt-2 mb-8">
+    <div className="w-full justify-center items-center px-4">
+      <div className="flex justify-center items-center gap-1 mt-2 mb-4 w-full">
         <SearchBar
-          containerClassName="!relative !transform-none !left-auto !top-auto !z-auto !w-60 !max-w-none !p-0"
-          topOffset="0px"
+          containerClassName="relative !transform-none !left-0 !top-0 !z-auto !w-80 !max-w-none !p-0"
+          topOffset="1px"
           placeholder="Search leads..."
           value={searchQuery}
           onChange={handleSearchChange}
           startOpen={true}
         />
       </div>
-
-      <Button
-        onClick={() => setOpenCreateForm(true)}
-        className="fixed top-4 right-10 bg-[#59ff00] text-black hover:bg-[#59ff00]/90 whitespace-nowrap z-50 
-          text-sm sm:text-base 
-          px-2 sm:px-3 
-          py-1 sm:py-2
-          h-8 sm:h-9
-          flex items-center"
-      >
-        <Plus className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-        <span className="hidden sm:inline">Create Lead</span>
-        <span className="sm:hidden">New Lead</span>
-      </Button>
 
       <LeadsClient 
         searchQuery={searchQuery} 
@@ -99,8 +82,6 @@ export default function LeadsPage() {
         onUserChange={setSelectedUser} 
         onSortChange={setSortOptions} 
         onSearchChange={setSearchQuery}
-        openCreateForm={openCreateForm}
-        setOpenCreateForm={setOpenCreateForm}
       />
     </div>
   )

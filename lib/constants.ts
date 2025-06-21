@@ -10,5 +10,9 @@ export const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/drive",           // Full Drive access (read/write)
   "https://www.googleapis.com/auth/drive.file",      // Access to files created/opened by app
   "https://www.googleapis.com/auth/drive.readonly",
-  "https://www.googleapis.com/auth/drive.metadata.readonly"
+  "https://www.googleapis.com/auth/drive.metadata.readonly",
+  // Gmail scopes (read, send, modify)
+  "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/gmail.send",
+  "https://www.googleapis.com/auth/gmail.modify"
 ]; 

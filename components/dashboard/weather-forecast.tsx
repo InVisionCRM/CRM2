@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { Loader2, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, CloudFog } from "lucide-react"
 import { WeatherOverviewDialog } from "./weather-overview-dialog"
 import { WeatherRadarDialog } from "./weather-radar-dialog"
 
@@ -24,6 +24,7 @@ export function WeatherForecast() {
   const [isRadarOpen, setIsRadarOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showAll, setShowAll] = useState(false)
 
   // Macomb Township, MI coordinates
   const lat = 42.6655
@@ -32,6 +33,28 @@ export function WeatherForecast() {
   const formatTemperature = (temp: number) => {
     const rounded = Math.round(temp)
     return rounded.toString().padStart(2, '0')
+  }
+
+  const getIconForCondition = (condition: string) => {
+    switch (condition) {
+      case 'clear':
+        return <Sun className="w-6 h-6 text-yellow-400" />
+      case 'clouds':
+        return <Cloud className="w-6 h-6 text-gray-300" />
+      case 'rain':
+        return <CloudRain className="w-6 h-6 text-blue-400" />
+      case 'snow':
+        return <CloudSnow className="w-6 h-6 text-white" />
+      case 'thunderstorm':
+        return <CloudLightning className="w-6 h-6 text-purple-400" />
+      case 'drizzle':
+        return <CloudDrizzle className="w-6 h-6 text-cyan-300" />
+      case 'fog':
+      case 'mist':
+        return <CloudFog className="w-6 h-6 text-gray-400" />
+      default:
+        return <Cloud className="w-6 h-6 text-gray-300" />
+    }
   }
 
   useEffect(() => {
@@ -100,34 +123,41 @@ export function WeatherForecast() {
   return (
     <>
       <div className="w-full max-w-4xl mx-auto p-3">
-        <div className="grid grid-cols-7 gap-4">
-          {forecast.map((day) => (
+        <div className={`grid gap-4 ${showAll ? 'grid-cols-7' : 'grid-cols-3'}`}>
+          {(showAll ? forecast : forecast.slice(0,3)).map((day) => (
             <div
               key={day.fullDate.toISOString()}
               className="flex flex-col items-center p-2 rounded-md hover:bg-white/5 transition-colors cursor-pointer"
               onClick={() => handleDayClick(day)}
             >
-              <span className="text-sm font-medium text-white/80">{day.dayAbbr}</span>
-              <span className="text-xs font-medium text-white/60 mb-2">
+              <span className="text-sm font-medium text-white/80 leading-none mb-[1px]">{day.dayAbbr}</span>
+              <span className="text-xs font-medium text-white/60 leading-none mb-[1px]">
                 {day.monthAbbr} {day.dayOfMonth}
               </span>
-              <img 
-                src={`https://openweathermap.org/img/wn/${day.icon}.png`}
-                alt={day.condition}
-                className="w-10 h-10"
-              />
-              <span className="text-lg font-semibold text-white mt-1">
+              <div className="mb-[1px] flex items-center justify-center h-6 w-6">
+                {getIconForCondition(day.condition)}
+              </div>
+              <span className="text-base font-semibold text-white leading-none">
                 {formatTemperature(day.temp)}°
               </span>
             </div>
           ))}
         </div>
-        <button
-          onClick={() => setIsRadarOpen(true)}
-          className="w-full mt-2 py-2 bg-white/5 hover:bg-white/10 transition-colors rounded-md text-white/80 font-medium"
-        >
-          Live Radar
-        </button>
+        <div className="flex flex-col gap-2 mt-2">
+          <button
+            onClick={() => setShowAll(!showAll)}
+            className="w-full py-2 bg-white/5 hover:bg-white/10 transition-colors rounded-md text-white/80 font-medium"
+          >
+            {showAll ? 'Show 3-Day' : 'Show 7-Day'} Forecast
+          </button>
+
+          <button
+            onClick={() => setIsRadarOpen(true)}
+            className="w-full py-2 bg-white/5 hover:bg-white/10 transition-colors rounded-md text-white/80 font-medium"
+          >
+            Live Radar
+          </button>
+        </div>
       </div>
 
       <WeatherOverviewDialog

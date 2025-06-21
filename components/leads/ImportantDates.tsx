@@ -10,8 +10,8 @@ import { Drawer, DrawerContent, DrawerTrigger, DrawerHeader, DrawerTitle } from 
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Calendar as CalendarIcon, Clock, DollarSign, Building2, CalendarPlus, ChevronDownIcon, ExternalLink } from "lucide-react"
-import { format, addHours } from "date-fns"
+import { Calendar as CalendarIcon, Clock, DollarSign, Building2, CalendarPlus, ChevronDownIcon, ExternalLink, Trash2, Mail } from "lucide-react"
+import { format, addHours, parseISO } from "date-fns"
 import { useToast } from "@/hooks/use-toast"
 import type { Lead } from "@prisma/client"
 import type { RawGCalEvent } from "@/types/appointments"
@@ -36,6 +36,12 @@ interface EventCreationData {
   icon: React.ReactNode
 }
 
+interface ImportantDateData {
+  key: string
+  label: string
+  icon: React.ReactNode
+}
+
 export function ImportantDates({ lead }: ImportantDatesProps) {
   const { data: session } = useSession()
   const { toast } = useToast()
@@ -54,6 +60,25 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
   const [eventDescription, setEventDescription] = useState("")
   const [isCreating, setIsCreating] = useState(false)
   const [lastCreatedEventUrl, setLastCreatedEventUrl] = useState<string | null>(null)
+  
+  // New state for important dates
+  const [isImportantDateModalOpen, setIsImportantDateModalOpen] = useState(false)
+  const [selectedImportantDate, setSelectedImportantDate] = useState<Date>()
+  const [selectedImportantDateType, setSelectedImportantDateType] = useState<ImportantDateData | null>(null)
+  const [isUpdatingImportantDate, setIsUpdatingImportantDate] = useState(false)
+  const [isDeletingImportantDate, setIsDeletingImportantDate] = useState(false)
+
+  // Reminder email dialog state
+  const [isReminderDialogOpen, setIsReminderDialogOpen] = useState(false)
+  const [lastScheduledInfo, setLastScheduledInfo] = useState<{
+    eventType: EventCreationData
+    scheduledDate: Date
+    formattedTime: string
+  } | null>(null)
+  const [isSendingReminder, setIsSendingReminder] = useState(false)
+
+  // State for calendar viewer
+  const [isCalendarDialogOpen, setIsCalendarDialogOpen] = useState(false)
 
   if (!lead) return null
 
@@ -61,7 +86,133 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
   const leadAddress = lead.address || ""
   const claimNumber = lead.claimNumber || ""
   const userEmail = session?.user?.email || ""
+
+  // Get important dates from metadata
+  const getImportantDateFromMetadata = (dateKey: string): string | null => {
+    const metadata = lead.metadata as Record<string, any> | null
+    return metadata?.importantDates?.[dateKey] || null
+  }
+
+  // Important dates configuration (Job Completion handled by its own component)
+  const importantDates: ImportantDateData[] = []
   
+  // Handle important date button click
+  const handleImportantDateClick = (dateData: ImportantDateData) => {
+    setSelectedImportantDateType(dateData)
+    const existingDate = getImportantDateFromMetadata(dateData.key)
+    setSelectedImportantDate(existingDate ? new Date(existingDate) : undefined)
+    setIsImportantDateModalOpen(true)
+  }
+
+  // Handle important date save
+  const handleSaveImportantDate = async () => {
+    if (!selectedImportantDateType || !selectedImportantDate) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a date",
+        variant: "destructive",
+        duration: 3000
+      })
+      return
+    }
+
+    setIsUpdatingImportantDate(true)
+    try {
+      // Store date as local YYYY-MM-DD string to avoid timezone shifts across
+      // different environments. We compute an ISO date string in local time
+      // (remove the timezone offset) and persist only the calendar date part.
+      const tzOffset = selectedImportantDate.getTimezoneOffset() * 60000
+      const localISODateOnly = new Date(selectedImportantDate.getTime() - tzOffset)
+        .toISOString()
+        .split("T")[0]
+
+      const response = await fetch(`/api/leads/${lead.id}/important-dates`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dateType: selectedImportantDateType.key,
+          date: localISODateOnly
+        })
+      })
+
+      if (response.ok) {
+        toast({
+          title: "✅ Date Updated Successfully!",
+          description: `${selectedImportantDateType.label} set to ${format(selectedImportantDate, "MMM d, yyyy")}`,
+          duration: 3000
+        })
+        setIsImportantDateModalOpen(false)
+        // Update the lead data in the parent component by triggering a refetch
+        window.location.reload() // Simple approach - could be optimized with proper state management
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Failed to Update Date",
+          description: error.error || "Failed to update important date",
+          variant: "destructive",
+          duration: 3000
+        })
+      }
+    } catch (error) {
+      console.error('Error updating important date:', error)
+      toast({
+        title: "Error",
+        description: "Failed to update important date",
+        variant: "destructive",
+        duration: 3000
+      })
+    } finally {
+      setIsUpdatingImportantDate(false)
+    }
+  }
+
+  // Handle important date delete
+  const handleDeleteImportantDate = async () => {
+    if (!selectedImportantDateType) {
+      return
+    }
+
+    setIsDeletingImportantDate(true)
+    try {
+      const response = await fetch(`/api/leads/${lead.id}/important-dates`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dateType: selectedImportantDateType.key
+        })
+      })
+
+      if (response.ok) {
+        toast({
+          title: "✅ Date Deleted Successfully!",
+          description: `${selectedImportantDateType.label} date has been removed`,
+          duration: 3000
+        })
+        setIsImportantDateModalOpen(false)
+        // Update the lead data in the parent component by triggering a refetch
+        window.location.reload() // Simple approach - could be optimized with proper state management
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Failed to Delete Date",
+          description: error.error || "Failed to delete important date",
+          variant: "destructive",
+          duration: 3000
+        })
+      }
+    } catch (error) {
+      console.error('Error deleting important date:', error)
+      toast({
+        title: "Error",
+        description: "Failed to delete important date",
+        variant: "destructive",
+        duration: 3000
+      })
+    } finally {
+      setIsDeletingImportantDate(false)
+    }
+  }
+
   // Fetch scheduled events from Google Calendar
   const fetchScheduledEvents = async () => {
     if (!lead.id || !leadName || !session?.user?.email) return
@@ -223,12 +374,18 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
         })
         setLastCreatedEventUrl(result.eventUrl)
         
-        // Format the original time the user selected (not the adjusted time)
+        // Capture info for reminder dialog
         const userSelectedTime = selectedTime
-        const [hours, minutes] = userSelectedTime.split(':').map(Number)
+        const [hours, minutes] = userSelectedTime.split(":").map(Number)
         const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
-        const ampm = hours >= 12 ? 'PM' : 'AM'
-        const formattedUserTime = `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`
+        const ampm = hours >= 12 ? "PM" : "AM"
+        const formattedUserTime = `${hour12}:${minutes.toString().padStart(2, "0")} ${ampm}`
+
+        setLastScheduledInfo({
+          eventType: selectedEventType,
+          scheduledDate: new Date(selectedDate),
+          formattedTime: formattedUserTime,
+        })
         
         // Show success toast with the original user-selected time
         toast({
@@ -263,6 +420,8 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
         }
         
         setIsEventModalOpen(false)
+        // Open reminder prompt dialog
+        setIsReminderDialogOpen(true)
         // Refresh the events list
         await fetchScheduledEvents()
       } else {
@@ -287,8 +446,130 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
     }
   }
 
+  // Build email subject/body dynamically so the time is always in 12-hour format
+  const buildReminderTemplate = (
+    type: EventCreationData['type'],
+    dateObj: Date,
+    time12hr: string
+  ): { subject: string; body: string } => {
+    const common = {
+      first: lead.firstName || '',
+      sales: session?.user?.name || '',
+      dateStr: format(dateObj, 'MMM d, yyyy'),
+      timeStr: time12hr,
+    }
+    switch (type) {
+      case 'adjuster':
+        return {
+          subject: `Reminder: Adjuster Appointment on ${common.dateStr}`,
+          body: `Hi ${common.first},\n\nThis is a friendly reminder of your adjuster appointment on ${common.dateStr} at ${common.timeStr}.\n\nIf you have any questions please let me know.\n\nThank you,\n${common.sales}`,
+        }
+      case 'build':
+        return {
+          subject: `Build Date confirmed – ${common.dateStr}`,
+          body: `Hi ${common.first},\n\nGreat news! Your build date is set for ${common.dateStr}. Our crew will arrive around ${common.timeStr}.\n\nLet me know if you need anything.\n\nBest,\n${common.sales}`,
+        }
+      case 'acv':
+        return {
+          subject: `ACV Check pickup scheduled – ${common.dateStr}`,
+          body: `Hi ${common.first},\n\nJust a reminder that I'll stop by to pick up the ACV check on ${common.dateStr} at ${common.timeStr}.\n\nThank you,\n${common.sales}`,
+        }
+      case 'rcv':
+        return {
+          subject: `RCV Check pickup scheduled – ${common.dateStr}`,
+          body: `Hi ${common.first},\n\nReminder that I'll be by on ${common.dateStr} at ${common.timeStr} to collect the RCV check.\n\nPlease reach out with any questions.\n\nThanks,\n${common.sales}`,
+        }
+    }
+  }
+
+  const handleSendReminderEmail = async () => {
+    if (!lead.email || !lastScheduledInfo) {
+      toast({ title: 'No email on file', variant: 'destructive' })
+      return
+    }
+    setIsSendingReminder(true)
+    try {
+      const tpl = buildReminderTemplate(
+        lastScheduledInfo.eventType.type,
+        lastScheduledInfo.scheduledDate,
+        lastScheduledInfo.formattedTime
+      )
+      const res = await fetch('/api/gmail/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: lead.email, subject: tpl.subject, text: tpl.body })
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to send email')
+      }
+      toast({ title: 'Email sent!', description: `Reminder email sent to ${lead.email}` })
+      setIsReminderDialogOpen(false)
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' })
+    } finally {
+      setIsSendingReminder(false)
+    }
+  }
+
   return (
     <>
+      {/* Important Date Buttons Section (header removed) */}
+      <Card className="w-full mb-4">
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            {importantDates.map((dateData, index) => {
+              const savedDateText = getImportantDateFromMetadata(dateData.key)
+              const formattedDate = savedDateText ? format(parseISO(savedDateText), "MMM d, yyyy") : null
+              
+              // Determine border color based on date status
+              let borderClass = "border-gray-700"
+              if (savedDateText) {
+                const date = parseISO(savedDateText)
+                const now = new Date()
+                const isPastDate = date < now
+                borderClass = isPastDate ? "border-gray-500 border-2" : "border-lime-500 border-2"
+              }
+              
+              return (
+                <Button
+                  key={index}
+                  variant="outline"
+                  onClick={() => handleImportantDateClick(dateData)}
+                  className={`h-16 p-2 flex flex-col items-center justify-center gap-1 hover:shadow-md transition-all duration-200 bg-transparent bg-black/60 text-white hover:bg-gray-800/50 disabled:opacity-100 ${borderClass}`}
+                  disabled={isUpdatingImportantDate || isDeletingImportantDate}
+                >
+                  <div className="flex-shrink-0">
+                    {dateData.icon}
+                  </div>
+                  <span className="text-xs font-medium text-center leading-tight text-white disabled:text-white px-1">
+                    {dateData.label}
+                  </span>
+                  {formattedDate && (
+                    <span className="text-xs text-white disabled:text-white text-center leading-tight mt-0.5 font-semibold">
+                      {formattedDate}
+                    </span>
+                  )}
+                  {!formattedDate && (
+                    <span className="text-xs text-gray-400 text-center leading-tight mt-0.5">
+                      Click to set
+                    </span>
+                  )}
+                  {(isUpdatingImportantDate || isDeletingImportantDate) && (
+                    <div className="flex items-center gap-1">
+                      <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-primary"></div>
+                      <span className="text-xs text-muted-foreground">
+                        {isUpdatingImportantDate ? "Updating..." : "Deleting..."}
+                      </span>
+                    </div>
+                  )}
+                </Button>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="w-full">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex flex-col items-center gap-2">
@@ -308,7 +589,7 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
               const eventCount = scheduledEvents[eventData.type]?.length || 0
               
               // Determine border color based on event status
-              let borderClass = "border-border" // default no border
+              let borderClass = "border-gray-700"
               if (scheduledEvent) {
                 const eventDate = new Date(scheduledEvent.start?.dateTime || scheduledEvent.start?.date || '')
                 const now = new Date()
@@ -321,34 +602,34 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                   key={index}
                   variant="outline"
                   onClick={() => handleEventButtonClick(eventData)}
-                  className={`h-20 sm:h-24 p-2 sm:p-4 flex flex-col items-center justify-center gap-0.5 sm:gap-1 hover:shadow-md transition-all duration-200 disabled:opacity-100 ${borderClass}`}
+                  className={`h-16 p-2 flex flex-col items-center justify-center gap-1 hover:shadow-md transition-all duration-200 bg-transparent bg-black/60 text-white hover:bg-gray-800/50 disabled:opacity-100 ${borderClass}`}
                   disabled={!userEmail || isLoading || isCreating}
                 >
                   <div className="flex-shrink-0">
                     {eventData.icon}
                   </div>
-                  <span className="text-[9px] sm:text-[10px] font-medium text-center leading-tight text-white disabled:text-white px-1">
+                  <span className="text-xs font-medium text-center leading-tight text-white disabled:text-white px-1">
                     {eventData.label}
                   </span>
                   {scheduledDate && (
-                    <span className="text-sm sm:text-base text-white disabled:text-white text-center leading-tight mt-0.5 sm:mt-1 font-semibold">
+                    <span className="text-xs text-white disabled:text-white text-center leading-tight mt-0.5 font-semibold">
                       {scheduledDate}
                     </span>
                   )}
                   {eventCount > 0 && !scheduledDate && (
-                    <span className="text-[9px] sm:text-[10px] text-white disabled:text-white text-center leading-tight mt-0.5 sm:mt-1">
+                    <span className="text-xs text-white disabled:text-white text-center leading-tight mt-0.5">
                       {eventCount} scheduled
                     </span>
                   )}
                   {eventCount > 1 && scheduledDate && (
-                    <span className="text-[9px] sm:text-[10px] text-white disabled:text-white text-center leading-tight">
+                    <span className="text-xs text-white disabled:text-white text-center leading-tight">
                       +{eventCount - 1} more
                     </span>
                   )}
                   {(isLoading || isCreating) && (
                     <div className="flex items-center gap-1">
-                      <div className="animate-spin rounded-full h-2 w-2 sm:h-3 sm:w-3 border-b-2 border-primary"></div>
-                      <span className="text-[8px] sm:text-[10px] text-muted-foreground">
+                      <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-primary"></div>
+                      <span className="text-xs text-muted-foreground">
                         {isCreating ? "Creating..." : "Loading..."}
                       </span>
                     </div>
@@ -359,6 +640,17 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* View Calendar Link */}
+      <div className="w-full flex justify-center mt-4">
+        <button
+          type="button"
+          onClick={() => setIsCalendarDialogOpen(true)}
+          className="text-sm text-blue-400 hover:underline focus:outline-none"
+        >
+          View Calendar
+        </button>
+      </div>
 
       {/* Event Creation Modal */}
       <Dialog open={isEventModalOpen} onOpenChange={setIsEventModalOpen}>
@@ -592,6 +884,106 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Important Dates Modal */}
+      <Dialog open={isImportantDateModalOpen} onOpenChange={setIsImportantDateModalOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5" />
+              Set {selectedImportantDateType?.label}
+            </DialogTitle>
+            <DialogDescription>
+              Select a date for {selectedImportantDateType?.label?.toLowerCase()} for {leadName}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label>Select Date</Label>
+              <div className="flex justify-center">
+                <Calendar
+                  mode="single"
+                  selected={selectedImportantDate}
+                  captionLayout="dropdown"
+                  onSelect={(date) => {
+                    setSelectedImportantDate(date)
+                  }}
+                  classNames={{
+                    day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsImportantDateModalOpen(false)}
+                className="flex-1"
+                disabled={isUpdatingImportantDate || isDeletingImportantDate}
+              >
+                Cancel
+              </Button>
+              {selectedImportantDateType && getImportantDateFromMetadata(selectedImportantDateType.key) && (
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteImportantDate}
+                  className="flex-1 flex items-center gap-2"
+                  disabled={isUpdatingImportantDate || isDeletingImportantDate}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {isDeletingImportantDate ? "Deleting..." : "Delete"}
+                </Button>
+              )}
+              <Button
+                onClick={handleSaveImportantDate}
+                className="flex-1"
+                disabled={isUpdatingImportantDate || isDeletingImportantDate || !selectedImportantDate}
+              >
+                {isUpdatingImportantDate ? "Saving..." : "Save Date"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reminder Email Dialog */}
+      <Dialog open={isReminderDialogOpen} onOpenChange={setIsReminderDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" /> Send Reminder Email?
+            </DialogTitle>
+            <DialogDescription>
+              {lastScheduledInfo && (
+                <span>
+                  {lastScheduledInfo.eventType.label} scheduled for {format(lastScheduledInfo.scheduledDate, 'MMM d, yyyy')} at {lastScheduledInfo.formattedTime}.
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 pt-4">
+            <Button variant="outline" className="flex-1" onClick={() => setIsReminderDialogOpen(false)} disabled={isSendingReminder}>
+              No Thanks
+            </Button>
+            <Button className="flex-1" onClick={handleSendReminderEmail} disabled={isSendingReminder}>
+              {isSendingReminder ? 'Sending...' : 'Send Email'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Calendar Iframe Dialog */}
+      <Dialog open={isCalendarDialogOpen} onOpenChange={setIsCalendarDialogOpen}>
+        <DialogContent className="w-full max-w-4xl h-[80vh] p-0 overflow-hidden">
+          <iframe
+            src="/calendar"
+            title="Calendar"
+            className="w-full h-full border-0"
+          />
         </DialogContent>
       </Dialog>
     </>

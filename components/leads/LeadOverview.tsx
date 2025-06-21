@@ -282,6 +282,7 @@ export function LeadOverview({ lead, onEditRequest }: LeadOverviewProps) {
                 <p className="text-xs">{lead.insuranceCompany || "N/A"}</p>
               </div>
               <ContactItem label="Ins. Phone" value={lead.insurancePhone} type="phone" />
+              <ContactItem label="Ins. Email" value={lead.insuranceEmail} type="email" className="col-span-2" />
               <div className="space-y-0.5">
                 <p className="text-xs font-medium text-muted-foreground">Damage Type</p>
                 <p className="text-xs">{lead.damageType || "N/A"}</p>

@@ -1,6 +1,6 @@
 "use client"
 
-import { formatDistanceToNow, format, isValid, parse } from "date-fns"
+import { formatDistanceToNow, format, isValid, parseISO } from "date-fns"
 import { useState, useEffect, useRef } from "react"
 import type { Lead } from "@prisma/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,6 +27,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Progress } from "@/components/ui/progress"
 import { useWindowSize } from "@/hooks/use-window-size"
 import ReactConfetti from "react-confetti"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
 interface User {
   id: string;
@@ -705,13 +706,52 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
       <CardContent className="space-y-1 p-1">
         {/* Lead Summary Section */}
         <div className="space-y-2 pb-4">
-          <div className="flex justify-center items-center">
+          <div className="flex items-center gap-1">
             <h3 className="text-lg font-medium text-white">Lead Summary</h3>
+            {onEditRequest && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 p-0"
+                onClick={() => onEditRequest('contact')}
+              >
+                <Pencil className="h-4 w-4" />
+                <span className="sr-only">Edit Contact</span>
+              </Button>
+            )}
           </div>
-          {/* Two-column layout: details (col 1) + upload buttons (col 2) */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Column 1 – Existing details */}
-            <div className="space-y-3">
+          {/* Two-column layout (always two columns even on small screens) */}
+          <div className="grid grid-cols-2 gap-2">
+            {/* Column 1 – Contact information (moved left) */}
+            <div className="space-y-3 order-1">
+              <div className="flex justify-between items-center">
+                <p className="text-sm font-medium text-blue-400">Contact</p>
+              </div>
+              <div>
+                <p className="font-medium text-base">{fullName}</p>
+                <div className="flex items-center gap-.5">
+                  <p className="text-sm break-all">{lead.email || "No email"}</p>
+                  {lead.email && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => handleEmailClick(lead.email!)}
+                    >
+                      <Mail className="h-3 w-3" />
+                      <span className="sr-only">Email</span>
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 gap-1 pt-1">
+                  <ContactItem label="Phone" value={lead.phone} type="phone" />
+                  <ContactItem label="Address" value={addressDisplay !== "No address provided" ? addressDisplay : null} type="address" />
+                </div>
+              </div>
+            </div>
+
+            {/* Column 2 – Existing details (shifted right 25%) */}
+            <div className="space-y-3 order-2 ml-0 md:ml-[25%]">
               <div className="space-y-0.5">
                 <p className="text-sm font-medium text-blue-400">Created</p>
                 {createdDate && isValid(createdDate) ? (
@@ -725,28 +765,53 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
               </div>
               <div className="space-y-0.5">
                 <p className="text-sm font-medium text-blue-400">SalesPerson</p>
-                <div className="relative max-w-sm">
-                  <Select 
-                    value={selectedAssignee} 
+                <div className="relative flex items-center gap-2">
+                  <Select
+                    value={selectedAssignee}
                     onValueChange={handleAssigneeChange}
                     disabled={isLoadingUsers || isUpdatingAssignee}
                   >
-                    <SelectTrigger className="h-9 text-sm w-1/2">
-                      <SelectValue placeholder="Select salesperson">
-                        {isLoadingUsers ? "Loading..." : isUpdatingAssignee ? "Updating..." : (selectedAssignee === "unassigned" ? "Unassigned" : users.find(user => user.id === selectedAssignee)?.name || 'Unassigned')}
-                      </SelectValue>
+                    <SelectTrigger className="h-10 px-1 border-none bg-transparent focus:ring-0 focus:outline-none flex items-center gap-1 min-w-0">
+                      {(() => {
+                        const selectedUser = users.find(u => u.id === selectedAssignee);
+                        const initials = selectedUser?.name ? selectedUser.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase() : "UA";
+                        const firstName = selectedUser?.name ? selectedUser.name.split(' ')[0] : "Unassigned";
+                        const lastInitial = selectedUser?.name && selectedUser.name.split(' ').length > 1 ? `${selectedUser.name.split(' ')[1][0]}.` : "";
+                        return (
+                          <>
+                            <Avatar className="h-8 w-8">
+                              {selectedUser?.image ? (
+                                <AvatarImage src={selectedUser.image} alt={selectedUser.name || 'User'} />
+                              ) : (
+                                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                              )}
+                            </Avatar>
+                            <span className="text-xs truncate max-w-[6rem] text-white">{firstName} {lastInitial}</span>
+                          </>
+                        );
+                      })()}
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                    <SelectContent className="max-h-60 overflow-y-auto">
+                      <SelectItem value="unassigned">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6"><AvatarFallback>UA</AvatarFallback></Avatar>
+                          <span>Unassigned</span>
+                        </div>
+                      </SelectItem>
                       {users.map(user => (
                         <SelectItem key={user.id} value={user.id}>
-                          {user.name || user.email}
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              {user.image ? <AvatarImage src={user.image} alt={user.name || 'User'} /> : <AvatarFallback>{user.name ? user.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase() : '?'}</AvatarFallback>}
+                            </Avatar>
+                            <span>{user.name || user.email}</span>
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   {isUpdatingAssignee && (
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2">
                       <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                     </div>
                   )}
@@ -754,7 +819,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
               </div>
               {/* Contract Status */}
               {(contractStatus || isLoadingContract || uploadedContract) && (
-                <div className="space-y-0.5">
+                <div className="space-y-0.5" id="contracts-info">
                   <p className="text-sm font-medium text-blue-400">Contract</p>
                   {isLoadingContract ? (
                     <div className="flex items-center gap-2">
@@ -834,150 +899,32 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                 </div>
               )}
             </div>
-
-            {/* Column 2 – Additional document uploads */}
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-blue-400 mb-2">Upload to Drive</p>
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
-                {[
-                  { key: "estimate", label: "Estimate" },
-                  { key: "acv", label: "ACV" },
-                  { key: "supplement", label: "Supplement" },
-                  { key: "eagleview", label: "EagleView" },
-                  { key: "scope_of_work", label: "SOW" },
-                  { key: "warrenty", label: "Warranty" },
-                ].map(({ key, label }) => (
-                  <div key={key} className="relative group">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleUploadFile(key)}
-                      disabled={isUploadingFile}
-                      className={`h-12 sm:h-10 px-1 sm:px-2 text-[10px] sm:text-md w-full rounded-xl border-gray-300/40 bg-black text-white hover:bg-gray-800 flex flex-col sm:flex-row items-center pt-4 justify-center gap-0.5 sm:gap-1 transition-all duration-200 ${
-                        uploadedFileStatus[key] ? 'border-lime-500/70' : ''
-                      }`}
-                    >
-                      <div className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1 flex-1 min-w-0">
-                        {isUploadingFile && currentUploadType === key ? (
-                          <Loader2 className="h-3 w-3 animate-spin flex-shrink-0" />
-                        ) : isCheckingFiles[key] ? (
-                          <Loader2 className="h-3 w-3 animate-spin text-blue-500 flex-shrink-0" />
-                        ) : null}
-                        <span className="truncate text-center sm:text-left text-[9px] sm:text-xs leading-tight">{label}</span>
-                      </div>
-                      
-                      {/* Green checkmark on the right when uploaded */}
-                      {uploadedFileStatus[key] && (
-                        <CheckCircle2 className="h-3 w-3 text-green-500 absolute top-1 right-1 flex-shrink-0" />
-                      )}
-                    </Button>
-                    
-                    {/* Hover overlay with View and Delete buttons */}
-                    {uploadedFileStatus[key] && (
-                      <div className="absolute inset-0 bg-black/80 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-1 sm:gap-2 z-10">
-                        {uploadedFileUrls[key] && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(uploadedFileUrls[key], '_blank');
-                            }}
-                            className="h-8 sm:h-7 px-2 sm:px-2 text-[10px] sm:text-xs text-blue-400 hover:text-blue-300 hover:bg-black/20"
-                          >
-                            <Eye className="h-3 w-3 mr-0.5 sm:mr-1" />
-                            <span className="hidden sm:inline">View</span>
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteFile(key);
-                          }}
-                          disabled={isDeletingFile[key]}
-                          className="h-8 sm:h-7 px-2 sm:px-2 text-[10px] sm:text-xs text-red-400 hover:text-red-300 hover:bg-black/20"
-                        >
-                          {isDeletingFile[key] ? (
-                            <Loader2 className="h-3 w-3 mr-0.5 sm:mr-1 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-3 w-3 mr-0.5 sm:mr-1" />
-                          )}
-                          <span className="hidden sm:inline">{isDeletingFile[key] ? 'Deleting...' : 'Delete'}</span>
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Generic hidden input for uploads */}
-              <input
-                ref={genericFileInputRef}
-                type="file"
-                onChange={handleGenericFileChange}
-                accept=".pdf,.doc,.docx"
-                className="hidden"
-                aria-label="Upload document"
-              />
-            </div>
           </div>
         </div>
       
-        {/* Custom gradient divider */}
-        <div className="h-px bg-gradient-to-r from-black via-lime-400 to-black my-4"></div>
-        
-        <div className="space-y-2 pb-4">
-          <div className="flex justify-center items-center relative">
-            <h3 className="text-lg mt-4 font-medium text-white">Contact Information</h3>
-            {onEditRequest && (
-              <Button variant="ghost" size="icon" className="h-8 w-8 absolute right-0" onClick={() => onEditRequest('contact')}>
-                <Pencil className="h-4 w-4" />
-                <span className="sr-only">Edit Contact</span>
-              </Button>
-            )}
-          </div>
-          <div className="space-y-1">
-            <div>
-              <p className="font-medium text-base">{fullName}</p>
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm text- break-all">{lead.email || "No email"}</p>
-                {lead.email && (
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleEmailClick(lead.email!)}>
-                    <Mail className="h-3 w-3" />
-                    <span className="sr-only">Email</span>
-                  </Button>
-                )}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-1 pt-1">
-              <ContactItem label="Phone" value={lead.phone} type="phone" />
-              <ContactItem label="Address" value={addressDisplay !== "No address provided" ? addressDisplay : null} type="address" />
-            </div>
-          </div>
-        </div>
-
-        {/* Custom gradient divider */}
+        {/* Divider between combined Summary/Contact section and Insurance */}
         <div className="h-px bg-gradient-to-r from-black via-lime-400 to-black my-6"></div>
-
-        {/* Insurance Details Section */}
-        <div className="space-y-4 pb-4">
-          <div className="flex justify-center items-center relative">
-            <h3 className="text-lg mt-4 font-medium text-white">Insurance Details</h3>
+        
+        {/* Insurance Information Section */}
+        <div className="space-y-4 pb-4" id="insurance-info">
+          <div className="flex items-center gap-1 mt-4">
+            <h3 className="text-lg font-medium text-white">Insurance Information</h3>
             {onEditRequest && (
-              <Button variant="ghost" size="icon" className="h-8 w-8 absolute right-0" onClick={() => onEditRequest('insurance')}>
+              <Button variant="ghost" size="icon" className="h-6 w-6 p-0" onClick={() => onEditRequest('insurance')}>
                 <Pencil className="h-4 w-4" />
                 <span className="sr-only">Edit Insurance</span>
               </Button>
             )}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 gap-1 sm:gap-2">
             <div className="space-y-0.5">
               <p className="text-sm font-medium text-muted-foreground">Company</p>
               <p className="text-sm">{lead.insuranceCompany || "N/A"}</p>
             </div>
             <ContactItem label="Ins. Phone" value={lead.insurancePhone} type="phone" />
+            {lead.insuranceSecondaryPhone && (
+              <ContactItem label="Secondary Phone" value={lead.insuranceSecondaryPhone} type="phone" />
+            )}
             <div className="space-y-0.5">
               <p className="text-sm font-medium text-muted-foreground">Damage Type</p>
               <p className="text-sm">{lead.damageType || "N/A"}</p>
@@ -986,18 +933,30 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
               <p className="text-sm font-medium text-muted-foreground">Claim Number</p>
               <p className="text-sm">{lead.claimNumber || "N/A"}</p>
             </div>
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium text-muted-foreground">Policy Number</p>
+              <p className="text-sm">{lead.insurancePolicyNumber || "N/A"}</p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium text-muted-foreground">Deductible</p>
+              <p className="text-sm">{lead.insuranceDeductible || "N/A"}</p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium text-muted-foreground">Date of Loss</p>
+              <p className="text-sm">{lead.dateOfLoss ? format(parseISO(lead.dateOfLoss), 'MM/dd/yyyy') : "N/A"}</p>
+            </div>
           </div>
         </div>
 
         {/* Custom gradient divider */}
         <div className="h-px bg-gradient-to-r from-black via-lime-400 to-black my-6"></div>
 
-        {/* Adjuster Details Section */}
-        <div className="space-y-4 pb-4">
-          <div className="flex justify-center items-center relative">
-            <h3 className="text-lg mt-4 font-medium text-white">Adjuster Details</h3>
+        {/* Adjuster Information Section */}
+        <div className="space-y-4 pb-4" id="adjuster-info">
+          <div className="flex items-center gap-1 mt-4">
+            <h3 className="text-lg font-medium text-white">Adjuster Information</h3>
             {onEditRequest && (
-              <Button variant="ghost" size="icon" className="h-8 w-8 absolute right-0" onClick={() => onEditRequest('adjuster')}>
+              <Button variant="ghost" size="icon" className="h-6 w-6 p-0" onClick={() => onEditRequest('adjuster')}>
                 <Pencil className="h-4 w-4" />
                 <span className="sr-only">Edit Adjuster</span>
               </Button>

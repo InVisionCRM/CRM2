@@ -9,11 +9,11 @@ export const FixedWavyBackground = () => {
         className="w-full h-full"
         containerClassName="w-full h-full"
         colors={["#59ff00", "#38bdf8", "#818cf8"]}
-        waveWidth={50}
+        waveWidth={25}
         backgroundFill="rgba(0, 0, 0, 0.5)"
-        blur={10}
+        blur={5}
         speed="fast"
-        waveOpacity={0.5}
+        waveOpacity={0.2}
       />
     </div>
   )

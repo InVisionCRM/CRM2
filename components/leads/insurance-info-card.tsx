@@ -49,6 +49,7 @@ interface InsuranceInfo {
   company: string
   phone: string
   secondaryPhone?: string | null
+  email?: string | null
   adjusterName: string
   adjusterPhone: string
   adjusterEmail: string
@@ -80,6 +81,7 @@ export function InsuranceInfoCard({
       company: "",
       phone: "",
       secondaryPhone: null,
+      email: null,
       adjusterName: "",
       adjusterPhone: "",
       adjusterEmail: "",
@@ -225,6 +227,15 @@ export function InsuranceInfoCard({
                   onChange={(e) => handleInputChange("secondaryPhone", e.target.value)}
                 />
               </div>
+              <div className="space-y-1">
+                <Label htmlFor="email">Insurance Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={insuranceInfo.email || ""}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                />
+              </div>
             </div>
 
             {/* Adjuster fields */}
@@ -305,6 +316,24 @@ export function InsuranceInfoCard({
                           className="text-primary hover:underline break-all"
                         >
                           {initialInsuranceInfo.secondaryPhone}
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Insurance Email */}
+                {initialInsuranceInfo.email && (
+                  <div className="flex items-start">
+                    <Mail className="h-5 w-5 mr-3 text-muted-foreground mt-0.5" />
+                    <div>
+                      <div className="font-medium">Insurance Email</div>
+                      <div className="flex items-center">
+                        <a
+                          href={`mailto:${initialInsuranceInfo.email}`}
+                          className="text-primary hover:underline break-all"
+                        >
+                          {initialInsuranceInfo.email}
                         </a>
                       </div>
                     </div>

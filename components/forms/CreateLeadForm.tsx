@@ -88,6 +88,7 @@ const createLeadSchema = z.object({
   // Insurance fields (all optional)
   insuranceCompany: z.string().optional().or(z.literal("")),
   customInsuranceCompany: z.string().optional().or(z.literal("")),
+  insuranceEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
   insurancePhone: z.string().optional().or(z.literal("")),
   insuranceSecondaryPhone: z.string().optional().or(z.literal("")),
   insuranceDeductible: z.string().optional().or(z.literal("")),
@@ -147,6 +148,7 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
       // Insurance defaults - start with dropdown
       insuranceCompany: "",
       customInsuranceCompany: "",
+      insuranceEmail: "",
       insurancePhone: "",
       insuranceSecondaryPhone: "",
       insuranceDeductible: "",
@@ -578,6 +580,21 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
                     disabled={isLoading}
                     className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
                   />
+                </div>
+
+                <div className="space-y-1 sm:space-y-2">
+                  <Label htmlFor="insuranceEmail" className="text-white text-opacity-90 text-sm sm:text-base">
+                    Insurance Email
+                  </Label>
+                  <Input
+                    id="insuranceEmail"
+                    type="email"
+                    placeholder="Enter insurance email"
+                    {...register("insuranceEmail")}
+                    disabled={isLoading}
+                    className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+                  />
+                  {errors.insuranceEmail && <p className="text-red-500 text-xs mt-1">{errors.insuranceEmail.message}</p>}
                 </div>
               </div>
 
