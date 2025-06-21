@@ -315,6 +315,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
     if (newExpanded.has(leadId)) {
       newExpanded.delete(leadId);
     } else {
+      // Clear all expanded rows and add only the new one (only one expanded at a time)
+      newExpanded.clear();
       newExpanded.add(leadId);
       // Load street view coordinates if not already loaded
       const lead = leads.find(l => l.id === leadId);
@@ -373,7 +375,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
         }
 
         toast({
-          title: "Success",
+          title: "✅ Success",
           description: `${fileType} uploaded successfully!`,
         });
       } else {
@@ -424,7 +426,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
         }));
 
         toast({
-          title: "Success",
+          title: "✅ Success",
           description: `${fileType} deleted successfully!`,
         });
       } else {
@@ -464,7 +466,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
 
       if (result.success) {
         toast({
-          title: "Success",
+          title: "✅ Success",
           description: "Note saved successfully!",
         });
         setQuickNotes(prev => ({ ...prev, [leadId]: "" }));
@@ -731,8 +733,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
 
       if (response.ok) {
         toast({
-          title: "Contract Sent!",
-          description: `Contract has been sent to ${lead.email}`
+          title: "✅ Contract Sent Successfully!",
+          description: `Contract has been sent to ${lead.email}`,
         });
       } else {
         const error = await response.json();
@@ -761,24 +763,33 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
     setIsSigningInPerson(prev => ({ ...prev, [leadId]: true }));
 
     try {
-      const response = await fetch('/api/docuseal/create-in-person', {
+      const response = await fetch('/api/docuseal/sign-in-person', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          leadId: leadId,
-          email: lead.email,
-          name: lead.name
+          leadId: leadId
         })
       });
 
       if (response.ok) {
         const result = await response.json();
-        if (result.url) {
-          window.open(result.url, '_blank');
+        if (result.signingUrl) {
+          window.open(result.signingUrl, '_blank');
+          
+          // Success toast
           toast({
-            title: "In-Person Signing Created!",
-            description: "Opening signing session in new tab"
+            title: "✅ In-Person Signing Created!",
+            description: "Opening signing session in new tab",
           });
+          
+          // Center notification about Chrome and Pop-ups
+          setTimeout(() => {
+            toast({
+              title: "📋 Important Notice",
+              description: "Please ensure you are using Chrome browser and have Pop-Ups enabled for the best signing experience.",
+              duration: 8000,
+            });
+          }, 1500);
         }
       } else {
         const error = await response.json();
@@ -890,6 +901,18 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
             {/* Expanded Details */}
             {isExpanded && (
               <div className="border-t border-gray-700 bg-gradient-to-b from-green-900/20 via-blue-900/20 to-gray-900 p-4 space-y-4">
+                {/* Lead Detail Navigation Arrow */}
+                <div className="flex justify-end mb-2">
+                  <Link 
+                    href={`/leads/${lead.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#59ff00]/20 hover:bg-[#59ff00]/30 rounded-lg border border-[#59ff00]/50 transition-all duration-200 text-white hover:text-[#59ff00]"
+                  >
+                    <span className="font-bold text-sm">View Full Details</span>
+                    <ExternalLink className="h-5 w-5 font-bold" />
+                  </Link>
+                </div>
+                
                 {/* Top Row: Street View and Quick Note */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {/* Street View */}

@@ -9,6 +9,7 @@ import { PWAInstallPrompt } from "@/components/PWAInstallPrompt"
 import { OfflineIndicator } from "@/components/OfflineIndicator"
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration"
 
+
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
@@ -124,6 +125,8 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+
+
   return (
     <html lang="en" suppressHydrationWarning className="dark">
       <head>

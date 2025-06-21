@@ -62,23 +62,23 @@ export default function AppSidebar({ className }: SidebarProps) {
 
   const navLinks = [
     { label: "Home", href: "/", icon: <IconHomeHeart className="h-5 w-5" /> },
-    { label: "Leads", href: "/leads", icon: <IconUserBolt className="h-5 w-5" /> },
-    { label: "Map", href: "/map", icon: <IconMap className="h-5 w-5" /> },
+    { label: "Leads", href: "/leads", icon: <IconUserBolt className="h-5 w-5 text-[#FF5400]" /> },
+    { label: "Map", href: "/map", icon: <IconMap className="h-5 w-5 text-[#52489C]" /> },
     { label: "Add Lead", href: "#add-lead", icon: <Plus className="h-6 w-6 text-lime-400" />, onClick: () => setIsCreateLeadOpen(true) },
-    { label: "MySigner", href: "/submissions", icon: <FileSignature className="h-5 w-5" /> },
+    { label: "MySigner", href: "/submissions", icon: <FileSignature className="h-5 w-5 text-[#F2E8CF]" /> },
   ] as const;
 
   const googleLinks = [
-    { label: "Calendar", href: "/dashboard/calendar", icon: <IconCalendar className="h-5 w-5 text-[#ea4335]" /> },
+    { label: "Calendar", href: "/dashboard/calendar", icon: <IconCalendar className="h-5 w-5 text-[#FFBD00]" /> },
     { label: "Drive", href: "/drive", icon: <IconFolder className="h-5 w-5 text-[#ea4335]" /> },
-    { label: "Gmail", href: "/gmail", icon: <Mail className="h-5 w-5 text-[#ea4335]" /> },
+    { label: "Gmail", href: "/gmail", icon: <Mail className="h-5 w-5 text-[#68B0AB]" /> },
   ] as const;
 
   const moreLinks = [
-    { label: "Quick Links", href: "/quick-links", icon: <IconLink className="h-5 w-5" /> },
-    { label: "Route Planner", href: "/route-planner", icon: <IconRoute className="h-5 w-5" /> },
-    { label: "Team", href: "/team", icon: <User className="h-5 w-5" /> },
-    { label: "Contracts", href: "/contracts/general", icon: <FileSignature className="h-5 w-5" /> },
+    { label: "Quick Links", href: "/quick-links", icon: <IconLink className="h-5 w-5 text-[#337CA0] hover:text-[#FFC800]" /> },
+    { label: "Route Planner", href: "/route-planner", icon: <IconRoute className="h-5 w-5 text-[#16E0BD] hover:text-[#FFC800]" /> },
+    { label: "Team", href: "/team", icon: <User className="h-5 w-5 text-[#77CBB9] hover:text-[#FFC800]" /> },
+    { label: "Contracts", href: "/contracts/general", icon: <FileSignature className="h-5 w-5 text-[#E13700] hover:bg-white/10 hover:text-[#FFC800]" /> },
   ] as const;
 
   const renderAvatar = () => (
@@ -191,7 +191,7 @@ export default function AppSidebar({ className }: SidebarProps) {
       <DropdownMenuTrigger asChild>
         <button className={cn(
           "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all",
-          moreLinks.some(link => pathname === link.href) ? "text-[#59ff00] bg-white/10" : "text-white hover:text-[#59ff00] hover:bg-white/5",
+          moreLinks.some(link => pathname === link.href) ? "text-[#59ff00] bg-white/10" : "text-white hover:text-[#FFC800] hover:bg-white/5",
         )}>
           <MoreHorizontal className="h-5 w-5" />
           <span className="text-xs font-medium text-center leading-tight">More</span>
@@ -216,13 +216,13 @@ export default function AppSidebar({ className }: SidebarProps) {
     <>
       <div className={cn(
         "fixed bottom-0 left-0 right-0 z-40",
-        "bg-black/90 backdrop-blur",
+        "bg-black/75 backdrop-blur",
         "border-t border-white/20 shadow-2xl",
         "transform transition-transform duration-300",
         isHidden ? "translate-y-full" : "translate-y-0",
         className
       )}>
-        <div className="flex items-center justify-evenly h-16 px-2">
+        <div className="flex items-center justify-evenly h-20 px-2 pb-1">
           {navLinks.map((link) => (
             <NavLink key={link.href} link={link} />
           ))}

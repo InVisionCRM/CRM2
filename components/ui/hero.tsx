@@ -176,7 +176,7 @@ export const Hero = () => {
         animate={{ opacity: 1, y: 0 }}
         style={{ opacity }}
         transition={{ duration: 0.8, ease: "easeOut" }}
-        className="h-[4.25rem] w-full bg-transparent flex flex-col items-center overflow-hidden rounded-md relative"
+        className="h-[7.25rem] w-full bg-transparent flex flex-col items-center overflow-hidden rounded-md relative"
       >
         {/* User Avatar in top right */}
         <motion.div

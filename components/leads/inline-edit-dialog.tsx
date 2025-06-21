@@ -42,8 +42,8 @@ export function InlineEditDialog({ leadId, field, isOpen, onClose, onSuccess }: 
 
       if (result.success) {
         toast({
-          title: "Success",
-          description: "Lead updated successfully"
+          title: "✅ Success",
+          description: `${fieldLabel} updated successfully`
         })
         onSuccess()
         onClose()

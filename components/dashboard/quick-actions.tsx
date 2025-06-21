@@ -3,6 +3,8 @@
 
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { useState } from "react"
+import { ConstructionChatDrawer } from "@/components/ConstructionChatDrawer"
 
 /* ---------- QUICK ACTION CARD ---------- */
 
@@ -12,9 +14,10 @@ interface QuickActionProps {
   imageUrl?: string
   isLarge?: boolean
   className?: string
+  onAIAssistantClick?: () => void
 }
 
-function QuickAction({ label, value, imageUrl, isLarge = false, className }: QuickActionProps) {
+function QuickAction({ label, value, imageUrl, isLarge = false, className, onAIAssistantClick }: QuickActionProps) {
   const router = useRouter()
 
   const handleClick = () => {
@@ -29,7 +32,7 @@ function QuickAction({ label, value, imageUrl, isLarge = false, className }: Qui
         router.push("/drive")
         break
       case "ai-assistant":
-        // AI assistant functionality can be added here
+        onAIAssistantClick?.()
         break
       case "leads":
         router.push("/leads")
@@ -125,6 +128,12 @@ function QuickAction({ label, value, imageUrl, isLarge = false, className }: Qui
 /* ---------- QUICK ACTIONS WRAPPER ---------- */
 
 export function QuickActions() {
+  const [isAIDrawerOpen, setIsAIDrawerOpen] = useState(false)
+
+  const handleAIAssistantClick = () => {
+    setIsAIDrawerOpen(true)
+  }
+
   return (
     <div className="w-full mx-auto p-2 sm:p-4">
       <div className="grid grid-cols-4 auto-rows-[80px] sm:auto-rows-[120px] gap-2 sm:gap-4 max-w-7xl mx-auto">
@@ -132,7 +141,13 @@ export function QuickActions() {
         <QuickAction label="Calendar" value="calendar" imageUrl="/icons/calendar.svg" />
         <QuickAction label="Gmail" value="gmail" imageUrl="/icons/gmail-logo.png" />
         <QuickAction label="Drive" value="drive" imageUrl="/icons/drive.png" />
-        <QuickAction label="AI Assistant" value="ai-assistant" />
+        <ConstructionChatDrawer>
+          <QuickAction 
+            label="AI Assistant" 
+            value="ai-assistant" 
+            onAIAssistantClick={handleAIAssistantClick}
+          />
+        </ConstructionChatDrawer>
 
         {/* Row 2: Middle 4 cards */}
         <QuickAction

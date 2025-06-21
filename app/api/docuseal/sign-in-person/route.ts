@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     });
 
     const requestBody = {
-      template_id: parseInt(process.env.DOCUSEAL_TEMPLATE_ID),
+      template_id: 2, // Use template 2 for in-person signing
       send_email: false, // Key: Don't send email for in-person signing
       submitters: [{
         role: "First Party",
@@ -87,7 +87,7 @@ export async function POST(req: Request) {
 
     console.log('📤 Sending in-person signing request to DocuSeal:', {
       url: `${process.env.DOCUSEAL_URL}/api/submissions`,
-      templateId: process.env.DOCUSEAL_TEMPLATE_ID,
+      templateId: 2, // Updated to show template 2
       signerEmail: lead.email,
       sendEmail: false
     });

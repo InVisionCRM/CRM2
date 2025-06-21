@@ -15,8 +15,6 @@ import { updateLeadAction } from "@/app/actions/lead-actions" // Changed import
 import { useToast } from "@/components/ui/use-toast" // Assuming useToast is in ui dir
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import React from 'react'
-import ReactConfetti from 'react-confetti'
-import { useWindowSize } from 'react-use'; // For confetti dimensions
 import { formatStatusLabel } from "@/lib/utils"; // Import formatStatusLabel
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { LeadFiles } from "@/components/leads/lead-files";
@@ -305,7 +303,7 @@ const MobileNavBar: React.FC<{ onNavigate: (id: string) => void }> = ({ onNaviga
 
   return (
     <div className="sm:hidden fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur border-b border-white/20">
-      <div className="flex overflow-x-auto no-scrollbar px-2 py-1 gap-2 items-center">
+      <div className="flex overflow-x-auto no-scrollbar px-2 py-3 gap-2 items-center">
         {buttons.map((b, idx) => (
           <React.Fragment key={b.id}>
             <SectionNavButton label={b.label} color={b.color} onClick={() => onNavigate(b.id)} />
@@ -330,11 +328,6 @@ export default function LeadDetailPage() {
 
   const { toast } = useToast()
 
-  const [isStatusUpdating, setIsStatusUpdating] = useState(false);
-  const [statusBeingUpdated, setStatusBeingUpdated] = useState<LeadStatus | null>(null);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  const { width, height } = useWindowSize(); // For confetti
-
   // Street View related state
   const [streetViewUrl, setStreetViewUrl] = useState<string>("")
   const [isStreetViewLoading, setIsStreetViewLoading] = useState(true)
@@ -343,7 +336,6 @@ export default function LeadDetailPage() {
   // Contract and dialog state
   const [showLoadingDialog, setShowLoadingDialog] = useState(false);
   const [isSendingContract, setIsSendingContract] = useState(false);
-  const [contractSuccessData, setContractSuccessData] = useState<any>(null);
   const [isSigningInPerson, setIsSigningInPerson] = useState(false);
   const [showContractSaveDialog, setShowContractSaveDialog] = useState(false);
   const [completedContracts, setCompletedContracts] = useState<any[]>([]);
@@ -435,60 +427,55 @@ export default function LeadDetailPage() {
     return metadata?.importantDates?.[dateKey] || null;
   };
 
+  const [isStatusUpdating, setIsStatusUpdating] = useState(false);
+  const [statusBeingUpdated, setStatusBeingUpdated] = useState<LeadStatus | null>(null);
+
   const handleStatusChange = async (newStatus: LeadStatus) => {
-    if (!id) {
-      toast({ title: "Error", description: "Lead ID is missing.", variant: "destructive" });
+    if (!lead) {
+      console.error("Cannot update status: no lead found");
       return;
     }
     if (isStatusUpdating) return; // Prevent multiple updates
 
     setIsStatusUpdating(true);
     setStatusBeingUpdated(newStatus);
-    setShowSuccessMessage(false); // Hide previous success message if any
 
     try {
-      const result = await updateLeadAction(id, { status: newStatus }) 
-      
+      const formData = new FormData();
+      formData.append('id', lead.id);
+      formData.append('status', newStatus);
+
+      const result = await updateLeadAction(formData);
+
       if (result.success) {
-        // Automatically set jobCompletionDate if status is completed_jobs and date is not set
-        if (newStatus === LeadStatus.completed_jobs && !getImportantDateFromMetadata('jobCompletionDate')) {
-          try {
-            await fetch(`/api/leads/${id}/important-dates`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                dateType: 'jobCompletionDate',
-                date: new Date().toISOString()
-              })
-            })
-            mutate()
-          } catch (err) {
-            console.error('Failed to set job completion date:', err)
-          }
-        }
-        setShowSuccessMessage(true);
-        mutate();
-        // Optional: auto-hide success message
-        setTimeout(() => setShowSuccessMessage(false), 5000); 
-      } else {
+        console.log("Lead status updated successfully:", result);
+        mutate(); // Refresh lead data
+        
+        // Show success toast
         toast({
-          title: "Error Updating Status",
-          description: result.error || "An unexpected error occurred.",
+          title: "✅ Success",
+          description: `Lead status updated to ${formatStatusLabel(newStatus)}`,
+        });
+      } else {
+        console.error("Failed to update lead status:", result.error);
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update lead status",
           variant: "destructive",
-        })
+        });
       }
     } catch (err) {
-      toast({
-        title: "Client-Side Error",
-        description: "Failed to update lead status due to a network or client error.",
-        variant: "destructive",
-      })
       console.error("Failed to update lead status:", err);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsStatusUpdating(false);
       setStatusBeingUpdated(null);
     }
-  }
+  };
 
   const handleScheduleAppointment = () => {
     if (!lead || !id) return;
@@ -520,8 +507,13 @@ export default function LeadDetailPage() {
       
       if (response.ok) {
         const data = await response.json();
-        setContractSuccessData(data);
-        setShowSuccessMessage(true);
+        
+        // Show success toast instead of confetti
+        toast({
+          title: "✅ Contract Sent Successfully!",
+          description: `Contract has been sent to ${data.email || lead.email}`,
+        });
+        
         mutate();
         setShowLoadingDialog(false);
       } else {
@@ -545,25 +537,47 @@ export default function LeadDetailPage() {
     setIsSigningInPerson(true);
     
     try {
-      const response = await fetch('/api/sign-in-person', {
+      const response = await fetch('/api/docuseal/sign-in-person', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leadId: lead.id })
+        body: JSON.stringify({ 
+          leadId: lead.id
+        })
       });
       
       if (response.ok) {
-        const data = await response.json();
-        toast({
-          title: "Success",
-          description: "Contract created for in-person signing.",
-        });
+        const result = await response.json();
+        if (result.signingUrl) {
+          window.open(result.signingUrl, '_blank');
+          
+          // Success toast
+          toast({
+            title: "✅ In-Person Signing Created!",
+            description: "Opening signing session in new tab",
+          });
+          
+          // Center notification about Chrome and Pop-ups
+          setTimeout(() => {
+            toast({
+              title: "📋 Important Notice",
+              description: "Please ensure you are using Chrome browser and have Pop-Ups enabled for the best signing experience.",
+              duration: 8000,
+            });
+          }, 1500);
+        }
       } else {
-        throw new Error('Failed to create contract');
+        const error = await response.json();
+        toast({
+          title: "Failed to Create Signing Session",
+          description: error.error || "Failed to create in-person signing",
+          variant: "destructive"
+        });
       }
     } catch (error) {
+      console.error('Error creating in-person signing:', error);
       toast({
         title: "Error",
-        description: "Failed to create contract. Please try again.",
+        description: "Failed to create in-person signing. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -684,44 +698,6 @@ export default function LeadDetailPage() {
       <MobileNavBar onNavigate={scrollToId} />
 
       <div className="container mx-auto px-4 pt-20 sm:pt-4 pb-4 sm:px-6 sm:py-8 space-y-4 md:space-y-6 relative">
-        {showSuccessMessage && (
-          <>
-            <div className="fixed inset-0 z-[60]">
-              <ReactConfetti width={width} height={height} numberOfPieces={200} recycle={false} />
-            </div>
-            <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" onClick={() => setShowSuccessMessage(false)}></div>
-            <Card className="fixed top-[500px] left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] w-11/12 max-w-md p-6 shadow-2xl bg-card animate-in fade-in duration-300 scale-in-center">
-              <CardHeader className="p-0 mb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-2xl text-green-600 dark:text-green-500">
-                    <CheckCircle2 className="h-8 w-8" /> {contractSuccessData ? "Contract Sent!" : "Congratulations!"}
-                  </CardTitle>
-                  <Button variant="ghost" size="icon" onClick={() => setShowSuccessMessage(false)} className="text-muted-foreground hover:text-foreground">
-                    <XIcon className="h-5 w-5" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0 text-center">
-                {contractSuccessData ? (
-                  <>
-                    <p className="text-lg mb-1">📄 Contract successfully sent to</p>
-                    <p className="text-xl font-semibold text-blue-600 mb-2">{contractSuccessData.email}</p>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Submission ID: {contractSuccessData.id} • Status: {contractSuccessData.status}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-lg mb-1">Lead status successfully updated to</p>
-                    <p className="text-xl font-semibold text-green-500 mb-4">{lead.status ? formatStatusLabel(lead.status) : "the new status"}!</p>
-                  </>
-                )}
-                <Button onClick={() => setShowSuccessMessage(false)} className="w-full text-black sm:w-auto">Close</Button>
-              </CardContent>
-            </Card>
-          </>
-        )}
-
         {/* Status Progression - Top of page */}
         <div className="w-full mb-6">
           <StatusProgression
