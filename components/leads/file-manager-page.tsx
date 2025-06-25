@@ -11,12 +11,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { useLeadFiles } from "@/hooks/use-lead-files"
 import { getLeadPhotos, uploadSinglePhoto, deletePhoto, updatePhoto } from "@/app/actions/photo-actions"
 import { useWindowSize } from "@/hooks/use-window-size"
-import ReactConfetti from "react-confetti"
+
 import ReactCrop, { type Crop as ReactCropType } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import PhotoCanvas from "@/components/photos/photo-canvas"
@@ -558,7 +558,7 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
   const [filesToUpload, setFilesToUpload] = useState<File[]>([])
   const [isUploading, setIsUploading] = useState(false)
-  const [showConfetti, setShowConfetti] = useState(false)
+
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
   const [currentUploadingFile, setCurrentUploadingFile] = useState<string>('')
   const [isDragOver, setIsDragOver] = useState(false)
@@ -838,11 +838,9 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
 
     if (successCount > 0) {
       toast({
-        title: "Upload Successful",
+        title: "✅ Upload Successful",
         description: `${successCount} file(s) uploaded successfully.`
       })
-      setShowConfetti(true)
-      setTimeout(() => setShowConfetti(false), 3000)
       
       // Refresh both photos and files
       await refreshFiles()
@@ -1176,7 +1174,6 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
 
   return (
     <div className="space-y-6">
-      {showConfetti && <ReactConfetti width={width} height={height} numberOfPieces={100} recycle={false} />}
       
       {/* Header */}
       <div className="flex items-center justify-between">

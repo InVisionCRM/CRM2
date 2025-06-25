@@ -21,12 +21,12 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { updateLeadAssigneeAction } from "@/app/actions/lead-actions"
 import { getAssignableUsersAction } from "@/app/actions/user-actions"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
-import { useWindowSize } from "@/hooks/use-window-size"
-import ReactConfetti from "react-confetti"
+
+
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
 interface User {
@@ -161,7 +161,7 @@ const getContractStatusIcon = (status: string) => {
 
 export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) => {
   const { toast } = useToast();
-  const { width, height } = useWindowSize();
+
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isUpdatingAssignee, setIsUpdatingAssignee] = useState(false);
@@ -185,7 +185,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [currentUploadFileName, setCurrentUploadFileName] = useState<string>("");
-  const [showConfetti, setShowConfetti] = useState(false);
+
 
   // Fetch contract status for this lead
   useEffect(() => {
@@ -618,13 +618,9 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
 
         // Show success message
         toast({
-          title: "Success",
+          title: "✅ Success",
           description: `${currentUploadType} uploaded successfully!`,
         });
-        
-        // Show confetti animation
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 3000);
         
         // Start checking for file confirmation
         setIsCheckingFiles(prev => ({ ...prev, [currentUploadType]: true }));
@@ -994,16 +990,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
       </DialogContent>
     </Dialog>
 
-    {/* Confetti Animation */}
-    {showConfetti && (
-      <ReactConfetti
-        width={width}
-        height={height}
-        numberOfPieces={100}
-        recycle={false}
-        gravity={0.3}
-      />
-    )}
+
     </>
   )
 } 

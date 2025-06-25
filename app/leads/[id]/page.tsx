@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { useLead } from "@/hooks/use-lead" // Corrected path
 import { Skeleton } from "@/components/ui/skeleton"
 import { updateLeadAction } from "@/app/actions/lead-actions" // Changed import
-import { useToast } from "@/components/ui/use-toast" // Assuming useToast is in ui dir
+import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import React from 'react'
 import { formatStatusLabel } from "@/lib/utils"; // Import formatStatusLabel
@@ -221,7 +221,8 @@ const StatusProgression: React.FC<StatusProgressionProps> = ({
     const isCurrent = status === currentStatus
     const distance = Math.abs(index - currentIndex)
 
-    const base = "relative flex items-center justify-center text-white rounded-full transition-all duration-300 cursor-pointer select-none bg-gradient-to-b from-[#0f0f0f] via-[#1a1a1a] to-[#000] border border-lime-400/40 shadow-[inset_0_0_8px_rgba(0,255,160,0.25),0_0_6px_rgba(0,255,160,0.15)] hover:shadow-[inset_0_0_14px_rgba(0,255,160,0.5),0_0_12px_rgba(0,255,160,0.4)] hover:ring-2 hover:ring-lime-400/70 before:absolute before:inset-0 before:-z-10 before:bg-[radial-gradient(transparent,rgba(0,255,160,0.25))] before:opacity-0 hover:before:opacity-100"
+    // Simplified styles for better click handling
+    const base = "relative flex items-center justify-center text-white rounded-full transition-all duration-300 cursor-pointer select-none border-2 hover:scale-105 active:scale-95"
     const size = distance === 0 ? "w-12 h-12 sm:w-14 sm:h-14 text-[10px]" : distance === 1 ? "w-10 h-10 sm:w-12 sm:h-12 text-[9px]" : distance === 2 ? "w-8 h-8 sm:w-10 sm:h-10 text-[8px]" : "w-7 h-7 sm:w-8 sm:h-8 text-[6px]"
     const opacity = distance === 0 ? "opacity-100" : distance === 1 ? "opacity-90" : distance === 2 ? "opacity-60" : "opacity-30"
     const scale = distance === 0 ? "scale-110" : distance === 1 ? "scale-95" : distance === 2 ? "scale-85" : "scale-70"
@@ -230,10 +231,11 @@ const StatusProgression: React.FC<StatusProgressionProps> = ({
   }
 
   return (
-    <div className="w-full px-2 sm:px-4">
+    <div className="w-full px-2 sm:px-4 relative z-10">
       <div 
         ref={containerRef}
-        className="flex items-center gap-1 sm:gap-2 overflow-x-auto overflow-y-visible pb-4 scrollbar-hide scroll-smooth px-4 sm:px-6"
+        className="flex items-center gap-1 sm:gap-2 overflow-x-auto overflow-y-visible pb-4 scrollbar-hide scroll-smooth px-4 sm:px-6 relative"
+        style={{ minHeight: '80px' }}
       >
         {statusOrder.map((item, index) => {
           const meta = statusMeta[item.status]
@@ -244,18 +246,26 @@ const StatusProgression: React.FC<StatusProgressionProps> = ({
           return (
             <div key={item.status} className="flex items-center">
               <div className="flex flex-col items-center gap-1">
-                <span className="text-[8px] sm:text-[10px] leading-none whitespace-nowrap">{item.abbrev}</span>
+                <span className="text-[8px] sm:text-[10px] leading-none whitespace-nowrap pointer-events-none">{item.abbrev}</span>
                 <button
                   ref={el => {
                     buttonRefs.current[index] = el;
                   }}
-                  onClick={() => onStatusChange(item.status)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Status button clicked:', item.status);
+                    onStatusChange(item.status);
+                  }}
                   style={{ backgroundColor: meta.color, borderColor: meta.color }}
-                  className={`${getStatusStyle(item.status, index)} border-2`}
-                >
-                  {meta.icon}
-                  {isCurrent && (
-                     <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping absolute -bottom-1"/>
+                  className={getStatusStyle(item.status, index)}
+                  type="button"
+                                  >
+                    <span className="pointer-events-none">
+                      {meta.icon}
+                    </span>
+                    {isCurrent && (
+                     <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping absolute -bottom-1 pointer-events-none"/>
                    )}
                 </button>
               </div>
@@ -441,11 +451,7 @@ export default function LeadDetailPage() {
     setStatusBeingUpdated(newStatus);
 
     try {
-      const formData = new FormData();
-      formData.append('id', lead.id);
-      formData.append('status', newStatus);
-
-      const result = await updateLeadAction(formData);
+      const result = await updateLeadAction(lead.id, { status: newStatus });
 
       if (result.success) {
         console.log("Lead status updated successfully:", result);

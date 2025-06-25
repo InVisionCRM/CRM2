@@ -132,7 +132,7 @@ export default function AppSidebar({ className }: SidebarProps) {
             {session?.user?.image ? (
               <AvatarImage src={session.user.image} alt={session.user.name || "User"} />
             ) : (
-              <AvatarFallback className="bg-black/50 text-white">
+              <AvatarFallback className="bg-black text-white">
                 <User className="h-5 w-5" />
               </AvatarFallback>
             )}

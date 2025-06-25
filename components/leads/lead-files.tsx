@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import { useLeadFiles } from "@/hooks/use-lead-files"
-import { useWindowSize } from "@/hooks/use-window-size"
-import ReactConfetti from "react-confetti"
+
+
 
 interface LeadFilesProps {
   leadId: string
@@ -27,12 +27,12 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
   } = useLeadFiles(leadId);
   
   const { toast } = useToast();
-  const { width, height } = useWindowSize();
+
 
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [showSuccessConfetti, setShowSuccessConfetti] = useState(false);
+
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
 
@@ -126,11 +126,9 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
     
     if (allSucceeded && filesToUpload.length > 0) {
       toast({
-        title: "Upload Successful",
+        title: "✅ Upload Successful",
         description: `${filesToUpload.length} file(s) uploaded to Google Drive.`,
       });
-      setShowSuccessConfetti(true);
-      setTimeout(() => setShowSuccessConfetti(false), 4000); 
       closeModal(); 
     }    
     
@@ -279,7 +277,7 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
         <DialogHeader>
           <DialogTitle>Upload Files</DialogTitle>
         </DialogHeader>
-        {showSuccessConfetti && <ReactConfetti width={width} height={height} numberOfPieces={100} recycle={false} className="!fixed !z-[100]" />}
+
         <div className="flex-1 space-y-4 py-4 overflow-y-auto pr-1">
           {!isUploading ? (
             <>
