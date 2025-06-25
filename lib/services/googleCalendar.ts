@@ -28,26 +28,35 @@ export class GoogleCalendarService {
     this.isRefreshingToken = true
     try {
       console.log('Attempting to refresh Google access token...')
-      const response = await fetch('/api/auth/refresh-google-token', {
+      // Call Google OAuth endpoint directly instead of going through our API
+      const response = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          client_id: process.env.GOOGLE_CLIENT_ID!,
+          client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+          refresh_token: this.credentials.refreshToken,
+          grant_type: 'refresh_token'
+        })
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to refresh token, unknown error' }))
-        console.error('Failed to refresh access token:', response.status, errorData.message)
-        throw new Error(errorData.message || 'Failed to refresh access token')
+        const errorData = await response.json().catch(() => ({ error_description: 'Failed to refresh token, unknown error' }))
+        console.error('Failed to refresh access token:', response.status, errorData.error_description)
+        throw new Error(errorData.error_description || 'Failed to refresh access token')
       }
 
       const data = await response.json()
-      if (data.accessToken) {
+      if (data.access_token) {
         console.log('Successfully refreshed Google access token.')
-        this.credentials.accessToken = data.accessToken
+        this.credentials.accessToken = data.access_token
         this.retryCount = 0
-        return data.accessToken
+        return data.access_token
       } else {
-        console.error('Refresh token endpoint did not return an access token.')
-        throw new Error('Refresh token endpoint did not return an access token.')
+        console.error('Google OAuth endpoint did not return an access token.')
+        throw new Error('Google OAuth endpoint did not return an access token.')
       }
     } catch (error) {
       console.error('Error during access token refresh:', error)

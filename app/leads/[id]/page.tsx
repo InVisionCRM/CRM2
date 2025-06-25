@@ -233,7 +233,7 @@ const StatusProgression: React.FC<StatusProgressionProps> = ({
     <div className="w-full px-2 sm:px-4">
       <div 
         ref={containerRef}
-        className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-4 scrollbar-hide scroll-smooth scroll-px-6"
+        className="flex items-center gap-1 sm:gap-2 overflow-x-auto overflow-y-visible pb-4 scrollbar-hide scroll-smooth px-4 sm:px-6"
       >
         {statusOrder.map((item, index) => {
           const meta = statusMeta[item.status]
