@@ -96,6 +96,11 @@ function createGoogleCalendarEvent(appointment: CalendarAppointment) {
     end: {
       dateTime: endDate.toISOString(),
     },
+    attendees: [
+      {
+        email: 'all@in-visionconstruction.com'
+      }
+    ],
     extendedProperties: {
       private: {
         leadId: appointment.leadId,

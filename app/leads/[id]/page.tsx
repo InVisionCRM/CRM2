@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useSearchParams } from "next/navigation" // Use next/navigation for App Router
 import { LeadStatus } from "@prisma/client"
-import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy, Loader2, NotebookPen, PenTool, CheckCircle, CalendarDays, Calendar, Palette, DollarSign, Hammer, ArrowRight, Paintbrush } from "lucide-react" // Added NotebookPen and PenTool icons
+import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy, Loader2, NotebookPen, PenTool, CheckCircle, CalendarDays, Calendar, Palette, DollarSign, Hammer, ArrowRight, Paintbrush, ClipboardList } from "lucide-react" // Added ClipboardList icon
 import { StatusChangeDrawer } from "@/components/leads/StatusChangeDrawer"
 import { LeadDetailTabs } from "@/components/leads/LeadDetailTabs"
 import { ActivityFeed } from "@/components/leads/ActivityFeed"
@@ -18,8 +18,8 @@ import React from 'react'
 import { formatStatusLabel } from "@/lib/utils"; // Import formatStatusLabel
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { LeadFiles } from "@/components/leads/lead-files";
-import { LeadContractsTab } from "@/components/leads/tabs/LeadContractsTab";
 import { LeadPhotosTab } from "@/components/leads/tabs/LeadPhotosTab"; // Import the new Photos tab component
+import { ScopeOfWorkDialog } from "@/components/leads/ScopeOfWorkDialog"; // Import the new Scope of Work dialog
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { LeadOverviewTab } from "@/components/leads/tabs/LeadOverviewTab"
@@ -35,7 +35,7 @@ interface QuickActionButtonProps {
   href?: string;
   label: string;
   disabled?: boolean;
-  variant?: 'default' | 'contract' | 'sign' | 'filemanager' | 'photos' | 'addnote' | 'email';
+  variant?: 'default' | 'contract' | 'sign' | 'filemanager' | 'photos' | 'addnote' | 'email' | 'scopeofwork';
 }
 
 const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, label, disabled, variant = 'default' }) => {
@@ -53,6 +53,8 @@ const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, la
         return "bg-[#14110F] border-l border-[#14110F] hover:bg-white/10";
       case 'email':
         return "bg-[#1D4ED8] border-l border-[#1D4ED8] hover:bg-white/10";
+      case 'scopeofwork':
+        return "bg-[#059669] border-l border-[#059669] hover:bg-white/10";
       default:
         return "bg-gradient-to-b from-black/40 via-black/30 via-black/20 to-white border-1 hover:from-slate-800/30 hover:via-slate-800/20 hover:to-white";
     }
@@ -76,6 +78,9 @@ const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, la
     }
     if (label.includes('Send Email')) {
       return <Mail className="h-4 w-4 mr-1" />;
+    }
+    if (label.includes('Scope of Work')) {
+      return <ClipboardList className="h-4 w-4 mr-1" />;
     }
     return null;
   };
@@ -352,12 +357,17 @@ export default function LeadDetailPage() {
   const [isSavingToDrive, setIsSavingToDrive] = useState(false);
   const [dialogDismissed, setDialogDismissed] = useState(false);
 
+  // Dialog states
+  const [filesDialogOpen, setFilesDialogOpen] = useState(false);
+  const [photosDialogOpen, setPhotosDialogOpen] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [scopeOfWorkDialogOpen, setScopeOfWorkDialogOpen] = useState(false);
+
   // Add a reference to the activity feed for refreshing
   const activityFeedRef = useRef<HTMLDivElement>(null);
   const addNoteRef = useRef<HTMLDivElement>(null);
   // Refs for section navigation
   const scheduleRef = useRef<HTMLDivElement>(null);
-  const contractsSectionRef = useRef<HTMLDivElement>(null);
   const uploadSectionRef = useRef<HTMLDivElement>(null);
   const summaryRef = useRef<HTMLDivElement>(null);
   const activityRef = activityFeedRef; // reuse existing ref
@@ -642,23 +652,19 @@ export default function LeadDetailPage() {
     ? lead.address || "Address not available" // Use the single address field, provide fallback for null
     : "Loading address...";
 
-  const [filesDialogOpen, setFilesDialogOpen] = useState(false);
-  const [contractsDialogOpen, setContractsDialogOpen] = useState(false);
-  const [photosDialogOpen, setPhotosDialogOpen] = useState(false);
-  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
-
-  const handleOpenFilesDialog = () => setFilesDialogOpen(true);
-  const handleCloseFilesDialog = () => setFilesDialogOpen(false);
-  const handleOpenContractsDialog = () => setContractsDialogOpen(true);
-  const handleCloseContractsDialog = () => setContractsDialogOpen(false);
-  const handleOpenPhotosDialog = () => setPhotosDialogOpen(true);
-  const handleClosePhotosDialog = () => setPhotosDialogOpen(false);
-  const handleOpenEmailDialog = () => setEmailDialogOpen(true);
-
   const scrollToId = (id: string) => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
   };
+
+  const handleOpenFilesDialog = () => setFilesDialogOpen(true);
+  const handleCloseFilesDialog = () => setFilesDialogOpen(false);
+  const handleOpenPhotosDialog = () => setPhotosDialogOpen(true);
+  const handleClosePhotosDialog = () => setPhotosDialogOpen(false);
+  const handleOpenEmailDialog = () => setEmailDialogOpen(true);
+  const handleCloseEmailDialog = () => setEmailDialogOpen(false);
+  const handleOpenScopeOfWorkDialog = () => setScopeOfWorkDialogOpen(true);
+  const handleCloseScopeOfWorkDialog = () => setScopeOfWorkDialogOpen(false);
 
   if (isLeadLoading && !lead) { // Show skeleton only on initial load
     return <LeadDetailSkeleton />
@@ -817,6 +823,12 @@ export default function LeadDetailPage() {
                           disabled={!lead || isSigningInPerson}
                           variant="sign"
                         />
+                        <QuickActionButton
+                          onClick={handleOpenScopeOfWorkDialog}
+                          label="Scope of Work"
+                          disabled={!lead}
+                          variant="scopeofwork"
+                        />
                       </div>
                     </div>
                   )}
@@ -831,13 +843,6 @@ export default function LeadDetailPage() {
               {/* Upload to Drive Section */}
               <div className="w-full mt-6" ref={uploadSectionRef} id="upload-info">
                  <UploadToDriveSection leadId={lead.id} />
-              </div>
-
-              {/* Contracts Section */}
-              <div className="w-full mt-6" id="contracts-info">
-                <div className="rounded-xl p-4 bg-gradient-to-b from-[#0f0f0f] via-[#1a1a1a] to-black border border-lime-400/20 shadow-inner shadow-lime-400/10">
-                  <LeadContractsTab leadId={lead.id} />
-                </div>
               </div>
             </div>
           )}
@@ -874,7 +879,7 @@ export default function LeadDetailPage() {
         </div>
 
         {/* Files Dialog */}
-        <Dialog open={filesDialogOpen} onOpenChange={setFilesDialogOpen}>
+        <Dialog open={filesDialogOpen} onOpenChange={handleCloseFilesDialog}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Files</DialogTitle>
@@ -884,7 +889,7 @@ export default function LeadDetailPage() {
         </Dialog>
 
         {/* Photos Dialog */}
-        <Dialog open={photosDialogOpen} onOpenChange={setPhotosDialogOpen}>
+        <Dialog open={photosDialogOpen} onOpenChange={handleClosePhotosDialog}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Photos</DialogTitle>
@@ -896,19 +901,20 @@ export default function LeadDetailPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Contracts Dialog */}
-        <Dialog open={contractsDialogOpen} onOpenChange={setContractsDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Contracts</DialogTitle>
-            </DialogHeader>
-            <LeadContractsTab leadId={lead.id} />
-          </DialogContent>
-        </Dialog>
+
 
         {/* Emailer Dialog */}
         {lead && (
-          <LeadEmailer lead={lead} open={emailDialogOpen} onOpenChange={setEmailDialogOpen} />
+          <LeadEmailer lead={lead} open={emailDialogOpen} onOpenChange={handleCloseEmailDialog} />
+        )}
+
+        {/* Scope of Work Dialog */}
+        {lead && (
+          <ScopeOfWorkDialog 
+            lead={lead} 
+            open={scopeOfWorkDialogOpen} 
+            onOpenChange={handleCloseScopeOfWorkDialog} 
+          />
         )}
 
         <Dialog open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>

@@ -241,6 +241,11 @@ export class GoogleCalendarService {
         dateTime: endTimeLocal,
         timeZone: targetTimeZone,
       },
+      attendees: [
+        {
+          email: 'all@in-visionconstruction.com'
+        }
+      ],
       colorId: appointment.purpose
         ? GOOGLE_CALENDAR_CONFIG.COLOR_MAP[appointment.purpose as AppointmentPurposeType]
         : undefined,
