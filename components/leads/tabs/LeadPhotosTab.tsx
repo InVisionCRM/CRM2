@@ -1010,12 +1010,56 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
     );
   };
 
-  // Camera capture handler
-  const handleCameraCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      const files = Array.from(event.target.files);
-      setUploadFiles(prev => [...prev, ...files]);
-      createPreviews(files);
+  // Camera capture handler (immediate upload)
+  const handleCameraCapture = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      const file = event.target.files[0];
+      // Create a preview for UI feedback (optional)
+      createPreviews([file]);
+      setIsUploading(true);
+      setUploadProgress(0);
+      setCurrentUploadingFile(`Uploading ${file.name}...`);
+      try {
+        const buffer = await file.arrayBuffer();
+        const base64Data = Buffer.from(buffer).toString('base64');
+        const serializedFile = {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          base64Data
+        };
+        const result = await uploadSinglePhoto(leadId, serializedFile);
+        if (result.success && result.photo) {
+          const newPhoto = {
+            id: result.photo.id,
+            url: result.photo.url,
+            thumbnailUrl: result.photo.thumbnailUrl || result.photo.url,
+            name: result.photo.name,
+            description: result.photo.description,
+            createdAt: result.photo.createdAt.toISOString(),
+            uploadedBy: result.photo.uploadedBy,
+            leadId: result.photo.leadId
+          };
+          setPhotos(prev => [newPhoto, ...prev]);
+          toast({
+            title: "Photo uploaded",
+            description: "Photo captured and uploaded successfully."
+          });
+        } else {
+          throw new Error(result.error || 'Failed to upload photo');
+        }
+      } catch (error) {
+        toast({
+          title: "Upload failed",
+          description: error instanceof Error ? error.message : 'Failed to upload photo',
+          variant: "destructive"
+        });
+      } finally {
+        setIsUploading(false);
+        setCurrentUploadingFile(null);
+        setUploadProgress(0);
+        if (fileInputCameraRef.current) fileInputCameraRef.current.value = '';
+      }
     }
   };
 
@@ -1099,7 +1143,7 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
             <Plus className="h-4 w-4 mr-2" />
             Upload Photos
           </Button>
-          {/* Take Photo Button */}
+          {/* Take Photo Button (shown in every tab) */}
           <Button
             type="button"
             variant="outline"
