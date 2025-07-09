@@ -4,7 +4,6 @@ import React, { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import AppSidebar from '@/components/AppSidebar';
 import { cn } from '@/lib/utils';
-import { FixedWavyBackground } from '@/components/ui/fixed-wavy-background';
 import { Toaster } from '@/components/ui/toaster';
 
 interface LayoutClientWrapperProps {
@@ -23,7 +22,6 @@ export default function LayoutClientWrapper({ children }: LayoutClientWrapperPro
 
   return (
     <>
-      <FixedWavyBackground />
       <div className="min-h-screen relative z-[1]">
         {/* Main content area */}
         <div 

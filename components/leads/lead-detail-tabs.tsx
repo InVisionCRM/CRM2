@@ -17,11 +17,17 @@ import type { Lead } from "@/types/lead"
 
 interface LeadDetailTabsProps {
   lead: Lead
+  activeTab?: string
+  onTabChange?: (value: string) => void
 }
 
-export function LeadDetailTabs({ lead }: LeadDetailTabsProps) {
+export function LeadDetailTabs({ lead, activeTab: externalActiveTab, onTabChange }: LeadDetailTabsProps) {
   const { data: session } = useSession()
-  const [activeTab, setActiveTab] = useState("details")
+  const [internalActiveTab, setInternalActiveTab] = useState("details")
+  
+  // Use external state if provided, otherwise use internal state
+  const activeTab = externalActiveTab || internalActiveTab
+  const setActiveTab = onTabChange || setInternalActiveTab
   const [isAppointmentDrawerOpen, setIsAppointmentDrawerOpen] = useState(false)
 
   const currentUserId = (session?.user as any)?.id

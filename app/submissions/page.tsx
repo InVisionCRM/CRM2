@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Search, Filter, Download, Eye, RefreshCw, FileText, CheckCircle2, Clock, XCircle, AlertTriangle, ExternalLink, Save } from "lucide-react"
+import { Search, Filter, Download, Eye, RefreshCw, FileText, CheckCircle2, Clock, XCircle, AlertTriangle, ExternalLink, Save, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
+import Link from "next/link"
 
 interface Submitter {
   id: number
@@ -65,6 +66,8 @@ interface Submission {
   submitters: Submitter[]
   template: Template
   created_by_user: CreatedByUser
+  displayStatus?: string
+  leadId?: number
 }
 
 interface SubmissionsResponse {
@@ -120,6 +123,9 @@ export default function SubmissionsPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [pagination, setPagination] = useState<SubmissionsResponse['pagination'] | null>(null)
   const [autoSavingContracts, setAutoSavingContracts] = useState<Set<number>>(new Set())
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [showConfirm, setShowConfirm] = useState<number | null>(null)
   const router = useRouter()
   const { toast } = useToast()
 
@@ -332,6 +338,35 @@ export default function SubmissionsPage() {
     }
   }
 
+  const handleDeleteSubmission = async (submissionId: number) => {
+    setDeletingId(submissionId)
+    setDeleteError(null)
+    try {
+      const res = await fetch(`/api/docuseal/submissions/${submissionId}/archive`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to delete submission')
+      }
+      setSubmissions(prev => prev.filter(s => s.id !== submissionId))
+      toast({
+        title: "Submission Archived",
+        description: `Submission ${submissionId} has been archived.`,
+      })
+    } catch (err: any) {
+      setDeleteError(err.message)
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      })
+    } finally {
+      setDeletingId(null)
+      setShowConfirm(null)
+    }
+  }
+
   if (error && !loading) {
     return (
       <div className="container mx-auto py-10">
@@ -407,26 +442,20 @@ export default function SubmissionsPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-        {['completed', 'pending', 'opened', 'declined', 'expired'].map((status) => {
-          // Count all submissions with this status, including 'sent' for pending
-          let count = 0
-          if (status === 'pending') {
-            count = submissions.filter(s => s.status === 'pending' || s.status === 'sent').length
-          } else {
-            count = submissions.filter(s => s.status === status).length
-          }
-          
+        {['Completed', 'Pending', 'Sent', 'Opened', 'Partially completed', 'Declined', 'Expired'].map((displayStatus) => {
+          // Count all submissions with this displayStatus
+          const count = submissions.filter(s => (s.displayStatus || s.status) === displayStatus).length
           return (
-            <Card key={status} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => {
-              setStatusFilter(status === 'pending' ? 'pending' : status)
+            <Card key={displayStatus} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => {
+              setStatusFilter(displayStatus.toLowerCase())
               setTimeout(() => fetchSubmissions(), 100)
             }}>
               <CardContent className="pt-6">
                 <div className="flex items-center space-x-2">
-                  {getStatusIcon(status)}
+                  {getStatusIcon(displayStatus.toLowerCase())}
                   <div>
                     <p className="text-2xl font-bold">{count}</p>
-                    <p className="text-sm text-muted-foreground capitalize">{status}</p>
+                    <p className="text-sm text-muted-foreground capitalize">{displayStatus}</p>
                   </div>
                 </div>
               </CardContent>
@@ -471,12 +500,20 @@ export default function SubmissionsPage() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-3">
                       <h3 className="font-semibold">
-                        {submission.template.name}
+                        {submission.leadId && submission.submitters && submission.submitters.length > 0 ? (
+                          <Link href={`/leads/${submission.leadId}/page`} className="underline text-blue-700 hover:text-blue-900 transition-colors">
+                            {submission.submitters[0].name || submission.submitters[0].email}
+                          </Link>
+                        ) : (
+                          submission.submitters && submission.submitters.length > 0
+                            ? (submission.submitters[0].name || submission.submitters[0].email)
+                            : "Unknown Submitter"
+                        )}
                       </h3>
                       <Badge className={cn("border", getStatusColor(submission.status))}>
                         {getStatusIcon(submission.status)}
                         <span className="ml-1 capitalize">
-                          {submission.status === 'sent' ? 'pending' : submission.status}
+                          {submission.displayStatus || submission.status}
                         </span>
                       </Badge>
                     </div>
@@ -523,7 +560,30 @@ export default function SubmissionsPage() {
                         Download
                       </Button>
                     )}
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setShowConfirm(submission.id)}
+                      disabled={deletingId === submission.id}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      {deletingId === submission.id ? 'Deleting...' : 'Delete'}
+                    </Button>
                   </div>
+                  {showConfirm === submission.id && (
+                    <div className="mt-2 bg-red-50 border border-red-200 rounded p-3 flex flex-col gap-2">
+                      <span className="text-red-700 font-semibold">Are you sure you want to archive this submission?</span>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="destructive" onClick={() => handleDeleteSubmission(submission.id)} disabled={deletingId === submission.id}>
+                          Yes, Archive
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setShowConfirm(null)} disabled={deletingId === submission.id}>
+                          Cancel
+                        </Button>
+                      </div>
+                      {deleteError && <span className="text-xs text-red-500">{deleteError}</span>}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

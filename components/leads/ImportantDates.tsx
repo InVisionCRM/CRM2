@@ -10,11 +10,19 @@ import { Drawer, DrawerContent, DrawerTrigger, DrawerHeader, DrawerTitle } from 
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Calendar as CalendarIcon, Clock, DollarSign, Building2, CalendarPlus, ChevronDownIcon, ExternalLink, Trash2, Mail } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, DollarSign, Building2, CalendarPlus, ChevronDownIcon, ExternalLink, Trash2, Mail, ChevronDown } from "lucide-react"
 import { format, addHours, parseISO } from "date-fns"
 import { useToast } from "@/hooks/use-toast"
 import type { Lead } from "@prisma/client"
 import type { RawGCalEvent } from "@/types/appointments"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils"
 
 interface ImportantDatesProps {
   lead: Lead | null
@@ -514,143 +522,117 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
 
   return (
     <>
-      {/* Important Date Buttons Section (header removed) */}
-      <Card className="w-full mb-4">
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-            {importantDates.map((dateData, index) => {
-              const savedDateText = getImportantDateFromMetadata(dateData.key)
-              const formattedDate = savedDateText ? format(parseISO(savedDateText), "MMM d, yyyy") : null
-              
-              // Determine border color based on date status
-              let borderClass = "border-gray-700"
-              if (savedDateText) {
-                const date = parseISO(savedDateText)
-                const now = new Date()
-                const isPastDate = date < now
-                borderClass = isPastDate ? "border-gray-500 border-2" : "border-lime-500 border-2"
-              }
-              
-              return (
-                <Button
-                  key={index}
-                  variant="outline"
-                  onClick={() => handleImportantDateClick(dateData)}
-                  className={`h-16 p-2 flex flex-col items-center justify-center gap-1 hover:shadow-md transition-all duration-200 bg-transparent bg-black/60 text-white hover:bg-gray-800/50 disabled:opacity-100 ${borderClass}`}
-                  disabled={isUpdatingImportantDate || isDeletingImportantDate}
-                >
-                  <div className="flex-shrink-0">
-                    {dateData.icon}
-                  </div>
-                  <span className="text-xs font-medium text-center leading-tight text-white disabled:text-white px-1">
-                    {dateData.label}
-                  </span>
-                  {formattedDate && (
-                    <span className="text-xs text-white disabled:text-white text-center leading-tight mt-0.5 font-semibold">
-                      {formattedDate}
-                    </span>
-                  )}
-                  {!formattedDate && (
-                    <span className="text-xs text-gray-400 text-center leading-tight mt-0.5">
-                      Click to set
-                    </span>
-                  )}
-                  {(isUpdatingImportantDate || isDeletingImportantDate) && (
-                    <div className="flex items-center gap-1">
-                      <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-primary"></div>
-                      <span className="text-xs text-muted-foreground">
-                        {isUpdatingImportantDate ? "Updating..." : "Deleting..."}
-                      </span>
-                    </div>
-                  )}
-                </Button>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="w-full">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex flex-col items-center gap-2">
-            <span>Schedule To Google Calendar</span>
-            {userEmail && (
-              <span className="text-sm text-muted-foreground font-normal">
-                ({userEmail})
-              </span>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className={cn(
+              "relative flex h-16 flex-1 items-center justify-center backdrop-blur-lg p-1 text-sm font-bold text-white",
+              "first:border-l-0 transition-all duration-300",
+              "bg-gradient-to-br from-blue-700/90 via-blue-600/90 to-blue-700/90 border-l border-blue-500/50 hover:from-blue-600/90 hover:via-blue-500/90 hover:to-blue-600/90 hover:border-blue-400/60 hover:shadow-lg hover:shadow-blue-500/20",
+              "hover:scale-[1.02] active:scale-[0.98]",
+              "cursor-pointer"
             )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-            {calendarEvents.map((eventData, index) => {
-              const scheduledEvent = getRecentEvent(scheduledEvents[eventData.type])
-              const scheduledDate = scheduledEvent ? formatEventDate(scheduledEvent) : null
-              const eventCount = scheduledEvents[eventData.type]?.length || 0
-              
-              // Determine border color based on event status
-              let borderClass = "border-gray-700"
-              if (scheduledEvent) {
-                const eventDate = new Date(scheduledEvent.start?.dateTime || scheduledEvent.start?.date || '')
-                const now = new Date()
-                const isPastEvent = eventDate < now
-                borderClass = isPastEvent ? "border-gray-500 border-2" : "border-lime-500 border-2"
-              }
-              
-              return (
-                <Button
-                  key={index}
-                  variant="outline"
-                  onClick={() => handleEventButtonClick(eventData)}
-                  className={`h-16 p-2 flex flex-col items-center justify-center gap-1 hover:shadow-md transition-all duration-200 bg-transparent bg-black/60 text-white hover:bg-gray-800/50 disabled:opacity-100 ${borderClass}`}
-                  disabled={!userEmail || isLoading || isCreating}
-                >
-                  <div className="flex-shrink-0">
-                    {eventData.icon}
-                  </div>
-                  <span className="text-xs font-medium text-center leading-tight text-white disabled:text-white px-1">
-                    {eventData.label}
-                  </span>
-                  {scheduledDate && (
-                    <span className="text-xs text-white disabled:text-white text-center leading-tight mt-0.5 font-semibold">
-                      {scheduledDate}
-                    </span>
-                  )}
-                  {eventCount > 0 && !scheduledDate && (
-                    <span className="text-xs text-white disabled:text-white text-center leading-tight mt-0.5">
-                      {eventCount} scheduled
-                    </span>
-                  )}
-                  {eventCount > 1 && scheduledDate && (
-                    <span className="text-xs text-white disabled:text-white text-center leading-tight">
-                      +{eventCount - 1} more
-                    </span>
-                  )}
-                  {(isLoading || isCreating) && (
-                    <div className="flex items-center gap-1">
-                      <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-primary"></div>
-                      <span className="text-xs text-muted-foreground">
-                        {isCreating ? "Creating..." : "Loading..."}
-                      </span>
-                    </div>
-                  )}
-                </Button>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* View Calendar Link */}
-      <div className="w-full flex justify-center mt-4">
-        <button
-          type="button"
-          onClick={() => setIsCalendarDialogOpen(true)}
-          className="text-sm text-blue-400 hover:underline focus:outline-none"
+          >
+            <div className="flex flex-col items-center justify-center gap-1">
+              <div className="p-1 bg-white/10 rounded-md">
+                <CalendarIcon className="h-4 w-4 text-blue-200" />
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-xs leading-tight font-semibold text-blue-100">Appointments</span>
+                <ChevronDown className="h-3 w-3 text-blue-200 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+              </div>
+            </div>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent 
+          className="w-80 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 border border-slate-600/50 backdrop-blur-xl shadow-2xl shadow-black/50 rounded-xl overflow-hidden"
+          side="bottom"
+          align="center"
+          sideOffset={8}
         >
-          View Calendar
-        </button>
-      </div>
+          <div className="p-2">
+            {/* Important Dates Section */}
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-gray-300 mb-3 px-2">Important Dates</h3>
+              {importantDates.map((dateData, index) => {
+                const savedDateText = getImportantDateFromMetadata(dateData.key)
+                const formattedDate = savedDateText ? format(parseISO(savedDateText), "MMM d, yyyy") : null
+                
+                return (
+                  <DropdownMenuItem
+                    key={index}
+                    onClick={() => handleImportantDateClick(dateData)}
+                    disabled={isUpdatingImportantDate || isDeletingImportantDate}
+                    className="flex items-center gap-4 text-white hover:bg-gradient-to-r hover:from-blue-600/20 hover:to-blue-500/20 focus:bg-gradient-to-r focus:from-blue-600/20 focus:to-blue-500/20 cursor-pointer py-3 px-4 rounded-lg transition-all duration-200 hover:scale-[1.02] border border-transparent hover:border-blue-500/30"
+                  >
+                    <div className="p-2 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-500/30">
+                      {dateData.icon}
+                    </div>
+                    <div className="flex-1 flex flex-col">
+                      <span className="text-sm font-semibold text-gray-100">{dateData.label}</span>
+                      {formattedDate && (
+                        <span className="text-xs text-blue-300">{formattedDate}</span>
+                      )}
+                      {!formattedDate && (
+                        <span className="text-xs text-gray-400">Click to set</span>
+                      )}
+                    </div>
+                  </DropdownMenuItem>
+                )
+              })}
+            </div>
+
+            <DropdownMenuSeparator className="my-2" />
+
+            {/* Calendar Events Section */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-300 mb-3 px-2">Schedule to Google Calendar</h3>
+              {calendarEvents.map((eventData, index) => {
+                const scheduledEvent = getRecentEvent(scheduledEvents[eventData.type])
+                const scheduledDate = scheduledEvent ? formatEventDate(scheduledEvent) : null
+                const eventCount = scheduledEvents[eventData.type]?.length || 0
+                
+                return (
+                  <DropdownMenuItem
+                    key={index}
+                    onClick={() => handleEventButtonClick(eventData)}
+                    disabled={!userEmail || isLoading || isCreating}
+                    className="flex items-center gap-4 text-white hover:bg-gradient-to-r hover:from-green-600/20 hover:to-green-500/20 focus:bg-gradient-to-r focus:from-green-600/20 focus:to-green-500/20 cursor-pointer py-3 px-4 rounded-lg transition-all duration-200 hover:scale-[1.02] border border-transparent hover:border-green-500/30"
+                  >
+                    <div className="p-2 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-lg border border-green-500/30">
+                      {eventData.icon}
+                    </div>
+                    <div className="flex-1 flex flex-col">
+                      <span className="text-sm font-semibold text-gray-100">{eventData.label}</span>
+                      {scheduledDate && (
+                        <span className="text-xs text-green-300">{scheduledDate}</span>
+                      )}
+                      {eventCount > 0 && !scheduledDate && (
+                        <span className="text-xs text-green-300">{eventCount} scheduled</span>
+                      )}
+                      {eventCount > 1 && scheduledDate && (
+                        <span className="text-xs text-green-300">+{eventCount - 1} more</span>
+                      )}
+                    </div>
+                  </DropdownMenuItem>
+                )
+              })}
+            </div>
+
+            {/* View Calendar Link */}
+            <DropdownMenuSeparator className="my-2" />
+            <DropdownMenuItem
+              onClick={() => setIsCalendarDialogOpen(true)}
+              className="flex items-center gap-4 text-white hover:bg-gradient-to-r hover:from-indigo-600/20 hover:to-indigo-500/20 focus:bg-gradient-to-r focus:from-indigo-600/20 focus:to-indigo-500/20 cursor-pointer py-3 px-4 rounded-lg transition-all duration-200 hover:scale-[1.02] border border-transparent hover:border-indigo-500/30"
+            >
+              <div className="p-2 bg-gradient-to-br from-indigo-500/20 to-indigo-600/20 rounded-lg border border-indigo-500/30">
+                <CalendarIcon className="h-4 w-4 text-indigo-300" />
+              </div>
+              <span className="text-sm font-semibold text-gray-100">View Calendar</span>
+            </DropdownMenuItem>
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Event Creation Modal */}
       <Dialog open={isEventModalOpen} onOpenChange={setIsEventModalOpen}>

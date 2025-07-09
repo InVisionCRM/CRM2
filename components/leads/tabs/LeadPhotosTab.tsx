@@ -565,6 +565,8 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [currentUploadingFile, setCurrentUploadingFile] = useState<string | null>(null)
   const progressInterval = useRef<NodeJS.Timeout>()
+  const [activeCategory, setActiveCategory] = useState<string>("all")
+  const fileInputCameraRef = useRef<HTMLInputElement>(null);
   
   // Cleanup interval on unmount
   useEffect(() => {
@@ -997,6 +999,26 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
     window.open(createGmailShareLink(photos, claimNumber), '_blank')
   }
 
+  // Helper: filter photos by category
+  const filterPhotosByCategory = (photos: Photo[], category: string) => {
+    if (category === "all") return photos;
+    const match = (str: string | null | undefined) =>
+      str && str.toLowerCase().includes(category.replace(/_/g, " ").toLowerCase());
+    return photos.filter(
+      (photo) =>
+        match(photo.name) || match(photo.description)
+    );
+  };
+
+  // Camera capture handler
+  const handleCameraCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      const files = Array.from(event.target.files);
+      setUploadFiles(prev => [...prev, ...files]);
+      createPreviews(files);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -1015,6 +1037,16 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
 
   return (
     <div className="space-y-4">
+      {/* Category Tabs */}
+      <Tabs value={activeCategory} onValueChange={setActiveCategory} className="mb-2">
+        <TabsList className="w-full grid grid-cols-5 gap-1">
+          <TabsTrigger value="before build">Before Build</TabsTrigger>
+          <TabsTrigger value="during build">During Build</TabsTrigger>
+          <TabsTrigger value="after build">After Build</TabsTrigger>
+          <TabsTrigger value="misc">Misc</TabsTrigger>
+          <TabsTrigger value="all">All</TabsTrigger>
+        </TabsList>
+      </Tabs>
       <div className="flex justify-between items-center">
         <div className="flex gap-2">
           {isSelectionMode && selectedPhotos.size > 0 && (
@@ -1036,66 +1068,67 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
                     Share 
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem 
-                    onClick={() => handleSharePhotos(photos.filter(p => selectedPhotos.has(p.id)))}
-                  >
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={async (e) => {
+                    e.stopPropagation()
+                    await handleSharePhotos(photos.filter(p => selectedPhotos.has(p.id)))
+                  }}>
                     <Share2 className="h-4 w-4 mr-2" />
-                    Share photos
+                    Share selected
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => handleGmailShare(photos.filter(p => selectedPhotos.has(p.id)))}
-                  >
+                  <DropdownMenuItem onClick={(e) => {
+                    e.stopPropagation()
+                    handleGmailShare(photos.filter(p => selectedPhotos.has(p.id)))
+                  }}>
                     <Mail className="h-4 w-4 mr-2" />
                     Share via Gmail
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => {
-                      const selectedUrls = photos
-                        .filter(p => selectedPhotos.has(p.id))
-                        .map(p => p.url)
-                        .join('\n')
-                      navigator.clipboard.writeText(selectedUrls)
-                      toast({
-                        title: "Links copied",
-                        description: `${selectedPhotos.size} photo URL${selectedPhotos.size > 1 ? 's' : ''} copied to clipboard`,
-                      })
-                    }}
-                  >
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copy links
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
           )}
-        </div>
-        <div className="flex gap-2">
-          {photos.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleSelectionMode}
-              className={isSelectionMode ? "bg-muted" : ""}
-            >
-              {isSelectionMode ? "Cancel" : "Select"}
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleSelectionMode}
+            className={isSelectionMode ? "bg-muted" : ""}
+          >
+            {isSelectionMode ? "Cancel" : "Select"}
+          </Button>
           <Button onClick={() => setIsUploadDialogOpen(true)} className="bg-[#59ff00] text-black hover:bg-[#59ff00]/90">
             <Plus className="h-4 w-4 mr-2" />
             Upload Photos
           </Button>
+          {/* Take Photo Button */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={() => fileInputCameraRef.current?.click()}
+          >
+            <Camera className="h-4 w-4" />
+            Take Photo
+          </Button>
+          <input
+            ref={fileInputCameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={handleCameraCapture}
+          />
         </div>
       </div>
 
-      {photos.length === 0 ? (
+      {filterPhotosByCategory(photos, activeCategory).length === 0 ? (
         <div className="text-center py-10 border-2 border-dashed rounded-lg">
           <p className="text-muted-foreground">No photos available.</p>
           <p className="text-sm text-muted-foreground mt-1">Upload photos to get started.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {photos.map((photo) => (
+          {filterPhotosByCategory(photos, activeCategory).map((photo) => (
             <Card 
               key={photo.id} 
               className={`group relative cursor-pointer overflow-hidden ${

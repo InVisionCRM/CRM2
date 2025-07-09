@@ -3,11 +3,11 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useSearchParams } from "next/navigation" // Use next/navigation for App Router
 import { LeadStatus } from "@prisma/client"
-import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy, Loader2, NotebookPen, PenTool, CheckCircle, CalendarDays, Calendar, Palette, DollarSign, Hammer, ArrowRight, Paintbrush, ClipboardList } from "lucide-react" // Added ClipboardList icon
+import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy, Loader2, NotebookPen, PenTool, CheckCircle, CalendarDays, Calendar, Palette, DollarSign, Hammer, ArrowRight, Paintbrush, ClipboardList, Save, ChevronDown, Upload, Eye, Trash2, ExternalLink } from "lucide-react" // Added ClipboardList icon
 import { StatusChangeDrawer } from "@/components/leads/StatusChangeDrawer"
 import { LeadDetailTabs } from "@/components/leads/LeadDetailTabs"
 import { ActivityFeed } from "@/components/leads/ActivityFeed"
-import { AddNote } from "@/components/leads/AddNote"
+
 import { Button } from "@/components/ui/button"
 import { useLead } from "@/hooks/use-lead" // Corrected path
 import { Skeleton } from "@/components/ui/skeleton"
@@ -27,7 +27,15 @@ import { ImportantDates } from "@/components/leads/ImportantDates"
 import { LeadEmailer } from "@/components/leads/LeadEmailer"
 import { JobCompletionCard } from "@/components/leads/JobCompletionCard"
 import { format, parseISO } from "date-fns"
-import UploadToDriveSection from '@/components/leads/UploadToDriveSection'
+import { ClientContractsDropdown } from "@/components/leads/ClientContractsDropdown"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 
 // Quick Actions Button component
 interface QuickActionButtonProps {
@@ -36,6 +44,434 @@ interface QuickActionButtonProps {
   label: string;
   disabled?: boolean;
   variant?: 'default' | 'contract' | 'sign' | 'filemanager' | 'photos' | 'addnote' | 'email' | 'scopeofwork';
+}
+
+// File categories for upload
+const FILE_CATEGORIES = [
+  { key: 'general_contract', label: 'General Contract', color: 'orange' },
+  { key: 'estimate', label: 'Estimate', color: 'blue' },
+  { key: 'acv', label: 'ACV', color: 'emerald' },
+  { key: 'supplement', label: 'Supplement', color: 'red' },
+  { key: 'eagleview', label: 'EagleView', color: 'purple' },
+  { key: 'scope_of_work', label: 'SOW', color: 'rose' },
+  { key: 'warrenty', label: 'Warranty', color: 'indigo' },
+  { key: 'other', label: 'Other', color: 'gray' }
+] as const
+
+type FileCategoryKey = (typeof FILE_CATEGORIES)[number]['key']
+
+// Add Note Button with Hover Dropdown component
+interface AddNoteButtonProps {
+  leadId: string;
+  onNoteAdded?: () => void;
+}
+
+// Upload Dropdown component
+interface UploadDropdownProps {
+  leadId: string;
+  lead: any;
+}
+
+const AddNoteButton: React.FC<AddNoteButtonProps> = ({ leadId, onNoteAdded }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!note.trim()) {
+      toast({
+        title: "Note required",
+        description: "Please enter a note before submitting.",
+        variant: "destructive"
+      });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`/api/leads/${leadId}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: note })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Failed to add note");
+      setNote("");
+      setIsOpen(false);
+      toast({ title: "Note added", description: "Your note has been added successfully." });
+      if (onNoteAdded) onNoteAdded();
+    } catch (error) {
+      console.error("Error adding note:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add note",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  return (
+    <div className="relative flex-1" ref={dropdownRef}>
+      <button
+        type="button"
+        className={cn(
+          "relative flex h-16 w-full items-center justify-center backdrop-blur-lg p-1 text-sm font-bold text-white",
+          "first:border-l-0 transition-all duration-300",
+          "bg-gradient-to-br from-[#14110F]/90 via-[#14110F]/80 to-[#14110F]/90 border-l border-[#14110F]/50 hover:from-[#14110F]/80 hover:via-[#14110F]/70 hover:to-[#14110F]/80 hover:border-[#14110F]/60 hover:shadow-lg hover:shadow-[#14110F]/20",
+          "hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+        )}
+        onClick={() => setIsOpen((v) => !v)}
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+      >
+        <div className="flex flex-col items-center justify-center gap-1">
+          <div className="p-1 bg-white/10 rounded-md">
+            <NotebookPen className="h-4 w-4 text-[#e0e0e0]" />
+          </div>
+          <span className="text-xs leading-tight font-semibold text-[#e0e0e0]">Add Note</span>
+        </div>
+      </button>
+      {isOpen && (
+        <div
+          className="absolute bottom-full left-0 right-0 mb-2 z-50 w-80 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 border border-slate-600/50 backdrop-blur-xl shadow-2xl shadow-black/50 rounded-xl overflow-hidden p-4"
+        >
+          <h3 className="text-sm font-semibold mb-3 text-gray-100">Quick Note</h3>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <Textarea
+              placeholder="Enter your note here..."
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="min-h-[100px] resize-none text-sm bg-slate-900 text-white border-slate-700 focus:border-[#14110F] focus:ring-[#14110F]"
+              disabled={isSubmitting}
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setNote("");
+                  setIsOpen(false);
+                }}
+                disabled={isSubmitting}
+                className="border-slate-700 text-white hover:bg-slate-800"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmitting || !note.trim()}
+                className="bg-[#14110F] hover:bg-[#14110F]/90 text-white"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-3 w-3" />
+                    Save Note
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const UploadDropdown: React.FC<UploadDropdownProps> = ({ leadId, lead }) => {
+  const { toast } = useToast()
+  const [uploadedFileStatus, setUploadedFileStatus] = useState<Record<string, boolean>>({})
+  const [uploadedFileUrls, setUploadedFileUrls] = useState<Record<string, string>>({})
+  const [isUploadingFile, setIsUploadingFile] = useState(false)
+  const [isDeletingFile, setIsDeletingFile] = useState<Record<string, boolean>>({})
+  const [currentUploadType, setCurrentUploadType] = useState<FileCategoryKey | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Check if file exists
+  const checkFileExists = async (fileType: string) => {
+    if (!leadId) return { exists: false, fileUrl: null as string | null }
+    try {
+      const response = await fetch(`/api/files/check-file-exists?leadId=${leadId}&fileType=${fileType}`)
+      if (!response.ok) return { exists: false, fileUrl: null }
+      const data = await response.json()
+      return { exists: data.exists as boolean, fileUrl: data.fileUrl as string | null }
+    } catch {
+      return { exists: false, fileUrl: null }
+    }
+  }
+
+  // Refresh all file statuses
+  const refreshAllStatuses = async () => {
+    const checks = await Promise.all(
+      FILE_CATEGORIES.map(async ({ key }) => {
+        const res = await checkFileExists(key)
+        return { key, ...res }
+      })
+    )
+    const newStatus: Record<string, boolean> = {}
+    const newUrls: Record<string, string> = {}
+    checks.forEach(c => {
+      newStatus[c.key] = c.exists
+      if (c.exists && c.fileUrl) newUrls[c.key] = c.fileUrl
+    })
+    setUploadedFileStatus(newStatus)
+    setUploadedFileUrls(newUrls)
+  }
+
+  // Load file statuses on mount
+  useEffect(() => {
+    refreshAllStatuses()
+  }, [leadId])
+
+  // Handle file upload
+  const handleUploadFile = (fileType: FileCategoryKey) => {
+    setCurrentUploadType(fileType)
+    // Set accept attribute based on file type
+    if (fileInputRef.current) {
+      if (fileType === 'other') {
+        fileInputRef.current.accept = '*' // Accept all file types for "Other"
+      } else {
+        fileInputRef.current.accept = '.pdf,.doc,.docx' // Specific file types for other categories
+      }
+    }
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !currentUploadType) return
+    setIsUploadingFile(true)
+
+    try {
+      // Get lead information for filename
+      const leadResponse = await fetch(`/api/leads/${leadId}`)
+      if (!leadResponse.ok) {
+        throw new Error('Failed to get lead information')
+      }
+      const leadData = await leadResponse.json()
+      
+      // Create custom filename
+      const leadName = `${leadData.firstName || 'Unknown'} ${leadData.lastName || 'Lead'}`.trim()
+      const fileExtension = file.name.split('.').pop() || 'pdf'
+      
+      let customFileName: string
+      if (currentUploadType === 'other') {
+        // For "Other" category, use the original filename structure from UploadToDriveSection
+        customFileName = `other/${leadName}/${file.name}`
+      } else {
+        // For specific categories, use the structured naming
+        customFileName = `${currentUploadType}/${leadName}/${leadId}.${fileExtension}`
+      }
+
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('leadId', leadId)
+      formData.append('fileType', currentUploadType)
+      formData.append('customFileName', customFileName)
+
+      const res = await fetch('/api/files/upload-to-shared-drive', { method: 'POST', body: formData })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Upload failed')
+      }
+      toast({ title: 'Success', description: `${currentUploadType === 'other' ? 'File' : currentUploadType} uploaded!` })
+      await refreshAllStatuses()
+    } catch (err) {
+      toast({ title: 'Error', description: 'Upload failed', variant: 'destructive' })
+    } finally {
+      setIsUploadingFile(false)
+      setCurrentUploadType(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  // Handle file deletion
+  const handleDeleteFile = async (fileType: FileCategoryKey) => {
+    if (isDeletingFile[fileType]) return
+    setIsDeletingFile(prev => ({ ...prev, [fileType]: true }))
+    try {
+      const checkResponse = await fetch(`/api/files/check-file-exists?leadId=${leadId}&fileType=${fileType}`)
+      if (!checkResponse.ok) {
+        throw new Error('Failed to find file')
+      }
+      
+      const checkData = await checkResponse.json()
+      if (!checkData.exists || !checkData.fileId) {
+        throw new Error('File not found')
+      }
+      
+      const response = await fetch(`/api/files/delete-from-shared-drive?driveFileId=${checkData.fileId}`, { method: 'DELETE' })
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed')
+      }
+      toast({ title: 'Deleted', description: `${fileType === 'other' ? 'File' : fileType} removed` })
+      await refreshAllStatuses()
+    } catch {
+      toast({ title: 'Error', description: 'Delete failed', variant: 'destructive' })
+    } finally {
+      setIsDeletingFile(prev => ({ ...prev, [fileType]: false }))
+    }
+  }
+
+  // Get color classes for each file type
+  const getColorClasses = (color: string) => {
+    const colorMap: Record<string, string> = {
+      blue: 'from-blue-600/20 to-blue-500/20 border-blue-500/30 text-blue-300 hover:from-blue-600/20 hover:to-blue-500/20 hover:shadow-blue-500/20 hover:border-blue-500/30',
+      emerald: 'from-emerald-600/20 to-emerald-500/20 border-emerald-500/30 text-emerald-300 hover:from-emerald-600/20 hover:to-emerald-500/20 hover:shadow-emerald-500/20 hover:border-emerald-500/30',
+      red: 'from-red-600/20 to-red-500/20 border-red-500/30 text-red-300 hover:from-red-600/20 hover:to-red-500/20 hover:shadow-red-500/20 hover:border-red-500/30',
+      purple: 'from-purple-600/20 to-purple-500/20 border-purple-500/30 text-purple-300 hover:from-purple-600/20 hover:to-purple-500/20 hover:shadow-purple-500/20 hover:border-purple-500/30',
+      rose: 'from-rose-600/20 to-rose-500/20 border-rose-500/30 text-rose-300 hover:from-rose-600/20 hover:to-rose-500/20 hover:shadow-rose-500/20 hover:border-rose-500/30',
+      indigo: 'from-indigo-600/20 to-indigo-500/20 border-indigo-500/30 text-indigo-300 hover:from-indigo-600/20 hover:to-indigo-500/20 hover:shadow-indigo-500/20 hover:border-indigo-500/30',
+      orange: 'from-orange-600/20 to-orange-500/20 border-orange-500/30 text-orange-300 hover:from-orange-600/20 hover:to-orange-500/20 hover:shadow-orange-500/20 hover:border-orange-500/30',
+      gray: 'from-gray-600/20 to-gray-500/20 border-gray-500/30 text-gray-300 hover:from-gray-600/20 hover:to-gray-500/20 hover:shadow-gray-500/20 hover:border-gray-500/30'
+    }
+    return colorMap[color] || colorMap.blue
+  }
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className={cn(
+              "relative flex h-16 flex-1 items-center justify-center backdrop-blur-lg p-1 text-sm font-bold text-white",
+              "first:border-l-0 transition-all duration-300",
+              "bg-gradient-to-br from-teal-700/90 via-teal-600/90 to-teal-700/90 border-l border-teal-500/50 hover:from-teal-600/90 hover:via-teal-500/90 hover:to-teal-600/90 hover:border-teal-400/60 hover:shadow-lg hover:shadow-teal-500/20",
+              "hover:scale-[1.02] active:scale-[0.98]",
+              "cursor-pointer"
+            )}
+          >
+            <div className="flex flex-col items-center justify-center gap-1">
+              <div className="p-1 bg-white/10 rounded-md">
+                <Upload className="h-4 w-4 text-teal-200" />
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-xs leading-tight font-semibold text-teal-100">Upload</span>
+                <ChevronDown className="h-3 w-3 text-teal-200 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+              </div>
+            </div>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent 
+          className="w-80 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 border border-slate-600/50 backdrop-blur-xl shadow-2xl shadow-black/50 rounded-xl overflow-hidden"
+          side="top"
+          align="center"
+          sideOffset={8}
+        >
+          <div className="p-2">
+            {FILE_CATEGORIES.map(({ key, label, color }) => (
+              <DropdownMenuItem
+                key={key}
+                onClick={() => handleUploadFile(key)}
+                disabled={isUploadingFile}
+                className="flex items-center gap-4 text-white hover:bg-gradient-to-r focus:bg-gradient-to-r cursor-pointer py-4 px-5 rounded-lg transition-all duration-200 hover:scale-[1.02] border border-transparent hover:border-current"
+                style={{ 
+                  '--tw-gradient-from': `var(--${color}-600)` + '/20',
+                  '--tw-gradient-to': `var(--${color}-500)` + '/20',
+                  '--tw-border-opacity': '0.3'
+                } as React.CSSProperties}
+              >
+                <div className={cn("p-2 bg-gradient-to-br rounded-lg border", getColorClasses(color))}>
+                  {uploadedFileStatus[key] ? (
+                    <CheckCircle2 className="h-5 w-5" />
+                  ) : (
+                    <FileText className="h-5 w-5" />
+                  )}
+                </div>
+                <div className="flex-1 flex items-center justify-between">
+                  <span className="text-base font-semibold text-gray-100">{label}</span>
+                  {uploadedFileStatus[key] && (
+                    <div className="flex items-center gap-1">
+                      {uploadedFileUrls[key] && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            window.open(uploadedFileUrls[key], '_blank')
+                          }}
+                          className="h-6 w-6 p-0 text-blue-400 hover:text-blue-300"
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={isDeletingFile[key]}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteFile(key)
+                        }}
+                        className="h-6 w-6 p-0 text-red-400 hover:text-red-300"
+                      >
+                        {isDeletingFile[key] ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </DropdownMenuItem>
+            ))}
+
+            <DropdownMenuSeparator className="my-2" />
+
+            {/* File Manager */}
+            <DropdownMenuItem
+              onClick={() => window.open(`/leads/${leadId}/files`, '_blank')}
+              className="flex items-center gap-4 text-white hover:bg-gradient-to-r hover:from-cyan-600/20 hover:to-cyan-500/20 focus:bg-gradient-to-r focus:from-cyan-600/20 focus:to-cyan-500/20 cursor-pointer py-4 px-5 rounded-lg transition-all duration-200 hover:scale-[1.02] border border-transparent hover:border-cyan-500/30"
+            >
+              <div className="p-2 bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 rounded-lg border border-cyan-500/30">
+                <FileText className="h-5 w-5 text-cyan-300" />
+              </div>
+              <div className="flex-1 flex items-center justify-between">
+                <span className="text-base font-semibold text-gray-100">File Manager</span>
+                <ExternalLink className="h-4 w-4 text-cyan-300" />
+              </div>
+            </DropdownMenuItem>
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.doc,.docx"
+        onChange={handleFileChange}
+        className="hidden"
+        aria-label="Upload file for document category"
+      />
+    </>
+  )
 }
 
 const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, label, disabled, variant = 'default' }) => {
@@ -365,10 +801,7 @@ export default function LeadDetailPage() {
 
   // Add a reference to the activity feed for refreshing
   const activityFeedRef = useRef<HTMLDivElement>(null);
-  const addNoteRef = useRef<HTMLDivElement>(null);
   // Refs for section navigation
-  const scheduleRef = useRef<HTMLDivElement>(null);
-  const uploadSectionRef = useRef<HTMLDivElement>(null);
   const summaryRef = useRef<HTMLDivElement>(null);
   const activityRef = activityFeedRef; // reuse existing ref
 
@@ -601,12 +1034,6 @@ export default function LeadDetailPage() {
     }
   };
 
-  const handleScrollToAddNote = () => {
-    if (addNoteRef.current) {
-      addNoteRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
   const handleSaveContractsToDrive = async () => {
     if (!lead?.id || completedContracts.length === 0) return;
 
@@ -797,37 +1224,29 @@ export default function LeadDetailPage() {
                       )}
                       <div className="absolute bottom-0 left-0 right-0 flex w-full text-center border-t-2 border-white rounded-t-xl shadow-inner shadow-black/40 bg-black/60 backdrop-blur">
                         <QuickActionButton 
-                          href={`/leads/${id}/files`}
-                          label="File Manager" 
-                          variant="filemanager"
-                        />
-                        <QuickActionButton 
                           onClick={handleOpenPhotosDialog} 
                           label="Photos" 
                           variant="photos"
                         />
-                        <QuickActionButton
-                          onClick={handleScrollToAddNote}
-                          label="Add Note"
-                          variant="addnote"
+                        <AddNoteButton
+                          leadId={lead.id}
+                          onNoteAdded={handleNoteAdded}
                         />
-                        <QuickActionButton
-                          onClick={handleSendContract}
-                          label={isSendingContract ? "Sending..." : "Send Contract"}
-                          disabled={!lead || isSendingContract}
-                          variant="contract"
+                        <UploadDropdown
+                          leadId={lead.id}
+                          lead={lead}
                         />
-                        <QuickActionButton
-                          onClick={handleSignInPerson}
-                          label={isSigningInPerson ? "Creating..." : "Sign in Person"}
-                          disabled={!lead || isSigningInPerson}
-                          variant="sign"
+                        <ImportantDates
+                          lead={lead}
                         />
-                        <QuickActionButton
-                          onClick={handleOpenScopeOfWorkDialog}
-                          label="Scope of Work"
+                        <ClientContractsDropdown
+                          onSendContract={handleSendContract}
+                          onSignInPerson={handleSignInPerson}
+                          onScopeOfWork={handleOpenScopeOfWorkDialog}
+                          isSendingContract={isSendingContract}
+                          isSigningInPerson={isSigningInPerson}
                           disabled={!lead}
-                          variant="scopeofwork"
+                          lead={lead}
                         />
                       </div>
                     </div>
@@ -835,15 +1254,9 @@ export default function LeadDetailPage() {
                 </CardContent>
               </Card>
 
-              {/* Important Dates & Scheduler */}
-              <div className="w-full mt-6" ref={scheduleRef} id="schedule-info">
-                <ImportantDates lead={lead} />
-              </div>
 
-              {/* Upload to Drive Section */}
-              <div className="w-full mt-6" ref={uploadSectionRef} id="upload-info">
-                 <UploadToDriveSection leadId={lead.id} />
-              </div>
+
+
             </div>
           )}
         </div>
@@ -867,9 +1280,7 @@ export default function LeadDetailPage() {
               {/* Divider under lead overview tab */}
               <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500/50 to-transparent" />
             </div>
-            <div className="w-full" ref={addNoteRef}>
-              <AddNote leadId={lead.id} onSuccess={handleNoteAdded} />
-            </div>
+
           </div>
 
           {/* Right column - Activity Feed only */}

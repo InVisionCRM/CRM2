@@ -1,5 +1,16 @@
 import { NextResponse } from 'next/server';
 
+const statusMap: Record<string, string> = {
+  awaiting: "Sent",
+  sent: "Sent",
+  opened: "Opened",
+  partially_completed: "Partially completed",
+  completed: "Completed",
+  declined: "Declined",
+  expired: "Expired",
+  pending: "Pending",
+};
+
 export async function GET(req: Request) {
   console.log('🔵 Fetching DocuSeal submissions');
   
@@ -86,6 +97,21 @@ export async function GET(req: Request) {
         originalCount: data.data?.length || 0,
         filteredCount: filteredData.data?.length || 0,
         email: email
+      });
+    }
+
+    // Add displayStatus to each submission and log raw statuses
+    if (filteredData.data && Array.isArray(filteredData.data)) {
+      filteredData.data.forEach((submission: any) => {
+        console.log('Docuseal raw status:', submission.status, 'Submitters:', submission.submitters?.map((s: any) => s.status));
+      });
+      filteredData.data = filteredData.data.map((submission: any) => {
+        const submitterStatus = submission.submitters && submission.submitters.length > 0 ? submission.submitters[0].status : undefined;
+        const displayStatus = statusMap[submitterStatus] || statusMap[submission.status] || submitterStatus || submission.status;
+        return {
+          ...submission,
+          displayStatus,
+        };
       });
     }
     
