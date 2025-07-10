@@ -23,6 +23,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { CalendarView } from "@/components/calendar-view"
 
 interface ImportantDatesProps {
   lead: Lead | null
@@ -526,7 +527,7 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
         <DropdownMenuTrigger asChild>
           <button
             className={cn(
-              "relative flex h-16 flex-1 items-center justify-center backdrop-blur-lg p-1 text-sm font-bold text-white",
+              "relative flex h-full w-full items-center justify-center backdrop-blur-lg p-1 text-sm font-bold text-white",
               "first:border-l-0 transition-all duration-300",
               "bg-gradient-to-br from-blue-700/90 via-blue-600/90 to-blue-700/90 border-l border-blue-500/50 hover:from-blue-600/90 hover:via-blue-500/90 hover:to-blue-600/90 hover:border-blue-400/60 hover:shadow-lg hover:shadow-blue-500/20",
               "hover:scale-[1.02] active:scale-[0.98]",
@@ -870,67 +871,131 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
       </Dialog>
 
       {/* Important Dates Modal */}
-      <Dialog open={isImportantDateModalOpen} onOpenChange={setIsImportantDateModalOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5" />
-              Set {selectedImportantDateType?.label}
-            </DialogTitle>
-            <DialogDescription>
-              Select a date for {selectedImportantDateType?.label?.toLowerCase()} for {leadName}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label>Select Date</Label>
-              <div className="flex justify-center">
-                <Calendar
-                  mode="single"
-                  selected={selectedImportantDate}
-                  captionLayout="dropdown"
-                  onSelect={(date) => {
-                    setSelectedImportantDate(date)
-                  }}
-                  classNames={{
-                    day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
-                  }}
-                />
+      <div className="sm:hidden">
+        <Drawer modal={false} onOpenChange={setIsImportantDateModalOpen} open={isImportantDateModalOpen}>
+          <DrawerContent>
+            <DialogHeader className="px-4 pt-4">
+              <DialogTitle>{selectedImportantDateType?.label}</DialogTitle>
+              <DialogDescription>
+                Select a date for {selectedImportantDateType?.label?.toLowerCase()} for {leadName}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Select Date</Label>
+                <div className="flex justify-center">
+                  <Calendar
+                    mode="single"
+                    selected={selectedImportantDate}
+                    captionLayout="dropdown"
+                    onSelect={(date) => {
+                      setSelectedImportantDate(date)
+                    }}
+                    classNames={{
+                      day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
+                    }}
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="flex gap-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setIsImportantDateModalOpen(false)}
-                className="flex-1"
-                disabled={isUpdatingImportantDate || isDeletingImportantDate}
-              >
-                Cancel
-              </Button>
-              {selectedImportantDateType && getImportantDateFromMetadata(selectedImportantDateType.key) && (
+              <div className="flex gap-2 pt-4">
                 <Button
-                  variant="destructive"
-                  onClick={handleDeleteImportantDate}
-                  className="flex-1 flex items-center gap-2"
+                  variant="outline"
+                  onClick={() => setIsImportantDateModalOpen(false)}
+                  className="flex-1"
                   disabled={isUpdatingImportantDate || isDeletingImportantDate}
                 >
-                  <Trash2 className="h-4 w-4" />
-                  {isDeletingImportantDate ? "Deleting..." : "Delete"}
+                  Cancel
                 </Button>
-              )}
-              <Button
-                onClick={handleSaveImportantDate}
-                className="flex-1"
-                disabled={isUpdatingImportantDate || isDeletingImportantDate || !selectedImportantDate}
-              >
-                {isUpdatingImportantDate ? "Saving..." : "Save Date"}
-              </Button>
+                {selectedImportantDateType && getImportantDateFromMetadata(selectedImportantDateType.key) && (
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteImportantDate}
+                    className="flex-1 flex items-center gap-2"
+                    disabled={isUpdatingImportantDate || isDeletingImportantDate}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {isDeletingImportantDate ? "Deleting..." : "Delete"}
+                  </Button>
+                )}
+                <Button
+                  onClick={handleSaveImportantDate}
+                  className="flex-1"
+                  disabled={isUpdatingImportantDate || isDeletingImportantDate || !selectedImportantDate}
+                >
+                  {isUpdatingImportantDate ? "Saving..." : "Save Date"}
+                </Button>
+              </div>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DrawerContent>
+        </Drawer>
+      </div>
+
+      {/* Important Date Modal using Dialog on desktop */}
+      <div className="hidden sm:block">
+        <Dialog open={isImportantDateModalOpen} onOpenChange={setIsImportantDateModalOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CalendarIcon className="h-5 w-5" />
+                Set {selectedImportantDateType?.label}
+              </DialogTitle>
+              <DialogDescription>
+                Select a date for {selectedImportantDateType?.label?.toLowerCase()} for {leadName}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Select Date</Label>
+                <div className="flex justify-center">
+                  <Calendar
+                    mode="single"
+                    selected={selectedImportantDate}
+                    captionLayout="dropdown"
+                    onSelect={(date) => {
+                      setSelectedImportantDate(date)
+                    }}
+                    classNames={{
+                      day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground"
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsImportantDateModalOpen(false)}
+                  className="flex-1"
+                  disabled={isUpdatingImportantDate || isDeletingImportantDate}
+                >
+                  Cancel
+                </Button>
+                {selectedImportantDateType && getImportantDateFromMetadata(selectedImportantDateType.key) && (
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteImportantDate}
+                    className="flex-1 flex items-center gap-2"
+                    disabled={isUpdatingImportantDate || isDeletingImportantDate}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {isDeletingImportantDate ? "Deleting..." : "Delete"}
+                  </Button>
+                )}
+                <Button
+                  onClick={handleSaveImportantDate}
+                  className="flex-1"
+                  disabled={isUpdatingImportantDate || isDeletingImportantDate || !selectedImportantDate}
+                >
+                  {isUpdatingImportantDate ? "Saving..." : "Save Date"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {/* Reminder Email Dialog */}
       <Dialog open={isReminderDialogOpen} onOpenChange={setIsReminderDialogOpen}>
@@ -958,14 +1023,18 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Calendar Iframe Dialog */}
+      {/* Calendar view Dialog */}
       <Dialog open={isCalendarDialogOpen} onOpenChange={setIsCalendarDialogOpen}>
-        <DialogContent className="w-full max-w-4xl h-[80vh] p-0 overflow-hidden">
-          <iframe
-            src="/calendar"
-            title="Calendar"
-            className="w-full h-full border-0"
-          />
+      <DialogContent className="w-full max-w-4xl h-[65vh] p-0 overflow-hidden">
+          <DialogHeader>
+            <DialogTitle></DialogTitle>
+            <DialogDescription>
+            
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-15">
+            <CalendarView urlLeadId={lead.id} />
+          </div>
         </DialogContent>
       </Dialog>
     </>

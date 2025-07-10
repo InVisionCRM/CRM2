@@ -130,11 +130,11 @@ const AddNoteButton: React.FC<AddNoteButtonProps> = ({ leadId, onNoteAdded }) =>
   }, [isOpen]);
 
   return (
-    <div className="relative flex-1" ref={dropdownRef}>
+    <div className="relative h-full" ref={dropdownRef}>
       <button
         type="button"
         className={cn(
-          "relative flex h-16 w-full items-center justify-center backdrop-blur-lg p-1 text-sm font-bold text-white",
+          "relative flex h-full w-full items-center justify-center backdrop-blur-lg p-1 text-sm font-bold text-white",
           "first:border-l-0 transition-all duration-300",
           "bg-gradient-to-br from-[#14110F]/90 via-[#14110F]/80 to-[#14110F]/90 border-l border-[#14110F]/50 hover:from-[#14110F]/80 hover:via-[#14110F]/70 hover:to-[#14110F]/80 hover:border-[#14110F]/60 hover:shadow-lg hover:shadow-[#14110F]/20",
           "hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
@@ -208,6 +208,7 @@ const UploadDropdown: React.FC<UploadDropdownProps> = ({ leadId, lead }) => {
   const { toast } = useToast()
   const [uploadedFileStatus, setUploadedFileStatus] = useState<Record<string, boolean>>({})
   const [uploadedFileUrls, setUploadedFileUrls] = useState<Record<string, string>>({})
+  const [isCheckingFiles, setIsCheckingFiles] = useState<Record<string, boolean>>({})
   const [isUploadingFile, setIsUploadingFile] = useState(false)
   const [isDeletingFile, setIsDeletingFile] = useState<Record<string, boolean>>({})
   const [currentUploadType, setCurrentUploadType] = useState<FileCategoryKey | null>(null)
@@ -356,12 +357,12 @@ const UploadDropdown: React.FC<UploadDropdownProps> = ({ leadId, lead }) => {
   }
 
   return (
-    <>
+    <div className="relative h-full">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
             className={cn(
-              "relative flex h-16 flex-1 items-center justify-center backdrop-blur-lg p-1 text-sm font-bold text-white",
+              "relative flex h-full w-full items-center justify-center backdrop-blur-lg p-1 text-sm font-bold text-white",
               "first:border-l-0 transition-all duration-300",
               "bg-gradient-to-br from-teal-700/90 via-teal-600/90 to-teal-700/90 border-l border-teal-500/50 hover:from-teal-600/90 hover:via-teal-500/90 hover:to-teal-600/90 hover:border-teal-400/60 hover:shadow-lg hover:shadow-teal-500/20",
               "hover:scale-[1.02] active:scale-[0.98]",
@@ -380,85 +381,55 @@ const UploadDropdown: React.FC<UploadDropdownProps> = ({ leadId, lead }) => {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent 
-          className="w-80 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 border border-slate-600/50 backdrop-blur-xl shadow-2xl shadow-black/50 rounded-xl overflow-hidden"
-          side="top"
+          className="w-72 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 border border-slate-600/50 backdrop-blur-xl shadow-2xl shadow-black/50 rounded-xl overflow-hidden p-2"
+          side="bottom"
           align="center"
           sideOffset={8}
         >
-          <div className="p-2">
+          <div className="grid grid-cols-2 gap-2">
             {FILE_CATEGORIES.map(({ key, label, color }) => (
               <DropdownMenuItem
                 key={key}
-                onClick={() => handleUploadFile(key)}
                 disabled={isUploadingFile}
-                className="flex items-center gap-4 text-white hover:bg-gradient-to-r focus:bg-gradient-to-r cursor-pointer py-4 px-5 rounded-lg transition-all duration-200 hover:scale-[1.02] border border-transparent hover:border-current"
-                style={{ 
-                  '--tw-gradient-from': `var(--${color}-600)` + '/20',
-                  '--tw-gradient-to': `var(--${color}-500)` + '/20',
-                  '--tw-border-opacity': '0.3'
-                } as React.CSSProperties}
+                onClick={() => handleUploadFile(key)}
+                className={cn(
+                  "flex items-center justify-between gap-1 text-white hover:bg-gradient-to-r focus:bg-gradient-to-r cursor-pointer p-1.5 rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-lg border border-transparent",
+                  `hover:from-${getColorClasses(color)}.from/20 hover:to-${getColorClasses(color)}.to/20 focus:from-${getColorClasses(color)}.from/20 focus:to-${getColorClasses(color)}.to/20 hover:border-${getColorClasses(color)}.border/30`
+                )}
               >
-                <div className={cn("p-2 bg-gradient-to-br rounded-lg border", getColorClasses(color))}>
-                  {uploadedFileStatus[key] ? (
-                    <CheckCircle2 className="h-5 w-5" />
-                  ) : (
-                    <FileText className="h-5 w-5" />
-                  )}
+                <div className="flex items-center gap-1.5">
+                  <div className={cn("p-1 rounded-md", `bg-gradient-to-br from-${getColorClasses(color)}.from/20 to-${getColorClasses(color)}.to/20`)}>
+                    <Upload className={cn("h-3 w-3", `text-${getColorClasses(color)}.icon`)} />
+                  </div>
+                  <span className="text-xs font-semibold">{label}</span>
                 </div>
-                <div className="flex-1 flex items-center justify-between">
-                  <span className="text-base font-semibold text-gray-100">{label}</span>
-                  {uploadedFileStatus[key] && (
+                <div className="flex items-center gap-1.5">
+                  {isCheckingFiles[key] ? (
+                    <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
+                  ) : uploadedFileStatus[key] ? (
                     <div className="flex items-center gap-1">
-                      {uploadedFileUrls[key] && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            window.open(uploadedFileUrls[key], '_blank')
-                          }}
-                          className="h-6 w-6 p-0 text-blue-400 hover:text-blue-300"
-                        >
-                          <Eye className="h-3 w-3" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={isDeletingFile[key]}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteFile(key)
-                        }}
-                        className="h-6 w-6 p-0 text-red-400 hover:text-red-300"
-                      >
-                        {isDeletingFile[key] ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-3 w-3" />
-                        )}
-                      </Button>
+                      <button onClick={(e) => { e.stopPropagation(); window.open(uploadedFileUrls[key], '_blank'); }} className="text-blue-400 hover:text-blue-300"><Eye className="h-3 w-3" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteFile(key); }} disabled={isDeletingFile[key]} className="text-red-400 hover:text-red-300">
+                        {isDeletingFile[key] ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                      </button>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </DropdownMenuItem>
             ))}
-
-            <DropdownMenuSeparator className="my-2" />
-
-            {/* File Manager */}
-            <DropdownMenuItem
-              onClick={() => window.open(`/leads/${leadId}/files`, '_blank')}
-              className="flex items-center gap-4 text-white hover:bg-gradient-to-r hover:from-cyan-600/20 hover:to-cyan-500/20 focus:bg-gradient-to-r focus:from-cyan-600/20 focus:to-cyan-500/20 cursor-pointer py-4 px-5 rounded-lg transition-all duration-200 hover:scale-[1.02] border border-transparent hover:border-cyan-500/30"
-            >
-              <div className="p-2 bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 rounded-lg border border-cyan-500/30">
-                <FileText className="h-5 w-5 text-cyan-300" />
-              </div>
-              <div className="flex-1 flex items-center justify-between">
-                <span className="text-base font-semibold text-gray-100">File Manager</span>
-                <ExternalLink className="h-4 w-4 text-cyan-300" />
-              </div>
-            </DropdownMenuItem>
+            <div className="col-span-2 mt-1">
+              <DropdownMenuItem
+                asChild
+                className="flex items-center gap-2 text-white hover:bg-gradient-to-r hover:from-cyan-600/20 hover:to-cyan-500/20 focus:bg-gradient-to-r focus:from-cyan-600/20 focus:to-cyan-500/20 cursor-pointer p-1.5 rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-lg border border-transparent hover:border-cyan-500/30"
+              >
+                <a href="/drive" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5">
+                  <div className="p-1 rounded-md bg-gradient-to-br from-cyan-500/20 to-cyan-600/20">
+                    <ExternalLink className="h-3 w-3 text-cyan-300" />
+                  </div>
+                  <span className="text-xs font-semibold">File Manager</span>
+                </a>
+              </DropdownMenuItem>
+            </div>
           </div>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -470,7 +441,7 @@ const UploadDropdown: React.FC<UploadDropdownProps> = ({ leadId, lead }) => {
         className="hidden"
         aria-label="Upload file for document category"
       />
-    </>
+    </div>
   )
 }
 
@@ -523,8 +494,8 @@ const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, la
 
   const commonProps = {
     className: cn(
-      "relative flex h-16 flex-1 items-center justify-center backdrop-blur-lg p-1 text-sm font-bold text-white",
-      "first:border-l-0 transition-all duration-200",
+      "relative flex h-full w-full items-center justify-center backdrop-blur-lg p-1 text-sm font-bold text-white",
+      "first:border-l-0 transition-all duration-300",
       getVariantStyles(),
       disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
     ),
@@ -599,8 +570,6 @@ const DateCard: React.FC<DateCardProps> = ({ title, date, icon, className, color
     </div>
   );
 };
-
-
 
 // Status Progression Component
 interface StatusProgressionProps {
@@ -1133,10 +1102,7 @@ export default function LeadDetailPage() {
 
   return (
     <>
-      {/* Mobile Navigation Bar */}
-      <MobileNavBar onNavigate={scrollToId} />
-
-      <div className="container mx-auto px-4 pt-20 sm:pt-4 pb-4 sm:px-6 sm:py-8 space-y-4 md:space-y-6 relative">
+      <div className="container mx-auto px-4 pt-4 sm:px-6 sm:py-8 space-y-4 md:space-y-6 relative">
         {/* Status Progression - Top of page */}
         <div className="w-full mb-6">
           <StatusProgression
@@ -1222,41 +1188,47 @@ export default function LeadDetailPage() {
                           <p>{streetViewError}</p>
                         </div>
                       )}
-                      <div className="absolute bottom-0 left-0 right-0 flex w-full text-center border-t-2 border-white rounded-t-xl shadow-inner shadow-black/40 bg-black/60 backdrop-blur">
-                        <QuickActionButton 
-                          onClick={handleOpenPhotosDialog} 
-                          label="Photos" 
-                          variant="photos"
-                        />
-                        <AddNoteButton
-                          leadId={lead.id}
-                          onNoteAdded={handleNoteAdded}
-                        />
-                        <UploadDropdown
-                          leadId={lead.id}
-                          lead={lead}
-                        />
-                        <ImportantDates
-                          lead={lead}
-                        />
-                        <ClientContractsDropdown
-                          onSendContract={handleSendContract}
-                          onSignInPerson={handleSignInPerson}
-                          onScopeOfWork={handleOpenScopeOfWorkDialog}
-                          isSendingContract={isSendingContract}
-                          isSigningInPerson={isSigningInPerson}
-                          disabled={!lead}
-                          lead={lead}
-                        />
+                      <div className="absolute bottom-0 left-0 right-0 grid grid-cols-6 sm:flex w-full text-center border-t-2 border-white rounded-t-xl shadow-inner shadow-black/40 bg-black/60 backdrop-blur">
+                        <div className="col-span-2 sm:flex-1">
+                          <QuickActionButton 
+                            onClick={handleOpenPhotosDialog} 
+                            label="Photos" 
+                            variant="photos"
+                          />
+                        </div>
+                        <div className="col-span-2 sm:flex-1">
+                          <AddNoteButton
+                            leadId={lead.id}
+                            onNoteAdded={handleNoteAdded}
+                          />
+                        </div>
+                        <div className="col-span-2 sm:flex-1">
+                          <UploadDropdown
+                            leadId={lead.id}
+                            lead={lead}
+                          />
+                        </div>
+                        <div className="col-span-3 sm:flex-1">
+                          <ImportantDates
+                            lead={lead}
+                          />
+                        </div>
+                        <div className="col-span-3 sm:flex-1">
+                          <ClientContractsDropdown
+                            onSendContract={handleSendContract}
+                            onSignInPerson={handleSignInPerson}
+                            onScopeOfWork={handleOpenScopeOfWorkDialog}
+                            isSendingContract={isSendingContract}
+                            isSigningInPerson={isSigningInPerson}
+                            disabled={!lead}
+                            lead={lead}
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
                 </CardContent>
               </Card>
-
-
-
-
             </div>
           )}
         </div>
@@ -1280,7 +1252,6 @@ export default function LeadDetailPage() {
               {/* Divider under lead overview tab */}
               <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500/50 to-transparent" />
             </div>
-
           </div>
 
           {/* Right column - Activity Feed only */}
@@ -1311,8 +1282,6 @@ export default function LeadDetailPage() {
             />
           </DialogContent>
         </Dialog>
-
-
 
         {/* Emailer Dialog */}
         {lead && (

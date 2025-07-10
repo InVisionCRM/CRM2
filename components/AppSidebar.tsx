@@ -1,279 +1,187 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { cn } from "@/lib/utils"
+import { useState, useEffect } from "react"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useSession, signIn, signOut } from "next-auth/react"
-import { User, LogIn, LogOut, Plus, MoreHorizontal, FileSignature, Bot, Mail } from "lucide-react"
-import Image from 'next/image'
-import { IconUserBolt, IconHomeHeart, IconMap, IconLink, IconCalendar, IconFolder, IconRoute } from "@tabler/icons-react"
+import { useTheme } from "next-themes"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  Home,
+  User,
+  Map,
+  Calendar,
+  ClipboardList,
+  Mail,
+  MoreHorizontal,
+  Plus,
+  FileSignature,
+  FileText,
+  Users,
+  Route,
+  Link as LinkIcon,
+  Settings,
+  Moon,
+  Sun,
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import { CreateLeadForm } from "@/components/forms/CreateLeadForm"
-import { ConstructionChatDrawer } from "@/components/ConstructionChatDrawer"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 
-interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
-  className?: string
-}
+const mainNavLinks = [
+  { href: "/", label: "Home", icon: Home },
+  { href: "/leads", label: "Leads", icon: User },
+  { href: "/map", label: "Map", icon: Map },
+]
 
-interface NavLink {
-  label: string
+const moreNavLinks = [
+  { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
+  { href: "/submissions", label: "MySigner", icon: FileSignature },
+  { href: "/drive", label: "Drive", icon: FileText },
+  { href: "/gmail", label: "Gmail", icon: Mail },
+  { href: "/quick-links", label: "Quick Links", icon: LinkIcon },
+  { href: "/route-planner", label: "Route Planner", icon: Route },
+  { href: "/team", label: "Team", icon: Users },
+  { href: "/contracts/general", label: "Contracts", icon: ClipboardList },
+  { href: "/admin/users", label: "Settings", icon: Settings },
+]
+
+function NavLink({
+  href,
+  icon: Icon,
+  label,
+}: {
   href: string
-  icon: React.ReactNode
-  onClick?: () => void
+  icon: React.ElementType
+  label: string
+}) {
+  const pathname = usePathname()
+  const isActive = pathname === href
+
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex flex-col items-center justify-center gap-1 h-full transition-colors",
+        isActive
+          ? "text-primary"
+          : "text-muted-foreground hover:text-foreground"
+      )}
+    >
+      <Icon className="h-6 w-6" />
+      <span className="text-xs font-medium">{label}</span>
+    </Link>
+  )
 }
 
-interface NavLinkProps {
-  link: NavLink
-  className?: string
-}
+function MoreMenu() {
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  const pathname = usePathname()
 
-export default function AppSidebar({ className }: SidebarProps) {
-  const pathname = usePathname() || ''
-  const { data: session, status } = useSession()
-  const [isCreateLeadOpen, setIsCreateLeadOpen] = useState(false)
-  const [isHidden, setIsHidden] = useState(false)
-  const [isPWA, setIsPWA] = useState(false)
-  const prevScroll = useRef(0)
-  const scrollTimeout = useRef<NodeJS.Timeout>()
-
-  // Detect PWA mode
   useEffect(() => {
-    const checkPWA = () => {
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-      const isAppleDevice = /iPad|iPhone|iPod/.test(navigator.userAgent)
-      const isApplePWA = isAppleDevice && window.navigator.standalone === true
-      setIsPWA(isStandalone || isApplePWA)
-    }
-    
-    checkPWA()
-    window.addEventListener('resize', checkPWA)
-    return () => window.removeEventListener('resize', checkPWA)
+    setMounted(true)
   }, [])
 
-  // Improved scroll handling with PWA considerations
-  useEffect(() => {
-    const handleScroll = () => {
-      // Always show on desktop or in PWA mode
-      if (window.innerWidth >= 768 || isPWA) {
-        setIsHidden(false)
-        return
-      }
+  if (!mounted) {
+    return null
+  }
 
-      const current = window.scrollY
-      
-      // Clear any existing timeout
-      if (scrollTimeout.current) {
-        clearTimeout(scrollTimeout.current)
-      }
-      
-      // Only hide if scrolling down significantly
-      if (current > prevScroll.current && current > 100) {
-        setIsHidden(true)
-      } else if (current < prevScroll.current - 20) {
-        // Show when scrolling up with some threshold
-        setIsHidden(false)
-      }
-      
-      // Auto-show after scroll stops
-      scrollTimeout.current = setTimeout(() => {
-        setIsHidden(false)
-      }, 2000)
-      
-      prevScroll.current = current
-    }
+  const isDarkMode = theme === "dark"
 
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => {
-      window.removeEventListener('scroll', handleScroll)
-      if (scrollTimeout.current) {
-        clearTimeout(scrollTimeout.current)
-      }
-    }
-  }, [isPWA])
+  const toggleTheme = () => {
+    setTheme(isDarkMode ? "light" : "dark")
+  }
 
-  // Main navigation items (4 items to fit nicely without scrolling)
-  const mainNavLinks = [
-    { label: "Home", href: "/", icon: <IconHomeHeart className="h-6 w-6" /> },
-    { label: "Leads", href: "/leads", icon: <IconUserBolt className="h-6 w-6 text-[#FF5400]" /> },
-    { label: "Map", href: "/map", icon: <IconMap className="h-6 w-6 text-[#52489C]" /> },
-    { label: "Add Lead", href: "#add-lead", icon: <Plus className="h-7 w-7 text-lime-400" />, onClick: () => setIsCreateLeadOpen(true) },
-  ] as const;
-
-  // Google links for the More menu
-  const googleLinks = [
-    { label: "Calendar", href: "/dashboard/calendar", icon: <IconCalendar className="h-6 w-6 text-[#FFBD00]" /> },
-    { label: "Drive", href: "/drive", icon: <IconFolder className="h-6 w-6 text-[#ea4335]" /> },
-    { label: "Gmail", href: "/gmail", icon: <Mail className="h-6 w-6 text-[#68B0AB]" /> },
-  ] as const;
-
-  // More links including MySigner and Google items
-  const moreLinks = [
-    { label: "MySigner", href: "/submissions", icon: <FileSignature className="h-6 w-6 text-[#F2E8CF]" /> },
-    ...googleLinks,
-    { label: "Quick Links", href: "/quick-links", icon: <IconLink className="h-6 w-6 text-[#337CA0] hover:text-[#FFC800]" /> },
-    { label: "Route Planner", href: "/route-planner", icon: <IconRoute className="h-6 w-6 text-[#16E0BD] hover:text-[#FFC800]" /> },
-    { label: "Team", href: "/team", icon: <User className="h-6 w-6 text-[#77CBB9] hover:text-[#FFC800]" /> },
-    { label: "Contracts", href: "/contracts/general", icon: <FileSignature className="h-6 w-6 text-[#E13700] hover:bg-white/10 hover:text-[#FFC800]" /> },
-  ] as const;
-
-  const renderAvatar = () => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <div className="cursor-pointer ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-          <Avatar className="h-10 w-10 border border-white/20 hover:border-white/40 transition-colors bg-black/50 backdrop-blur-sm">
-            {session?.user?.image ? (
-              <AvatarImage src={session.user.image} alt={session.user.name || "User"} />
-            ) : (
-              <AvatarFallback className="bg-black text-white">
-                <User className="h-5 w-5" />
-              </AvatarFallback>
-            )}
-          </Avatar>
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <button
+          className={cn(
+            "flex flex-col items-center justify-center gap-1 h-full transition-colors text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <MoreHorizontal className="h-6 w-6" />
+          <span className="text-xs font-medium">More</span>
+        </button>
+      </SheetTrigger>
+      <SheetContent side="bottom" className="h-auto bg-background">
+        <SheetHeader>
+          <SheetTitle>More Options</SheetTitle>
+        </SheetHeader>
+        <div className="grid grid-cols-3 gap-4 py-4">
+          {moreNavLinks.map((link) => {
+            const isActive = pathname === link.href
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-2 rounded-lg p-3 transition-colors",
+                  isActive
+                    ? "bg-accent text-accent-foreground"
+                    : "hover:bg-accent/50"
+                )}
+              >
+                <link.icon
+                  className={cn(
+                    "h-7 w-7",
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  )}
+                />
+                <span className="text-sm font-medium">{link.label}</span>
+              </Link>
+            )
+          })}
         </div>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56 bg-black/80 backdrop-blur-md border-white/20 text-white" align="start">
-        {status === "authenticated" ? (
-          <>
-            <DropdownMenuLabel>
-              {session.user.name || session.user.email}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator className="bg-white/10" />
-            <DropdownMenuItem 
-              className="cursor-pointer hover:bg-white/10"
-              onClick={() => window.location.href = "/profile"}
-            >
-              <User className="mr-2 h-4 w-4" />
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-white/10" />
-            <DropdownMenuItem 
-              className="cursor-pointer hover:bg-white/10"
-              onClick={() => signOut()}
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Log out
-            </DropdownMenuItem>
-          </>
-        ) : (
-          <DropdownMenuItem 
-            className="cursor-pointer hover:bg-white/10"
-            onClick={() => signIn()}
-          >
-            <LogIn className="mr-2 h-4 w-4" />
-            Log in
-          </DropdownMenuItem>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <div className="border-t pt-4 mt-4">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="theme-toggle" className="flex items-center gap-2 text-base">
+              {isDarkMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+              <span>{isDarkMode ? "Dark" : "Light"} Mode</span>
+            </Label>
+            <Switch
+              id="theme-toggle"
+              checked={isDarkMode}
+              onCheckedChange={toggleTheme}
+            />
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
+}
 
-  const NavLink = ({ link, className = "" }: NavLinkProps) => {
-    const handleClick = (e: React.MouseEvent) => {
-      if (link.onClick) {
-        e.preventDefault();
-        link.onClick();
-      }
-    };
-    return (
-      <a
-        href={link.href}
-        onClick={handleClick}
-        className={cn(
-          "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all flex-1",
-          pathname === link.href ? "text-[#59ff00] bg-white/10" : "text-white hover:text-[#59ff00] hover:bg-white/5",
-          className
-        )}
-      >
-        <div className="text-lg">
-          {link.icon}
-        </div>
-        <span className="text-xs font-semibold text-center leading-tight">{link.label}</span>
-      </a>
-    );
-  };
-
-  const MoreMenu = () => {
-    const isMoreActive = moreLinks.some(link => pathname === link.href);
-    
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className={cn(
-            "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-all flex-1",
-            isMoreActive ? "text-[#59ff00] bg-white/10" : "text-white hover:text-[#FFC800] hover:bg-white/5",
-          )}>
-            <div className="text-lg">
-              <MoreHorizontal className="h-6 w-6" />
-            </div>
-            <span className="text-xs font-semibold text-center leading-tight">More</span>
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-48 bg-black/80 backdrop-blur-md border-white/20 text-white mb-4" align="center">
-          <DropdownMenuLabel className="text-center">MySigner & Google</DropdownMenuLabel>
-          <DropdownMenuSeparator className="bg-white/10" />
-          {moreLinks.slice(0, 4).map((link) => (
-            <DropdownMenuItem 
-              key={link.href}
-              className="cursor-pointer hover:bg-white/10 flex items-center gap-2"
-              onClick={() => window.location.href = link.href}
-            >
-              {link.icon}
-              {link.label}
-            </DropdownMenuItem>
-          ))}
-          <DropdownMenuSeparator className="bg-white/10" />
-          <DropdownMenuLabel className="text-center">Other</DropdownMenuLabel>
-          <DropdownMenuSeparator className="bg-white/10" />
-          {moreLinks.slice(4).map((link) => (
-            <DropdownMenuItem 
-              key={link.href}
-              className="cursor-pointer hover:bg-white/10 flex items-center gap-2"
-              onClick={() => window.location.href = link.href}
-            >
-              {link.icon}
-              {link.label}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  };
+export default function AppSidebar() {
+  const [isCreateLeadOpen, setIsCreateLeadOpen] = useState(false)
 
   return (
     <>
-      <div className={cn(
-        "fixed bottom-0 left-0 right-0 z-50",
-        "bg-black/90 backdrop-blur-sm border-t border-white/20",
-        "transition-transform duration-300 ease-in-out",
-        // PWA-specific styles
-        isPWA && "pwa-bottom-nav ios-pwa-bottom-nav",
-        // Hide/show logic - always show in PWA mode
-        (!isPWA && isHidden) ? "translate-y-full" : "translate-y-0",
-        className
-      )}>
-        <div className={cn(
-          "flex items-center justify-between px-4",
-          // Standard height and padding
-          "h-20 pb-safe",
-          // Additional safe area for PWA
-          isPWA && "pb-safe-area-inset-bottom"
-        )}>
-          {mainNavLinks.map((link) => (
-            <NavLink key={link.href} link={link} />
-          ))}
+      <div className="fixed bottom-0 left-0 right-0 z-40 h-16 transform-gpu border-t bg-background pb-[env(safe-area-inset-bottom)]">
+        <div className="mx-auto grid h-full max-w-lg grid-cols-5 items-center">
+          <NavLink href={mainNavLinks[0].href} icon={mainNavLinks[0].icon} label={mainNavLinks[0].label} />
+          <NavLink href={mainNavLinks[1].href} icon={mainNavLinks[1].icon} label={mainNavLinks[1].label} />
+          <div className="flex justify-center">
+            <Button
+              size="icon"
+              className="h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg -translate-y-4"
+              onClick={() => setIsCreateLeadOpen(true)}
+            >
+              <Plus className="h-8 w-8" />
+            </Button>
+          </div>
+          <NavLink href={mainNavLinks[2].href} icon={mainNavLinks[2].icon} label={mainNavLinks[2].label} />
           <MoreMenu />
         </div>
       </div>
-
-      <CreateLeadForm 
+      <CreateLeadForm
         open={isCreateLeadOpen}
         onOpenChange={setIsCreateLeadOpen}
       />

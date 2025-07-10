@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { Camera, Upload, X, Info, Trash2, Check, Share2, Copy, Link, Mail, Download, Crop, Pencil, Type, Plus } from "lucide-react"
+import { Camera, Upload, X, Info, Trash2, Check, Share2, Copy, Link, Mail, Download, Crop, Pencil, Type, Plus, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -44,6 +44,7 @@ interface Photo {
     image: string | null
   } | null
   leadId: string
+  category?: string
 }
 
 // Add new interface for photo updates
@@ -544,6 +545,303 @@ const PhotoDialog = ({ photo, isOpen, onClose, onDelete, onUpdate, canDelete = t
   )
 }
 
+// CameraModal for multi-capture with category selection
+const PHOTO_CATEGORIES = [
+  { value: "before build", label: "Before Build" },
+  { value: "during build", label: "During Build" },
+  { value: "after build", label: "After Build" },
+  { value: "misc", label: "Misc" },
+];
+
+// Simple Draw Tool Modal
+function DrawModal({ open, onClose, imageUrl, onSave }: {
+  open: boolean;
+  onClose: () => void;
+  imageUrl: string;
+  onSave: (blob: Blob) => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [drawing, setDrawing] = useState(false);
+  const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
+  const [img, setImg] = useState<HTMLImageElement | null>(null);
+  const [lastPos, setLastPos] = useState<{ x: number; y: number } | null>(null);
+  const [canvasDims, setCanvasDims] = useState({ width: 320, height: 320 });
+
+  useEffect(() => {
+    if (open && canvasRef.current) {
+      const image = new window.Image();
+      image.onload = () => {
+        // Fit image into a square canvas, preserving aspect ratio
+        let w = 320, h = 320;
+        if (image.width > image.height) {
+          h = Math.round((image.height / image.width) * 320);
+        } else if (image.height > image.width) {
+          w = Math.round((image.width / image.height) * 320);
+        }
+        setCanvasDims({ width: w, height: h });
+        setImg(image);
+        const context = canvasRef.current!.getContext("2d");
+        setCtx(context);
+        if (context) {
+          // Fill background white
+          context.fillStyle = "#fff";
+          context.fillRect(0, 0, w, h);
+          // Draw image centered
+          context.drawImage(image, 0, 0, w, h);
+        }
+      };
+      image.src = imageUrl;
+    }
+  }, [open, imageUrl]);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    setDrawing(true);
+    setLastPos({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY });
+  };
+  const handlePointerUp = () => {
+    setDrawing(false);
+    setLastPos(null);
+  };
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!drawing || !ctx || !lastPos) return;
+    ctx.strokeStyle = "#ff0000";
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(lastPos.x, lastPos.y);
+    ctx.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+    ctx.stroke();
+    setLastPos({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY });
+  };
+  const handleClear = () => {
+    if (ctx && img && canvasRef.current) {
+      ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      ctx.drawImage(img, 0, 0, canvasRef.current.width, canvasRef.current.height);
+    }
+  };
+  const handleSave = () => {
+    if (canvasRef.current) {
+      canvasRef.current.toBlob((blob) => {
+        if (blob) onSave(blob);
+      }, "image/jpeg", 0.95);
+    }
+  };
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md w-full">
+        <div className="flex flex-col items-center gap-2">
+          <canvas
+            ref={canvasRef}
+            width={canvasDims.width}
+            height={canvasDims.height}
+            className="border rounded bg-black"
+            style={{ touchAction: "none", background: '#fff' }}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerMove={handlePointerMove}
+          />
+          <div className="flex gap-2 mt-2">
+            <Button type="button" onClick={handleClear} variant="outline">Clear</Button>
+            <Button type="button" onClick={handleSave} className="bg-lime-400 text-black">Save</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CameraModal({ open, onClose, onUpload, leadId }: {
+  open: boolean;
+  onClose: () => void;
+  onUpload: (photos: { blob: Blob; category: string }[]) => Promise<void>;
+  leadId: string;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [captured, setCaptured] = useState<{ url: string; blob: Blob; category: string }[]>([]);
+  const [activeCategory, setActiveCategory] = useState(PHOTO_CATEGORIES[0].value);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [drawIdx, setDrawIdx] = useState<number | null>(null);
+  const [drawModalOpen, setDrawModalOpen] = useState(false);
+
+  // Start camera on open
+  useEffect(() => {
+    if (open) {
+      (async () => {
+        try {
+          const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+          setStream(s);
+          if (videoRef.current) {
+            videoRef.current.srcObject = s;
+            videoRef.current.play();
+          }
+        } catch (e) {
+          setError("Unable to access camera");
+        }
+      })();
+    } else {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+        setStream(null);
+      }
+      setCaptured([]);
+      setError(null);
+    }
+    // eslint-disable-next-line
+  }, [open]);
+
+  // Take photo
+  const handleCapture = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        if (blob) {
+          setCaptured((prev) => [
+            ...prev,
+            { url: URL.createObjectURL(blob), blob, category: activeCategory },
+          ]);
+        }
+      }, "image/jpeg", 0.95);
+    }
+  };
+
+  // Remove photo
+  const handleRemove = (idx: number) => {
+    setCaptured((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  // Change category for a photo
+  const handleCategoryChange = (idx: number, category: string) => {
+    setCaptured((prev) => prev.map((p, i) => i === idx ? { ...p, category } : p));
+  };
+
+  // Upload all
+  const handleUploadAll = async () => {
+    setIsUploading(true);
+    await onUpload(captured);
+    setIsUploading(false);
+    onClose();
+  };
+
+  // Replace photo with drawn version
+  const handleDrawSave = (blob: Blob) => {
+    if (drawIdx === null) return;
+    setCaptured((prev) => prev.map((p, i) =>
+      i === drawIdx ? { ...p, url: URL.createObjectURL(blob), blob } : p
+    ));
+    setDrawModalOpen(false);
+    setDrawIdx(null);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-lg w-full p-0 rounded-lg overflow-hidden" style={{ maxWidth: 420 }}>
+        <div className="flex flex-col h-[80vh] bg-black">
+          <div className="flex-1 flex flex-col items-center justify-center relative">
+            {error ? (
+              <div className="text-red-500 text-center p-8">{error}</div>
+            ) : (
+              <video
+                ref={videoRef}
+                className="w-full h-full object-contain bg-black"
+                playsInline
+                autoPlay
+                muted
+                style={{ maxHeight: 320, borderRadius: 8 }}
+              />
+            )}
+            <div className="absolute bottom-2 left-0 right-0 flex flex-col items-center gap-2">
+              <div className="flex gap-2 justify-center">
+                {PHOTO_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.value}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${activeCategory === cat.value ? "bg-lime-400 text-black border-lime-400" : "bg-black/60 text-white border-white/20"}`}
+                    onClick={() => setActiveCategory(cat.value)}
+                    type="button"
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+              <Button
+                onClick={handleCapture}
+                className="bg-lime-400 text-black w-16 h-16 rounded-full flex items-center justify-center text-2xl shadow-lg border-4 border-white/30 mt-2"
+                type="button"
+                disabled={!!error}
+                style={{ minWidth: 64, minHeight: 64 }}
+              >
+                <Camera className="h-8 w-8" />
+              </Button>
+            </div>
+          </div>
+          {/* Thumbnails and category selectors */}
+          {captured.length > 0 && (
+            <div className="bg-black/80 p-2 flex flex-col gap-2 overflow-y-auto max-h-56">
+              <div className="grid grid-cols-2 gap-2 pb-2">
+                {captured.map((photo, idx) => (
+                  <div key={idx} className="relative flex flex-col items-center">
+                    <img src={photo.url} alt="Captured" className="w-20 h-20 object-cover rounded-md border border-white/20" />
+                    <button
+                      className="absolute top-0 right-0 bg-black/70 text-white rounded-full p-1 text-xs"
+                      onClick={() => handleRemove(idx)}
+                      type="button"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                    <select
+                      className="mt-1 w-20 text-xs rounded bg-black/80 text-white border border-white/20 px-1 py-0.5"
+                      value={photo.category}
+                      onChange={e => handleCategoryChange(idx, e.target.value)}
+                    >
+                      {PHOTO_CATEGORIES.map(cat => (
+                        <option key={cat.value} value={cat.value}>{cat.label}</option>
+                      ))}
+                    </select>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="mt-1 w-20"
+                      onClick={() => { setDrawIdx(idx); setDrawModalOpen(true); }}
+                    >
+                      Draw
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <Button
+                onClick={handleUploadAll}
+                disabled={isUploading || captured.length === 0}
+                className="w-full bg-lime-400 text-black font-bold mt-2"
+              >
+                {isUploading ? "Uploading..." : `Upload All (${captured.length})`}
+              </Button>
+              {/* Draw Tool Modal */}
+              {drawIdx !== null && captured[drawIdx] && (
+                <DrawModal
+                  open={drawModalOpen}
+                  onClose={() => { setDrawModalOpen(false); setDrawIdx(null); }}
+                  imageUrl={captured[drawIdx].url}
+                  onSave={handleDrawSave}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Main PhotosTab component
 export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
   const [photos, setPhotos] = useState<Photo[]>([])
@@ -567,6 +865,9 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
   const progressInterval = useRef<NodeJS.Timeout>()
   const [activeCategory, setActiveCategory] = useState<string>("all")
   const fileInputCameraRef = useRef<HTMLInputElement>(null);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+  const [moveCategory, setMoveCategory] = useState<string>("");
+  const [isMoveDropdownOpen, setIsMoveDropdownOpen] = useState(false);
   
   // Cleanup interval on unmount
   useEffect(() => {
@@ -598,46 +899,46 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
   }
 
   // Fetch photos
+  const fetchPhotos = async () => {
+    if (!leadId) {
+      setError("Lead ID is required")
+      setIsLoading(false)
+      return
+    }
+    try {
+      setIsLoading(true)
+      const result = await getLeadPhotos(leadId)
+      if (result.success && result.photos) {
+        // Transform the photos to match our interface
+        const transformedPhotos: Photo[] = result.photos.map(photo => ({
+          id: photo.id,
+          url: photo.url,
+          thumbnailUrl: photo.thumbnailUrl || photo.url,
+          name: photo.name,
+          description: photo.description,
+          createdAt: photo.createdAt.toISOString(),
+          uploadedBy: photo.uploadedBy,
+          leadId: photo.leadId,
+          category: photo.category
+        }))
+        setPhotos(transformedPhotos)
+      } else {
+        setError(result.error || "Failed to fetch photos")
+      }
+    } catch (error) {
+      console.error("Error fetching photos:", error)
+      setError("Failed to fetch photos")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Ensure photos are fetched on mount and when leadId changes
   useEffect(() => {
-    const fetchPhotos = async () => {
-      if (!leadId) {
-        setError("Lead ID is required")
-        setIsLoading(false)
-        return
-      }
-
-      try {
-        setIsLoading(true)
-        const result = await getLeadPhotos(leadId)
-        
-        if (result.success && result.photos) {
-          // Transform the photos to match our interface
-          const transformedPhotos: Photo[] = result.photos.map(photo => ({
-            id: photo.id,
-            url: photo.url,
-            thumbnailUrl: photo.thumbnailUrl || photo.url,
-            name: photo.name,
-            description: photo.description,
-            createdAt: photo.createdAt.toISOString(),
-            uploadedBy: photo.uploadedBy,
-            leadId: photo.leadId
-          }))
-          setPhotos(transformedPhotos)
-        } else {
-          setError(result.error || "Failed to fetch photos")
-        }
-      } catch (error) {
-        console.error("Error fetching photos:", error)
-        setError("Failed to fetch photos")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     if (leadId) {
-      fetchPhotos()
+      fetchPhotos();
     }
-  }, [leadId])
+  }, [leadId]);
 
   // Function to create file previews
   const createPreviews = (files: File[]) => {
@@ -750,7 +1051,19 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
         const result = await uploadSinglePhoto(leadId, serializedFile)
         
         if (result.success && result.photo) {
-          uploadedPhotos.push(result.photo)
+          const newPhoto = {
+            id: result.photo.id,
+            url: result.photo.url,
+            thumbnailUrl: result.photo.thumbnailUrl || result.photo.url,
+            name: result.photo.name,
+            description: result.photo.description,
+            createdAt: result.photo.createdAt.toISOString(),
+            uploadedBy: result.photo.uploadedBy,
+            leadId: result.photo.leadId,
+            category: result.photo.category
+          };
+          setPhotos(prev => [newPhoto, ...prev]);
+          uploadedPhotos.push(newPhoto)
         } else {
           throw new Error(result.error || `Failed to upload ${file.name}`)
         }
@@ -768,19 +1081,6 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
 
     // Show results
     if (uploadedPhotos.length > 0) {
-      // Manually add new photos to state to avoid re-fetching everything
-      const newPhotos: Photo[] = uploadedPhotos.map(p => ({
-        id: p.id,
-        url: p.url,
-        thumbnailUrl: p.thumbnailUrl,
-        name: p.name,
-        description: p.description,
-        createdAt: p.createdAt.toISOString(),
-        leadId: p.leadId,
-      }));
-
-      setPhotos(prev => [...newPhotos, ...prev]);
-
       toast({
         title: "Upload Complete",
         description: `Successfully uploaded ${uploadedPhotos.length} photo${uploadedPhotos.length > 1 ? 's' : ''}.`,
@@ -1006,61 +1306,57 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
       str && str.toLowerCase().includes(category.replace(/_/g, " ").toLowerCase());
     return photos.filter(
       (photo) =>
-        match(photo.name) || match(photo.description)
+        (photo.category && photo.category.toLowerCase() === category.toLowerCase()) ||
+        (!photo.category && (match(photo.name) || match(photo.description)))
     );
   };
 
-  // Camera capture handler (immediate upload)
-  const handleCameraCapture = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      const file = event.target.files[0];
-      // Create a preview for UI feedback (optional)
-      createPreviews([file]);
-      setIsUploading(true);
-      setUploadProgress(0);
-      setCurrentUploadingFile(`Uploading ${file.name}...`);
+  // Handle upload from camera modal
+  const handleCameraModalUpload = async (photos: { blob: Blob; category: string }[]) => {
+    setIsUploading(true);
+    setUploadProgress(0);
+    let uploadedCount = 0;
+    for (const { blob, category } of photos) {
       try {
-        const buffer = await file.arrayBuffer();
+        const buffer = await blob.arrayBuffer();
         const base64Data = Buffer.from(buffer).toString('base64');
         const serializedFile = {
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          base64Data
+          name: `${category.replace(/ /g, '_')}_${Date.now()}.jpg`,
+          type: 'image/jpeg',
+          size: blob.size,
+          base64Data,
+          category,
         };
-        const result = await uploadSinglePhoto(leadId, serializedFile);
-        if (result.success && result.photo) {
-          const newPhoto = {
-            id: result.photo.id,
-            url: result.photo.url,
-            thumbnailUrl: result.photo.thumbnailUrl || result.photo.url,
-            name: result.photo.name,
-            description: result.photo.description,
-            createdAt: result.photo.createdAt.toISOString(),
-            uploadedBy: result.photo.uploadedBy,
-            leadId: result.photo.leadId
-          };
-          setPhotos(prev => [newPhoto, ...prev]);
-          toast({
-            title: "Photo uploaded",
-            description: "Photo captured and uploaded successfully."
-          });
-        } else {
-          throw new Error(result.error || 'Failed to upload photo');
-        }
-      } catch (error) {
-        toast({
-          title: "Upload failed",
-          description: error instanceof Error ? error.message : 'Failed to upload photo',
-          variant: "destructive"
-        });
-      } finally {
-        setIsUploading(false);
-        setCurrentUploadingFile(null);
-        setUploadProgress(0);
-        if (fileInputCameraRef.current) fileInputCameraRef.current.value = '';
+        await uploadSinglePhoto(leadId, serializedFile);
+      } catch (e) {
+        // Optionally show error toast
       }
+      uploadedCount++;
+      setUploadProgress(Math.round((uploadedCount / photos.length) * 100));
     }
+    // After all uploads, fetch the latest photos from backend
+    await fetchPhotos();
+    setIsUploading(false);
+    setUploadProgress(0);
+    setCurrentUploadingFile(null);
+    toast({ title: "Photos uploaded", description: `${photos.length} photo(s) uploaded.` });
+  };
+
+  // Move selected photos to a new category
+  const handleMoveCategory = async (category: string) => {
+    setIsMoveDropdownOpen(false);
+    setMoveCategory("");
+    // For each selected photo, update its category (frontend only for now)
+    setPhotos((prev) =>
+      prev.map((photo) =>
+        selectedPhotos.has(photo.id)
+          ? { ...photo, category }
+          : photo
+      )
+    );
+    setSelectedPhotos(new Set());
+    setIsSelectionMode(false);
+    toast({ title: "Photos moved", description: `Moved to ${category}` });
   };
 
   if (isLoading) {
@@ -1081,18 +1377,36 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
 
   return (
     <div className="space-y-4">
+      {/* Camera Modal */}
+      <CameraModal
+        open={isCameraModalOpen}
+        onClose={() => setIsCameraModalOpen(false)}
+        onUpload={handleCameraModalUpload}
+        leadId={leadId}
+      />
       {/* Category Tabs */}
-      <Tabs value={activeCategory} onValueChange={setActiveCategory} className="mb-2">
-        <TabsList className="w-full grid grid-cols-5 gap-1">
-          <TabsTrigger value="before build">Before Build</TabsTrigger>
-          <TabsTrigger value="during build">During Build</TabsTrigger>
-          <TabsTrigger value="after build">After Build</TabsTrigger>
-          <TabsTrigger value="misc">Misc</TabsTrigger>
-          <TabsTrigger value="all">All</TabsTrigger>
-        </TabsList>
-      </Tabs>
-      <div className="flex justify-between items-center">
-        <div className="flex gap-2">
+      <div className="overflow-x-auto pb-2 -mx-2">
+        <Tabs value={activeCategory} onValueChange={setActiveCategory} className="mb-2 min-w-[400px] sm:min-w-0 px-2">
+          <TabsList className="flex w-full min-w-[400px] sm:grid sm:grid-cols-5 gap-1 whitespace-nowrap">
+            <TabsTrigger value="before build" className="px-3 py-2 text-xs sm:text-sm">Before Build</TabsTrigger>
+            <TabsTrigger value="during build" className="px-3 py-2 text-xs sm:text-sm">During Build</TabsTrigger>
+            <TabsTrigger value="after build" className="px-3 py-2 text-xs sm:text-sm">After Build</TabsTrigger>
+            <TabsTrigger value="misc" className="px-3 py-2 text-xs sm:text-sm">Misc</TabsTrigger>
+            <TabsTrigger value="all" className="px-3 py-2 text-xs sm:text-sm">All</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+      {/* Select and bulk action controls - single row, responsive */}
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center mb-2 w-full">
+        <div className="flex flex-1 gap-2">
+          <Button
+            variant={isSelectionMode ? "default" : "outline"}
+            size="sm"
+            onClick={toggleSelectionMode}
+            className={isSelectionMode ? "bg-muted flex-1" : "flex-1"}
+          >
+            {isSelectionMode ? "Cancel" : "Select"}
+          </Button>
           {isSelectionMode && selectedPhotos.size > 0 && (
             <>
               <Button
@@ -1100,28 +1414,28 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
                 size="sm"
                 onClick={() => setIsDeleteDialogOpen(true)}
                 disabled={isDeletingBulk}
-                className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs"
+                className="h-10 flex-1"
               >
-                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <Trash2 className="h-4 w-4 mr-2" />
                 Delete ({selectedPhotos.size})
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs">
-                    <Share2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    Share 
+                  <Button variant="outline" size="sm" className="h-10 flex-1">
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={async (e) => {
-                    e.stopPropagation()
+                    e.stopPropagation();
                     await handleSharePhotos(photos.filter(p => selectedPhotos.has(p.id)))
                   }}>
                     <Share2 className="h-4 w-4 mr-2" />
                     Share selected
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={(e) => {
-                    e.stopPropagation()
+                    e.stopPropagation();
                     handleGmailShare(photos.filter(p => selectedPhotos.has(p.id)))
                   }}>
                     <Mail className="h-4 w-4 mr-2" />
@@ -1129,46 +1443,56 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              {/* Move to Category Dropdown */}
+              <div className="relative flex-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1 h-10 w-full"
+                  onClick={() => setIsMoveDropdownOpen((v) => !v)}
+                >
+                  Move to Category <ChevronDown className="h-3 w-3" />
+                </Button>
+                {isMoveDropdownOpen && (
+                  <div className="absolute z-50 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded shadow-lg min-w-[160px]">
+                    {PHOTO_CATEGORIES.map((cat) => (
+                      <button
+                        key={cat.value}
+                        className="block w-full text-left px-4 py-2 text-sm hover:bg-lime-100 dark:hover:bg-lime-900"
+                        onClick={() => handleMoveCategory(cat.value)}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleSelectionMode}
-            className={isSelectionMode ? "bg-muted" : ""}
-          >
-            {isSelectionMode ? "Cancel" : "Select"}
-          </Button>
-          <Button onClick={() => setIsUploadDialogOpen(true)} className="bg-[#59ff00] text-black hover:bg-[#59ff00]/90">
+        </div>
+        <div className="flex flex-1 gap-2">
+          <Button onClick={() => setIsUploadDialogOpen(true)} className="bg-[#59ff00] text-black hover:bg-[#59ff00]/90 flex-1 h-10">
             <Plus className="h-4 w-4 mr-2" />
             Upload Photos
           </Button>
-          {/* Take Photo Button (shown in every tab) */}
+          {/* Take Photos (Custom Camera UI) Button */}
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="flex items-center gap-2"
-            onClick={() => fileInputCameraRef.current?.click()}
+            className="flex items-center gap-2 flex-1 h-10"
+            onClick={() => setIsCameraModalOpen(true)}
           >
             <Camera className="h-4 w-4" />
-            Take Photo
+            Take Photos
           </Button>
-          <input
-            ref={fileInputCameraRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            style={{ display: 'none' }}
-            onChange={handleCameraCapture}
-          />
         </div>
       </div>
-
+      {/* ...existing photo grid... */}
       {filterPhotosByCategory(photos, activeCategory).length === 0 ? (
-        <div className="text-center py-10 border-2 border-dashed rounded-lg">
-          <p className="text-muted-foreground">No photos available.</p>
-          <p className="text-sm text-muted-foreground mt-1">Upload photos to get started.</p>
+        <div className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg py-8 px-2 my-2 min-h-[120px] max-w-xs mx-auto">
+          <p className="text-muted-foreground text-center text-sm">No photos available.</p>
+          <p className="text-xs text-muted-foreground mt-1 text-center">Upload photos to get started.</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">

@@ -1,7 +1,7 @@
 "use client"
 
-import { QuickActions } from "@/components/dashboard/quick-actions"
 import { Hero } from "@/components/ui/hero"
+import { GlobalStats } from "@/components/dashboard/global-stats"
 import { RecentActivities } from "@/components/dashboard/recent-activities"
 import { WeatherForecast } from "@/components/dashboard/weather-forecast"
 import { PWAInstallSection } from "@/components/PWAInstallSection"
@@ -16,24 +16,19 @@ export function DashboardContent() {
       {/* Hero Section */}
       <Hero />
       
+      {/* Global Stats Section */}
+      <div className="container mx-auto px-4 py-6">
+        <GlobalStats />
+      </div>
+      
       {/* PWA Install Section */}
       <div className="container mx-auto px-4 py-6">
         <PWAInstallSection />
       </div>
       
-      {/* Quick Actions and Upcoming Events Grid */}
+      {/* Upcoming Events */}
       <div className="container mx-auto px-4 py-3">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Mobile: Upcoming Events first */}
-          <div className="space-y-4 lg:order-2">
-            <UpcomingEvents />
-          </div>
-          
-          {/* Mobile: Quick Actions second, Desktop: First column */}
-          <div className="space-y-4 lg:order-1">
-            <QuickActions />
-          </div>
-        </div>
+        <UpcomingEvents />
       </div>
       
       {/* Gradient Divider */}

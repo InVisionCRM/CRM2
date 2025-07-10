@@ -39,7 +39,7 @@ export const ClientContractsDropdown: React.FC<ClientContractsDropdownProps> = (
         <DropdownMenuTrigger asChild>
           <button
             className={cn(
-              "relative flex h-16 flex-1 items-center justify-center backdrop-blur-lg p-1 text-sm font-bold text-white",
+              "relative flex h-full w-full items-center justify-center backdrop-blur-lg p-1 text-sm font-bold text-white",
               "first:border-l-0 transition-all duration-300",
               "bg-gradient-to-br from-purple-700/90 via-purple-600/90 to-purple-700/90 border-l border-purple-500/50 hover:from-purple-600/90 hover:via-purple-500/90 hover:to-purple-600/90 hover:border-purple-400/60 hover:shadow-lg hover:shadow-purple-500/20",
               "hover:scale-[1.02] active:scale-[0.98]",

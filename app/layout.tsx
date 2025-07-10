@@ -2,13 +2,11 @@ import React from "react"
 import "./globals.css"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
-import LayoutClientWrapper from "@/components/LayoutClientWrapper"
-import { AuthProvider } from "./auth-provider"
+import { Providers } from "./providers"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt"
 import { OfflineIndicator } from "@/components/OfflineIndicator"
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration"
-
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -175,14 +173,12 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} h-screen`}>
         <ErrorBoundary>
-          <AuthProvider>
-            <LayoutClientWrapper>
-              {children}
-              <PWAInstallPrompt />
-              <OfflineIndicator />
-              <ServiceWorkerRegistration />
-            </LayoutClientWrapper>
-          </AuthProvider>
+          <Providers>
+            {children}
+            <PWAInstallPrompt />
+            <OfflineIndicator />
+            <ServiceWorkerRegistration />
+          </Providers>
         </ErrorBoundary>
       </body>
     </html>
