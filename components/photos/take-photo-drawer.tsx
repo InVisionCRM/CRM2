@@ -187,9 +187,9 @@ export default function TakePhotoDrawer({ open, onOpenChange, onSavePhoto, leadI
 
         <div className="flex-1 overflow-y-auto">
           {!photoTaken ? (
-            // Camera view - reduced by 25%
-            <div className="p-4 space-y-4">
-              <div className="relative bg-black rounded-lg overflow-hidden aspect-video w-[75%] mx-auto">
+            // Camera view - full mobile-friendly size
+            <div className="p-2 space-y-4 h-full flex flex-col">
+              <div className="relative bg-black rounded-lg overflow-hidden flex-1 min-h-[60vh] max-h-[80vh]">
                 <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
 
                 {/* Camera flip button */}
@@ -217,10 +217,10 @@ export default function TakePhotoDrawer({ open, onOpenChange, onSavePhoto, leadI
               </div>
             </div>
           ) : (
-            // Photo review - with iOS-inspired interface and reduced image size
-            <div>
-              {/* Photo container - reduced by 25% */}
-              <div className="relative bg-black overflow-hidden w-[75%] mx-auto">
+            // Photo review - with iOS-inspired interface and full mobile size
+            <div className="h-full flex flex-col">
+              {/* Photo container - full mobile size */}
+              <div className="relative bg-black overflow-hidden flex-1 min-h-[50vh] max-h-[70vh] mx-2">
                 {isDrawing ? (
                   // Drawing mode
                   <div className="relative">
@@ -247,7 +247,7 @@ export default function TakePhotoDrawer({ open, onOpenChange, onSavePhoto, leadI
               </div>
 
               {/* iOS-style controls section */}
-              <div className="p-4 space-y-4">
+              <div className="p-4 space-y-4 flex-shrink-0">
                 {/* Inline name editing */}
                 <div className="flex items-center justify-between">
                   <div className="flex-1">

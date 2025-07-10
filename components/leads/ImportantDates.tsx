@@ -539,7 +539,7 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
                 <CalendarIcon className="h-4 w-4 text-blue-200" />
               </div>
               <div className="flex items-center gap-1">
-                <span className="text-xs leading-tight font-semibold text-blue-100">Appointments</span>
+                <span className="text-xs leading-tight font-semibold text-blue-100">Schedule</span>
                 <ChevronDown className="h-3 w-3 text-blue-200 transition-transform duration-200 group-data-[state=open]:rotate-180" />
               </div>
             </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useSearchParams } from "next/navigation" // Use next/navigation for App Router
 import { LeadStatus } from "@prisma/client"
-import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy, Loader2, NotebookPen, PenTool, CheckCircle, CalendarDays, Calendar, Palette, DollarSign, Hammer, ArrowRight, Paintbrush, ClipboardList, Save, ChevronDown, Upload, Eye, Trash2, ExternalLink } from "lucide-react" // Added ClipboardList icon
+import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy, Loader2, NotebookPen, PenTool, CheckCircle, CalendarDays, Calendar, Palette, DollarSign, Hammer, ArrowRight, Paintbrush, ClipboardList, Save, ChevronDown, Upload, Eye, Trash2, ExternalLink, Ruler } from "lucide-react" // Added ClipboardList icon
 import { StatusChangeDrawer } from "@/components/leads/StatusChangeDrawer"
 import { LeadDetailTabs } from "@/components/leads/LeadDetailTabs"
 import { ActivityFeed } from "@/components/leads/ActivityFeed"
@@ -36,6 +36,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import { RoofAreaEstimatorDrawer } from "@/components/map/RoofAreaEstimatorDrawer"
 
 // Quick Actions Button component
 interface QuickActionButtonProps {
@@ -767,6 +768,9 @@ export default function LeadDetailPage() {
   const [photosDialogOpen, setPhotosDialogOpen] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [scopeOfWorkDialogOpen, setScopeOfWorkDialogOpen] = useState(false);
+  const [isEstimatorOpen, setIsEstimatorOpen] = useState(false)
+  const [estimatorInitialCenter, setEstimatorInitialCenter] = useState<{ lat: number; lng: number } | undefined>(undefined)
+  const [isGeocoding, setIsGeocoding] = useState(false)
 
   // Add a reference to the activity feed for refreshing
   const activityFeedRef = useRef<HTMLDivElement>(null);
@@ -1062,6 +1066,46 @@ export default function LeadDetailPage() {
   const handleOpenScopeOfWorkDialog = () => setScopeOfWorkDialogOpen(true);
   const handleCloseScopeOfWorkDialog = () => setScopeOfWorkDialogOpen(false);
 
+  const handleOpenEstimator = async () => {
+    if (!lead?.address) {
+      toast({
+        title: "Address Missing",
+        description: "Cannot open estimator because the lead has no address.",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    setIsGeocoding(true)
+    try {
+      const response = await fetch('/api/geocode/forward', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: lead.address }),
+      })
+      
+      if (response.ok) {
+        const data = await response.json();
+        setEstimatorInitialCenter(data);
+        setIsEstimatorOpen(true);
+      } else {
+        toast({
+          title: "Geocoding Failed",
+          description: "Could not find coordinates for the address.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An error occurred while preparing the estimator.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsGeocoding(false)
+    }
+  }
+
   if (isLeadLoading && !lead) { // Show skeleton only on initial load
     return <LeadDetailSkeleton />
   }
@@ -1147,10 +1191,11 @@ export default function LeadDetailPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(lead.address || '')}`, '_blank', 'noopener,noreferrer')}
+                          onClick={handleOpenEstimator}
+                          disabled={isGeocoding}
                           className="flex-shrink-0 text-blue-400 hover:text-blue-300"
                         >
-                          Open in Maps
+                          {isGeocoding ? "Loading..." : "Estimator"}
                         </Button>
                       </div>
                       
@@ -1188,32 +1233,32 @@ export default function LeadDetailPage() {
                           <p>{streetViewError}</p>
                         </div>
                       )}
-                      <div className="absolute bottom-0 left-0 right-0 grid grid-cols-6 sm:flex w-full text-center border-t-2 border-white rounded-t-xl shadow-inner shadow-black/40 bg-black/60 backdrop-blur">
-                        <div className="col-span-2 sm:flex-1">
-                          <QuickActionButton 
-                            onClick={handleOpenPhotosDialog} 
-                            label="Photos" 
+                                            <div className="absolute bottom-0 left-0 right-0 grid grid-cols-5 sm:flex w-full text-center border-t-2 border-white rounded-t-xl shadow-inner shadow-black/40 bg-black/60 backdrop-blur">
+                        <div className="col-span-1 sm:flex-1">
+                          <QuickActionButton
+                            onClick={handleOpenPhotosDialog}
+                            label="Photos"
                             variant="photos"
                           />
                         </div>
-                        <div className="col-span-2 sm:flex-1">
+                        <div className="col-span-1 sm:flex-1">
                           <AddNoteButton
                             leadId={lead.id}
                             onNoteAdded={handleNoteAdded}
                           />
                         </div>
-                        <div className="col-span-2 sm:flex-1">
+                        <div className="col-span-1 sm:flex-1">
                           <UploadDropdown
                             leadId={lead.id}
                             lead={lead}
                           />
                         </div>
-                        <div className="col-span-3 sm:flex-1">
+                        <div className="col-span-1 sm:flex-1">
                           <ImportantDates
                             lead={lead}
                           />
                         </div>
-                        <div className="col-span-3 sm:flex-1">
+                        <div className="col-span-1 sm:flex-1">
                           <ClientContractsDropdown
                             onSendContract={handleSendContract}
                             onSignInPerson={handleSignInPerson}
@@ -1296,6 +1341,12 @@ export default function LeadDetailPage() {
             onOpenChange={handleCloseScopeOfWorkDialog} 
           />
         )}
+
+        <RoofAreaEstimatorDrawer 
+          open={isEstimatorOpen}
+          onOpenChange={setIsEstimatorOpen}
+          initialCenter={estimatorInitialCenter}
+        />
 
         <Dialog open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
           <DialogContent className="sm:max-w-md flex flex-col items-center justify-center p-6 gap-4">

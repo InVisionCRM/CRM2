@@ -3,7 +3,6 @@
 import { Hero } from "@/components/ui/hero"
 import { GlobalStats } from "@/components/dashboard/global-stats"
 import { RecentActivities } from "@/components/dashboard/recent-activities"
-import { WeatherForecast } from "@/components/dashboard/weather-forecast"
 import { PWAInstallSection } from "@/components/PWAInstallSection"
 import { RecentUploads } from "@/components/dashboard/recent-uploads"
 import { RecentEmails } from "@/components/dashboard/recent-emails"
@@ -29,16 +28,6 @@ export function DashboardContent() {
       {/* Upcoming Events */}
       <div className="container mx-auto px-4 py-3">
         <UpcomingEvents />
-      </div>
-      
-      {/* Gradient Divider */}
-      <div className="container mx-auto px-4">
-        <div className="h-px bg-gradient-to-r from-transparent via-[#59ff00]/50 to-transparent" />
-      </div>
-      
-      {/* Weather Forecast */}
-      <div className="container mx-auto px-4 py-3">
-        <WeatherForecast />
       </div>
       
       {/* Gradient Divider */}

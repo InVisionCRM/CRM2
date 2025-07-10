@@ -72,11 +72,11 @@ function NavLink({
         "flex flex-col items-center justify-center gap-1 h-full transition-colors",
         isActive
           ? "text-primary"
-          : "text-muted-foreground hover:text-foreground"
+          : "text-white/80 hover:text-foreground"
       )}
     >
       <Icon className="h-6 w-6" />
-      <span className="text-xs font-medium">{label}</span>
+      <span className="text-sm font-medium">{label}</span>
     </Link>
   )
 }
@@ -108,11 +108,11 @@ function MoreMenu() {
             "flex flex-col items-center justify-center gap-1 h-full transition-colors text-muted-foreground hover:text-foreground"
           )}
         >
-          <MoreHorizontal className="h-6 w-6" />
-          <span className="text-xs font-medium">More</span>
+          <MoreHorizontal className="h-6 w-6 text-white" />
+          <span className="text-sm font-medium text-white/80">More</span>
         </button>
       </SheetTrigger>
-      <SheetContent side="bottom" className="h-auto bg-background">
+      <SheetContent side="bottom" className="h-auto bg-transparent">
         <SheetHeader>
           <SheetTitle>More Options</SheetTitle>
         </SheetHeader>
@@ -126,7 +126,7 @@ function MoreMenu() {
                 className={cn(
                   "flex flex-col items-center justify-center gap-2 rounded-lg p-3 transition-colors",
                   isActive
-                    ? "bg-accent text-accent-foreground"
+                    ? "bg-accent text-white/80"
                     : "hover:bg-accent/50"
                 )}
               >
@@ -164,18 +164,23 @@ export default function AppSidebar() {
 
   return (
     <>
-      <div className="fixed bottom-0 left-0 right-0 z-40 h-16 transform-gpu border-t bg-background pb-[env(safe-area-inset-bottom)]">
-        <div className="mx-auto grid h-full max-w-lg grid-cols-5 items-center">
+      <div className="fixed bottom-0 left-0 right-0 z-40 h-20 transform-gpu border-t/2 bg-opacity-70 border-t-primary/20 border-2 backdrop-blur-md bg-black/40 supports-[backdrop-filter]:bg-black/40 bg-transparent border-t-primary pb-[calc(env(safe-area-inset-bottom)+20px)] before:absolute before:inset-0 before:bg-gradient-to-t before:from-white/10 before:to-transparent before:pointer-events-none">
+        <div className="mx-auto grid h-full max-w-lg grid-cols-5 items-center relative">
           <NavLink href={mainNavLinks[0].href} icon={mainNavLinks[0].icon} label={mainNavLinks[0].label} />
           <NavLink href={mainNavLinks[1].href} icon={mainNavLinks[1].icon} label={mainNavLinks[1].label} />
           <div className="flex justify-center">
-            <Button
-              size="icon"
-              className="h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg -translate-y-4"
-              onClick={() => setIsCreateLeadOpen(true)}
-            >
-              <Plus className="h-8 w-8" />
-            </Button>
+            <div className="relative">
+              {/* Glowing background */}
+              <div className="absolute inset-0 bg-primary bg-opacity-50 blur-sm rounded-full animate-glow scale-100 -translate-y-4 hover:bg-white/5 transition-all"></div>
+              {/* Button */}
+              <Button
+                size="sm"
+                className="relative h-16 w-16 rounded-full bg-opacity-5 border border-primary/50 border-2 transform-gpu backdrop-blur-lg shadow-lg shadow-black shadow-bottom-[10px] -translate-y-4 hover:bg-white/10 transition-all duration-300"
+                onClick={() => setIsCreateLeadOpen(true)}
+              >
+                <span className="text-xs font-semibold text-white">Add Lead</span>
+              </Button>
+            </div>
           </div>
           <NavLink href={mainNavLinks[2].href} icon={mainNavLinks[2].icon} label={mainNavLinks[2].label} />
           <MoreMenu />
