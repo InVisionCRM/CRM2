@@ -50,7 +50,7 @@ export function LeadDetailTabs({ lead, activeTab: externalActiveTab, onTabChange
 
       <TabsContent value="appointments" className="space-y-4">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Schedule</h2>
+          <h2 className="text-lg font-semibold">Appointments</h2>
           <Button onClick={() => setIsAppointmentDrawerOpen(true)} size="sm" disabled={!currentUserId}>
             <Plus className="h-4 w-4 mr-1" /> Add Appointment
           </Button>

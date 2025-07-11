@@ -98,16 +98,25 @@ export function AddressSearch({ onAddressSelect }: AddressSearchProps) {
 
   return (
     <div className="relative w-full max-w-md">
-      <SearchBar
-        value={searchValue}
-        onChange={(e) => {
-          const value = e.target.value
-          setSearchValue(value)
-          searchAddress(value)
-        }}
-        placeholder="Search for an address..."
-        className="w-full"
-      />
+      {/* Custom inline search input without fixed positioning */}
+      <div className="relative">
+        <input
+          type="text"
+          value={searchValue}
+          onChange={(e) => {
+            const value = e.target.value
+            setSearchValue(value)
+            searchAddress(value)
+          }}
+          placeholder="Search for an address..."
+          className="w-full px-4 py-3 bg-slate-800/50 text-white placeholder-white/50 border border-slate-600/50 rounded-lg focus:border-[#59ff00]/80 focus:outline-none focus:ring-1 focus:ring-[#59ff00]/50 transition-colors"
+        />
+        <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+          <svg className="h-4 w-4 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+      </div>
       
       {predictions.length > 0 && (
         <div className="absolute w-full mt-1 bg-black/50 border border-[#59ff00]/20 rounded-lg overflow-hidden z-50 backdrop-blur-md">

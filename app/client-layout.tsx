@@ -19,7 +19,7 @@ export default function ClientLayout({
       
       {/* Main content area */}
       <div className="flex flex-col flex-1 w-full h-full">
-        <main className="flex-1 w-full overflow-auto bg-transparent">{children}</main>
+        <main className={`flex-1 w-full overflow-auto bg-transparent ${!isMapPage ? 'pb-24' : ''}`}>{children}</main>
       </div>
     </div>
   )

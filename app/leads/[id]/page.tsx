@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { useParams, useSearchParams } from "next/navigation" // Use next/navigation for App Router
+import { useParams, useSearchParams, useRouter } from "next/navigation" // Use next/navigation for App Router
 import { LeadStatus } from "@prisma/client"
 import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy, Loader2, NotebookPen, PenTool, CheckCircle, CalendarDays, Calendar, Palette, DollarSign, Hammer, ArrowRight, Paintbrush, ClipboardList, Save, ChevronDown, Upload, Eye, Trash2, ExternalLink, Ruler } from "lucide-react" // Added ClipboardList icon
 import { StatusChangeDrawer } from "@/components/leads/StatusChangeDrawer"
@@ -36,7 +36,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { RoofAreaEstimatorDrawer } from "@/components/map/RoofAreaEstimatorDrawer"
 
 // Quick Actions Button component
 interface QuickActionButtonProps {
@@ -739,6 +738,7 @@ const MobileNavBar: React.FC<{ onNavigate: (id: string) => void }> = ({ onNaviga
 export default function LeadDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams(); // Get search params
+  const router = useRouter(); // Add router for navigation
   const id = typeof params?.id === 'string' ? params.id : undefined;
   
   const { lead, isLoading: isLeadLoading, error, mutate } = useLead(id) // useLead hook handles undefined id
@@ -768,8 +768,6 @@ export default function LeadDetailPage() {
   const [photosDialogOpen, setPhotosDialogOpen] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [scopeOfWorkDialogOpen, setScopeOfWorkDialogOpen] = useState(false);
-  const [isEstimatorOpen, setIsEstimatorOpen] = useState(false)
-  const [estimatorInitialCenter, setEstimatorInitialCenter] = useState<{ lat: number; lng: number } | undefined>(undefined)
   const [isGeocoding, setIsGeocoding] = useState(false)
 
   // Add a reference to the activity feed for refreshing
@@ -1086,19 +1084,23 @@ export default function LeadDetailPage() {
       
       if (response.ok) {
         const data = await response.json();
-        setEstimatorInitialCenter(data);
-        setIsEstimatorOpen(true);
+        // Navigate to the roof estimator page with coordinates
+        router.push(`/roof-estimator?lat=${data.lat}&lng=${data.lng}`)
       } else {
+        // Navigate to the roof estimator page without coordinates
+        router.push('/roof-estimator')
         toast({
           title: "Geocoding Failed",
-          description: "Could not find coordinates for the address.",
+          description: "Could not find coordinates for the address. You can still use the estimator by searching for the address.",
           variant: "destructive",
         })
       }
     } catch (error) {
+      // Navigate to the roof estimator page without coordinates
+      router.push('/roof-estimator')
       toast({
         title: "Error",
-        description: "An error occurred while preparing the estimator.",
+        description: "An error occurred while preparing the estimator. You can still use the estimator by searching for the address.",
         variant: "destructive",
       })
     } finally {
@@ -1341,12 +1343,6 @@ export default function LeadDetailPage() {
             onOpenChange={handleCloseScopeOfWorkDialog} 
           />
         )}
-
-        <RoofAreaEstimatorDrawer 
-          open={isEstimatorOpen}
-          onOpenChange={setIsEstimatorOpen}
-          initialCenter={estimatorInitialCenter}
-        />
 
         <Dialog open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
           <DialogContent className="sm:max-w-md flex flex-col items-center justify-center p-6 gap-4">

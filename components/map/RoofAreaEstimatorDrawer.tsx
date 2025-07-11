@@ -18,11 +18,13 @@ export function RoofAreaEstimatorDrawer({ open, onOpenChange, initialCenter }: R
         <DrawerHeader className="pb-2 sm:pb-4">
           <DrawerTitle className="text-lg sm:text-xl">Roof Area Estimator</DrawerTitle>
           <DrawerDescription className="text-sm sm:text-base">
-            Use the polygon tool to draw on the map and calculate the roof area in squares.
+            Draw multiple structures (house, garage, shed) and apply complexity multipliers for accurate material estimates.
           </DrawerDescription>
         </DrawerHeader>
-        <div className="h-full py-2 px-1 sm:py-4 sm:px-2">
-            <RoofAreaEstimator initialCenter={initialCenter} />
+        <div 
+          className="h-full py-2 px-1 sm:py-4 sm:px-2"
+        >
+          <RoofAreaEstimator initialCenter={initialCenter} />
         </div>
       </DrawerContent>
     </Drawer>
