@@ -68,6 +68,10 @@ model User {
   routePoints   RoutePoint[]
   googleCalendarEvents GoogleCalendarEvent[]
   uploadedPhotos LeadPhoto[]
+  
+  // Notification relations
+  sentNotifications     Notification[] @relation("NotificationSender")
+  receivedNotifications Notification[] @relation("NotificationRecipient")
 
   createdAt     DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt     DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
@@ -115,6 +119,7 @@ model Lead {
   contracts                Contract[]
   visionMarker             VisionMarker?
   photos                   LeadPhoto[] // Relation to photos
+  notifications            Notification[]
 
   @@index([assignedToId], map: "idx_leads_assigned_to")
   @@index([status], map: "idx_leads_status")
@@ -159,6 +164,7 @@ model Activity {
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   leadId      String?      @db.VarChar(255)
   lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  notifications Notification[]
   
   @@index([leadId])
   @@index([userId])
@@ -347,39 +353,88 @@ model Contract {
 }
 
 model RoutePoint {
-  id        String   @id @default(cuid())
-  userId    String   @db.Uuid
-  timestamp DateTime @default(now())
-  lat       Float
-  lng       Float
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  latitude      Float
+  longitude     Float
+  address       String
+  timestamp     DateTime @default(now()) @db.Timestamptz(6)
+  accuracy      Float?
+  speed         Float?
+  heading       Float?
+  
   @@index([userId])
   @@index([timestamp])
 }
 
 model LeadPhoto {
-  id            String    @id @default(uuid())
-  name          String
-  description   String?
-  url           String    // Full-size photo URL from Vercel Blob
-  thumbnailUrl  String    // Thumbnail URL from Vercel Blob
-  mimeType      String?   // File MIME type
-  size          Int?      // File size in bytes
-  driveFileId   String?   // Optional Google Drive file ID
+  id        String    @id @default(uuid()) @db.Uuid
+  leadId    String    @db.VarChar(255)
+  userId    String    @db.Uuid
+  url       String    // Vercel Blob URL
+  name      String?
+  stage     PhotoStage @default(Before)
   
-  // Relations
-  leadId        String    @db.VarChar(255)
-  lead          Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  uploadedById  String?   @db.Uuid
-  uploadedBy    User?     @relation(fields: [uploadedById], references: [id])
+  lead      Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt     DateTime  @updatedAt @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(6)
 
   @@index([leadId])
-  @@index([uploadedById])
+  @@index([userId])
+  @@index([stage])
   @@index([createdAt])
-  @@index([updatedAt])
+}
+
+// Notification system for @mentions
+model Notification {
+  id          String            @id @default(uuid()) @db.Uuid
+  type        NotificationType  @default(MENTION)
+  title       String
+  message     String
+  isRead      Boolean           @default(false)
+  
+  // Relations
+  senderId    String?           @db.Uuid
+  sender      User?             @relation("NotificationSender", fields: [senderId], references: [id], onDelete: SetNull)
+  
+  recipientId String            @db.Uuid
+  recipient   User              @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  
+  // Context - what was mentioned in
+  leadId      String?           @db.VarChar(255)
+  lead        Lead?             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  
+  activityId  String?           @db.Uuid
+  activity    Activity?         @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  metadata    Json?             // Store additional context like note content, URLs, etc.
+  
+  createdAt   DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime          @updatedAt @db.Timestamptz(6)
+  
+  @@index([recipientId])
+  @@index([senderId])
+  @@index([leadId])
+  @@index([activityId])
+  @@index([type])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  MENTION
+  ACTIVITY_UPDATE
+  LEAD_ASSIGNED
+  APPOINTMENT_REMINDER
+  CONTRACT_SIGNED
+}
+
+enum PhotoStage {
+  Before
+  During
+  After
 }

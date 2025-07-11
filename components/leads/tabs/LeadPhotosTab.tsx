@@ -568,26 +568,44 @@ function DrawModal({ open, onClose, imageUrl, onSave }: {
   const [canvasDims, setCanvasDims] = useState({ width: 320, height: 320 });
 
   useEffect(() => {
-    if (open && canvasRef.current) {
+    if (open && canvasRef.current && imageUrl) {
       const image = new window.Image();
+      image.crossOrigin = "anonymous"; // Add CORS support
       image.onload = () => {
-        // Fit image into a square canvas, preserving aspect ratio
-        let w = 320, h = 320;
+        // Fit image into a larger canvas, preserving aspect ratio
+        const maxSize = Math.min(window.innerWidth - 40, 400);
+        let w = maxSize, h = maxSize;
         if (image.width > image.height) {
-          h = Math.round((image.height / image.width) * 320);
+          h = Math.round((image.height / image.width) * maxSize);
         } else if (image.height > image.width) {
-          w = Math.round((image.width / image.height) * 320);
+          w = Math.round((image.width / image.height) * maxSize);
         }
         setCanvasDims({ width: w, height: h });
         setImg(image);
         const context = canvasRef.current!.getContext("2d");
         setCtx(context);
         if (context) {
+          // Clear and resize canvas
+          canvasRef.current!.width = w;
+          canvasRef.current!.height = h;
           // Fill background white
           context.fillStyle = "#fff";
           context.fillRect(0, 0, w, h);
-          // Draw image centered
+          // Draw image
           context.drawImage(image, 0, 0, w, h);
+        }
+      };
+      image.onerror = (e) => {
+        console.error("Failed to load image for drawing:", e);
+        // Try to load as blob URL if direct URL fails
+        if (!imageUrl.startsWith('blob:')) {
+          fetch(imageUrl)
+            .then(response => response.blob())
+            .then(blob => {
+              const blobUrl = URL.createObjectURL(blob);
+              image.src = blobUrl;
+            })
+            .catch(err => console.error("Failed to fetch image as blob:", err));
         }
       };
       image.src = imageUrl;
@@ -630,21 +648,36 @@ function DrawModal({ open, onClose, imageUrl, onSave }: {
   };
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-md w-full">
-        <div className="flex flex-col items-center gap-2">
-          <canvas
-            ref={canvasRef}
-            width={canvasDims.width}
-            height={canvasDims.height}
-            className="border rounded bg-black"
-            style={{ touchAction: "none", background: '#fff' }}
-            onPointerDown={handlePointerDown}
-            onPointerUp={handlePointerUp}
-            onPointerMove={handlePointerMove}
-          />
-          <div className="flex gap-2 mt-2">
-            <Button type="button" onClick={handleClear} variant="outline">Clear</Button>
-            <Button type="button" onClick={handleSave} className="bg-lime-400 text-black">Save</Button>
+      <DialogContent className="max-w-full w-full h-full p-4 m-0 rounded-none overflow-hidden sm:max-w-md sm:h-auto sm:rounded-lg sm:m-6">
+        <div className="flex flex-col items-center gap-4 h-full">
+          <div className="flex-1 flex items-center justify-center">
+            <canvas
+              ref={canvasRef}
+              width={canvasDims.width}
+              height={canvasDims.height}
+              className="border rounded bg-white shadow-lg max-w-full max-h-full"
+              style={{ touchAction: "none" }}
+              onPointerDown={handlePointerDown}
+              onPointerUp={handlePointerUp}
+              onPointerMove={handlePointerMove}
+            />
+          </div>
+          <div className="flex gap-3 w-full max-w-xs">
+            <Button 
+              type="button" 
+              onClick={handleClear} 
+              variant="outline" 
+              className="flex-1"
+            >
+              Clear
+            </Button>
+            <Button 
+              type="button" 
+              onClick={handleSave} 
+              className="bg-lime-400 text-black hover:bg-lime-500 flex-1"
+            >
+              Save
+            </Button>
           </div>
         </div>
       </DialogContent>
@@ -666,6 +699,7 @@ function CameraModal({ open, onClose, onUpload, leadId }: {
   const [error, setError] = useState<string | null>(null);
   const [drawIdx, setDrawIdx] = useState<number | null>(null);
   const [drawModalOpen, setDrawModalOpen] = useState(false);
+  const [isCameraMinimized, setIsCameraMinimized] = useState(false);
 
   // Start camera on open
   useEffect(() => {
@@ -689,6 +723,7 @@ function CameraModal({ open, onClose, onUpload, leadId }: {
       }
       setCaptured([]);
       setError(null);
+      setIsCameraMinimized(false);
     }
     // eslint-disable-next-line
   }, [open]);
@@ -744,19 +779,19 @@ function CameraModal({ open, onClose, onUpload, leadId }: {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg w-full p-0 rounded-lg overflow-hidden" style={{ maxWidth: 420 }}>
-        <div className="flex flex-col h-[80vh] bg-black">
-          <div className="flex-1 flex flex-col items-center justify-center relative">
+      <DialogContent className="max-w-full w-full h-full p-0 m-0 rounded-none overflow-hidden sm:max-w-lg sm:h-auto sm:rounded-lg sm:m-6" style={{ maxWidth: 'none' }}>
+        <div className="flex flex-col h-[100vh] sm:h-[80vh] bg-gray-500">
+          <div className={`flex flex-col items-center justify-center relative ${isCameraMinimized ? 'h-32' : 'flex-1'} min-h-0 transition-all duration-300`}>
             {error ? (
               <div className="text-red-500 text-center p-8">{error}</div>
             ) : (
               <video
                 ref={videoRef}
-                className="w-full h-full object-contain bg-black"
+                className="w-full h-full object-cover bg-black"
                 playsInline
                 autoPlay
                 muted
-                style={{ maxHeight: 320, borderRadius: 8 }}
+                style={{ minHeight: isCameraMinimized ? '8rem' : '60vh' }}
               />
             )}
             <div className="absolute bottom-2 left-0 right-0 flex flex-col items-center gap-2">
@@ -772,49 +807,76 @@ function CameraModal({ open, onClose, onUpload, leadId }: {
                   </button>
                 ))}
               </div>
-              <Button
-                onClick={handleCapture}
-                className="bg-lime-400 text-black w-16 h-16 rounded-full flex items-center justify-center text-2xl shadow-lg border-4 border-white/30 mt-2"
-                type="button"
-                disabled={!!error}
-                style={{ minWidth: 64, minHeight: 64 }}
-              >
-                <Camera className="h-8 w-8" />
-              </Button>
+              <div className="flex items-center gap-3">
+                {captured.length > 0 && (
+                  <Button
+                    onClick={() => setIsCameraMinimized(!isCameraMinimized)}
+                    className="bg-white/20 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg border-2 border-white/30"
+                    type="button"
+                  >
+                    {isCameraMinimized ? (
+                      <ChevronDown className="h-5 w-5" />
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <div className="w-2 h-1 bg-white rounded mb-0.5"></div>
+                        <div className="w-3 h-1 bg-white rounded"></div>
+                      </div>
+                    )}
+                  </Button>
+                )}
+                <Button
+                  onClick={handleCapture}
+                  className="bg-lime-400 text-black w-16 h-16 rounded-full flex items-center justify-center text-2xl shadow-lg border-4 border-white/30"
+                  type="button"
+                  disabled={!!error}
+                  style={{ minWidth: 64, minHeight: 64 }}
+                >
+                  <Camera className="h-8 w-8" />
+                </Button>
+              </div>
             </div>
           </div>
           {/* Thumbnails and category selectors */}
           {captured.length > 0 && (
-            <div className="bg-black/80 p-2 flex flex-col gap-2 overflow-y-auto max-h-56">
-              <div className="grid grid-cols-2 gap-2 pb-2">
+            <div className={`bg-black/80 p-2 flex flex-col gap-2 overflow-y-auto ${isCameraMinimized ? 'flex-1' : 'max-h-56'} transition-all duration-300`}>
+              <div className="grid grid-cols-4 gap-2 pb-2">
                 {captured.map((photo, idx) => (
                   <div key={idx} className="relative flex flex-col items-center">
-                    <img src={photo.url} alt="Captured" className="w-20 h-20 object-cover rounded-md border border-white/20" />
-                    <button
-                      className="absolute top-0 right-0 bg-black/70 text-white rounded-full p-1 text-xs"
-                      onClick={() => handleRemove(idx)}
-                      type="button"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                    <div className="relative">
+                      <img 
+                        src={photo.url} 
+                        alt="Captured" 
+                        className="w-full aspect-square object-cover rounded-md border border-white/20 transition-all duration-300" 
+                      />
+                      {/* Delete button */}
+                      <button
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 text-xs shadow-lg z-10"
+                        onClick={() => handleRemove(idx)}
+                        type="button"
+                        title="Delete photo"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                      {/* Draw/Pencil button */}
+                      <button
+                        className="absolute top-1 left-1 bg-black/70 text-white rounded-full p-1 text-xs shadow-lg z-10"
+                        onClick={() => { setDrawIdx(idx); setDrawModalOpen(true); }}
+                        type="button"
+                        title="Draw on photo"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    </div>
                     <select
-                      className="mt-1 w-20 text-xs rounded bg-black/80 text-white border border-white/20 px-1 py-0.5"
+                      className="mt-1 w-full text-xs rounded bg-black/80 text-white border border-white/20 px-1 py-0.5 transition-all duration-300"
                       value={photo.category}
                       onChange={e => handleCategoryChange(idx, e.target.value)}
+                      title="Select photo category"
                     >
                       {PHOTO_CATEGORIES.map(cat => (
                         <option key={cat.value} value={cat.value}>{cat.label}</option>
                       ))}
                     </select>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="mt-1 w-20"
-                      onClick={() => { setDrawIdx(idx); setDrawModalOpen(true); }}
-                    >
-                      Draw
-                    </Button>
                   </div>
                 ))}
               </div>
@@ -1513,51 +1575,65 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
                     className="object-cover transition-transform group-hover:scale-105"
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                   />
-                  {!isSelectionMode && (
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="secondary" size="icon" className="h-8 w-8 bg-black/50 hover:bg-black/70">
-                            <Share2 className="h-4 w-4 text-white" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={async (e) => {
-                            e.stopPropagation()
-                            await handleSharePhotos([photo])
-                          }}>
-                            <Share2 className="h-4 w-4 mr-2" />
-                            Share photo
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation()
-                            handleGmailShare([photo])
-                          }}>
-                            <Mail className="h-4 w-4 mr-2" />
-                            Share via Gmail
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={async (e) => {
-                            e.stopPropagation()
-                            await downloadImage(photo.url, photo.name)
-                          }}>
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={(e) => {
-                            e.stopPropagation()
-                            navigator.clipboard.writeText(photo.url)
-                            toast({
-                              title: "Link copied",
-                              description: "Photo URL has been copied to clipboard",
-                            })
-                          }}>
-                            <Copy className="h-4 w-4 mr-2" />
-                            Copy link
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  )}
+                            {!isSelectionMode && (
+            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex gap-1">
+              {/* Delete Button */}
+              <Button 
+                variant="secondary" 
+                size="icon" 
+                className="h-8 w-8 bg-red-500/80 hover:bg-red-600 text-white" 
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleDeletePhoto(photo.id)
+                }}
+                title="Delete photo"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+              {/* Share Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                  <Button variant="secondary" size="icon" className="h-8 w-8 bg-black/50 hover:bg-black/70">
+                    <Share2 className="h-4 w-4 text-white" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={async (e) => {
+                    e.stopPropagation()
+                    await handleSharePhotos([photo])
+                  }}>
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share photo
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => {
+                    e.stopPropagation()
+                    handleGmailShare([photo])
+                  }}>
+                    <Mail className="h-4 w-4 mr-2" />
+                    Share via Gmail
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={async (e) => {
+                    e.stopPropagation()
+                    await downloadImage(photo.url, photo.name)
+                  }}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => {
+                    e.stopPropagation()
+                    navigator.clipboard.writeText(photo.url)
+                    toast({
+                      title: "Link copied",
+                      description: "Photo URL has been copied to clipboard",
+                    })
+                  }}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy link
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
                   {isSelectionMode ? (
                     <div 
                       className={`absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity ${

@@ -64,6 +64,23 @@ function extractStatusFromTitle(title: string, description: string | null): { ol
   return { oldStatus: null, newStatus: null }
 }
 
+// Render content with @mention highlighting
+function renderContentWithMentions(content: string) {
+  const mentionRegex = /@([a-zA-Z\s]+(?:\s+[a-zA-Z]+)*)/g;
+  const parts = content.split(mentionRegex);
+  
+  return parts.map((part, index) => {
+    if (index % 2 === 1) { // This is a mention
+      return (
+        <span key={index} className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1 rounded">
+          @{part}
+        </span>
+      );
+    }
+    return part;
+  });
+}
+
 function ActivityContent({ activity }: { activity: ActivityWithUser }) {
   if (activity.type === ActivityType.STATUS_CHANGED) {
     const { oldStatus, newStatus } = extractStatusFromTitle(activity.title, activity.description)
@@ -82,7 +99,7 @@ function ActivityContent({ activity }: { activity: ActivityWithUser }) {
     }
   }
   
-  return <span className="font-medium text-card-foreground">{activity.title}</span>
+  return <span className="font-medium text-card-foreground">{renderContentWithMentions(activity.title)}</span>
 }
 
 function PaginationButton({ 
@@ -113,7 +130,6 @@ export function ActivityFeed({ leadId, limit = 3 }: ActivityFeedProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalActivities, setTotalActivities] = useState(0)
-  const [expanded, setExpanded] = useState<Set<string>>(new Set())
   
   const fetchActivities = useCallback(async (pageNum: number) => {
     if (!leadId) {
@@ -260,16 +276,9 @@ export function ActivityFeed({ leadId, limit = 3 }: ActivityFeedProps) {
                 <div
                   key={activity.id}
                   className={cn(
-                    "border-b border-border/40 pb-3 last:border-0 last:pb-0 p-3 rounded-lg -mx-3 cursor-pointer",
+                    "border-b border-border/40 pb-3 last:border-0 last:pb-0 p-3 rounded-lg -mx-3",
                     getActivityColorClasses(activity.type)
                   )}
-                  onClick={() => {
-                    setExpanded((prev)=>{
-                      const set=new Set(prev);
-                      set.has(activity.id) ? set.delete(activity.id) : set.add(activity.id);
-                      return set;
-                    })
-                  }}
                 >
                   <div className="flex items-center justify-between text-sm">
                     <ActivityContent activity={activity} />
@@ -277,23 +286,21 @@ export function ActivityFeed({ leadId, limit = 3 }: ActivityFeedProps) {
                       {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true })}
                     </span>
                   </div>
-                  {expanded.has(activity.id) && (
-                    <>
-                      {activity.description && (
-                        <p className="text-sm text-muted-foreground leading-relaxed mt-1">{activity.description}</p>
-                      )}
-                      {activity.user && (
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-2">
-                          <Avatar className="h-4 w-4">
-                            {activity.user.image && <AvatarImage src={activity.user.image} alt={activity.user.name || 'User'} />}
-                            <AvatarFallback className="text-[8px]">
-                              {activity.user.name ? activity.user.name.substring(0,1).toUpperCase() : 'U'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span>{activity.user.name || 'Unknown User'}</span>
-                        </div>
-                      )}
-                    </>
+                  {activity.description && (
+                    <p className="text-sm text-muted-foreground leading-relaxed mt-1">
+                      {renderContentWithMentions(activity.description)}
+                    </p>
+                  )}
+                  {activity.user && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-2">
+                      <Avatar className="h-4 w-4">
+                        {activity.user.image && <AvatarImage src={activity.user.image} alt={activity.user.name || 'User'} />}
+                        <AvatarFallback className="text-[8px]">
+                          {activity.user.name ? activity.user.name.substring(0,1).toUpperCase() : 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{activity.user.name || 'Unknown User'}</span>
+                    </div>
                   )}
                 </div>
               ))}

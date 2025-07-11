@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useParams, useSearchParams, useRouter } from "next/navigation" // Use next/navigation for App Router
 import { LeadStatus } from "@prisma/client"
-import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy, Loader2, NotebookPen, PenTool, CheckCircle, CalendarDays, Calendar, Palette, DollarSign, Hammer, ArrowRight, Paintbrush, ClipboardList, Save, ChevronDown, Upload, Eye, Trash2, ExternalLink, Ruler } from "lucide-react" // Added ClipboardList icon
+import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy, Loader2, NotebookPen, PenTool, CheckCircle, CalendarDays, Calendar, Palette, DollarSign, Hammer, ArrowRight, Paintbrush, ClipboardList, Save, ChevronDown, Upload, Eye, Trash2, ExternalLink, Ruler, AtSign } from "lucide-react" // Added ClipboardList icon
 import { StatusChangeDrawer } from "@/components/leads/StatusChangeDrawer"
 import { LeadDetailTabs } from "@/components/leads/LeadDetailTabs"
 import { ActivityFeed } from "@/components/leads/ActivityFeed"
@@ -72,12 +72,91 @@ interface UploadDropdownProps {
   lead: any;
 }
 
+interface User {
+  id: string;
+  name: string | null;
+  email: string;
+}
+
 const AddNoteButton: React.FC<AddNoteButtonProps> = ({ leadId, onNoteAdded }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [showMentionDropdown, setShowMentionDropdown] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [cursorPosition, setCursorPosition] = useState(0);
   const { toast } = useToast();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Fetch users for @mentions
+  useEffect(() => {
+    async function fetchUsers() {
+      setIsLoadingUsers(true);
+      try {
+        const response = await fetch('/api/users/search?query=');
+        if (response.ok) {
+          const userData = await response.json();
+          setUsers(userData);
+        }
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      } finally {
+        setIsLoadingUsers(false);
+      }
+    }
+    fetchUsers();
+  }, []);
+
+  // Handle @mention input detection
+  const handleTextareaChange = (value: string) => {
+    setNote(value);
+    
+    if (!textareaRef.current) return;
+    
+    const cursorPos = textareaRef.current.selectionStart;
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const atMatch = textBeforeCursor.match(/@([a-zA-Z\s]*)$/);
+    
+    if (atMatch) {
+      setShowMentionDropdown(true);
+      setMentionQuery(atMatch[1]);
+      setCursorPosition(cursorPos);
+    } else {
+      setShowMentionDropdown(false);
+      setMentionQuery("");
+    }
+  };
+
+  // Insert mention into textarea
+  const insertMention = (user: User) => {
+    if (!textareaRef.current) return;
+    
+    const beforeCursor = note.substring(0, cursorPosition);
+    const afterCursor = note.substring(cursorPosition);
+    const beforeAt = beforeCursor.replace(/@[a-zA-Z\s]*$/, '');
+    const newValue = `${beforeAt}@${user.name} ${afterCursor}`;
+    const newCursorPos = beforeAt.length + (user.name?.length || 0) + 2;
+    
+    setNote(newValue);
+    setShowMentionDropdown(false);
+    setMentionQuery("");
+    
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }, 0);
+  };
+
+  // Filter users based on mention query
+  const filteredUsers = users.filter(user => 
+    user.name?.toLowerCase().includes(mentionQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(mentionQuery.toLowerCase())
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,6 +179,8 @@ const AddNoteButton: React.FC<AddNoteButtonProps> = ({ leadId, onNoteAdded }) =>
       if (!response.ok) throw new Error(result.error || "Failed to add note");
       setNote("");
       setIsOpen(false);
+      setShowMentionDropdown(false);
+      setMentionQuery("");
       toast({ title: "Note added", description: "Your note has been added successfully." });
       if (onNoteAdded) onNoteAdded();
     } catch (error) {
@@ -154,48 +235,97 @@ const AddNoteButton: React.FC<AddNoteButtonProps> = ({ leadId, onNoteAdded }) =>
         <div
           className="absolute bottom-full left-0 right-0 mb-2 z-50 w-80 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 border border-slate-600/50 backdrop-blur-xl shadow-2xl shadow-black/50 rounded-xl overflow-hidden p-4"
         >
-          <h3 className="text-sm font-semibold mb-3 text-gray-100">Quick Note</h3>
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-sm font-semibold text-gray-100">Quick Note</h3>
+            <AtSign className="h-4 w-4 text-gray-400" />
+            <span className="text-xs text-gray-400">Use @name to mention team members</span>
+          </div>
           <form onSubmit={handleSubmit} className="space-y-3">
-            <Textarea
-              placeholder="Enter your note here..."
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              className="min-h-[100px] resize-none text-sm bg-slate-900 text-white border-slate-700 focus:border-[#14110F] focus:ring-[#14110F]"
-              disabled={isSubmitting}
-              autoFocus
-            />
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setNote("");
-                  setIsOpen(false);
-                }}
+            <div className="relative">
+              <Textarea
+                ref={textareaRef}
+                placeholder="Enter your note here... Use @name to mention team members"
+                value={note}
+                onChange={(e) => handleTextareaChange(e.target.value)}
+                className="min-h-[100px] resize-none text-sm bg-slate-900 text-white border-slate-700 focus:border-[#14110F] focus:ring-[#14110F]"
                 disabled={isSubmitting}
-                className="border-slate-700 text-white hover:bg-slate-800"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={isSubmitting || !note.trim()}
-                className="bg-[#14110F] hover:bg-[#14110F]/90 text-white"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                    Saving...
-                  </>
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape' && showMentionDropdown) {
+                    setShowMentionDropdown(false);
+                    setMentionQuery("");
+                  }
+                }}
+              />
+              
+              {/* @Mention Dropdown */}
+              {showMentionDropdown && filteredUsers.length > 0 && (
+                <div className="absolute z-30 w-full mt-1 bg-slate-800 border border-slate-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {filteredUsers.slice(0, 5).map((user) => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onClick={() => insertMention(user)}
+                      className="w-full text-left px-3 py-2 hover:bg-slate-700 flex items-center gap-2 text-white"
+                    >
+                      <AtSign className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <div className="font-medium">{user.name || user.email}</div>
+                        {user.name && (
+                          <div className="text-xs text-gray-400">{user.email}</div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <div className="text-xs text-gray-400">
+                {users.length > 0 ? (
+                  `${users.length} team members available`
+                ) : isLoadingUsers ? (
+                  "Loading team members..."
                 ) : (
-                  <>
-                    <Save className="mr-2 h-3 w-3" />
-                    Save Note
-                  </>
+                  "No team members found"
                 )}
-              </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setNote("");
+                    setIsOpen(false);
+                    setShowMentionDropdown(false);
+                    setMentionQuery("");
+                  }}
+                  disabled={isSubmitting}
+                  className="border-slate-700 text-white hover:bg-slate-800"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isSubmitting || !note.trim()}
+                  className="bg-[#14110F] hover:bg-[#14110F]/90 text-white"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-3 w-3" />
+                      Save Note
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </form>
         </div>
@@ -422,7 +552,7 @@ const UploadDropdown: React.FC<UploadDropdownProps> = ({ leadId, lead }) => {
                 asChild
                 className="flex items-center gap-2 text-white hover:bg-gradient-to-r hover:from-cyan-600/20 hover:to-cyan-500/20 focus:bg-gradient-to-r focus:from-cyan-600/20 focus:to-cyan-500/20 cursor-pointer p-1.5 rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-lg border border-transparent hover:border-cyan-500/30"
               >
-                <a href="/drive" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5">
+                <a href={`/leads/${leadId}/files`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5">
                   <div className="p-1 rounded-md bg-gradient-to-br from-cyan-500/20 to-cyan-600/20">
                     <ExternalLink className="h-3 w-3 text-cyan-300" />
                   </div>
