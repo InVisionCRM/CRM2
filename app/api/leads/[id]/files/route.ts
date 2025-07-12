@@ -3,11 +3,10 @@ import { getFilesByLeadId } from "@/lib/db/files"
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: Promise<string> | string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    // Always await params.id
-    const leadId = await params.id
+    const leadId = params.id
     console.log("Fetching files for lead:", leadId)
 
     const files = await getFilesByLeadId(leadId)

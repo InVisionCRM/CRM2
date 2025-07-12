@@ -169,6 +169,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
   const [contractStatus, setContractStatus] = useState<ContractStatus | null>(null);
   const [isLoadingContract, setIsLoadingContract] = useState(false);
   const [uploadedContract, setUploadedContract] = useState<UploadedContract | null>(null);
+  const [databaseContracts, setDatabaseContracts] = useState<any[]>([]);
   const [isUploadingContract, setIsUploadingContract] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Additional upload handling for other lead summary documents
@@ -190,19 +191,32 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
   // Fetch contract status for this lead
   useEffect(() => {
     const fetchContractStatus = async () => {
-      if (!lead?.email) return;
+      if (!lead?.id) return;
       
       setIsLoadingContract(true);
       try {
-        const response = await fetch(`/api/docuseal/submissions?email=${encodeURIComponent(lead.email)}`);
-        if (response.ok) {
-          const data = await response.json();
-          // Handle the correct DocuSeal API response structure
-          if (data.data && data.data.length > 0) {
-            const mostRecent = data.data.sort((a: ContractStatus, b: ContractStatus) => 
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            )[0];
-            setContractStatus(mostRecent);
+        // Check for DocuSeal contracts
+        if (lead.email) {
+          const response = await fetch(`/api/docuseal/submissions?email=${encodeURIComponent(lead.email)}`);
+          if (response.ok) {
+            const data = await response.json();
+            // Handle the correct DocuSeal API response structure
+            if (data.data && data.data.length > 0) {
+              const mostRecent = data.data.sort((a: ContractStatus, b: ContractStatus) => 
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              )[0];
+              setContractStatus(mostRecent);
+            }
+          }
+        }
+        
+        // Check for database contracts (manual uploads, etc.)
+        const contractsResponse = await fetch(`/api/contracts?lead_id=${encodeURIComponent(lead.id)}`);
+        if (contractsResponse.ok) {
+          const contractsData = await contractsResponse.json();
+          if (contractsData.success && contractsData.contracts && contractsData.contracts.length > 0) {
+            setDatabaseContracts(contractsData.contracts);
+            console.log('✅ Found database contracts:', contractsData.contracts.length);
           }
         }
       } catch (error) {
@@ -213,7 +227,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
     };
 
     fetchContractStatus();
-  }, [lead?.email]);
+  }, [lead?.id, lead?.email]);
 
   // Fetch users that can be assigned
   useEffect(() => {
@@ -251,6 +265,44 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
       setSelectedAssignee(lead.assignedToId || "unassigned");
     }
   }, [lead?.assignedToId]);
+
+  // Function to refresh contract status (can be called from child components)
+  const refreshContractStatus = async () => {
+    if (!lead?.id) return;
+    
+    setIsLoadingContract(true);
+    try {
+      // Check for DocuSeal contracts
+      if (lead.email) {
+        const response = await fetch(`/api/docuseal/submissions?email=${encodeURIComponent(lead.email)}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.data && data.data.length > 0) {
+            const mostRecent = data.data.sort((a: ContractStatus, b: ContractStatus) => 
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            )[0];
+            setContractStatus(mostRecent);
+          }
+        }
+      }
+      
+      // Check for database contracts (manual uploads, etc.)
+      const contractsResponse = await fetch(`/api/contracts?lead_id=${encodeURIComponent(lead.id)}`);
+      if (contractsResponse.ok) {
+        const contractsData = await contractsResponse.json();
+        if (contractsData.success && contractsData.contracts && contractsData.contracts.length > 0) {
+          setDatabaseContracts(contractsData.contracts);
+          console.log('✅ Refreshed database contracts:', contractsData.contracts.length);
+        } else {
+          setDatabaseContracts([]);
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing contract status:', error);
+    } finally {
+      setIsLoadingContract(false);
+    }
+  };
 
   const handleAssigneeChange = async (userId: string) => {
     if (!lead || userId === selectedAssignee) return;
@@ -814,7 +866,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                 </div>
               </div>
               {/* Contract Status */}
-              {(contractStatus || isLoadingContract || uploadedContract) && (
+              {(contractStatus || isLoadingContract || uploadedContract || databaseContracts.length > 0) && (
                 <div className="space-y-0.5" id="contracts-info">
                   <p className="text-sm font-medium text-blue-400">Contract</p>
                   {isLoadingContract ? (
@@ -858,11 +910,32 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                         View Contract
                       </Button>
                     </div>
+                  ) : databaseContracts.length > 0 ? (
+                    <div className="flex flex-col gap-2">
+                      <Badge className={`border w-fit ${getContractStatusColor('completed')}`}>
+                        {getContractStatusIcon('completed')}
+                        <span className="ml-1 capitalize">completed</span>
+                      </Badge>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const mostRecentContract = databaseContracts[0];
+                          if (mostRecentContract?.pdfUrl) {
+                            window.open(mostRecentContract.pdfUrl, '_blank');
+                          }
+                        }}
+                        className="h-6 px-2 text-xs w-fit"
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        View Contract
+                      </Button>
+                    </div>
                   ) : null}
                 </div>
               )}
               {/* Upload Contract Button - Show only when no contract exists */}
-              {!contractStatus && !uploadedContract && !isLoadingContract && (
+              {!contractStatus && !uploadedContract && !isLoadingContract && databaseContracts.length === 0 && (
                 <div className="space-y-0.5">
                   <p className="text-sm font-medium text-blue-400">Contract</p>
                   <Button

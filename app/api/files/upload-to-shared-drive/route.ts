@@ -155,6 +155,24 @@ export async function POST(req: Request) {
 
     console.log('✅ File uploaded to Shared Drive:', driveFileId);
 
+    // Create database record for the uploaded file
+    try {
+      const fileRecord = await prisma.file.create({
+        data: {
+          url: webViewLink,
+          name: fileName,
+          size: file.size,
+          type: file.type,
+          category: fileType,
+          leadId: leadId
+        }
+      });
+      console.log('📝 Created database record for file:', fileRecord.id);
+    } catch (dbError) {
+      console.error('⚠️ Failed to create database record, but file was uploaded to Drive:', dbError);
+      // Don't fail the entire upload if database creation fails
+    }
+
     const responseData = {
       success: true,
       file: {

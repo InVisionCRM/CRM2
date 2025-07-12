@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useRef } from "react"
+import { useState, useMemo, useRef, useEffect } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { format, addHours, parseISO, formatDistanceToNow } from "date-fns"
 import type { LeadSummary } from "@/types/dashboard"
+import type { LeadFile } from "@/types/documents"
 import { 
   MapPin, 
   Phone, 
@@ -84,6 +85,49 @@ import { LeadFiles } from "@/components/leads/lead-files"
 import { LeadPhotosTab } from "@/components/leads/tabs/LeadPhotosTab"
 import { motion, AnimatePresence } from "framer-motion"
 
+// Insurance company list with phone numbers
+const INSURANCE_COMPANIES = [
+  { name: "AAA / The Auto Club Group", phone: "800-222-8252", secondaryPhone: "800-672-5246" },
+  { name: "Allstate", phone: "800-255-7828", secondaryPhone: "800-669-2214" },
+  { name: "American Family Insurance", phone: "800-692-6326", secondaryPhone: "800-374-1111" },
+  { name: "Auto Club Insurance Association", phone: "800-222-6424", secondaryPhone: null },
+  { name: "Auto-Owners Insurance", phone: "517-323-1200", secondaryPhone: "800-346-0346" },
+  { name: "Chubb", phone: "800-252-4670", secondaryPhone: "800-682-4822" },
+  { name: "Cincinnati Insurance", phone: "888-242-8811", secondaryPhone: "800-635-7521" },
+  { name: "Citizens Insurance Company of America", phone: "800-333-0606", secondaryPhone: null },
+  { name: "Erie Insurance", phone: "800-458-0811", secondaryPhone: "800-367-3743" },
+  { name: "Farm Bureau Insurance of Michigan", phone: "517-323-7000", secondaryPhone: "800-292-2680" },
+  { name: "Farmers Insurance", phone: "888-327-6335", secondaryPhone: "800-435-7764" },
+  { name: "Frankenmuth Insurance", phone: "800-234-1133", secondaryPhone: "989-652-6121" },
+  { name: "Geico", phone: "800-207-7847", secondaryPhone: "800-841-3000" },
+  { name: "Grange Insurance", phone: "800-422-0550", secondaryPhone: "800-247-2643" },
+  { name: "Hanover Insurance", phone: "800-922-8427", secondaryPhone: null },
+  { name: "Hartford", phone: "860-547-5000", secondaryPhone: "800-243-5860" },
+  { name: "Hastings Mutual", phone: "800-442-8277", secondaryPhone: null },
+  { name: "Home-Owners Insurance", phone: "517-323-1200", secondaryPhone: "800-346-0346" },
+  { name: "Liberty Mutual", phone: "800-290-8711", secondaryPhone: "800-837-5254" },
+  { name: "MEEMIC Insurance Company", phone: "800-333-2252", secondaryPhone: null },
+  { name: "MetLife", phone: "800-638-5433", secondaryPhone: "800-422-4272" },
+  { name: "Nationwide", phone: "877-669-6877", secondaryPhone: "800-421-3535" },
+  { name: "Not Listed", phone: "", secondaryPhone: null },
+  { name: "Pioneer State Mutual", phone: "800-783-9935", secondaryPhone: null },
+  { name: "Progressive", phone: "800-776-4737", secondaryPhone: "800-274-4499" },
+  { name: "Safeco Insurance", phone: "800-332-3226", secondaryPhone: null },
+  { name: "State Farm", phone: "800-782-8332", secondaryPhone: "800-732-5246" },
+  { name: "Travelers", phone: "800-252-4633", secondaryPhone: "800-238-6225" },
+  { name: "USAA", phone: "800-531-8722", secondaryPhone: "800-531-8111" },
+  { name: "Westfield Insurance", phone: "800-243-0210", secondaryPhone: null },
+  { name: "Wolverine Mutual Insurance", phone: "800-733-3320", secondaryPhone: null }
+];
+
+// Damage type options
+const DAMAGE_TYPES = [
+  { value: "HAIL", label: "Hail" },
+  { value: "WIND", label: "Wind" },
+  { value: "FIRE", label: "Fire" },
+  { value: "WIND_AND_HAIL", label: "Wind and Hail" }
+]
+
 interface LeadsListProps {
   leads: LeadSummary[]
   isLoading?: boolean
@@ -115,6 +159,19 @@ interface QuickActionButtonProps {
   label: string;
   disabled?: boolean;
   variant?: 'default' | 'contract' | 'sign';
+}
+
+interface Activity {
+  id: string
+  type: string
+  title: string
+  description: string
+  createdAt: string
+  user?: {
+    id: string
+    name: string | null
+    image: string | null
+  }
 }
 
 const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, label, disabled, variant = 'default' }) => {
@@ -259,62 +316,73 @@ const getDropdownItemColor = (status: string) => {
   }
 }
 
-// Helper to get Google Maps URL for navigation
 const getGoogleMapsUrl = (address: string) => {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
-};
+  const encodedAddress = encodeURIComponent(address)
+  return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`
+}
 
-// Helper to format dates consistently
 const formatDate = (date: Date | string | null): string => {
-  if (!date) return "Not set";
+  if (!date) return "N/A"
   try {
-    const parsedDate = typeof date === "string" ? parseISO(date) : date;
-    return format(parsedDate, "MMM d, yyyy 'at' h:mm a");
+    const d = typeof date === 'string' ? new Date(date) : date
+    return format(d, 'MMM d, yyyy')
   } catch {
-    return "Invalid date";
+    return "N/A"
   }
-};
+}
 
-// Helper to get salesperson initials
 const getSalespersonInitials = (name: string | null | undefined): string => {
-  if (!name) return "N/A";
-  return name.substring(0, 2).toUpperCase();
-};
+  if (!name) return "N/A"
+  return name.split(' ').map(n => n[0]).join('').toUpperCase()
+}
 
-// Neon Lead Card Component
 function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?: string }) {
+  const [isExpanded, setIsExpanded] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+  const [currentStatus, setCurrentStatus] = useState<LeadStatus>(lead.status)
   const [noteText, setNoteText] = useState("")
   const [editingInsurance, setEditingInsurance] = useState(false)
   const [editingAdjuster, setEditingAdjuster] = useState(false)
-  const [currentStatus, setCurrentStatus] = useState<LeadStatus>(lead.status || LeadStatus.follow_ups)
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
-  // Expanded by default on non-mobile screens
-  const [isExpanded, setIsExpanded] = useState(typeof window !== 'undefined' ? window.innerWidth >= 768 : false)
+  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false)
+  const [showDamageTypeDropdown, setShowDamageTypeDropdown] = useState(false)
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [files, setFiles] = useState<LeadFile[]>([])
+  const [loadingActivities, setLoadingActivities] = useState(false)
+  const [loadingFiles, setLoadingFiles] = useState(false)
+  const [savingInsurance, setSavingInsurance] = useState(false)
+  const [savingAdjuster, setSavingAdjuster] = useState(false)
+  const [savingNote, setSavingNote] = useState(false)
+  const [isUploadingFile, setIsUploadingFile] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [insuranceFormData, setInsuranceFormData] = useState({
+    insuranceCompany: lead.insuranceCompany || "",
+    insurancePhone: lead.insurancePhone || "",
+    claimNumber: lead.claimNumber || "",
+    damageType: lead.damageType || "",
+    dateOfLoss: lead.dateOfLoss ? format(new Date(lead.dateOfLoss), 'MM/dd/yy') : "",
+    insuranceEmail: lead.insuranceEmail || ""
+  })
+  const [adjusterFormData, setAdjusterFormData] = useState({
+    insuranceAdjusterName: lead.insuranceAdjusterName || "",
+    insuranceAdjusterPhone: lead.insuranceAdjusterPhone || "",
+    insuranceAdjusterEmail: lead.insuranceAdjusterEmail || ""
+  })
   const { toast } = useToast()
 
-  // Handle status change with real API call
   const handleStatusChange = async (newStatus: LeadStatus) => {
     setIsUpdatingStatus(true)
     try {
-      const result = await updateLeadStatus(lead.id, newStatus)
-      if (result.success) {
-        setCurrentStatus(newStatus)
+      await updateLeadStatus(lead.id, newStatus)
+      setCurrentStatus(newStatus)
         toast({
-          title: "Status Updated",
-          description: `Lead status changed to ${formatStatusLabel(newStatus)}`,
-        })
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to update status",
-          variant: "destructive",
-        })
-      }
+        title: "Status updated",
+        description: `Lead status changed to ${formatStatusLabel(newStatus)}`,
+      })
     } catch (error) {
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: "Failed to update lead status",
         variant: "destructive",
       })
     } finally {
@@ -324,72 +392,336 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
 
   const colors = getStatusColors(currentStatus)
 
-  // Mock data for tabs (you can replace with real data)
-  const mockActivities = [
-    {
-      id: "1",
-      type: "phone_call",
-      title: "Called client to schedule appointment",
-      description: "Discussed available time slots for roof inspection",
-      timestamp: new Date().toISOString(),
-      user: lead.assignedTo || "System"
-    },
-    {
-      id: "2", 
-      type: "file_upload",
-      title: "Uploaded inspection photos",
-      description: "Added photos from initial assessment",
-      timestamp: new Date(Date.now() - 86400000).toISOString(),
-      user: lead.assignedTo || "System"
-    },
-    {
-      id: "3",
-      type: "status_change",
-      title: "Status changed",
-      description: `Lead moved to ${formatStatusLabel(currentStatus)} status`,
-      timestamp: new Date(Date.now() - 172800000).toISOString(),
-      user: "System"
+  // Fetch activities when expanded and activities tab is active
+  useEffect(() => {
+    if (isExpanded && activeTab === "activities" && activities.length === 0) {
+      fetchActivities()
     }
-  ]
+  }, [isExpanded, activeTab])
 
-  const mockFiles = [
-    {
-      id: "1",
-      name: "inspection_photos.pdf",
-      size: "2.4 MB",
-      type: "PDF",
-      category: "Photos",
-      uploadedAt: new Date().toISOString()
-    },
-    {
-      id: "2",
-      name: "estimate_worksheet.xlsx", 
-      size: "156 KB",
-      type: "Excel",
-      category: "Estimates",
-      uploadedAt: new Date().toISOString()
+  // Fetch files when expanded and files tab is active
+  useEffect(() => {
+    if (isExpanded && activeTab === "files" && files.length === 0) {
+      fetchFiles()
     }
-  ]
+  }, [isExpanded, activeTab])
 
-  return (
-    <div className="w-full space-y-2">
-      {/* Compact Row - Always Visible */}
-      <div 
-        className="flex items-center justify-between p-3 sm:p-4 cursor-pointer transition-all duration-300 rounded-lg border backdrop-blur-sm"
-        onClick={() => setIsExpanded(!isExpanded)}
+  const fetchActivities = async () => {
+    setLoadingActivities(true)
+    try {
+      const response = await fetch(`/api/leads/${lead.id}/activities`)
+      if (response.ok) {
+        const data = await response.json()
+        setActivities(data)
+      }
+    } catch (error) {
+      console.error('Error fetching activities:', error)
+    } finally {
+      setLoadingActivities(false)
+    }
+  }
+
+  const fetchFiles = async () => {
+    setLoadingFiles(true)
+    try {
+      const response = await fetch(`/api/leads/${lead.id}/files`)
+      if (response.ok) {
+        const data = await response.json()
+        setFiles(data)
+      }
+    } catch (error) {
+      console.error('Error fetching files:', error)
+    } finally {
+      setLoadingFiles(false)
+    }
+  }
+
+  const saveInsurance = async () => {
+    setSavingInsurance(true)
+    try {
+      const response = await fetch(`/api/leads/${lead.id}/insurance`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(insuranceFormData),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Insurance information updated successfully",
+        })
+        setEditingInsurance(false)
+        // Update the lead object with new data
+        Object.assign(lead, insuranceFormData)
+      } else {
+        throw new Error('Failed to update insurance information')
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update insurance information",
+        variant: "destructive",
+      })
+    } finally {
+      setSavingInsurance(false)
+    }
+  }
+
+  const saveAdjuster = async () => {
+    setSavingAdjuster(true)
+    try {
+      const response = await fetch(`/api/leads/${lead.id}/adjuster`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(adjusterFormData),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Adjuster information updated successfully",
+        })
+        setEditingAdjuster(false)
+        // Update the lead object with new data
+        Object.assign(lead, adjusterFormData)
+      } else {
+        throw new Error('Failed to update adjuster information')
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update adjuster information",
+        variant: "destructive",
+      })
+    } finally {
+      setSavingAdjuster(false)
+    }
+  }
+
+  const handleCompanySelect = (companyName: string) => {
+    setInsuranceFormData({...insuranceFormData, insuranceCompany: companyName})
+    const company = INSURANCE_COMPANIES.find(c => c.name === companyName)
+    if (company && company.name !== "Not Listed") {
+      setInsuranceFormData(prev => ({
+        ...prev, 
+        insuranceCompany: companyName,
+        insurancePhone: company.phone
+      }))
+    }
+    setShowCompanyDropdown(false)
+  }
+
+  const handleDamageTypeSelect = (damageType: string) => {
+    setInsuranceFormData({...insuranceFormData, damageType})
+    setShowDamageTypeDropdown(false)
+  }
+
+  const saveNote = async () => {
+    if (!noteText.trim()) {
+      toast({
+        title: "Note required",
+        description: "Please enter a note before submitting.",
+        variant: "destructive"
+      })
+      return
+    }
+    
+    setSavingNote(true)
+    try {
+      const response = await fetch(`/api/leads/${lead.id}/notes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ content: noteText })
+      })
+      
+      const result = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to add note")
+      }
+      
+      // Success handling
+      setNoteText("")
+        toast({
+        title: "Note added",
+        description: "Your note has been added successfully."
+      })
+      
+      // Refresh activities if they're loaded
+      if (activities.length > 0) {
+        fetchActivities()
+      }
+    } catch (error) {
+      console.error("Error adding note:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add note",
+        variant: "destructive"
+      })
+    } finally {
+      setSavingNote(false)
+    }
+  }
+
+  const handleFileUpload = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setIsUploadingFile(true)
+    
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('leadId', lead.id)
+      formData.append('fileType', 'file')
+
+      const response = await fetch('/api/files/upload-to-shared-drive', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Upload failed')
+      }
+
+      const result = await response.json()
+      
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "File uploaded successfully!"
+        })
+        
+        // Always refresh files after successful upload
+        fetchFiles()
+      } else {
+        throw new Error(result.error || 'Upload failed')
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error)
+      toast({
+        title: "Error",
+        description: "Failed to upload file. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsUploadingFile(false)
+      // Clear the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  // Custom dropdown component for insurance company
+  const CompanyDropdown = () => (
+    <div className="relative">
+      <div
+        className={cn(
+          "flex items-center justify-between px-3 py-2 bg-slate-800/50 border-slate-700/50 rounded-md cursor-pointer h-10 text-slate-200",
+          "border transition-all duration-300 hover:border-opacity-70"
+        )}
+        onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
         style={{
           borderColor: `rgba(${colors.border}, 0.3)`,
-          boxShadow: `0 0 10px rgba(${colors.shadow}, 0.1)`,
-          background: `linear-gradient(135deg, 
-            rgba(${colors.shadow}, 0.05) 0%, 
-            rgba(15, 23, 42, 0.8) 30%, 
-            rgba(15, 23, 42, 0.9) 70%, 
-            rgba(${colors.shadow}, 0.05) 100%)`,
         }}
       >
+        <span className={insuranceFormData.insuranceCompany ? "text-slate-200" : "text-slate-500"}>
+          {insuranceFormData.insuranceCompany || "Company"}
+        </span>
+        <ChevronDown className="ml-2 h-4 w-4 text-slate-400" />
+      </div>
+      
+      {showCompanyDropdown && (
+        <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-md shadow-lg max-h-60 overflow-auto">
+          {INSURANCE_COMPANIES.map((company) => (
+            <div
+              key={company.name}
+              className={cn(
+                "px-3 py-2 cursor-pointer hover:bg-slate-700 flex justify-between items-center text-sm",
+                insuranceFormData.insuranceCompany === company.name ? "bg-slate-700" : ""
+              )}
+              onClick={() => handleCompanySelect(company.name)}
+            >
+              <span className="text-slate-200">{company.name}</span>
+              {insuranceFormData.insuranceCompany === company.name && <CheckCircle2 size={16} className="text-green-400" />}
+            </div>
+          ))}
+        </div>
+      )}
+      </div>
+    )
+
+  // Custom dropdown component for damage type
+  const DamageTypeDropdown = () => (
+    <div className="relative">
+      <div
+        className={cn(
+          "flex items-center justify-between px-3 py-2 bg-slate-800/50 border-slate-700/50 rounded-md cursor-pointer h-10 text-slate-200",
+          "border transition-all duration-300 hover:border-opacity-70"
+        )}
+        onClick={() => setShowDamageTypeDropdown(!showDamageTypeDropdown)}
+        style={{
+          borderColor: `rgba(${colors.border}, 0.3)`,
+        }}
+      >
+        <span className={insuranceFormData.damageType ? "text-slate-200" : "text-slate-500"}>
+          {insuranceFormData.damageType ? DAMAGE_TYPES.find(d => d.value === insuranceFormData.damageType)?.label : "Select damage type"}
+        </span>
+        <ChevronDown className="ml-2 h-4 w-4 text-slate-400" />
+      </div>
+      
+      {showDamageTypeDropdown && (
+        <div className="absolute z-50 w-full bottom-full mb-1 bg-slate-800 border border-slate-700 rounded-md shadow-lg max-h-60 overflow-auto">
+          {DAMAGE_TYPES.map((damageType) => (
+            <div
+              key={damageType.value}
+              className={cn(
+                "px-3 py-2 cursor-pointer hover:bg-slate-700 flex justify-between items-center text-sm",
+                insuranceFormData.damageType === damageType.value ? "bg-slate-700" : ""
+              )}
+              onClick={() => handleDamageTypeSelect(damageType.value)}
+            >
+              <span className="text-slate-200">{damageType.label}</span>
+              {insuranceFormData.damageType === damageType.value && <CheckCircle2 size={16} className="text-green-400" />}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+        
+        return (
+    <div className="w-full space-y-2">
+      {/* Compact Row - Only Visible When Collapsed */}
+      {!isExpanded && (
+        <div 
+          className="flex items-center justify-between p-3 sm:p-4 cursor-pointer transition-all duration-300 rounded-lg border backdrop-blur-sm"
+          onClick={() => setIsExpanded(!isExpanded)}
+          style={{
+            borderColor: `rgba(${colors.border}, 0.3)`,
+            boxShadow: `0 0 10px rgba(${colors.shadow}, 0.1)`,
+            background: `linear-gradient(135deg, 
+              rgba(${colors.shadow}, 0.05) 0%, 
+              rgba(15, 23, 42, 0.8) 30%, 
+              rgba(15, 23, 42, 0.9) 70%, 
+              rgba(${colors.shadow}, 0.05) 100%)`,
+          }}
+        >
         <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
-          {/* Salesperson Avatar */}
-          <div className="flex-shrink-0">
+                {/* Salesperson Avatar */}
+                <div className="flex-shrink-0">
             <Avatar 
               className="h-8 w-8 sm:h-10 sm:w-10 bg-slate-700 border-2 transition-all duration-300"
               style={{
@@ -398,59 +730,67 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
               }}
             >
               <AvatarFallback className="text-slate-300 bg-slate-700 text-xs sm:text-sm">
-                {getSalespersonInitials(lead.assignedTo)}
+                      {getSalespersonInitials(lead.assignedTo)}
               </AvatarFallback>
             </Avatar>
-          </div>
+                </div>
 
           {/* Lead Name and Address */}
-          <div className="flex-1 min-w-0">
-            <Link 
-              href={`/leads/${lead.id}`}
-              onClick={(e) => e.stopPropagation()}
+                <div className="flex-1 min-w-0">
+                  <Link 
+                    href={`/leads/${lead.id}`}
+                    onClick={(e) => e.stopPropagation()}
               className="font-semibold text-slate-200 hover:text-slate-100 transition-colors block truncate text-sm sm:text-base"
-            >
-              {lead.name || "N/A"}
-            </Link>
+                  >
+                    {lead.name || "N/A"}
+                  </Link>
             <p className="text-xs sm:text-sm text-slate-400 flex items-center gap-1 truncate">
               <MapPin className="h-3 w-3 flex-shrink-0" />
               <span className="truncate">{parseAddressStreetAndCity(lead.address)}</span>
             </p>
-          </div>
-        </div>
+                </div>
+
+                {/* Status Badge */}
+                <div className="flex-shrink-0">
+                  <Badge className={`${getStatusColor(currentStatus)} border`}>
+                    {formatStatusLabel(currentStatus)}
+                  </Badge>
+                </div>
+              </div>
 
         {/* Expand Button */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
+                <Button
+                  variant="ghost"
+                  size="sm"
             className="h-8 w-8 p-0 text-slate-400 hover:text-slate-200"
             onClick={(e) => {
               e.stopPropagation()
               setIsExpanded(!isExpanded)
             }}
-          >
-            {isExpanded ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-      </div>
+                >
+                  {isExpanded ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+        )}
 
-      {/* Expanded Details */}
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="overflow-hidden"
-          >
+                        {/* Expanded Details */}
+            <AnimatePresence>
+              {isExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="overflow-visible"
+                >
             <Card 
-              className="bg-slate-900/50 border-slate-700/50 backdrop-blur-sm transition-all duration-300 w-full"
+              className="bg-slate-900/50 border-slate-700/50 backdrop-blur-sm transition-all duration-300 w-full overflow-visible"
               style={{
                 borderColor: `rgba(${colors.border}, 0.8)`,
                 boxShadow: `
@@ -468,99 +808,76 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
                   rgba(${colors.shadow}, 0.05) 100%)`,
               }}
             >
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg text-slate-200 flex items-center gap-2">
-                  Lead Details
-                  <div 
-                    className="w-3 h-3 rounded-full animate-pulse"
-                    style={{
-                      backgroundColor: colors.glow,
-                      boxShadow: `0 0 10px ${colors.glow}, 0 0 20px ${colors.glow}`,
-                    }}
-                  />
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Lead Header with Status Change */}
-                <div 
-                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-slate-800/30 rounded-lg border border-slate-700/30 transition-all duration-300"
-                  style={{
-                    borderColor: `rgba(${colors.border}, 0.3)`,
-                    boxShadow: `0 0 15px rgba(${colors.shadow}, 0.1)`,
-                  }}
-                >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <Avatar 
-                      className="h-10 w-10 bg-slate-700 border-2 transition-all duration-300 flex-shrink-0"
+              <CardHeader className="pb-3 overflow-visible">
+                <CardTitle className="text-lg text-slate-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    Lead Details
+                    <div 
+                      className="w-3 h-3 rounded-full animate-pulse"
                       style={{
-                        borderColor: `rgba(${colors.border}, 0.5)`,
-                        boxShadow: `0 0 10px rgba(${colors.shadow}, 0.2)`,
+                        backgroundColor: colors.glow,
+                        boxShadow: `0 0 10px ${colors.glow}, 0 0 20px ${colors.glow}`,
                       }}
-                    >
-                      <AvatarFallback className="text-slate-300 bg-slate-700">
-                        {getSalespersonInitials(lead.assignedTo)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-slate-200 truncate">{lead.name || "N/A"}</h3>
-                      <p className="text-sm text-slate-400 flex items-center gap-1 truncate">
-                        <MapPin className="h-3 w-3 flex-shrink-0" />
-                        <span className="truncate">{lead.address || "No address"}</span>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                    />
+                          </div>
+                                    <div className="flex items-center gap-2">
                     <Select value={currentStatus} onValueChange={handleStatusChange} disabled={isUpdatingStatus}>
                       <SelectTrigger 
-                        className="w-[140px] sm:w-[180px] h-[40px] bg-slate-800/50 text-slate-200 transition-all duration-300 border-0"
+                        className="w-[180px] sm:w-[200px] h-[40px] text-slate-200 transition-all duration-300 border-0 bg-transparent"
                         style={{
-                          boxShadow: `0 0 5px rgba(${colors.shadow}, 0.1)`,
+                          boxShadow: `0 0 1px rgba(${colors.shadow}, 0.1)`,
                         }}
                       >
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="follow_ups" className="p-0">
+                      <SelectContent 
+                        className="bg-slate-800 border border-slate-700 z-50 max-h-[300px] overflow-y-auto"
+                        position="popper"
+                        side="bottom"
+                        align="end"
+                        sideOffset={5}
+                      >
+                        <SelectItem value="follow_ups" className="p-0 pb-2">
                           <Badge className={`${getStatusColor("follow_ups")} border min-w-[120px] justify-center`}>
                             Follow Ups
                           </Badge>
                         </SelectItem>
-                        <SelectItem value="scheduled" className="p-0">
+                        <SelectItem value="scheduled" className="p-0 pb-2">
                           <Badge className={`${getStatusColor("scheduled")} border min-w-[120px] justify-center`}>
                             Scheduled
                           </Badge>
                         </SelectItem>
-                        <SelectItem value="colors" className="p-0">
+                        <SelectItem value="colors" className="p-0 pb-2">
                           <Badge className={`${getStatusColor("colors")} border min-w-[120px] justify-center`}>
                             Colors
                           </Badge>
                         </SelectItem>
-                        <SelectItem value="acv" className="p-0">
+                        <SelectItem value="acv" className="p-0 pb-2">
                           <Badge className={`${getStatusColor("acv")} border min-w-[120px] justify-center`}>
                             ACV
                           </Badge>
                         </SelectItem>
-                        <SelectItem value="signed_contract" className="p-0">
+                        <SelectItem value="signed_contract" className="p-0 pb-2">
                           <Badge className={`${getStatusColor("signed_contract")} border min-w-[120px] justify-center`}>
                             Signed Contract
                           </Badge>
                         </SelectItem>
-                        <SelectItem value="job" className="p-0">
+                        <SelectItem value="job" className="p-0 pb-2">
                           <Badge className={`${getStatusColor("job")} border min-w-[120px] justify-center`}>
                             Job
                           </Badge>
                         </SelectItem>
-                        <SelectItem value="completed_jobs" className="p-0">
+                        <SelectItem value="completed_jobs" className="p-0 pb-2">
                           <Badge className={`${getStatusColor("completed_jobs")} border min-w-[120px] justify-center`}>
                             Completed Jobs
                           </Badge>
                         </SelectItem>
-                        <SelectItem value="zero_balance" className="p-0">
+                        <SelectItem value="zero_balance" className="p-0 pb-2">
                           <Badge className={`${getStatusColor("zero_balance")} border min-w-[120px] justify-center`}>
                             Zero Balance
                           </Badge>
                         </SelectItem>
-                        <SelectItem value="denied" className="p-0">
+                        <SelectItem value="denied" className="p-0 pb-2">
                           <Badge className={`${getStatusColor("denied")} border min-w-[120px] justify-center`}>
                             Denied
                           </Badge>
@@ -572,14 +889,43 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
                         className="h-4 w-4 animate-spin transition-all duration-300" 
                         style={{ color: colors.glow }}
                       />
-                    )}
-                  </div>
-                </div>
-
+                                )}
+                              </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Lead Header */}
+                <div 
+                  className="flex items-center gap-3 p-4 bg-slate-800/30 rounded-lg border border-slate-700/30 transition-all duration-300"
+                  style={{
+                    borderColor: `rgba(${colors.border}, 0.3)`,
+                    boxShadow: `0 0 15px rgba(${colors.shadow}, 0.1)`,
+                  }}
+                >
+                  <Avatar 
+                    className="h-10 w-10 bg-slate-700 border-2 transition-all duration-300 flex-shrink-0"
+                    style={{
+                      borderColor: `rgba(${colors.border}, 0.5)`,
+                      boxShadow: `0 0 10px rgba(${colors.shadow}, 0.2)`,
+                    }}
+                  >
+                    <AvatarFallback className="text-slate-300 bg-slate-700">
+                      {getSalespersonInitials(lead.assignedTo)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-slate-200 truncate">{lead.name || "N/A"}</h3>
+                    <p className="text-sm text-slate-400 flex items-center gap-1 truncate">
+                      <MapPin className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{lead.address || "No address"}</span>
+                    </p>
+                          </div>
+                        </div>
+                        
                 {/* Tabs with Enhanced Neon - Mobile Optimized */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                   <TabsList 
-                    className="grid w-full grid-cols-3 sm:grid-cols-6 bg-slate-800/50 border transition-all duration-300"
+                    className="grid w-full grid-cols-6 bg-slate-800/50 border transition-all duration-300"
                     style={{
                       borderColor: `rgba(${colors.border}, 0.3)`,
                       boxShadow: `0 0 10px rgba(${colors.shadow}, 0.1)`,
@@ -594,19 +940,19 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
                         boxShadow: activeTab === 'overview' ? `0 0 10px rgba(${colors.shadow}, 0.3)` : 'none',
                       }}
                     >
-                      Overview
+                      Info
                     </TabsTrigger>
-                    <TabsTrigger 
-                      value="insurance" 
-                      className="data-[state=active]:text-slate-200 transition-all duration-300 data-[state=active]:shadow-lg text-xs sm:text-sm"
-                      style={{
-                        backgroundColor: activeTab === 'insurance' ? `rgba(${colors.shadow}, 0.3)` : 'transparent',
-                        color: activeTab === 'insurance' ? colors.glow : 'inherit',
-                        boxShadow: activeTab === 'insurance' ? `0 0 10px rgba(${colors.shadow}, 0.3)` : 'none',
-                      }}
-                    >
-                      Insurance
-                    </TabsTrigger>
+                                          <TabsTrigger 
+                        value="insurance" 
+                        className="data-[state=active]:text-slate-200 transition-all duration-300 data-[state=active]:shadow-lg text-xs sm:text-sm"
+                        style={{
+                          backgroundColor: activeTab === 'insurance' ? `rgba(${colors.shadow}, 0.3)` : 'transparent',
+                          color: activeTab === 'insurance' ? colors.glow : 'inherit',
+                          boxShadow: activeTab === 'insurance' ? `0 0 10px rgba(${colors.shadow}, 0.3)` : 'none',
+                        }}
+                      >
+                        Insur..
+                      </TabsTrigger>
                     <TabsTrigger 
                       value="adjuster" 
                       className="data-[state=active]:text-slate-200 transition-all duration-300 data-[state=active]:shadow-lg text-xs sm:text-sm"
@@ -638,7 +984,7 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
                         boxShadow: activeTab === 'activities' ? `0 0 10px rgba(${colors.shadow}, 0.3)` : 'none',
                       }}
                     >
-                      Activities
+                      Notes
                     </TabsTrigger>
                     <TabsTrigger 
                       value="jobs" 
@@ -654,33 +1000,33 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
                   </TabsList>
 
                   <TabsContent value="overview" className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-slate-300">
+                        <div className="flex items-center gap-2 text-white">
                           <Phone className="h-4 w-4" />
                           <span className="text-sm">{lead.phone || "No phone"}</span>
-                        </div>
+                            </div>
                         <div className="flex items-center gap-2 text-slate-300">
                           <Mail className="h-4 w-4" />
                           <span className="text-sm">{lead.email || "No email"}</span>
-                        </div>
+                          </div>
                         <div className="flex items-center gap-2 text-slate-300">
                           <User className="h-4 w-4" />
-                          <span className="text-sm">Assigned to: {lead.assignedTo || "Unassigned"}</span>
+                          <span className="text-sm"> {lead.assignedTo || "Unassigned"}</span>
                         </div>
-                      </div>
+                          </div>
                       <div className="space-y-3">
                         <div className="flex items-center gap-2 text-slate-300">
                           <Clock className="h-4 w-4" />
                           <span className="text-sm">Created: {formatDate(lead.createdAt)}</span>
-                        </div>
+                      </div>
                         <div className="flex items-center gap-2 text-slate-300">
                           <Activity className="h-4 w-4" />
                           <span className="text-sm">Last Activity: {formatDate(lead.lastActivity)}</span>
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex gap-2">
                       <Button 
                         size="sm" 
@@ -708,7 +1054,7 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
                           value={noteText}
                           onChange={(e) => setNoteText(e.target.value)}
                           placeholder="Add a note about this lead..."
-                          className="bg-slate-800/50 border-slate-700/50 text-slate-200 placeholder-slate-500 pr-12 min-h-[80px] transition-all duration-300 focus:border-opacity-70"
+                          className="bg-slate-800 border-slate-700/50 text-slate-200 placeholder-slate-500 pr-12 min-h-[15px] transition-all duration-300 focus:border-opacity-70"
                           style={{
                             borderColor: `rgba(${colors.border}, 0.3)`,
                             boxShadow: `0 0 5px rgba(${colors.shadow}, 0.1)`,
@@ -716,8 +1062,9 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
                         />
                         <Button
                           size="sm"
-                          className="absolute bottom-2 right-2 h-8 w-8 p-0 border transition-all duration-300 hover:scale-110"
-                          disabled={!noteText.trim()}
+                          className="absolute bottom-2 right-2 h-11 w-11 p-0 border transition-all duration-300 hover:scale-110"
+                          disabled={!noteText.trim() || savingNote}
+                          onClick={saveNote}
                           style={{
                             backgroundColor: `rgba(${colors.shadow}, 0.2)`,
                             borderColor: `rgba(${colors.border}, 0.5)`,
@@ -725,7 +1072,11 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
                             boxShadow: `0 0 10px rgba(${colors.shadow}, 0.3)`,
                           }}
                         >
-                          <Send className="h-4 w-4" />
+                          {savingNote ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
                     </div>
@@ -746,27 +1097,140 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
                           }}
                         >
                           <Edit className="h-4 w-4 mr-2" />
-                          Edit
+                          {editingInsurance ? 'Cancel' : 'Edit'}
                         </Button>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-slate-400">Company</Label>
-                          <p className="text-slate-200">{lead.insuranceCompany || "Not set"}</p>
+                              </div>
+                      
+                                              {editingInsurance ? (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-slate-400">Company</Label>
+                              <CompanyDropdown />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-slate-400">Phone</Label>
+                              <Input
+                                value={insuranceFormData.insurancePhone}
+                                onChange={(e) => setInsuranceFormData({...insuranceFormData, insurancePhone: e.target.value})}
+                                placeholder="Insurance phone"
+                                className="bg-slate-800/50 border-slate-700/50 text-slate-200"
+                                style={{
+                                  borderColor: `rgba(${colors.border}, 0.3)`,
+                                }}
+                              />
+                          </div>
+                            <div className="space-y-2">
+                              <Label className="text-slate-400">Email</Label>
+                              <Input
+                                value={insuranceFormData.insuranceEmail}
+                                onChange={(e) => setInsuranceFormData({...insuranceFormData, insuranceEmail: e.target.value})}
+                                placeholder="Insurance email"
+                                type="email"
+                                className="bg-slate-800/50 border-slate-700/50 text-slate-200"
+                                style={{
+                                  borderColor: `rgba(${colors.border}, 0.3)`,
+                                }}
+                              />
                         </div>
-                        <div className="space-y-2">
-                          <Label className="text-slate-400">Phone</Label>
-                          <p className="text-slate-200">{lead.insurancePhone || "Not set"}</p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-slate-400">Claim Number</Label>
-                          <p className="text-slate-200">{lead.claimNumber || "Not set"}</p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-slate-400">Damage Type</Label>
-                          <p className="text-slate-200">{lead.damageType || "Not set"}</p>
-                        </div>
-                      </div>
+                            <div className="space-y-2">
+                              <Label className="text-slate-400">Claim Number</Label>
+                              <Input
+                                value={insuranceFormData.claimNumber}
+                                onChange={(e) => setInsuranceFormData({...insuranceFormData, claimNumber: e.target.value})}
+                                placeholder="Claim number"
+                                className="bg-slate-800/50 border-slate-700/50 text-slate-200"
+                                style={{
+                                  borderColor: `rgba(${colors.border}, 0.3)`,
+                                }}
+                              />
+                    </div>
+                            <div className="space-y-2">
+                              <Label className="text-slate-400">DOL (Date of Loss)</Label>
+                              <Input
+                                value={insuranceFormData.dateOfLoss}
+                                onChange={(e) => {
+                                  let value = e.target.value.replace(/\D/g, '');
+                                  if (value.length >= 2) {
+                                    value = value.slice(0, 2) + '/' + value.slice(2);
+                                  }
+                                  if (value.length >= 5) {
+                                    value = value.slice(0, 5) + '/' + value.slice(5);
+                                  }
+                                  if (value.length > 8) {
+                                    value = value.slice(0, 8);
+                                  }
+                                  setInsuranceFormData({...insuranceFormData, dateOfLoss: value});
+                                }}
+                                placeholder="MM/DD/YY"
+                                maxLength={8}
+                                className="bg-slate-800/50 border-slate-700/50 text-slate-200"
+                                style={{
+                                  borderColor: `rgba(${colors.border}, 0.3)`,
+                                }}
+                              />
+                  </div>
+                            <div className="space-y-2">
+                              <Label className="text-slate-400">Damage Type</Label>
+                              <DamageTypeDropdown />
+                            </div>
+                            <div className="col-span-2 flex gap-2">
+                            <Button
+                                size="sm"
+                                onClick={saveInsurance}
+                                disabled={savingInsurance}
+                                className="border-2 transition-all duration-300 hover:scale-105"
+                                style={{
+                                  backgroundColor: `rgba(${colors.shadow}, 0.2)`,
+                                  borderColor: `rgba(${colors.border}, 0.5)`,
+                                  color: colors.glow,
+                                  boxShadow: `0 0 10px rgba(${colors.shadow}, 0.3)`,
+                                }}
+                              >
+                                {savingInsurance ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Save className="h-4 w-4 mr-2" />
+                                )}
+                                {savingInsurance ? 'Saving...' : 'Save'}
+                            </Button>
+                          <Button
+                            size="sm"
+                                variant="ghost"
+                                onClick={() => setEditingInsurance(false)}
+                                className="text-slate-400 hover:text-slate-200"
+                              >
+                                Cancel
+                          </Button>
+                            </div>
+                          </div>
+                                              ) : (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-slate-400">Company</Label>
+                              <p className="text-slate-200">{lead.insuranceCompany || "Not set"}</p>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-slate-400">Phone</Label>
+                              <p className="text-slate-200">{lead.insurancePhone || "Not set"}</p>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-slate-400">Email</Label>
+                              <p className="text-slate-200">{lead.insuranceEmail || "Not set"}</p>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-slate-400">Claim Number</Label>
+                              <p className="text-slate-200">{lead.claimNumber || "Not set"}</p>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-slate-400">DOL (Date of Loss)</Label>
+                              <p className="text-slate-200">{lead.dateOfLoss ? format(new Date(lead.dateOfLoss), 'MM/dd/yy') : "Not set"}</p>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-slate-400">Damage Type</Label>
+                              <p className="text-slate-200">{lead.damageType ? DAMAGE_TYPES.find(d => d.value === lead.damageType)?.label : "Not set"}</p>
+                            </div>
+                          </div>
+                        )}
                     </div>
                   </TabsContent>
 
@@ -774,127 +1238,226 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <h3 className="text-lg font-medium text-slate-200">Adjuster Information</h3>
-                        <Button
-                          variant="ghost"
-                          size="sm"
+                              <Button
+                                variant="ghost"
+                                size="sm"
                           onClick={() => setEditingAdjuster(!editingAdjuster)}
-                          className="text-slate-400 hover:text-slate-200 transition-all duration-300"
+                          className="text-white hover:text-slate-200 transition-all duration-300"
                           style={{
                             color: colors.glow,
                             borderColor: `rgba(${colors.border}, 0.3)`,
                           }}
                         >
                           <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </Button>
+                          {editingAdjuster ? 'Cancel' : 'Edit'}
+                            </Button>
+                          </div>
+                      
+                                              {editingAdjuster ? (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-slate-400">Name</Label>
+                              <Input
+                                value={adjusterFormData.insuranceAdjusterName}
+                                onChange={(e) => setAdjusterFormData({...adjusterFormData, insuranceAdjusterName: e.target.value})}
+                                placeholder="Adjuster name"
+                                className="bg-slate-800/50 border-slate-700/50 text-slate-200"
+                                style={{
+                                  borderColor: `rgba(${colors.border}, 0.3)`,
+                                }}
+                        />
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-slate-400">Name</Label>
-                          <p className="text-slate-200">{lead.insuranceAdjusterName || "Not set"}</p>
+                            <div className="space-y-2">
+                              <Label className="text-slate-400">Phone</Label>
+                              <Input
+                                value={adjusterFormData.insuranceAdjusterPhone}
+                                onChange={(e) => setAdjusterFormData({...adjusterFormData, insuranceAdjusterPhone: e.target.value})}
+                                placeholder="Adjuster phone"
+                                className="bg-slate-800/50 border-slate-700/50 text-slate-200"
+                                style={{
+                                  borderColor: `rgba(${colors.border}, 0.3)`,
+                                }}
+                              />
+                    </div>
+                            <div className="space-y-2 col-span-2">
+                              <Label className="text-slate-400">Email</Label>
+                              <Input
+                                value={adjusterFormData.insuranceAdjusterEmail}
+                                onChange={(e) => setAdjusterFormData({...adjusterFormData, insuranceAdjusterEmail: e.target.value})}
+                                placeholder="Adjuster email"
+                                className="bg-slate-800/50 border-slate-700/50 text-slate-200"
+                                style={{
+                                  borderColor: `rgba(${colors.border}, 0.3)`,
+                                }}
+                              />
+                  </div>
+                            <div className="col-span-2 flex gap-2">
+                        <Button
+                                size="sm"
+                                onClick={saveAdjuster}
+                                disabled={savingAdjuster}
+                                className="border-2 transition-all duration-300 hover:scale-105"
+                                style={{
+                                  backgroundColor: `rgba(${colors.shadow}, 0.2)`,
+                                  borderColor: `rgba(${colors.border}, 0.5)`,
+                                  color: colors.glow,
+                                  boxShadow: `0 0 10px rgba(${colors.shadow}, 0.3)`,
+                                }}
+                              >
+                                {savingAdjuster ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Save className="h-4 w-4 mr-2" />
+                                )}
+                                {savingAdjuster ? 'Saving...' : 'Save'}
+                              </Button>
+                                    <Button
+                                      size="sm"
+                                variant="ghost"
+                                onClick={() => setEditingAdjuster(false)}
+                                className="text-slate-400 hover:text-slate-200"
+                              >
+                                Cancel
+                                    </Button>
+                            </div>
+                          </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-slate-400">Name</Label>
+                            <p className="text-slate-200">{lead.insuranceAdjusterName || "Not set"}</p>
                         </div>
-                        <div className="space-y-2">
-                          <Label className="text-slate-400">Phone</Label>
-                          <p className="text-slate-200">{lead.insuranceAdjusterPhone || "Not set"}</p>
+                          <div className="space-y-2">
+                            <Label className="text-slate-400">Phone</Label>
+                            <p className="text-slate-200">{lead.insuranceAdjusterPhone || "Not set"}</p>
+                  </div>
+                          <div className="space-y-2 col-span-2">
+                            <Label className="text-slate-400">Email</Label>
+                            <p className="text-slate-200">{lead.insuranceAdjusterEmail || "Not set"}</p>
+                          </div>
                         </div>
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label className="text-slate-400">Email</Label>
-                          <p className="text-slate-200">{lead.insuranceAdjusterEmail || "Not set"}</p>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </TabsContent>
 
                   <TabsContent value="files" className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-medium text-slate-200">Files ({mockFiles.length})</h3>
-                      <Button 
-                        size="sm" 
-                        className="border-2 transition-all duration-300 hover:scale-105"
-                        style={{
-                          backgroundColor: `rgba(${colors.shadow}, 0.2)`,
-                          borderColor: `rgba(${colors.border}, 0.5)`,
-                          color: colors.glow,
-                          boxShadow: `0 0 10px rgba(${colors.shadow}, 0.3)`,
-                        }}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Upload
-                      </Button>
-                    </div>
+                        <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium text-slate-200">Files ({files.length})</h3>
+                                  <Button
+                                    size="sm"
+                              className="border-2 transition-all duration-300 hover:scale-105"
+                              disabled={isUploadingFile}
+                              onClick={handleFileUpload}
+                              style={{
+                                backgroundColor: `rgba(${colors.shadow}, 0.2)`,
+                                borderColor: `rgba(${colors.border}, 0.5)`,
+                                color: colors.glow,
+                                boxShadow: `0 0 10px rgba(${colors.shadow}, 0.3)`,
+                              }}
+                            >
+                              {isUploadingFile ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <Plus className="h-4 w-4 mr-2" />
+                              )}
+                              {isUploadingFile ? 'Uploading...' : 'Upload'}
+                                  </Button>
+                                </div>
                     <div className="max-h-64 overflow-y-auto space-y-2">
-                      {mockFiles.map((file) => (
-                        <div 
-                          key={file.id} 
-                          className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg border border-slate-700/30 transition-all duration-300 hover:bg-slate-800/40"
-                          style={{
-                            borderColor: `rgba(${colors.border}, 0.2)`,
-                            boxShadow: `0 0 5px rgba(${colors.shadow}, 0.1)`,
-                          }}
-                        >
-                          <div className="flex items-center gap-3">
-                            <FileText 
-                              className="h-5 w-5 text-slate-400" 
-                              style={{ color: colors.glow }}
-                            />
-                            <div>
-                              <p className="text-sm font-medium text-slate-200">{file.name}</p>
-                              <p className="text-xs text-slate-400">{file.size} • {file.category}</p>
+                      {loadingFiles ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
                             </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-8 w-8 p-0 text-slate-400 hover:text-slate-200 transition-all duration-300"
-                              style={{ color: colors.glow }}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              className="h-8 w-8 p-0 text-slate-400 hover:text-slate-200 transition-all duration-300"
-                              style={{ color: colors.glow }}
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-400 hover:text-red-300 transition-all duration-300">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                      ) : files.length === 0 ? (
+                        <div className="text-center py-8 text-slate-400">
+                          No files found
                         </div>
-                      ))}
-                    </div>
+                      ) : (
+                        files.map((file) => (
+                          <div 
+                            key={file.id} 
+                            className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg border border-slate-700/30 transition-all duration-300 hover:bg-slate-800/40"
+                            style={{
+                              borderColor: `rgba(${colors.border}, 0.2)`,
+                              boxShadow: `0 0 5px rgba(${colors.shadow}, 0.1)`,
+                            }}
+                          >
+                            <div className="flex items-center gap-3">
+                              <FileText 
+                                className="h-5 w-5 text-slate-400" 
+                                style={{ color: colors.glow }}
+                              />
+                              <div>
+                                <p className="text-sm font-medium text-slate-200">{file.name}</p>
+                                <p className="text-xs text-slate-400">{file.size} bytes • {file.category}</p>
+                        </div>
+                          </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 text-slate-400 hover:text-slate-200 transition-all duration-300"
+                                style={{ color: colors.glow }}
+                                onClick={() => window.open(file.url, '_blank')}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost" 
+                                className="h-8 w-8 p-0 text-slate-400 hover:text-slate-200 transition-all duration-300"
+                                style={{ color: colors.glow }}
+                                onClick={() => window.open(file.url, '_blank')}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-400 hover:text-red-300 transition-all duration-300">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                        </div>
+                          </div>
+                        ))
+                          )}
+                        </div>
                   </TabsContent>
 
                   <TabsContent value="activities" className="space-y-4">
                     <h3 className="text-lg font-medium text-slate-200">Recent Activities</h3>
                     <div className="space-y-3">
-                      {mockActivities.map((activity) => (
-                        <div 
-                          key={activity.id} 
-                          className="flex gap-3 p-3 bg-slate-800/30 rounded-lg border border-slate-700/30 transition-all duration-300 hover:bg-slate-800/40"
-                          style={{
-                            borderColor: `rgba(${colors.border}, 0.2)`,
-                            boxShadow: `0 0 5px rgba(${colors.shadow}, 0.1)`,
-                          }}
-                        >
-                          <div 
-                            className="w-2 h-2 rounded-full mt-2 flex-shrink-0 animate-pulse" 
-                            style={{ 
-                              backgroundColor: colors.glow,
-                              boxShadow: `0 0 5px ${colors.glow}`,
-                            }}
-                          />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-slate-200">{activity.title}</p>
-                            <p className="text-xs text-slate-400">{activity.description}</p>
-                            <p className="text-xs text-slate-500 mt-1">{activity.user} • {formatDate(activity.timestamp)}</p>
+                      {loadingActivities ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
                           </div>
+                      ) : activities.length === 0 ? (
+                        <div className="text-center py-8 text-slate-400">
+                          No activities found
                         </div>
-                      ))}
-                    </div>
+                      ) : (
+                        activities.map((activity) => (
+                          <div 
+                            key={activity.id} 
+                            className="flex gap-3 p-3 bg-slate-800/30 rounded-lg border border-slate-700/30 transition-all duration-300 hover:bg-slate-800/40"
+                            style={{
+                              borderColor: `rgba(${colors.border}, 0.2)`,
+                              boxShadow: `0 0 5px rgba(${colors.shadow}, 0.1)`,
+                            }}
+                          >
+                            <div 
+                              className="w-2 h-2 rounded-full mt-2 flex-shrink-0 animate-pulse" 
+                              style={{ 
+                                backgroundColor: colors.glow,
+                                boxShadow: `0 0 5px ${colors.glow}`,
+                              }}
+                            />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-slate-200">{activity.title}</p>
+                              <p className="text-xs text-slate-400">{activity.description}</p>
+                              <p className="text-xs text-slate-500 mt-1">{activity.user?.name || "System"} • {formatDate(activity.createdAt)}</p>
+                        </div>
+                          </div>
+                        ))
+                          )}
+                        </div>
                   </TabsContent>
 
                   <TabsContent value="jobs" className="space-y-4">
@@ -905,15 +1468,73 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
                       />
                       <h3 className="text-lg font-medium text-slate-200 mb-2">Job Management</h3>
                       <p className="text-slate-400 text-sm">Coming Soon</p>
-                    </div>
+                          </div>
                   </TabsContent>
                 </Tabs>
+
+                {/* Large Neon Animated Collapse Button Section */}
+                <div 
+                  className="relative py-1 pt-1 pb-1 cursor-pointer transition-all duration-300 hover:bg-slate-800/20"
+                  onClick={() => setIsExpanded(false)}
+                >
+                  <div className="flex items-center justify-center px-1">
+                    {/* Left Chevron */}
+                    <ChevronUp 
+                      className="h-8 w-8 animate-pulse transition-all duration-300"
+                      style={{ 
+                        color: colors.glow,
+                        filter: `drop-shadow(0 0 8px ${colors.glow})`,
+                        animationDuration: '3s'
+                      }}
+                    />
+                    
+                    {/* Center Chevron */}
+                    <ChevronUp 
+                      className="h-10 w-10 animate-pulse transition-all duration-300"
+                      style={{ 
+                        color: colors.glow,
+                        filter: `drop-shadow(0 0 12px ${colors.glow})`,
+                        animationDuration: '2s'
+                      }}
+                    />
+                    
+                    {/* Right Chevron */}
+                    <ChevronUp 
+                      className="h-8 w-8 animate-pulse transition-all duration-300"
+                      style={{ 
+                        color: colors.glow,
+                        filter: `drop-shadow(0 0 8px ${colors.glow})`,
+                        animationDuration: '4s'
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Subtle hover effect overlay */}
+                  <div 
+                    className="absolute inset-0 rounded-lg opacity-0 hover:opacity-100 transition-opacity duration-300"
+                    style={{
+                      background: `linear-gradient(90deg, 
+                        transparent 0%, 
+                        rgba(${colors.shadow}, 0.1) 50%, 
+                        transparent 100%)`
+                    }}
+                  />
+                </div>
               </CardContent>
             </Card>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+      
+      {/* Hidden file input for file upload */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+        accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
+      />
+                        </div>
   )
 }
 
@@ -938,14 +1559,14 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
   }
 
   if (isLoading) {
-    return (
+                        return (
       <div className="space-y-4">
         {[...Array(5)].map((_, i) => (
           <div key={i} className="animate-pulse">
             <div className="h-20 bg-slate-800/50 rounded-lg"></div>
-          </div>
+                            </div>
         ))}
-      </div>
+                              </div>
     )
   }
 
@@ -953,18 +1574,18 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
     return (
       <div className="text-center py-8">
         <p className="text-slate-400">No leads found.</p>
-      </div>
+                    </div>
     )
   }
 
   return (
     <div className="space-y-4">
       {/* Leads List - Responsive Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-4">
         {currentLeads.map((lead) => (
           <NeonLeadCard key={lead.id} lead={lead} />
         ))}
-      </div>
+                  </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -986,47 +1607,47 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => goToPage(1)}
-              disabled={currentPage === 1}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(1)}
+                disabled={currentPage === 1}
               className="bg-slate-800/50 border-slate-700/50 text-slate-200 hover:bg-slate-700/50"
-            >
-              <ChevronsLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
               className="bg-slate-800/50 border-slate-700/50 text-slate-200 hover:bg-slate-700/50"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
             
             <span className="text-sm text-slate-400 px-3">
               Page {currentPage} of {totalPages}
             </span>
             
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
               className="bg-slate-800/50 border-slate-700/50 text-slate-200 hover:bg-slate-700/50"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => goToPage(totalPages)}
-              disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(totalPages)}
+                disabled={currentPage === totalPages}
               className="bg-slate-800/50 border-slate-700/50 text-slate-200 hover:bg-slate-700/50"
-            >
-              <ChevronsRight className="h-4 w-4" />
-            </Button>
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
           </div>
         </div>
       )}

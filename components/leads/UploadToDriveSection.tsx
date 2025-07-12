@@ -101,6 +101,39 @@ export const UploadToDriveSection: React.FC<UploadToDriveSectionProps> = ({ lead
         const data = await res.json()
         throw new Error(data.error || 'Upload failed')
       }
+      
+      const uploadResult = await res.json()
+      
+      // If this is a general contract upload, create a contract record to mark it as completed
+      if (currentUploadType === 'general_contract') {
+        try {
+          const contractResponse = await fetch('/api/contracts/manual-upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              leadId: leadId,
+              fileName: file.name,
+              pdfUrl: uploadResult.file?.url || null
+            })
+          })
+          
+          if (contractResponse.ok) {
+            const contractResult = await contractResponse.json()
+            console.log('✅ Contract record created for general contract upload:', contractResult.contractId)
+            toast({ 
+              title: 'Contract Status Updated', 
+              description: 'General contract uploaded and marked as completed!' 
+            })
+          } else {
+            const errorData = await contractResponse.json()
+            console.warn('⚠️ Failed to create contract record:', errorData.error)
+          }
+        } catch (contractError) {
+          console.error('⚠️ Failed to create contract record, but file was uploaded:', contractError)
+          // Don't fail the upload if contract creation fails
+        }
+      }
+      
       toast({ title: 'Success', description: `${currentUploadType} uploaded!` })
       await refreshAllStatuses()
     } catch (err) {
