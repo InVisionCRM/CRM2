@@ -225,7 +225,6 @@ export async function uploadPhotos(
             thumbnailUrl: uploadResult.thumbnailUrl,
             mimeType: file.type,
             size: file.size,
-            uploadedById: session.user.id,
             driveFileId: null // This is now optional in the schema
           }
         })
@@ -299,7 +298,7 @@ export async function uploadSinglePhoto(
         thumbnailUrl: uploadResult.thumbnailUrl,
         mimeType: file.type,
         size: file.size,
-        uploadedById: session.user.id,
+
         driveFileId: null
       }
     })
@@ -329,15 +328,7 @@ export async function getLeadPhotos(leadId: string) {
     // Get all photos for the lead
     const photos = await prisma.leadPhoto.findMany({
       where: { leadId },
-      orderBy: { createdAt: "desc" },
-      include: {
-        uploadedBy: {
-          select: {
-            name: true,
-            image: true
-          }
-        }
-      }
+      orderBy: { createdAt: "desc" }
     })
 
     return { 

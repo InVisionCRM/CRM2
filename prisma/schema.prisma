@@ -67,7 +67,7 @@ model User {
   visits        Visit[]
   routePoints   RoutePoint[]
   googleCalendarEvents GoogleCalendarEvent[]
-  uploadedPhotos LeadPhoto[]
+
   
   // Notification relations
   sentNotifications     Notification[] @relation("NotificationSender")
@@ -369,23 +369,23 @@ model RoutePoint {
 }
 
 model LeadPhoto {
-  id        String    @id @default(uuid()) @db.Uuid
-  leadId    String    @db.VarChar(255)
-  userId    String    @db.Uuid
-  url       String    // Vercel Blob URL
-  name      String?
-  stage     PhotoStage @default(Before)
+  id            String    @id @default(uuid()) @db.Uuid
+  name          String?
+  description   String?
+  url           String    // Vercel Blob URL
+  thumbnailUrl  String
+  mimeType      String?
+  size          Int?
+  leadId        String    @db.VarChar(255)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(6)
+  driveFileId   String?
   
-  lead      Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  createdAt DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime  @updatedAt @db.Timestamptz(6)
+  lead          Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
-  @@index([userId])
-  @@index([stage])
   @@index([createdAt])
+  @@index([updatedAt])
 }
 
 // Notification system for @mentions

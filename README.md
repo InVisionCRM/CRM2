@@ -2,6 +2,8 @@
 
 A mobile-first CRM application built specifically for roofing contractors. Manage leads, appointments, files, and more from any device.
 
+**Current Version: v1.02**
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -54,13 +56,50 @@ npm run dev
 
 7. Open [http://localhost:3000](http://localhost:3000) in your browser
 
+## 📱 Progressive Web App (PWA)
+
+This CRM is available as a Progressive Web App, providing a native app-like experience:
+
+### PWA Features
+- **Installable**: Add to home screen on mobile and desktop
+- **Offline Support**: Works without internet connection
+- **Fast Loading**: Optimized caching and performance
+- **Native Experience**: Full-screen mode without browser UI
+- **Automatic Updates**: Seamless background updates
+
+### PWA Installation
+- **Android/Chrome**: Tap the install prompt or use browser menu
+- **iOS/Safari**: Tap Share button → "Add to Home Screen"
+- **Desktop**: Click install button in address bar
+
+### Recent PWA Improvements (v1.01)
+- Fixed GlobalStats component not displaying in PWA mode
+- Enhanced API route caching strategies for better performance
+- Improved authentication handling in PWA environment
+- Added comprehensive error handling and retry logic
+- Enhanced service worker registration with detailed logging
+- Fixed manifest shortcuts to point to correct routes
+- Added PWA-specific optimizations for SWR data fetching
+- Implemented offline/online status detection
+- Added development debugging tools for PWA issues
+
+### Latest Updates (v1.02)
+- **Neon UI Design System**: Complete redesign with status-based neon colors and glow effects
+- **Enhanced Lead Management**: New tabbed interface with Overview, Insurance, Adjuster, Files, Activities, and Jobs
+- **Mobile-First Responsive Design**: Optimized for all screen sizes with collapsible cards
+- **Real-time Status Updates**: Dynamic status changes with smooth color transitions
+- **Improved Performance**: Lazy loading and optimized animations
+- **Better UX**: Streamlined interface with consistent sizing and layout
+
 ## 🧰 Features
 
 ### Lead Management
-- View and filter leads by status
-- Detailed lead profiles with contact info
-- Track lead status history
-- Add notes to leads
+- **Neon Status-Based Design**: Visual status indicators with dynamic color themes
+- **Responsive Card Layout**: Grid-based layout that adapts to screen size
+- **Tabbed Interface**: Organized tabs for Overview, Insurance, Adjuster, Files, Activities, and Jobs
+- **Real-time Status Updates**: Live status changes with API integration
+- **Mobile-Optimized**: Collapsible cards for mobile, expanded by default on desktop
+- **Enhanced UX**: Smooth animations and transitions throughout the interface
 
 ### Appointment Scheduling
 - Calendar with day, week, and month views
@@ -98,12 +137,21 @@ npm run dev
 - Organize frequently used resources
 - Categorize links for easy access
 
+### Global Statistics Dashboard
+- Real-time lead statistics
+- Top performer tracking
+- Lead status distribution
+- Zip code heat mapping
+- Weather integration
+- Recent activity monitoring
+
 ## 📱 Mobile-First Design
 This CRM is designed to work great on mobile devices:
 - Responsive design that works on phones, tablets, and desktops
 - Bottom navigation for easy thumb access on mobile
 - Optimized touch targets for mobile use
 - Offline capabilities for field use
+- PWA support for native app experience
 
 ## 🛠️ Tech Stack
 - **Frontend**: React + Next.js App Router (TypeScript)
@@ -111,6 +159,9 @@ This CRM is designed to work great on mobile devices:
 - **Database**: Neon PostgreSQL with Prisma ORM
 - **File Storage**: Vercel Blob for file/image uploads
 - **Authentication**: JWT with HTTP-only cookies
+- **PWA**: Next.js PWA with Workbox caching
+- **State Management**: SWR for data fetching
+- **Animations**: Framer Motion
 
 ## 🔐 Authentication
 
@@ -183,6 +234,34 @@ roofing-mobile-crm/
 ├── public/                 # Static assets
 └── types/                  # TypeScript types
 \`\`\`
+
+## 📋 Version History
+
+### v1.01 (Current)
+- **PWA Fixes**: Resolved GlobalStats component not displaying in PWA mode
+- **API Caching**: Enhanced caching strategies for better PWA performance
+- **Authentication**: Improved auth handling in PWA environment
+- **Error Handling**: Added comprehensive error handling and retry logic
+- **Service Worker**: Enhanced registration with detailed logging
+- **Manifest**: Fixed shortcut URLs to point to correct routes
+- **SWR Optimization**: Added PWA-specific configurations
+- **Offline Support**: Implemented offline/online status detection
+- **Debug Tools**: Added development debugging for PWA issues
+
+### v1.0.0
+- Initial release
+- Core CRM functionality
+- PWA implementation
+- Mobile-first design
+- Authentication system
+- Lead management
+- Appointment scheduling
+- File management
+- Weather integration
+- Financial tracking
+- Team performance
+- Messaging system
+- Quick links
 
 ## 🤝 Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.

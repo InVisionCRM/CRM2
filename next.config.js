@@ -25,6 +25,47 @@ const withPWA = require('@ducanh2912/next-pwa').default({
           maxAgeSeconds: 365 * 24 * 60 * 60 // 365 days
         }
       }
+    },
+    {
+      urlPattern: /^https:\/\/api\.openweathermap\.org\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'weather-cache',
+        expiration: {
+          maxEntries: 10,
+          maxAgeSeconds: 30 * 60 // 30 minutes
+        }
+      }
+    },
+    {
+      urlPattern: /\/api\/stats\/.*/i,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'stats-cache',
+        expiration: {
+          maxEntries: 50,
+          maxAgeSeconds: 5 * 60 // 5 minutes
+        },
+        networkTimeoutSeconds: 10,
+        cacheableResponse: {
+          statuses: [0, 200]
+        }
+      }
+    },
+    {
+      urlPattern: /\/api\/.*/i,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'api-cache',
+        expiration: {
+          maxEntries: 100,
+          maxAgeSeconds: 10 * 60 // 10 minutes
+        },
+        networkTimeoutSeconds: 15,
+        cacheableResponse: {
+          statuses: [0, 200]
+        }
+      }
     }
   ],
   buildExcludes: [/middleware-manifest\.json$/]

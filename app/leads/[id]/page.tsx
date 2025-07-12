@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge"
 import { LeadOverviewTab } from "@/components/leads/tabs/LeadOverviewTab"
 import { ImportantDates } from "@/components/leads/ImportantDates"
 import { LeadEmailer } from "@/components/leads/LeadEmailer"
+import { LeadTemplateEmailer } from "@/components/leads/LeadTemplateEmailer"
 import { JobCompletionCard } from "@/components/leads/JobCompletionCard"
 import { format, parseISO } from "date-fns"
 import { ClientContractsDropdown } from "@/components/leads/ClientContractsDropdown"
@@ -589,7 +590,7 @@ const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, la
       case 'addnote':
         return "bg-[#14110F] border-l border-[#14110F] hover:bg-white/10";
       case 'email':
-        return "bg-[#1D4ED8] border-l border-[#1D4ED8] hover:bg-white/10";
+        return "bg-gradient-to-b from-blue-600 via-blue-500 to-blue-700 border-l border-blue-600 hover:from-blue-700 hover:via-blue-600 hover:to-blue-800";
       case 'scopeofwork':
         return "bg-[#059669] border-l border-[#059669] hover:bg-white/10";
       default:
@@ -897,6 +898,7 @@ export default function LeadDetailPage() {
   const [filesDialogOpen, setFilesDialogOpen] = useState(false);
   const [photosDialogOpen, setPhotosDialogOpen] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
   const [scopeOfWorkDialogOpen, setScopeOfWorkDialogOpen] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false)
 
@@ -1191,6 +1193,8 @@ export default function LeadDetailPage() {
   const handleClosePhotosDialog = () => setPhotosDialogOpen(false);
   const handleOpenEmailDialog = () => setEmailDialogOpen(true);
   const handleCloseEmailDialog = () => setEmailDialogOpen(false);
+  const handleOpenTemplatesDialog = () => setTemplatesDialogOpen(true);
+  const handleCloseTemplatesDialog = () => setTemplatesDialogOpen(false);
   const handleOpenScopeOfWorkDialog = () => setScopeOfWorkDialogOpen(true);
   const handleCloseScopeOfWorkDialog = () => setScopeOfWorkDialogOpen(false);
 
@@ -1365,7 +1369,7 @@ export default function LeadDetailPage() {
                           <p>{streetViewError}</p>
                         </div>
                       )}
-                                            <div className="absolute bottom-0 left-0 right-0 grid grid-cols-5 sm:flex w-full text-center border-t-2 border-white rounded-t-xl shadow-inner shadow-black/40 bg-black/60 backdrop-blur">
+                                            <div className="absolute bottom-0 left-0 right-0 grid grid-cols-6 sm:flex w-full text-center border-t-2 border-white rounded-t-xl shadow-inner shadow-black/40 bg-black/60 backdrop-blur">
                         <div className="col-span-1 sm:flex-1">
                           <QuickActionButton
                             onClick={handleOpenPhotosDialog}
@@ -1383,6 +1387,13 @@ export default function LeadDetailPage() {
                           <UploadDropdown
                             leadId={lead.id}
                             lead={lead}
+                          />
+                        </div>
+                        <div className="col-span-1 sm:flex-1">
+                          <QuickActionButton
+                            onClick={handleOpenTemplatesDialog}
+                            label="E-mail"
+                            variant="email"
                           />
                         </div>
                         <div className="col-span-1 sm:flex-1">
@@ -1463,6 +1474,11 @@ export default function LeadDetailPage() {
         {/* Emailer Dialog */}
         {lead && (
           <LeadEmailer lead={lead} open={emailDialogOpen} onOpenChange={handleCloseEmailDialog} />
+        )}
+
+        {/* Templates Dialog */}
+        {lead && (
+          <LeadTemplateEmailer lead={lead} open={templatesDialogOpen} onOpenChange={handleCloseTemplatesDialog} />
         )}
 
         {/* Scope of Work Dialog */}

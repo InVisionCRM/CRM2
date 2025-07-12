@@ -24,7 +24,27 @@ import { TrendingUp, FileText, CheckCircle, MessageSquare, Clock, User, Award, B
 import { cn } from "@/lib/utils"
 import { LeadStatus } from "@prisma/client"
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+const fetcher = async (url: string) => {
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+      },
+      credentials: 'include', // Include cookies for authentication
+    })
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    
+    return response.json()
+  } catch (error) {
+    console.error('Fetch error:', error)
+    throw error
+  }
+}
 
 interface TopUser {
   id: string
@@ -181,21 +201,79 @@ export function GlobalStats() {
   const [api, setApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
   const [count, setCount] = useState(0)
+  const [isPWA, setIsPWA] = useState(false)
+  const [isOnline, setIsOnline] = useState(true)
+
+  // Debug logging for PWA issues
+  useEffect(() => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    setIsPWA(isStandalone)
+    setIsOnline(navigator.onLine)
+    
+    console.log('GlobalStats: Component mounted')
+    console.log('GlobalStats: PWA mode:', isStandalone)
+    console.log('GlobalStats: Service worker available:', 'serviceWorker' in navigator)
+    console.log('GlobalStats: Online status:', navigator.onLine)
+    
+    if (isStandalone) {
+      console.log('GlobalStats: Running in PWA standalone mode')
+    }
+
+    // Listen for online/offline events
+    const handleOnline = () => {
+      setIsOnline(true)
+      console.log('GlobalStats: Back online')
+    }
+    const handleOffline = () => {
+      setIsOnline(false)
+      console.log('GlobalStats: Gone offline')
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   const { data, error, isLoading } = useSWR<GlobalStatsData>("/api/stats/global", fetcher, {
     refreshInterval: 60000, // Refresh every 60 seconds
+    revalidateOnFocus: !isPWA, // Disable revalidation on focus in PWA to prevent issues
+    revalidateOnReconnect: true,
+    retryCount: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    onError: (error) => {
+      console.error('GlobalStats: Error fetching global stats:', error)
+    },
+    onSuccess: (data) => {
+      console.log('GlobalStats: Successfully fetched global stats:', data)
+    }
   })
 
   const { data: statusData } = useSWR<StatusCountData>("/api/stats/lead-status-counts", fetcher, {
     refreshInterval: 30000, // Refresh every 30 seconds
+    revalidateOnFocus: !isPWA,
+    revalidateOnReconnect: true,
+    retryCount: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   })
 
   const { data: activityData } = useSWR<LastActivityData>("/api/stats/last-activity", fetcher, {
     refreshInterval: 15000, // Refresh every 15 seconds
+    revalidateOnFocus: !isPWA,
+    revalidateOnReconnect: true,
+    retryCount: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   })
 
   const { data: zipData, error: zipError } = useSWR<ZipCodeHeatMapData>("/api/stats/leads-by-city", fetcher, {
     refreshInterval: 60000, // Refresh every 60 seconds
+    revalidateOnFocus: !isPWA,
+    revalidateOnReconnect: true,
+    retryCount: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     onError: (error) => {
       console.error('Error fetching zip code data:', error)
     }
@@ -207,6 +285,10 @@ export function GlobalStats() {
 
   const { data: weatherData, error: weatherError } = useSWR<WeatherData>(`/api/weather/forecast?lat=${lat}&lon=${lon}`, fetcher, {
     refreshInterval: 300000, // Refresh every 5 minutes
+    revalidateOnFocus: !isPWA,
+    revalidateOnReconnect: true,
+    retryCount: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     onError: (error) => {
       console.error('Error fetching weather data:', error)
     }
@@ -237,7 +319,32 @@ export function GlobalStats() {
   }, [api])
 
   if (isLoading) return <LoadingSkeleton />
-  if (error || !data) return <p className="text-center text-destructive">Failed to load stats.</p>
+  if (error || !data) {
+    console.error('GlobalStats: Failed to load stats. Error:', error)
+    return (
+      <Card className="h-[350px] sm:h-[400px] bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-slate-200 dark:border-slate-700">
+        <CardHeader className="pb-2 sm:pb-4">
+          <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-200 text-lg sm:text-xl">
+            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" /> Global Stats
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-full pb-6 sm:pb-8">
+          <div className="text-center">
+            <p className="text-destructive mb-2">Failed to load stats.</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              {error?.message || 'Please check your connection and try again.'}
+            </p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   const {
     totalLeads,
@@ -265,6 +372,16 @@ export function GlobalStats() {
 
   return (
     <div className="w-full max-w-6xl mx-auto">
+      {/* PWA Status Indicator (Development) */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mb-4 p-2 bg-blue-100 dark:bg-blue-900 rounded text-xs">
+          <strong>PWA Debug:</strong> 
+          {isPWA ? ' Running in PWA mode' : ' Running in browser mode'} | 
+          Service Worker: {'serviceWorker' in navigator ? 'Available' : 'Not available'} |
+          Network: {isOnline ? 'Online' : 'Offline'}
+        </div>
+      )}
+      
       <Carousel
         setApi={setApi}
         opts={{

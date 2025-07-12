@@ -21,6 +21,7 @@ import {
   Settings,
   Moon,
   Sun,
+  MessageSquare,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -46,6 +47,7 @@ const moreNavLinks = [
   { href: "/submissions", label: "MySigner", icon: FileSignature },
   { href: "/drive", label: "Drive", icon: FileText },
   { href: "/gmail", label: "Gmail", icon: Mail },
+  { href: "/templates", label: "Templates", icon: MessageSquare },
   { href: "/quick-links", label: "Quick Links", icon: LinkIcon },
   { href: "/route-planner", label: "Route Planner", icon: Route },
   { href: "/team", label: "Team", icon: Users },

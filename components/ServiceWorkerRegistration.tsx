@@ -21,6 +21,9 @@ export function ServiceWorkerRegistration() {
 
   const registerServiceWorker = async () => {
     try {
+      console.log('ServiceWorkerRegistration: Starting registration...')
+      console.log('ServiceWorkerRegistration: PWA mode:', window.matchMedia('(display-mode: standalone)').matches)
+      
       const reg = await navigator.serviceWorker.register('/sw.js', {
         scope: '/',
         updateViaCache: 'none',
@@ -37,6 +40,7 @@ export function ServiceWorkerRegistration() {
           console.log('New service worker installing...')
 
           newWorker.addEventListener('statechange', () => {
+            console.log('Service worker state changed:', newWorker.state)
             if (newWorker.state === 'installed') {
               if (navigator.serviceWorker.controller) {
                 // Update available

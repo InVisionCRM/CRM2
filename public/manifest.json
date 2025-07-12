@@ -82,7 +82,7 @@
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "View main dashboard",
-      "url": "/dashboard",
+      "url": "/",
       "icons": [{ "src": "/icons/shortcut-dashboard.png", "sizes": "192x192" }]
     },
     {
@@ -103,7 +103,7 @@
       "name": "Calendar",
       "short_name": "Calendar",
       "description": "View calendar",
-      "url": "/calendar",
+      "url": "/dashboard/calendar",
       "icons": [{ "src": "/icons/shortcut-calendar.png", "sizes": "192x192" }]
     }
   ],

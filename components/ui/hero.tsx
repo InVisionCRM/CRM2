@@ -354,6 +354,17 @@ export const Hero = () => {
                 />
               </div>
             </h1>
+            {/* Version display */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 1.0, ease: "easeOut" }}
+              className="mt-2"
+            >
+              <span className="text-xs text-white/60 font-mono tracking-wider">
+                v1.01
+              </span>
+            </motion.div>
           </motion.div>
         </div>
       </motion.div>
