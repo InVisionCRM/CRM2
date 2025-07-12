@@ -7,30 +7,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// NextAuth.js Models
 model Account {
-  id                String  @id @default(cuid())
-  userId            String  @db.Uuid
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
+  id                       String  @id @default(cuid())
+  userId                   String  @db.Uuid
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String?
+  access_token             String?
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String?
+  session_state            String?
   refresh_token_expires_in Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@index([userId])
 }
 
 model Session {
-  id           String   @id @default(uuid()) 
+  id           String   @id @default(uuid())
   sessionToken String   @unique
   userId       String   @db.Uuid
   expires      DateTime @db.Timestamptz(6)
@@ -47,79 +45,77 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// Application Models
 model User {
-  id            String    @id @default(uuid()) @db.Uuid
-  name          String    @db.VarChar(255)
-  email         String    @unique @db.VarChar(255)
-  emailVerified DateTime? @db.Timestamptz(6)
-  image         String?
-  password      String?   @db.VarChar(255)
-  role          UserRole  @default(USER)
-  
-  // Relations
-  accounts      Account[]
-  sessions      Session[]
-  appointments  Appointment[]
-  assignedLeads Lead[]        @relation("AssignedLeads")
-  activities    Activity[]
-  visionMarkers VisionMarker[]
-  visits        Visit[]
-  routePoints   RoutePoint[]
+  id                   String                @id @default(uuid()) @db.Uuid
+  name                 String                @db.VarChar(255)
+  email                String                @unique @db.VarChar(255)
+  emailVerified        DateTime?             @db.Timestamptz(6)
+  image                String?
+  password             String?               @db.VarChar(255)
+  role                 UserRole              @default(USER)
+  createdAt            DateTime              @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime              @updatedAt @db.Timestamptz(6)
+  phone                String?               @db.VarChar(20)
+  accounts             Account[]
+  activities           Activity[]
+  appointments         Appointment[]
+  EmailTemplate        EmailTemplate[]
   googleCalendarEvents GoogleCalendarEvent[]
-
-  
-  // Notification relations
-  sentNotifications     Notification[] @relation("NotificationSender")
-  receivedNotifications Notification[] @relation("NotificationRecipient")
-
-  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt     DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  assignedLeads        Lead[]                @relation("AssignedLeads")
+  LeadPhoto            LeadPhoto[]
+  routePoints          RoutePoint[]
+  sessions             Session[]
+  UserTracking         UserTracking[]
+  visionMarkers        VisionMarker[]
+  visits               Visit[]
 }
 
 model Lead {
-  id                        String    @id @db.VarChar(255)
-  firstName                 String?   @db.VarChar(255)
-  lastName                  String?   @db.VarChar(255)
-  email                     String?   @db.VarChar(255)
-  phone                     String?   @db.VarChar(50)
-  address                   String?   @db.VarChar(510)
-  status                    LeadStatus @default(follow_ups)
-  assignedToId              String?   @db.Uuid
-  notes                     String?
-  insuranceCompany          String?
-  insurancePolicyNumber     String?
-  insurancePhone            String?
-  insuranceAdjusterName     String?
-  insuranceAdjusterPhone    String?
-  insuranceAdjusterEmail    String?
-  insuranceDeductible       String?
-  insuranceSecondaryPhone   String?
-  dateOfLoss                DateTime? @db.Timestamptz(6)
-  damageType                DamageType?
-  claimNumber               String?
-  adjusterAppointmentDate   DateTime? @db.Timestamptz(6)
-  adjusterAppointmentTime   String?
-  adjusterAppointmentNotes  String?
-  googleEventId             String?
-  latitude                  Decimal?  @db.Decimal(10,7)
-  longitude                 Decimal?  @db.Decimal(10,7)
-  googleDriveUrl            String?   // Field to store the Google Drive URL for this lead
-  googleDriveFolderId       String?   // Field to store the Google Drive Folder ID for this lead
-  metadata                  Json?     // JSON field to store additional metadata (like photosFolderId)
-  createdAt                 DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt                 DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
-
-  // Relations
-  assignedTo                User?     @relation("AssignedLeads", fields: [assignedToId], references: [id])
-  appointments              Appointment[]
+  id                       String        @id
+  firstName                String?       @db.VarChar(255)
+  lastName                 String?       @db.VarChar(255)
+  email                    String?       @db.VarChar(255)
+  phone                    String?       @db.VarChar(50)
+  address                  String?       @db.VarChar(510)
+  status                   LeadStatus    @default(follow_ups)
+  assignedToId             String?       @db.Uuid
+  notes                    String?
+  insuranceCompany         String?
+  insurancePolicyNumber    String?
+  insurancePhone           String?
+  insuranceAdjusterName    String?
+  insuranceAdjusterPhone   String?
+  insuranceAdjusterEmail   String?
+  insuranceDeductible      String?
+  insuranceSecondaryPhone  String?
+  dateOfLoss               DateTime?     @db.Timestamptz(6)
+  damageType               DamageType?
+  claimNumber              String?
+  adjusterAppointmentDate  DateTime?     @db.Timestamptz(6)
+  adjusterAppointmentTime  String?
+  adjusterAppointmentNotes String?
+  googleEventId            String?
+  latitude                 Decimal?      @db.Decimal(10, 7)
+  longitude                Decimal?      @db.Decimal(10, 7)
+  createdAt                DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt                DateTime      @updatedAt @db.Timestamptz(6)
+  googleDriveFolderId      String?
+  googleDriveUrl           String?
+  metadata                 Json?
+  homeownerUpgrades        Decimal?
+  insuranceScopeACV        Decimal?
+  insuranceScopeRCV        Decimal?
   activities               Activity[]
-  visits                   Visit[]
-  files                    File[]
+  appointments             Appointment[]
   contracts                Contract[]
+  files                    File[]
+  assignedTo               User?         @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  photos                   LeadPhoto[]
   visionMarker             VisionMarker?
-  photos                   LeadPhoto[] // Relation to photos
-  notifications            Notification[]
+  visits                   Visit[]
+  job_costs                job_costs[]
+  payments                 payments[]
+  supplements              supplements[]
 
   @@index([assignedToId], map: "idx_leads_assigned_to")
   @@index([status], map: "idx_leads_status")
@@ -127,23 +123,20 @@ model Lead {
 }
 
 model Appointment {
-  id          String    @id @default(uuid())
-  title       String
-  startTime   DateTime  @db.Timestamptz(6)
-  endTime     DateTime  @db.Timestamptz(6)
-  purpose     AppointmentPurpose
-  status      AppointmentStatus @default(SCHEDULED)
-  address     String?
-  notes       String?
-  
-  // Relations
-  leadId      String    @db.VarChar
-  userId      String    @db.Uuid
-  lead        Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  createdAt   DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime  @updatedAt @db.Timestamptz(6)
+  id        String             @id @default(uuid())
+  title     String
+  startTime DateTime           @db.Timestamptz(6)
+  endTime   DateTime           @db.Timestamptz(6)
+  purpose   AppointmentPurpose
+  status    AppointmentStatus  @default(SCHEDULED)
+  address   String?
+  notes     String?
+  leadId    String
+  userId    String             @db.Uuid
+  createdAt DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime           @updatedAt @db.Timestamptz(6)
+  lead      Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
   @@index([userId])
@@ -155,42 +148,35 @@ model Activity {
   type        ActivityType
   title       String
   description String?
-  imageUrl    String?     // URL to any associated image (like Street View)
+  userId      String       @db.Uuid
+  leadId      String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
-  
-  // Relations
-  userId      String       @db.Uuid
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  leadId      String?      @db.VarChar(255)
+  imageUrl    String?
   lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  notifications Notification[]
-  
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([leadId])
   @@index([userId])
   @@index([createdAt])
 }
 
 model VisionMarker {
-  id             String    @id @default(uuid()) @db.Uuid
-  latitude       Float
-  longitude      Float
-  address        String
-  notes          String?
-  status         KnockStatus @default(KNOCKED)
-  contactInfo    Json?
-  visits         Json?      // Consider creating a separate visits model if this data is structured
-  followUp       Json?      // Consider creating a structured followUp model if needed
-  
-  // Relations
-  userId         String?    @db.Uuid
-  user           User?      @relation(fields: [userId], references: [id])
-  
-  leadId         String?    @db.VarChar(255) @unique
-  lead           Lead?      @relation(fields: [leadId], references: [id])
-
-  createdAt      DateTime   @default(now()) @db.Timestamptz(6)
-  updatedAt      DateTime   @default(now()) @updatedAt @db.Timestamptz(6)
+  id          String      @id @default(uuid()) @db.Uuid
+  latitude    Float
+  longitude   Float
+  address     String
+  notes       String?
+  status      KnockStatus @default(KNOCKED)
+  contactInfo Json?
+  visits      Json?
+  followUp    Json?
+  userId      String?     @db.Uuid
+  leadId      String?     @unique
+  createdAt   DateTime    @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime    @updatedAt @db.Timestamptz(6)
+  lead        Lead?       @relation(fields: [leadId], references: [id])
+  user        User?       @relation(fields: [userId], references: [id])
 
   @@index([latitude], map: "idx_vision_markers_lat")
   @@index([longitude], map: "idx_vision_markers_lng")
@@ -200,24 +186,21 @@ model VisionMarker {
 }
 
 model Visit {
-  id             String    @id @default(uuid()) @db.Uuid
-  address        String
-  latitude       Float
-  longitude      Float
-  status         KnockStatus
-  notes          String?
-  followUpDate   DateTime? @db.Timestamptz(6)
-  followUpTime   String?
-  followUpNotes  String?
-  
-  // Relations
-  leadId         String?   @db.VarChar(255)
-  lead           Lead?     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  userId         String?   @db.Uuid
-  user           User?     @relation(fields: [userId], references: [id])
-
-  createdAt      DateTime? @default(now()) @db.Timestamptz(6)
-  updatedAt      DateTime? @default(now()) @updatedAt @db.Timestamptz(6)
+  id            String      @id @default(uuid()) @db.Uuid
+  address       String
+  latitude      Float
+  longitude     Float
+  status        KnockStatus
+  notes         String?
+  followUpDate  DateTime?   @db.Timestamptz(6)
+  followUpTime  String?
+  followUpNotes String?
+  leadId        String?
+  userId        String?     @db.Uuid
+  createdAt     DateTime?   @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime?   @updatedAt @db.Timestamptz(6)
+  lead          Lead?       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user          User?       @relation(fields: [userId], references: [id])
 
   @@index([leadId])
   @@index([userId])
@@ -227,27 +210,166 @@ model Visit {
 model GoogleCalendarEvent {
   id            String    @id @default(uuid())
   userId        String    @db.Uuid
-  googleEventId String?   @unique @map("googleId") // From migration SQL
+  googleEventId String?   @unique @map("googleId")
   summary       String
   description   String?
   location      String?
   startTime     DateTime?
   endTime       DateTime?
-  // The migration SQL used startDate and endDate too, if these are different from startTime/endTime, add them.
-  // For simplicity, assuming startTime/endTime cover those for now.
   isAllDay      Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@map("Event") // To match the table name in the old migration
+  @@map("Event")
 }
 
 model ClientIdSequence {
-  id      Int @id @default(autoincrement())
-  lastId  Int @default(50000)
+  id     Int @id @default(autoincrement())
+  lastId Int @default(50000)
+}
+
+model File {
+  id        String   @id @default(cuid())
+  url       String
+  name      String
+  size      Int
+  type      String
+  category  String?
+  leadId    String
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([category])
+}
+
+model Contract {
+  id                String    @id @default(uuid()) @db.Uuid
+  leadId            String
+  contractType      String
+  signatures        Json
+  dates             Json
+  names             Json
+  addresses         Json
+  contactInfo       Json
+  pdfUrl            String?
+  createdAt         DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @db.Timestamptz(6)
+  signedPdfUrl      String?
+  status            String    @default("pending")
+  fileName          String?
+  googleDriveFileId String?
+  googleDriveLink   String?
+  uploadedAt        DateTime?
+  lead              Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+}
+
+model RoutePoint {
+  id        String   @id @default(uuid())
+  userId    String   @db.Uuid
+  timestamp DateTime @default(now())
+  lat       Float
+  lng       Float
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([timestamp])
+}
+
+model LeadPhoto {
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  url          String
+  thumbnailUrl String?
+  mimeType     String?
+  size         Int?
+  leadId       String
+  uploadedById String?  @db.Uuid
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(6)
+  driveFileId  String?
+  lead         Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  User         User?    @relation(fields: [uploadedById], references: [id])
+
+  @@index([leadId])
+  @@index([uploadedById])
+}
+
+model EmailTemplate {
+  id           String   @id @db.Uuid
+  name         String   @db.VarChar(255)
+  description  String?
+  emailSubject String
+  emailBody    String
+  textMessage  String
+  isDefault    Boolean  @default(false)
+  createdById  String   @db.Uuid
+  createdAt    DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime @db.Timestamptz(6)
+  User         User     @relation(fields: [createdById], references: [id])
+
+  @@index([createdById])
+  @@index([isDefault])
+}
+
+model UserTracking {
+  id        String   @id
+  userId    String   @db.Uuid
+  sessionId String
+  eventType String
+  page      String
+  timestamp DateTime @db.Timestamptz(6)
+  data      Json
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([eventType])
+  @@index([page])
+  @@index([sessionId])
+  @@index([timestamp])
+  @@index([userId])
+}
+
+model job_costs {
+  id        String        @id
+  createdAt DateTime      @default(now())
+  updatedAt DateTime
+  leadId    String
+  type      JobCostType
+  amount    Decimal
+  payee     String?
+  poNumber  String?
+  status    JobCostStatus
+  Lead      Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
+
+model payments {
+  id           String        @id
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime
+  leadId       String
+  type         PaymentType
+  amount       Decimal
+  status       PaymentStatus
+  dateReceived DateTime?
+  Lead         Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
+
+model supplements {
+  id          String           @id
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime
+  leadId      String
+  amount      Decimal
+  description String?
+  status      SupplementStatus @default(PENDING)
+  Lead        Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
 }
 
 enum UserRole {
@@ -299,12 +421,12 @@ enum ActivityType {
 }
 
 enum KnockStatus {
-  KNOCKED        // Represents the initial state or "New"
+  KNOCKED
   NO_ANSWER
   NOT_INTERESTED
   FOLLOW_UP
   INSPECTED
-  IN_CONTRACT    // Added
+  IN_CONTRACT
 }
 
 enum DamageType {
@@ -314,127 +436,38 @@ enum DamageType {
   WIND_AND_HAIL
 }
 
-model File {
-  id        String   @id @default(cuid())
-  url       String
-  name      String
-  size      Int
-  type      String
-  category  String?
-  
-  // Relations
-  leadId    String   @db.VarChar(255)
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @default(now()) @updatedAt @db.Timestamptz(6)
-
-  @@index([leadId])
-  @@index([category])
+enum JobCostStatus {
+  ORDERED
+  PAID
+  INVOICED
+  ACCRUED
+  PLANNED
 }
 
-model Contract {
-  id            String    @id @default(uuid()) @db.Uuid
-  leadId        String    @db.VarChar(255)
-  contractType  String
-  signatures    Json
-  dates         Json
-  names         Json
-  addresses     Json
-  contactInfo   Json
-  pdfUrl        String?
-  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt     DateTime  @updatedAt @db.Timestamptz(6)
-  
-  // Relations
-  lead          Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
-  @@index([leadId])
+enum JobCostType {
+  MATERIAL
+  LABOR
+  PERMIT
+  DUMPSTER
+  SALES_COMMISSION
 }
 
-model RoutePoint {
-  id            String   @id @default(uuid()) @db.Uuid
-  userId        String   @db.Uuid
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  latitude      Float
-  longitude     Float
-  address       String
-  timestamp     DateTime @default(now()) @db.Timestamptz(6)
-  accuracy      Float?
-  speed         Float?
-  heading       Float?
-  
-  @@index([userId])
-  @@index([timestamp])
+enum PaymentStatus {
+  INVOICED
+  RECEIVED
+  DEPOSITED
 }
 
-model LeadPhoto {
-  id            String    @id @default(uuid()) @db.Uuid
-  name          String?
-  description   String?
-  url           String    // Vercel Blob URL
-  thumbnailUrl  String
-  mimeType      String?
-  size          Int?
-  leadId        String    @db.VarChar(255)
-  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
-  updatedAt     DateTime  @updatedAt @db.Timestamptz(6)
-  driveFileId   String?
-  
-  lead          Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
-  @@index([leadId])
-  @@index([createdAt])
-  @@index([updatedAt])
+enum PaymentType {
+  DEDUCTIBLE
+  ACV
+  SUPPLEMENT
+  DEPRECIATION
+  UPGRADE
 }
 
-// Notification system for @mentions
-model Notification {
-  id          String            @id @default(uuid()) @db.Uuid
-  type        NotificationType  @default(MENTION)
-  title       String
-  message     String
-  isRead      Boolean           @default(false)
-  
-  // Relations
-  senderId    String?           @db.Uuid
-  sender      User?             @relation("NotificationSender", fields: [senderId], references: [id], onDelete: SetNull)
-  
-  recipientId String            @db.Uuid
-  recipient   User              @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
-  
-  // Context - what was mentioned in
-  leadId      String?           @db.VarChar(255)
-  lead        Lead?             @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  
-  activityId  String?           @db.Uuid
-  activity    Activity?         @relation(fields: [activityId], references: [id], onDelete: Cascade)
-  
-  // Metadata
-  metadata    Json?             // Store additional context like note content, URLs, etc.
-  
-  createdAt   DateTime          @default(now()) @db.Timestamptz(6)
-  updatedAt   DateTime          @updatedAt @db.Timestamptz(6)
-  
-  @@index([recipientId])
-  @@index([senderId])
-  @@index([leadId])
-  @@index([activityId])
-  @@index([type])
-  @@index([isRead])
-  @@index([createdAt])
-}
-
-enum NotificationType {
-  MENTION
-  ACTIVITY_UPDATE
-  LEAD_ASSIGNED
-  APPOINTMENT_REMINDER
-  CONTRACT_SIGNED
-}
-
-enum PhotoStage {
-  Before
-  During
-  After
+enum SupplementStatus {
+  PENDING
+  APPROVED
+  DENIED
 }
