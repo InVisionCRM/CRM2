@@ -22,7 +22,6 @@ export function ServiceWorkerRegistration() {
   const registerServiceWorker = async () => {
     try {
       console.log('ServiceWorkerRegistration: Starting registration...')
-      console.log('ServiceWorkerRegistration: PWA mode:', window.matchMedia('(display-mode: standalone)').matches)
       
       const reg = await navigator.serviceWorker.register('/sw.js', {
         scope: '/',
@@ -63,11 +62,6 @@ export function ServiceWorkerRegistration() {
         setIsUpdateReady(true)
         setUpdateAvailable(false)
       })
-
-      // Check for updates periodically
-      setInterval(() => {
-        reg.update()
-      }, 60000) // Check every minute
 
     } catch (error) {
       console.error('Service Worker registration failed:', error)

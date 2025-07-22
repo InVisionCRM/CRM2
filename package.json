@@ -103,7 +103,6 @@
     "nanoid": "^5.1.5",
     "next": "^15.3.3",
     "next-auth": "latest",
-    "next-pwa": "^5.6.0",
     "next-themes": "^0.4.6",
     "nodemailer": "latest",
     "openweathermap-ts": "^1.2.10",
@@ -128,7 +127,6 @@
     "use-debounce": "^10.0.4",
     "uuid": "^11.1.0",
     "vaul": "^1.1.2",
-    "workbox-webpack-plugin": "^7.3.0",
     "zod": "^3.24.4"
   },
   "devDependencies": {

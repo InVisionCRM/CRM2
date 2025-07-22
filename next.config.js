@@ -1,8 +1,9 @@
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
-  disable: process.env.NODE_ENV === 'development',
+  disable: false,
   register: true,
   skipWaiting: true,
+  sw: '/sw.js',
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/maps\.googleapis\.com\/.*/i,
@@ -68,7 +69,10 @@ const withPWA = require('@ducanh2912/next-pwa').default({
       }
     }
   ],
-  buildExcludes: [/middleware-manifest\.json$/]
+  buildExcludes: [/middleware-manifest\.json$/],
+  fallbacks: {
+    document: '/offline.html'
+  }
 })
 
 /** @type {import('next').NextConfig} */
