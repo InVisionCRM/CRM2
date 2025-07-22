@@ -72,7 +72,10 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   buildExcludes: [/middleware-manifest\.json$/],
   fallbacks: {
     document: '/offline.html'
-  }
+  },
+  maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
+  sourcemap: false,
+  disable: process.env.NODE_ENV === 'development' && process.env.DISABLE_PWA === 'true'
 })
 
 /** @type {import('next').NextConfig} */

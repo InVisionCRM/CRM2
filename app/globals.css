@@ -338,3 +338,43 @@ body {
   animation: border-flow 3s ease infinite;
   background-size: 300% 300%;
 }
+
+/* PWA-specific styles for better mobile experience */
+@media (display-mode: standalone) {
+  /* Ensure inputs are properly sized for mobile */
+  input, textarea, select {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+  
+  /* Improve touch targets */
+  button, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Better scrolling */
+  body {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
+  }
+  
+  /* Prevent pull-to-refresh in PWA */
+  html, body {
+    overscroll-behavior-y: none;
+  }
+  
+  /* Ensure proper viewport behavior */
+  .pwa-input {
+    font-size: 16px !important;
+    transform: translateZ(0);
+  }
+}
+
+/* General mobile improvements */
+@media (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}

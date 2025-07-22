@@ -239,8 +239,8 @@ export function GlobalStats() {
   }, [])
 
   const { data, error, isLoading } = useSWR<GlobalStatsData>("/api/stats/global", fetcher, {
-    refreshInterval: 60000, // Refresh every 60 seconds
-    revalidateOnFocus: !isPWA, // Disable revalidation on focus in PWA to prevent issues
+    refreshInterval: isPWA ? 120000 : 60000, // Longer refresh interval in PWA
+    revalidateOnFocus: false, // Disable revalidation on focus in PWA
     revalidateOnReconnect: true,
     retryCount: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
@@ -253,24 +253,24 @@ export function GlobalStats() {
   })
 
   const { data: statusData } = useSWR<StatusCountData>("/api/stats/lead-status-counts", fetcher, {
-    refreshInterval: 30000, // Refresh every 30 seconds
-    revalidateOnFocus: !isPWA,
+    refreshInterval: isPWA ? 60000 : 30000, // Longer refresh interval in PWA
+    revalidateOnFocus: false, // Disable revalidation on focus in PWA
     revalidateOnReconnect: true,
     retryCount: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   })
 
   const { data: activityData } = useSWR<LastActivityData>("/api/stats/last-activity", fetcher, {
-    refreshInterval: 15000, // Refresh every 15 seconds
-    revalidateOnFocus: !isPWA,
+    refreshInterval: isPWA ? 30000 : 15000, // Longer refresh interval in PWA
+    revalidateOnFocus: false, // Disable revalidation on focus in PWA
     revalidateOnReconnect: true,
     retryCount: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   })
 
   const { data: zipData, error: zipError } = useSWR<ZipCodeHeatMapData>("/api/stats/leads-by-city", fetcher, {
-    refreshInterval: 60000, // Refresh every 60 seconds
-    revalidateOnFocus: !isPWA,
+    refreshInterval: isPWA ? 120000 : 60000, // Longer refresh interval in PWA
+    revalidateOnFocus: false, // Disable revalidation on focus in PWA
     revalidateOnReconnect: true,
     retryCount: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
@@ -284,8 +284,8 @@ export function GlobalStats() {
   const lon = -82.9447
 
   const { data: weatherData, error: weatherError } = useSWR<WeatherData>(`/api/weather/forecast?lat=${lat}&lon=${lon}`, fetcher, {
-    refreshInterval: 300000, // Refresh every 5 minutes
-    revalidateOnFocus: !isPWA,
+    refreshInterval: isPWA ? 600000 : 300000, // Longer refresh interval in PWA
+    revalidateOnFocus: false, // Disable revalidation on focus in PWA
     revalidateOnReconnect: true,
     retryCount: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
@@ -629,6 +629,8 @@ export function GlobalStats() {
                 : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
             )}
             onClick={() => api?.scrollTo(index)}
+            aria-label={`Go to slide ${index + 1} of ${count}`}
+            aria-current={current === index + 1 ? "true" : "false"}
           />
         ))}
       </div>

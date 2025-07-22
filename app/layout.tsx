@@ -2,6 +2,7 @@ import React from "react"
 import "./globals.css"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
+import { Analytics } from "@vercel/analytics/next"
 import { Providers } from "./providers"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt"
@@ -113,8 +114,9 @@ export const metadata: Metadata = {
   viewport: {
     width: "device-width",
     initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
+    maximumScale: 5,
+    userScalable: true,
+    viewportFit: "cover",
   },
 }
 
@@ -139,6 +141,12 @@ export default function RootLayout({
         <meta name="msapplication-TileColor" content="#000000" />
         <meta name="msapplication-tap-highlight" content="no" />
         <meta name="theme-color" content="#000000" />
+        
+        {/* PWA Mobile Experience */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="mobile-web-app-capable" content="yes" />
         
         {/* Manifest */}
         <link rel="manifest" href="/manifest.json" />
@@ -178,6 +186,7 @@ export default function RootLayout({
             <PWAInstallPrompt />
             <OfflineIndicator />
             <ServiceWorkerRegistration />
+            <Analytics />
           </Providers>
         </ErrorBoundary>
       </body>
