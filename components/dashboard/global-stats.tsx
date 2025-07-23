@@ -307,16 +307,16 @@ export function GlobalStats() {
     })
   }, [api])
 
-  // Auto-rotation effect
-  useEffect(() => {
-    if (!api) return
+  // Auto-rotation effect - DISABLED for mobile PWA compatibility
+  // useEffect(() => {
+  //   if (!api) return
 
-    const interval = setInterval(() => {
-      api.scrollNext()
-    }, 5000) // Change slide every 5 seconds
+  //   const interval = setInterval(() => {
+  //     api.scrollNext()
+  //   }, 5000) // Change slide every 5 seconds
 
-    return () => clearInterval(interval)
-  }, [api])
+  //   return () => clearInterval(interval)
+  // }, [api])
 
   if (isLoading) return <LoadingSkeleton />
   if (error || !data) {
@@ -378,7 +378,8 @@ export function GlobalStats() {
           <strong>PWA Debug:</strong> 
           {isPWA ? ' Running in PWA mode' : ' Running in browser mode'} | 
           Service Worker: {'serviceWorker' in navigator ? 'Available' : 'Not available'} |
-          Network: {isOnline ? 'Online' : 'Offline'}
+          Network: {isOnline ? 'Online' : 'Offline'} |
+          Auto-Rotation: DISABLED
         </div>
       )}
       
