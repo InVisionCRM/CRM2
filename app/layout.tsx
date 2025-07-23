@@ -8,13 +8,14 @@ import ErrorBoundary from "@/components/ErrorBoundary"
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt"
 import { OfflineIndicator } from "@/components/OfflineIndicator"
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration"
+import { PWAInputFix } from "@/components/PWAInputFix"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: {
-    default: "Roofing Mobile CRM",
-    template: "%s | Roofing Mobile CRM"
+    default: "Purlin",
+    template: "%s | Purlin"
   },
   description: "Mobile-first CRM for roofing contractors. Manage leads, schedule appointments, track projects, and grow your roofing business.",
   keywords: [
@@ -42,21 +43,21 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "/",
-    title: "Roofing Mobile CRM",
+    title: "Purlin",
     description: "Mobile-first CRM for roofing contractors",
-    siteName: "Roofing Mobile CRM",
-    images: [
-      {
-        url: "/icons/icon-512x512.png",
-        width: 512,
-        height: 512,
-        alt: "Roofing Mobile CRM Logo",
-      },
-    ],
+    siteName: "Purlin",
+            images: [
+          {
+            url: "/icons/icon-512x512.png",
+            width: 512,
+            height: 512,
+            alt: "Purlin Logo",
+          },
+        ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Roofing Mobile CRM",
+    title: "Purlin",
     description: "Mobile-first CRM for roofing contractors",
     images: ["/icons/icon-512x512.png"],
   },
@@ -99,7 +100,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "RoofingCRM",
+    title: "Purlin",
     startupImage: [
       {
         url: "/icons/apple-touch-startup-image-750x1334.png",
@@ -131,10 +132,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className="dark">
       <head>
         {/* PWA Meta Tags */}
-        <meta name="application-name" content="RoofingCRM" />
+        <meta name="application-name" content="Purlin" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="RoofingCRM" />
+        <meta name="apple-mobile-web-app-title" content="Purlin" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-config" content="/icons/browserconfig.xml" />
@@ -142,11 +143,8 @@ export default function RootLayout({
         <meta name="msapplication-tap-highlight" content="no" />
         <meta name="theme-color" content="#000000" />
         
-        {/* PWA Mobile Experience */}
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="mobile-web-app-capable" content="yes" />
+        {/* PWA Mobile Experience - Single viewport meta tag */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover, user-scalable=yes" />
         
         {/* Manifest */}
         <link rel="manifest" href="/manifest.json" />
@@ -178,6 +176,11 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://api.mapbox.com" />
+        
+        {/* PWA Debug Script (only in development) */}
+        {process.env.NODE_ENV === 'development' && (
+          <script src="/clear-pwa-cache.js" defer />
+        )}
       </head>
       <body className={`${inter.className} h-screen`}>
         <ErrorBoundary>
@@ -186,6 +189,7 @@ export default function RootLayout({
             <PWAInstallPrompt />
             <OfflineIndicator />
             <ServiceWorkerRegistration />
+            <PWAInputFix />
             <Analytics />
           </Providers>
         </ErrorBoundary>
