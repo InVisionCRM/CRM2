@@ -21,9 +21,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { TrendingUp, FileText, CheckCircle, MessageSquare, Clock, User, Award, BarChart3, Activity, MapPin, Cloud, Sun, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, CloudFog } from "lucide-react"
+import { TrendingUp, FileText, CheckCircle, MessageSquare, Clock, User, Award, BarChart3, Activity, Cloud, Sun, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, CloudFog } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { LeadStatus } from "@prisma/client"
+import { StatusLeadsDialog } from "./status-leads-dialog"
 
 const fetcher = async (url: string) => {
   try {
@@ -81,15 +82,7 @@ interface LastActivityData {
   } | null
 }
 
-interface ZipCodeHeatMapData {
-  topZipCodes: Array<{
-    zipCode: string
-    count: number
-    rank: number
-    percentage: number
-  }>
-  totalLeads: number
-}
+
 
 interface WeatherDay {
   dayAbbr: string
@@ -202,24 +195,37 @@ export function GlobalStats() {
   const [api, setApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
   const [count, setCount] = useState(0)
-  const [isPWA, setIsPWA] = useState(false)
   const [isOnline, setIsOnline] = useState(true)
+  const [selectedStatus, setSelectedStatus] = useState<LeadStatus | null>(null)
+  const [selectedStatusLabel, setSelectedStatusLabel] = useState("")
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
+  const [selectedIsUserSpecific, setSelectedIsUserSpecific] = useState(false)
 
 
-  // Debug logging for PWA issues
+  const handleStatusClick = (status: LeadStatus, label: string, isUserSpecific: boolean = false) => {
+    // Only allow interaction with user-specific status overview for non-admins
+    if (!isUserSpecific && userStatusData?.userRole !== 'ADMIN') {
+      return
+    }
+    setSelectedStatus(status)
+    setSelectedStatusLabel(label)
+    setIsStatusDialogOpen(true)
+    setSelectedIsUserSpecific(isUserSpecific)
+  }
+
+  const handleCloseStatusDialog = () => {
+    setIsStatusDialogOpen(false)
+    setSelectedStatus(null)
+    setSelectedStatusLabel("")
+    setSelectedIsUserSpecific(false)
+  }
+
+  // Debug logging
   useEffect(() => {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-    setIsPWA(isStandalone)
     setIsOnline(navigator.onLine)
     
     console.log('GlobalStats: Component mounted')
-    console.log('GlobalStats: PWA mode:', isStandalone)
-    console.log('GlobalStats: Service worker available:', 'serviceWorker' in navigator)
     console.log('GlobalStats: Online status:', navigator.onLine)
-    
-    if (isStandalone) {
-      console.log('GlobalStats: Running in PWA standalone mode')
-    }
 
     // Listen for online/offline events
     const handleOnline = () => {
@@ -241,8 +247,8 @@ export function GlobalStats() {
   }, [])
 
   const { data, error, isLoading } = useSWR<GlobalStatsData>("/api/stats/global", fetcher, {
-    refreshInterval: isPWA ? 120000 : 60000, // Longer refresh interval in PWA
-    revalidateOnFocus: false, // Disable revalidation on focus in PWA
+    refreshInterval: 60000,
+    revalidateOnFocus: false,
     revalidateOnReconnect: true,
     retryCount: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
@@ -255,29 +261,29 @@ export function GlobalStats() {
   })
 
   const { data: statusData } = useSWR<StatusCountData>("/api/stats/lead-status-counts", fetcher, {
-    refreshInterval: isPWA ? 60000 : 30000, // Longer refresh interval in PWA
-    revalidateOnFocus: false, // Disable revalidation on focus in PWA
+    refreshInterval: 30000,
+    revalidateOnFocus: false,
     revalidateOnReconnect: true,
     retryCount: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   })
 
   const { data: activityData } = useSWR<LastActivityData>("/api/stats/last-activity", fetcher, {
-    refreshInterval: isPWA ? 30000 : 15000, // Longer refresh interval in PWA
-    revalidateOnFocus: false, // Disable revalidation on focus in PWA
+    refreshInterval: 15000,
+    revalidateOnFocus: false,
     revalidateOnReconnect: true,
     retryCount: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   })
 
-  const { data: zipData, error: zipError } = useSWR<ZipCodeHeatMapData>("/api/stats/leads-by-city", fetcher, {
-    refreshInterval: isPWA ? 120000 : 60000, // Longer refresh interval in PWA
-    revalidateOnFocus: false, // Disable revalidation on focus in PWA
+  const { data: userStatusData, error: userStatusError } = useSWR<StatusCountData>("/api/stats/user-lead-status-counts", fetcher, {
+    refreshInterval: 30000,
+    revalidateOnFocus: false,
     revalidateOnReconnect: true,
     retryCount: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     onError: (error) => {
-      console.error('Error fetching zip code data:', error)
+      console.error('Error fetching user status data:', error)
     }
   })
 
@@ -288,8 +294,8 @@ export function GlobalStats() {
   const lon = -82.9447
 
   const { data: weatherData, error: weatherError } = useSWR<WeatherData>(`/api/weather/forecast?lat=${lat}&lon=${lon}`, fetcher, {
-    refreshInterval: isPWA ? 600000 : 300000, // Longer refresh interval in PWA
-    revalidateOnFocus: false, // Disable revalidation on focus in PWA
+    refreshInterval: 300000,
+    revalidateOnFocus: false,
     revalidateOnReconnect: true,
     retryCount: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
@@ -311,7 +317,7 @@ export function GlobalStats() {
     })
   }, [api])
 
-  // Auto-rotation effect - DISABLED for mobile PWA compatibility
+  
   // useEffect(() => {
   //   if (!api) return
 
@@ -376,16 +382,7 @@ export function GlobalStats() {
 
   return (
     <div className="w-full max-w-6xl mx-auto">
-      {/* PWA Status Indicator (Development) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mb-4 p-2 bg-blue-100 dark:bg-blue-900 rounded text-xs">
-          <strong>PWA Debug:</strong> 
-          {isPWA ? ' Running in PWA mode' : ' Running in browser mode'} | 
-          Service Worker: {'serviceWorker' in navigator ? 'Available' : 'Not available'} |
-          Network: {isOnline ? 'Online' : 'Offline'} |
-          Auto-Rotation: DISABLED
-        </div>
-      )}
+
       
       <Carousel
         setApi={setApi}
@@ -410,7 +407,16 @@ export function GlobalStats() {
                   <div className="grid grid-cols-3 gap-2 sm:gap-4 h-full">
                     {/* Top Row */}
                     {statusData.statusCounts.slice(0, 3).map(({ status, count, label }) => (
-                      <div key={status} className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50">
+                      <div 
+                        key={status} 
+                        className={cn(
+                          "flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50 transition-colors",
+                          userStatusData?.userRole === 'ADMIN' 
+                            ? "hover:bg-white/70 dark:hover:bg-slate-800/70 cursor-pointer" 
+                            : "cursor-default"
+                        )}
+                        onClick={() => handleStatusClick(status, label, false)}
+                      >
                         <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">{label}</p>
                         <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-200">{count}</p>
                       </div>
@@ -418,7 +424,15 @@ export function GlobalStats() {
                     
                     {/* Middle Row - Left */}
                     {statusData.statusCounts[3] && (
-                      <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50">
+                      <div 
+                        className={cn(
+                          "flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50 transition-colors",
+                          userStatusData?.userRole === 'ADMIN' 
+                            ? "hover:bg-white/70 dark:hover:bg-slate-800/70 cursor-pointer" 
+                            : "cursor-default"
+                        )}
+                        onClick={() => handleStatusClick(statusData.statusCounts[3].status, statusData.statusCounts[3].label, false)}
+                      >
                         <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">{statusData.statusCounts[3].label}</p>
                         <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-200">{statusData.statusCounts[3].count}</p>
                       </div>
@@ -433,7 +447,15 @@ export function GlobalStats() {
                     
                     {/* Middle Row - Right */}
                     {statusData.statusCounts[4] && (
-                      <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50">
+                      <div 
+                        className={cn(
+                          "flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50 transition-colors",
+                          userStatusData?.userRole === 'ADMIN' 
+                            ? "hover:bg-white/70 dark:hover:bg-slate-800/70 cursor-pointer" 
+                            : "cursor-default"
+                        )}
+                        onClick={() => handleStatusClick(statusData.statusCounts[4].status, statusData.statusCounts[4].label, false)}
+                      >
                         <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">{statusData.statusCounts[4].label}</p>
                         <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-200">{statusData.statusCounts[4].count}</p>
                       </div>
@@ -441,7 +463,16 @@ export function GlobalStats() {
                     
                     {/* Bottom Row */}
                     {statusData.statusCounts.slice(5, 8).map(({ status, count, label }) => (
-                      <div key={status} className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50">
+                      <div 
+                        key={status} 
+                        className={cn(
+                          "flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50 transition-colors",
+                          userStatusData?.userRole === 'ADMIN' 
+                            ? "hover:bg-white/70 dark:hover:bg-slate-800/70 cursor-pointer" 
+                            : "cursor-default"
+                        )}
+                        onClick={() => handleStatusClick(status, label, false)}
+                      >
                         <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">{label}</p>
                         <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-200">{count}</p>
                       </div>
@@ -456,52 +487,78 @@ export function GlobalStats() {
             </Card>
           </CarouselItem>
 
-          {/* Slide 4: Zip Code Heat Map */}
+          {/* Slide 4: User Lead Status Overview */}
           <CarouselItem>
-            <Card className="h-[350px] sm:h-[400px] bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-slate-200 dark:border-slate-700">
+            <Card className="h-[280px] sm:h-[320px] border-slate-200 dark:border-slate-700">
               <CardHeader className="pb-2 sm:pb-4">
                 <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-200 text-lg sm:text-xl">
-                  <MapPin className="h-4 w-4 sm:h-5 sm:w-5" /> Lead Heat Map
+                  <User className="h-4 w-4 sm:h-5 sm:w-5" /> My Lead Status Overview
                 </CardTitle>
-                <CardDescription className="text-slate-600 dark:text-slate-400 text-sm">Top 3 zip codes with most leads</CardDescription>
+                <CardDescription className="text-slate-600 dark:text-slate-400 text-sm">Your personal lead distribution by status</CardDescription>
               </CardHeader>
-              <CardContent className="h-full pb-6 sm:pb-8 overflow-y-auto">
-                {zipData && zipData.topZipCodes && Array.isArray(zipData.topZipCodes) ? (
-                  <div className="space-y-2 sm:space-y-4">
-                    {zipData.topZipCodes.length > 0 ? (
-                      zipData.topZipCodes.map(({ zipCode, count, rank, percentage }) => (
-                        <div key={zipCode} className="flex items-center justify-between p-3 sm:p-4 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50">
-                          <div className="flex items-center gap-2 sm:gap-3">
-                            <div className={cn(
-                              "flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full text-white font-bold text-xs sm:text-sm",
-                              rank === 1 ? "bg-yellow-500" : rank === 2 ? "bg-gray-400" : "bg-orange-600"
-                            )}>
-                              #{rank}
-                            </div>
-                            <div>
-                              <p className="font-semibold text-base sm:text-lg text-slate-800 dark:text-slate-200">{zipCode}</p>
-                              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">{percentage}% of all leads</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xl sm:text-2xl font-bold text-primary">{count}</p>
-                            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">leads</p>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8">
-                        <p className="text-slate-600 dark:text-slate-400 text-sm">No zip code data available</p>
+              <CardContent className="pb-4 sm:pb-6 overflow-y-auto">
+                {userStatusData ? (
+                  <div className="grid grid-cols-3 gap-2 sm:gap-4 h-full">
+                    {/* Top Row */}
+                    {userStatusData.statusCounts.slice(0, 3).map(({ status, count, label }) => (
+                      <div 
+                        key={status} 
+                        className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50 hover:bg-white/70 dark:hover:bg-slate-800/70 cursor-pointer transition-colors"
+                        onClick={() => handleStatusClick(status, label, true)}
+                      >
+                        <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">{label}</p>
+                        <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-200">{count}</p>
+                      </div>
+                    ))}
+                    
+                    {/* Middle Row - Left */}
+                    {userStatusData.statusCounts[3] && (
+                      <div 
+                        className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50 hover:bg-white/70 dark:hover:bg-slate-800/70 cursor-pointer transition-colors"
+                        onClick={() => handleStatusClick(userStatusData.statusCounts[3].status, userStatusData.statusCounts[3].label, true)}
+                      >
+                        <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">{userStatusData.statusCounts[3].label}</p>
+                        <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-200">{userStatusData.statusCounts[3].count}</p>
                       </div>
                     )}
+                    
+                    {/* Center - Total Leads */}
+                    <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border-2 border-primary bg-primary/10 dark:bg-primary/20">
+                      <p className="text-xs sm:text-sm font-medium text-primary text-center">Total</p>
+                      <p className="text-xl sm:text-3xl font-bold text-primary">{userStatusData.statusCounts.reduce((sum, item) => sum + item.count, 0)}</p>
+                      <p className="text-xs text-primary/70">leads</p>
+                    </div>
+                    
+                    {/* Middle Row - Right */}
+                    {userStatusData.statusCounts[4] && (
+                      <div 
+                        className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50 hover:bg-white/70 dark:hover:bg-slate-800/70 cursor-pointer transition-colors"
+                        onClick={() => handleStatusClick(userStatusData.statusCounts[4].status, userStatusData.statusCounts[4].label, true)}
+                      >
+                        <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">{userStatusData.statusCounts[4].label}</p>
+                        <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-200">{userStatusData.statusCounts[4].count}</p>
+                      </div>
+                    )}
+                    
+                    {/* Bottom Row */}
+                    {userStatusData.statusCounts.slice(5, 8).map(({ status, count, label }) => (
+                      <div 
+                        key={status} 
+                        className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50 hover:bg-white/70 dark:hover:bg-slate-800/70 cursor-pointer transition-colors"
+                        onClick={() => handleStatusClick(status, label, true)}
+                      >
+                        <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">{label}</p>
+                        <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-200">{count}</p>
+                      </div>
+                    ))}
                   </div>
-                ) : zipError ? (
+                ) : userStatusError ? (
                   <div className="flex items-center justify-center h-32">
-                    <p className="text-destructive text-sm">Error loading zip code data</p>
+                    <p className="text-destructive text-sm">Error loading your status data</p>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center h-32">
-                    <p className="text-slate-600 dark:text-slate-400 text-sm">Loading zip code data...</p>
+                    <p className="text-slate-600 dark:text-slate-400 text-sm">Loading your status data...</p>
                   </div>
                 )}
               </CardContent>
@@ -624,6 +681,14 @@ export function GlobalStats() {
         ))}
       </div>
 
+      {/* Status Leads Dialog */}
+              <StatusLeadsDialog
+          isOpen={isStatusDialogOpen}
+          onClose={handleCloseStatusDialog}
+          status={selectedStatus}
+          statusLabel={selectedStatusLabel}
+          isUserSpecific={selectedIsUserSpecific}
+        />
 
     </div>
   )

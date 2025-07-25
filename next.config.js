@@ -1,21 +1,14 @@
-const withPWA = require('@ducanh2912/next-pwa').default({
+
+
+import withPWA from '@ducanh2912/next-pwa'
+
+const pwaConfig = {
   dest: 'public',
-  disable: false,
+  disable: process.env.NODE_ENV === 'development',
   register: true,
   skipWaiting: true,
   sw: '/sw.js',
   runtimeCaching: [
-    {
-      urlPattern: /^https:\/\/maps\.googleapis\.com\/.*/i,
-      handler: 'CacheFirst',
-      options: {
-        cacheName: 'google-maps-cache',
-        expiration: {
-          maxEntries: 32,
-          maxAgeSeconds: 365 * 24 * 60 * 60 // 365 days
-        }
-      }
-    },
     {
       urlPattern: /^https:\/\/api\.mapbox\.com\/.*/i,
       handler: 'CacheFirst',
@@ -39,21 +32,6 @@ const withPWA = require('@ducanh2912/next-pwa').default({
       }
     },
     {
-      urlPattern: /\/api\/stats\/.*/i,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'stats-cache',
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 5 * 60 // 5 minutes
-        },
-        networkTimeoutSeconds: 10,
-        cacheableResponse: {
-          statuses: [0, 200]
-        }
-      }
-    },
-    {
       urlPattern: /\/api\/.*/i,
       handler: 'NetworkFirst',
       options: {
@@ -70,13 +48,9 @@ const withPWA = require('@ducanh2912/next-pwa').default({
     }
   ],
   buildExcludes: [/middleware-manifest\.json$/],
-  fallbacks: {
-    document: '/offline.html'
-  },
   maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
-  sourcemap: false,
-  disable: process.env.NODE_ENV === 'development' && process.env.DISABLE_PWA === 'true'
-})
+  sourcemap: false
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -149,4 +123,4 @@ const nextConfig = {
   },
 }
 
-module.exports = withPWA(nextConfig)
+export default withPWA(pwaConfig)(nextConfig)

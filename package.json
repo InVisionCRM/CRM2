@@ -1,6 +1,7 @@
 {
   "name": "my-v0-project",
   "version": "0.1.0",
+  "type": "module",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,15 +9,15 @@
     "build:with-migrate": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
+    "pwa:icons": "node scripts/generate-icons.js",
+    "pwa:screenshots": "node scripts/generate-screenshots.js",
+    "pwa:setup": "npm run pwa:icons && npm run pwa:screenshots",
     "test": "jest",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:migrate:safe": "node scripts/migrate-db.js",
-    "pwa:icons": "node scripts/generate-icons.js && node scripts/generate-additional-icons.js",
-    "pwa:screenshots": "node scripts/generate-screenshots.js",
-    "pwa:setup": "npm run pwa:icons && npm run pwa:screenshots",
     "lighthouse": "npx lighthouse http://localhost:3000 --output-path=./lighthouse-report.html --view",
     "analyze": "cross-env ANALYZE=true npm run build"
   },

@@ -1,5 +1,5 @@
 {
-  "name": "Purlin",
+  "name": "Purlin CRM",
   "short_name": "Purlin",
   "description": "Mobile-first CRM for roofing contractors",
   "start_url": "/",
@@ -7,27 +7,9 @@
   "background_color": "#000000",
   "theme_color": "#000000",
   "orientation": "portrait-primary",
-  "display_override": ["standalone", "minimal-ui"],
   "scope": "/",
   "lang": "en",
-  "dir": "ltr",
   "categories": ["business", "productivity"],
-  "screenshots": [
-    {
-      "src": "/images/screenshot-wide.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Desktop view of Roofing CRM"
-    },
-    {
-      "src": "/images/screenshot-narrow.png", 
-      "sizes": "750x1334",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Mobile view of Roofing CRM"
-    }
-  ],
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
@@ -82,39 +64,50 @@
     {
       "name": "Dashboard",
       "short_name": "Dashboard",
-      "description": "View main dashboard",
-      "url": "/",
-      "icons": [{ "src": "/icons/shortcut-dashboard.png", "sizes": "192x192" }]
+      "description": "View dashboard",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "/icons/shortcut-dashboard.png",
+          "sizes": "96x96"
+        }
+      ]
     },
     {
       "name": "Leads",
       "short_name": "Leads",
       "description": "Manage leads",
       "url": "/leads",
-      "icons": [{ "src": "/icons/shortcut-leads.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Map",
-      "short_name": "Map",
-      "description": "View location map",
-      "url": "/map",
-      "icons": [{ "src": "/icons/shortcut-map.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icons/shortcut-leads.png",
+          "sizes": "96x96"
+        }
+      ]
     },
     {
       "name": "Calendar",
       "short_name": "Calendar",
       "description": "View calendar",
-      "url": "/dashboard/calendar",
-      "icons": [{ "src": "/icons/shortcut-calendar.png", "sizes": "192x192" }]
+      "url": "/calendar",
+      "icons": [
+        {
+          "src": "/icons/shortcut-calendar.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Map",
+      "short_name": "Map",
+      "description": "View map",
+      "url": "/map",
+      "icons": [
+        {
+          "src": "/icons/shortcut-map.png",
+          "sizes": "96x96"
+        }
+      ]
     }
-  ],
-  "prefer_related_applications": false,
-  "related_applications": [],
-  "edge_side_panel": {
-    "preferred_width": 400
-  },
-  "handle_links": "preferred",
-  "launch_handler": {
-    "client_mode": "navigate-existing"
-  }
+  ]
 } 

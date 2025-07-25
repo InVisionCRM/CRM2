@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined }
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const session = await getServerSession(authOptions)
 
@@ -37,9 +37,10 @@ export default async function CalendarPage({
   }
 
   // Get lead information from search params
-  const leadId = searchParams.leadId as string;
-  const leadName = searchParams.leadName as string;
-  const returnUrl = searchParams.returnUrl as string;
+  const resolvedSearchParams = await searchParams;
+  const leadId = resolvedSearchParams.leadId as string;
+  const leadName = resolvedSearchParams.leadName as string;
+  const returnUrl = resolvedSearchParams.returnUrl as string;
 
   return (
     <DashboardLayout>

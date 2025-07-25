@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Hero } from "@/components/ui/hero"
 import { GlobalStats } from "@/components/dashboard/global-stats"
 import { RecentActivities } from "@/components/dashboard/recent-activities"
-import { PWAInstallSection } from "@/components/PWAInstallSection"
+
 import { RecentUploads } from "@/components/dashboard/recent-uploads"
 import { RecentEmails } from "@/components/dashboard/recent-emails"
 import { MyLeads } from "@/components/dashboard/my-leads"
@@ -30,7 +30,7 @@ export function DashboardContent() {
   }
 
   return (
-    <div className="flex-1 h-full overflow-hidden">
+    <div className="flex-1 h-full overflow-y-auto">
       <LeadsSplashScreen 
         isOpen={showSplashScreen} 
         onClose={handleCloseSplashScreen} 
@@ -43,10 +43,7 @@ export function DashboardContent() {
         <GlobalStats />
       </div>
       
-      {/* PWA Install Section */}
-      <div className="container mx-auto px-4 py-6">
-        <PWAInstallSection />
-      </div>
+
       
       {/* Upcoming Events */}
       <div className="container mx-auto px-4 py-3">

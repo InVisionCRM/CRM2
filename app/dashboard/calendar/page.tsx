@@ -7,11 +7,11 @@ import { WelcomeAnimationWrapper } from "@/components/welcome-animation-wrapper"
 // import { DateDebug } from "@/components/date-debug"
 
 interface CalendarPageProps {
-  searchParams: {
+  searchParams: Promise<{
     leadId?: string;
     leadName?: string;
     // any other search params you expect
-  };
+  }>;
 }
 
 export default async function CalendarPage({ searchParams }: CalendarPageProps) {
@@ -21,8 +21,9 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
     redirect("/")
   }
 
-  const urlLeadId = searchParams.leadId;
-  const urlLeadName = searchParams.leadName;
+  const resolvedSearchParams = await searchParams;
+  const urlLeadId = resolvedSearchParams.leadId;
+  const urlLeadName = resolvedSearchParams.leadName;
 
   return (
     <div className="relative min-h-screen w-full flex flex-col items-center">
