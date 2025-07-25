@@ -57,18 +57,18 @@ export function StatusDropdownMenu({
         <Button 
           variant="outline" 
           className={cn(
-            "flex items-center gap-1.5 text-sm h-9 px-3", // Compact styling
+            "flex items-center gap-1.5 text-lg h-10 px-3 w-full sm:w-[140px]", // Increased font size and height
             disabled ? "cursor-not-allowed opacity-70" : "",
             triggerClassName
           )}
         >
           <span>Status:</span>
           <span className="font-medium">{getActiveStatusTriggerLabel()}</span>
-          <ChevronDown className="h-4 w-4 opacity-80" />
+          <ChevronDown className="h-5 w-5 opacity-80" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-64"> {/* Increased width for counts */}
-        <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
+      <DropdownMenuContent className="w-[400px] text-lg"> {/* Reduced width */}
+        <DropdownMenuLabel className="text-lg text-center">Filter by Status</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuRadioGroup 
           value={activeStatus || "all"} 
@@ -76,18 +76,18 @@ export function StatusDropdownMenu({
             onStatusSelect(value === "all" ? null : value as LeadStatus);
           }}
         >
-          <DropdownMenuRadioItem value="all" className="text-sm">
+          <DropdownMenuRadioItem value="all" className="text-lg py-4 text-center">
             All Statuses 
-            <span className="ml-auto text-xs opacity-70">{totalLeads}</span>
+            <span className="ml-auto text-lg font-bold text-red-500 right-8">{totalLeads}</span>
           </DropdownMenuRadioItem>
           {statusCounts.map((statusInfo) => (
             <DropdownMenuRadioItem 
               key={statusInfo.status} 
               value={statusInfo.status}
-              className="text-sm"
+              className="text-lg py-4 text-center justify-center"
             >
               {formatStatusLabel(statusInfo.status)}
-              <span className="ml-auto text-xs opacity-70">{statusInfo.count}</span>
+              <span className="ml-auto text-lg font-bold text-red-500">{statusInfo.count}</span>
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>

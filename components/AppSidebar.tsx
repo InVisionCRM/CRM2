@@ -22,10 +22,13 @@ import {
   Moon,
   Sun,
   MessageSquare,
+  Rss,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { CreateLeadForm } from "@/components/forms/CreateLeadForm"
+import { BulletinBoard } from "@/components/bulletin-board"
 import {
   Sheet,
   SheetContent,
@@ -35,11 +38,66 @@ import {
 } from "@/components/ui/sheet"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { useSession } from "next-auth/react"
+
+// Hook to get unread message count
+function useUnreadMessageCount() {
+  const [unreadCount, setUnreadCount] = useState(0)
+  const { data: session } = useSession()
+
+  useEffect(() => {
+    if (!session?.user?.id) return
+
+    const checkUnreadMessages = () => {
+      try {
+        const stored = localStorage.getItem('bulletin-board-messages')
+        if (stored) {
+          const messages = JSON.parse(stored)
+          const unread = messages.filter((message: any) => {
+            const readBy = message.readBy || []
+            return !readBy.includes(session.user.id)
+          }).length
+          setUnreadCount(unread)
+        }
+      } catch (error) {
+        console.error('Error checking unread messages:', error)
+      }
+    }
+
+    // Check immediately
+    checkUnreadMessages()
+
+    // Check every 5 seconds for new messages
+    const interval = setInterval(checkUnreadMessages, 5000)
+
+    // Listen for storage changes (when bulletin board updates)
+    const handleStorageChange = () => {
+      checkUnreadMessages()
+    }
+
+    // Listen for custom bulletin board update events
+    const handleBulletinBoardUpdate = () => {
+      checkUnreadMessages()
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('bulletin-board-updated', handleBulletinBoardUpdate)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('bulletin-board-updated', handleBulletinBoardUpdate)
+    }
+  }, [session?.user?.id])
+
+  return unreadCount
+}
 
 const mainNavLinks = [
-  { href: "/", label: "Home", icon: Home },
+  { href: "/dashboard", label: "Home", icon: Home },
   { href: "/leads", label: "Leads", icon: User },
   { href: "/map", label: "Map", icon: Map },
+  { label: "Feed", icon: Rss, action: "bulletin-board" },
 ]
 
 const moreNavLinks = [
@@ -132,29 +190,21 @@ function MoreMenu() {
                     : "hover:bg-accent/50"
                 )}
               >
-                <link.icon
-                  className={cn(
-                    "h-7 w-7",
-                    isActive ? "text-primary" : "text-muted-foreground"
-                  )}
-                />
+                <link.icon className="h-6 w-6" />
                 <span className="text-sm font-medium">{link.label}</span>
               </Link>
             )
           })}
         </div>
-        <div className="border-t pt-4 mt-4">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="theme-toggle" className="flex items-center gap-2 text-base">
-              {isDarkMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-              <span>{isDarkMode ? "Dark" : "Light"} Mode</span>
-            </Label>
-            <Switch
-              id="theme-toggle"
-              checked={isDarkMode}
-              onCheckedChange={toggleTheme}
-            />
-          </div>
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="theme"
+            checked={isDarkMode}
+            onCheckedChange={toggleTheme}
+          />
+          <Label htmlFor="theme">
+            {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+          </Label>
         </div>
       </SheetContent>
     </Sheet>
@@ -163,11 +213,13 @@ function MoreMenu() {
 
 export default function AppSidebar() {
   const [isCreateLeadOpen, setIsCreateLeadOpen] = useState(false)
+  const [isBulletinBoardOpen, setIsBulletinBoardOpen] = useState(false)
+  const unreadCount = useUnreadMessageCount()
 
   return (
     <>
       <div className="fixed bottom-0 left-0 right-0 z-40 h-20 transform-gpu border-t/2 bg-opacity-70 border-t-primary/20 border-2 backdrop-blur-md bg-black/40 supports-[backdrop-filter]:bg-black/40 bg-transparent border-t-primary pb-[calc(env(safe-area-inset-bottom)+20px)] before:absolute before:inset-0 before:bg-gradient-to-t before:from-white/10 before:to-transparent before:pointer-events-none">
-        <div className="mx-auto grid h-full max-w-lg grid-cols-5 items-center relative">
+        <div className="mx-auto grid h-full max-w-lg grid-cols-6 items-center relative">
           <NavLink href={mainNavLinks[0].href} icon={mainNavLinks[0].icon} label={mainNavLinks[0].label} />
           <NavLink href={mainNavLinks[1].href} icon={mainNavLinks[1].icon} label={mainNavLinks[1].label} />
           <div className="flex justify-center">
@@ -185,12 +237,30 @@ export default function AppSidebar() {
             </div>
           </div>
           <NavLink href={mainNavLinks[2].href} icon={mainNavLinks[2].icon} label={mainNavLinks[2].label} />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-full flex flex-col items-center justify-center gap-1 transition-colors text-white/80 hover:text-foreground"
+            onClick={() => setIsBulletinBoardOpen(true)}
+          >
+            <Rss className="h-6 w-6" />
+            <span className="text-sm font-medium">Feed</span>
+            {unreadCount > 0 && (
+              <Badge variant="secondary" className="absolute -top-2 -right-2">
+                {unreadCount}
+              </Badge>
+            )}
+          </Button>
           <MoreMenu />
         </div>
       </div>
       <CreateLeadForm
         open={isCreateLeadOpen}
         onOpenChange={setIsCreateLeadOpen}
+      />
+      <BulletinBoard 
+        isOpen={isBulletinBoardOpen} 
+        onClose={() => setIsBulletinBoardOpen(false)} 
       />
     </>
   )

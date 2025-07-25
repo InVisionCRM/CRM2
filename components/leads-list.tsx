@@ -679,7 +679,7 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
         <span className={insuranceFormData.damageType ? "text-slate-200" : "text-slate-500"}>
           {insuranceFormData.damageType ? DAMAGE_TYPES.find(d => d.value === insuranceFormData.damageType)?.label : "Select damage type"}
         </span>
-        <ChevronDown className="ml-2 h-4 w-4 text-slate-400" />
+        <ChevronDown className="ml-2 h-4 w-4 text-white" />
       </div>
       
       {showDamageTypeDropdown && (
@@ -808,9 +808,10 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
                   rgba(${colors.shadow}, 0.05) 100%)`,
               }}
             >
-              <CardHeader className="pb-3 overflow-visible">
-                <CardTitle className="text-lg text-slate-200 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+              <CardHeader className="pb-3 overflow-visible relative">
+                <CardTitle className="text-lg text-white flex items-center justify-between gap-2">
+                  {/* Left: Lead Details */}
+                  <div className="flex items-center gap-2 min-w-0">
                     Lead Details
                     <div 
                       className="w-3 h-3 rounded-full animate-pulse"
@@ -819,78 +820,92 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
                         boxShadow: `0 0 10px ${colors.glow}, 0 0 20px ${colors.glow}`,
                       }}
                     />
-                          </div>
-                                    <div className="flex items-center gap-2">
-                    <Select value={currentStatus} onValueChange={handleStatusChange} disabled={isUpdatingStatus}>
-                      <SelectTrigger 
-                        className="w-[180px] sm:w-[200px] h-[40px] text-slate-200 transition-all duration-300 border-0 bg-transparent"
-                        style={{
-                          boxShadow: `0 0 1px rgba(${colors.shadow}, 0.1)`,
-                        }}
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent 
-                        className="bg-slate-800 border border-slate-700 z-50 max-h-[300px] overflow-y-auto"
-                        position="popper"
-                        side="bottom"
-                        align="end"
-                        sideOffset={5}
-                      >
-                        <SelectItem value="follow_ups" className="p-0 pb-2">
-                          <Badge className={`${getStatusColor("follow_ups")} border min-w-[120px] justify-center`}>
-                            Follow Ups
-                          </Badge>
-                        </SelectItem>
-                        <SelectItem value="scheduled" className="p-0 pb-2">
-                          <Badge className={`${getStatusColor("scheduled")} border min-w-[120px] justify-center`}>
-                            Scheduled
-                          </Badge>
-                        </SelectItem>
-                        <SelectItem value="colors" className="p-0 pb-2">
-                          <Badge className={`${getStatusColor("colors")} border min-w-[120px] justify-center`}>
-                            Colors
-                          </Badge>
-                        </SelectItem>
-                        <SelectItem value="acv" className="p-0 pb-2">
-                          <Badge className={`${getStatusColor("acv")} border min-w-[120px] justify-center`}>
-                            ACV
-                          </Badge>
-                        </SelectItem>
-                        <SelectItem value="signed_contract" className="p-0 pb-2">
-                          <Badge className={`${getStatusColor("signed_contract")} border min-w-[120px] justify-center`}>
-                            Signed Contract
-                          </Badge>
-                        </SelectItem>
-                        <SelectItem value="job" className="p-0 pb-2">
-                          <Badge className={`${getStatusColor("job")} border min-w-[120px] justify-center`}>
-                            Job
-                          </Badge>
-                        </SelectItem>
-                        <SelectItem value="completed_jobs" className="p-0 pb-2">
-                          <Badge className={`${getStatusColor("completed_jobs")} border min-w-[120px] justify-center`}>
-                            Completed Jobs
-                          </Badge>
-                        </SelectItem>
-                        <SelectItem value="zero_balance" className="p-0 pb-2">
-                          <Badge className={`${getStatusColor("zero_balance")} border min-w-[120px] justify-center`}>
-                            Zero Balance
-                          </Badge>
-                        </SelectItem>
-                        <SelectItem value="denied" className="p-0 pb-2">
-                          <Badge className={`${getStatusColor("denied")} border min-w-[120px] justify-center`}>
-                            Denied
-                          </Badge>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {isUpdatingStatus && (
-                      <Loader2 
-                        className="h-4 w-4 animate-spin transition-all duration-300" 
-                        style={{ color: colors.glow }}
-                      />
-                                )}
-                              </div>
+                  </div>
+                  {/* Center: Status Selector */}
+                  <div className="flex-1 flex justify-center">
+                    <div className="flex items-center gap-2">
+                      <Select value={currentStatus} onValueChange={handleStatusChange} disabled={isUpdatingStatus}>
+                        <SelectTrigger 
+                          className="w-[180px] sm:w-[200px] h-[40px] text-white transition-all duration-300 border-0 bg-transparent"
+                          style={{
+                            boxShadow: `0 0 1px rgba(${colors.shadow}, 0.1)`,
+                          }}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent 
+                          className="bg-slate-800 border border-slate-700 z-50 max-h-[300px] overflow-y-auto"
+                          position="popper"
+                          side="bottom"
+                          align="end"
+                          sideOffset={5}
+                        >
+                          <SelectItem value="follow_ups" className="p-0 pb-2">
+                            <Badge className={`${getStatusColor("follow_ups")} border min-w-[120px] justify-center`}>
+                              Follow Ups
+                            </Badge>
+                          </SelectItem>
+                          <SelectItem value="scheduled" className="p-0 pb-2">
+                            <Badge className={`${getStatusColor("scheduled")} border min-w-[120px] justify-center`}>
+                              Scheduled
+                            </Badge>
+                          </SelectItem>
+                          <SelectItem value="colors" className="p-0 pb-2">
+                            <Badge className={`${getStatusColor("colors")} border min-w-[120px] justify-center`}>
+                              Colors
+                            </Badge>
+                          </SelectItem>
+                          <SelectItem value="acv" className="p-0 pb-2">
+                            <Badge className={`${getStatusColor("acv")} border min-w-[120px] justify-center`}>
+                              ACV
+                            </Badge>
+                          </SelectItem>
+                          <SelectItem value="signed_contract" className="p-0 pb-2">
+                            <Badge className={`${getStatusColor("signed_contract")} border min-w-[120px] justify-center`}>
+                              Signed Contract
+                            </Badge>
+                          </SelectItem>
+                          <SelectItem value="job" className="p-0 pb-2">
+                            <Badge className={`${getStatusColor("job")} border min-w-[120px] justify-center`}>
+                              Job
+                            </Badge>
+                          </SelectItem>
+                          <SelectItem value="completed_jobs" className="p-0 pb-2">
+                            <Badge className={`${getStatusColor("completed_jobs")} border min-w-[120px] justify-center`}>
+                              Completed Jobs
+                            </Badge>
+                          </SelectItem>
+                          <SelectItem value="zero_balance" className="p-0 pb-2">
+                            <Badge className={`${getStatusColor("zero_balance")} border min-w-[120px] justify-center`}>
+                              Zero Balance
+                            </Badge>
+                          </SelectItem>
+                          <SelectItem value="denied" className="p-0 pb-2">
+                            <Badge className={`${getStatusColor("denied")} border min-w-[120px] justify-center`}>
+                              Denied
+                            </Badge>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {isUpdatingStatus && (
+                        <Loader2 
+                          className="h-4 w-4 animate-spin transition-all duration-300" 
+                          style={{ color: colors.glow }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                  {/* Right: Collapse Button */}
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      aria-label="Collapse card"
+                      onClick={() => setIsExpanded(false)}
+                      className="absolute top-2 right-2 z-10 p-1 rounded-full bg-slate-800/80 hover:bg-slate-700/90 border border-slate-700 shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    >
+                      <ChevronUp className="h-6 w-6 text-white" style={{ color: colors.glow }} />
+                    </button>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1471,55 +1486,6 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
                           </div>
                   </TabsContent>
                 </Tabs>
-
-                {/* Large Neon Animated Collapse Button Section */}
-                <div 
-                  className="relative py-1 pt-1 pb-1 cursor-pointer transition-all duration-300 hover:bg-slate-800/20"
-                  onClick={() => setIsExpanded(false)}
-                >
-                  <div className="flex items-center justify-center px-1">
-                    {/* Left Chevron */}
-                    <ChevronUp 
-                      className="h-8 w-8 animate-pulse transition-all duration-300"
-                      style={{ 
-                        color: colors.glow,
-                        filter: `drop-shadow(0 0 8px ${colors.glow})`,
-                        animationDuration: '3s'
-                      }}
-                    />
-                    
-                    {/* Center Chevron */}
-                    <ChevronUp 
-                      className="h-10 w-10 animate-pulse transition-all duration-300"
-                      style={{ 
-                        color: colors.glow,
-                        filter: `drop-shadow(0 0 12px ${colors.glow})`,
-                        animationDuration: '2s'
-                      }}
-                    />
-                    
-                    {/* Right Chevron */}
-                    <ChevronUp 
-                      className="h-8 w-8 animate-pulse transition-all duration-300"
-                      style={{ 
-                        color: colors.glow,
-                        filter: `drop-shadow(0 0 8px ${colors.glow})`,
-                        animationDuration: '4s'
-                      }}
-                    />
-                  </div>
-                  
-                  {/* Subtle hover effect overlay */}
-                  <div 
-                    className="absolute inset-0 rounded-lg opacity-0 hover:opacity-100 transition-opacity duration-300"
-                    style={{
-                      background: `linear-gradient(90deg, 
-                        transparent 0%, 
-                        rgba(${colors.shadow}, 0.1) 50%, 
-                        transparent 100%)`
-                    }}
-                  />
-                </div>
               </CardContent>
             </Card>
           </motion.div>

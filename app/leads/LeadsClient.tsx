@@ -297,30 +297,30 @@ export default function LeadsClient({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 sm:gap-3">
-        <StatusDropdownMenu 
-          statusCounts={statusCounts} 
-          activeStatus={selectedStatus} 
-          onStatusSelect={handleStatusSelect} 
-          disabled={isLoading}
-        />
         <UserFilter 
           users={users} 
           selectedUser={selectedUser} 
           onUserChange={onUserChange} 
           isLoading={isLoadingUsers || isLoading}
         />
+        <StatusDropdownMenu 
+          statusCounts={statusCounts} 
+          activeStatus={selectedStatus} 
+          onStatusSelect={handleStatusSelect} 
+          disabled={isLoading}
+        />
         <Select onValueChange={handleSortChange} defaultValue={`${sortOptions.field}_${sortOptions.order}`} disabled={isLoading}>
-          <SelectTrigger className="flex items-center gap-1.5 text-sm h-9 px-3 w-auto min-w-[100px]">
+          <SelectTrigger className="flex items-center gap-1.5 text-lg h-10 px-3 w-full sm:w-[140px]">
             <span></span>
             <span className="font-medium"><SelectValue placeholder="Sort by" /></span>
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="createdAt_desc">Newest First</SelectItem>
-            <SelectItem value="createdAt_asc">Oldest First</SelectItem>
-            <SelectItem value="name_asc">Name (A-Z)</SelectItem>
-            <SelectItem value="name_desc">Name (Z-A)</SelectItem>
-            <SelectItem value="status_asc">Status (A-Z)</SelectItem>
-            <SelectItem value="status_desc">Status (Z-A)</SelectItem>
+          <SelectContent className="w-80 text-lg">
+            <SelectItem value="createdAt_desc" className="text-lg py-4">Newest First</SelectItem>
+            <SelectItem value="createdAt_asc" className="text-lg py-4">Oldest First</SelectItem>
+            <SelectItem value="name_asc" className="text-lg py-4">Name (A-Z)</SelectItem>
+            <SelectItem value="name_desc" className="text-lg py-4">Name (Z-A)</SelectItem>
+            <SelectItem value="status_asc" className="text-lg py-4">Status (A-Z)</SelectItem>
+            <SelectItem value="status_desc" className="text-lg py-4">Status (Z-A)</SelectItem>
           </SelectContent>
         </Select>
       </div>

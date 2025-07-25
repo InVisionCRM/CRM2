@@ -7,6 +7,7 @@ import { LeadsDrawer } from "@/components/leads-drawer"
 import { AppointmentsDrawer } from "@/components/appointments/appointments-drawer"
 import { SimpleCalculator } from "@/components/calculator/simple-calculator"
 import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 
 function ExpandedMenu({
   isOpen,
@@ -82,6 +83,7 @@ function ExpandedMenu({
 export function MobileNavigation() {
   const { data: session } = useSession()
   const userId = session?.user?.id
+  const router = useRouter()
 
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLeadsDrawerOpen, setIsLeadsDrawerOpen] = useState(false)
@@ -95,7 +97,7 @@ export function MobileNavigation() {
   }, [isLeadsDrawerOpen, isAppointmentsDrawerOpen, isCalculatorOpen])
 
   const navItems = [
-    { icon: Home, label: "Dashboard", action: () => {} },
+    { icon: Home, label: "Dashboard", action: () => router.push("/dashboard") },
     { icon: UserPlus, label: "Leads", action: () => setIsLeadsDrawerOpen(true) },
     { icon: Calendar, label: "Appointments", action: () => userId && setIsAppointmentsDrawerOpen(true), disabled: !userId },
     { icon: FolderOpen, label: "Files", action: () => { alert('Files functionality is temporarily unavailable.'); console.log("Files action clicked, but LeadSelectionSheet is removed.") } },

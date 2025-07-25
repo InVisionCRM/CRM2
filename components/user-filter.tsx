@@ -37,10 +37,19 @@ export function UserFilter({ users, selectedUser, onUserChange, isLoading = fals
     onUserChange(userId)
   }
 
-  const selectedUserName = selected ? users.find((user) => user.id === selected)?.name || "All Users" : "All Users"
+  // Helper to get first name and last initial
+  function formatShortName(name: string): string {
+    const [first, ...rest] = name.split(" ");
+    if (!first) return name;
+    const last = rest.length > 0 ? rest[rest.length - 1] : "";
+    return last ? `${first} ${last[0]}.` : first;
+  }
+
+  const selectedUserName = selected ? users.find((user) => user.id === selected)?.name || "Users" : "Users";
+  const selectedUserShort = selected && users.find((user) => user.id === selected) ? formatShortName(users.find((user) => user.id === selected)!.name) : "Users";
 
   if (isLoading) {
-    return <Skeleton className="h-10 w-48" />
+    return <Skeleton className="h-10 w-14" />
   }
 
   return (
@@ -50,28 +59,28 @@ export function UserFilter({ users, selectedUser, onUserChange, isLoading = fals
           variant="outline" 
           role="combobox" 
           aria-expanded={open} 
-          className="w-full sm:w-[200px] justify-between bg-black/20 backdrop-blur-sm border-white/20 hover:bg-black/30"
+          className="w-full sm:w-[140px] justify-between bg-black/20 backdrop-blur-sm border-white/20 hover:bg-black/30 text-lg"
         >
-          <User className="mr-2 h-4 w-4" />
-          <span className="truncate">{selectedUserName}</span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <User className="mr-2 h-5 w-5" />
+          <span className="truncate">{selectedUserShort}</span>
+          <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full sm:w-[200px] p-0 bg-black/30 backdrop-blur-lg border-white/20">
+      <PopoverContent className="w-full sm:w-[280px] p-0 bg-black/30 backdrop-blur-lg border-white/20">
         <Command>
-          <CommandInput placeholder="Search users..." className="bg-transparent" />
-          <CommandList>
-            <CommandEmpty className="text-white/70">No user found.</CommandEmpty>
+          <CommandInput placeholder="Search users..." className="bg-transparent text-lg" />
+          <CommandList className="max-h-none">
+            <CommandEmpty className="text-white/70 text-lg">No user found.</CommandEmpty>
             <CommandGroup>
               <CommandItem
                 onSelect={() => {
                   handleUserChange(null)
                   setOpen(false)
                 }}
-                className="cursor-pointer hover:bg-white/10"
+                className="cursor-pointer hover:bg-white/10 text-lg py-6"
               >
-                <Check className={cn("mr-2 h-4 w-4", !selected ? "opacity-100" : "opacity-0")} />
-                All Users
+                <Check className={cn("mr-2 h-5 w-5", !selected ? "opacity-100" : "opacity-0")} />
+                Users
               </CommandItem>
               {users.map((user) => (
                 <CommandItem
@@ -80,10 +89,10 @@ export function UserFilter({ users, selectedUser, onUserChange, isLoading = fals
                     handleUserChange(user.id)
                     setOpen(false)
                   }}
-                  className="cursor-pointer hover:bg-white/10"
+                  className="cursor-pointer hover:bg-white/10 text-lg py-6"
                 >
-                  <Check className={cn("mr-2 h-4 w-4", selected === user.id ? "opacity-100" : "opacity-0")} />
-                  {user.name}
+                  <Check className={cn("mr-2 h-5 w-5", selected === user.id ? "opacity-100" : "opacity-0")} />
+                  {formatShortName(user.name)}
                 </CommandItem>
               ))}
             </CommandGroup>
