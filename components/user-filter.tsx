@@ -59,7 +59,7 @@ export function UserFilter({ users, selectedUser, onUserChange, isLoading = fals
           variant="outline" 
           role="combobox" 
           aria-expanded={open} 
-          className="w-full sm:w-[140px] justify-between bg-black/20 backdrop-blur-sm border-white/20 hover:bg-black/30 text-lg"
+          className="w-full sm:w-[120px] justify-between bg-black/20 backdrop-blur-sm border-white/20 hover:bg-black/30 text-lg px-2"
         >
           <User className="mr-2 h-5 w-5" />
           <span className="truncate">{selectedUserShort}</span>
@@ -69,7 +69,7 @@ export function UserFilter({ users, selectedUser, onUserChange, isLoading = fals
       <PopoverContent className="w-full sm:w-[280px] p-0 bg-black/30 backdrop-blur-lg border-white/20">
         <Command>
           <CommandInput placeholder="Search users..." className="bg-transparent text-lg" />
-          <CommandList className="max-h-none">
+          <CommandList className="max-h-[200px] overflow-y-auto">
             <CommandEmpty className="text-white/70 text-lg">No user found.</CommandEmpty>
             <CommandGroup>
               <CommandItem
@@ -77,7 +77,7 @@ export function UserFilter({ users, selectedUser, onUserChange, isLoading = fals
                   handleUserChange(null)
                   setOpen(false)
                 }}
-                className="cursor-pointer hover:bg-white/10 text-lg py-6"
+                className="cursor-pointer hover:bg-white/10 text-lg py-3"
               >
                 <Check className={cn("mr-2 h-5 w-5", !selected ? "opacity-100" : "opacity-0")} />
                 Users
@@ -89,7 +89,7 @@ export function UserFilter({ users, selectedUser, onUserChange, isLoading = fals
                     handleUserChange(user.id)
                     setOpen(false)
                   }}
-                  className="cursor-pointer hover:bg-white/10 text-lg py-6"
+                  className="cursor-pointer hover:bg-white/10 text-lg py-3"
                 >
                   <Check className={cn("mr-2 h-5 w-5", selected === user.id ? "opacity-100" : "opacity-0")} />
                   {formatShortName(user.name)}

@@ -72,7 +72,7 @@ This CRM is available as a Progressive Web App, providing a native app-like expe
 - **iOS/Safari**: Tap Share button → "Add to Home Screen"
 - **Desktop**: Click install button in address bar
 
-### Recent PWA Improvements (v1.01)
+### Recent PWA Improvements (v1.02)
 - Fixed GlobalStats component not displaying in PWA mode
 - Enhanced API route caching strategies for better performance
 - Improved authentication handling in PWA environment
@@ -237,7 +237,7 @@ roofing-mobile-crm/
 
 ## 📋 Version History
 
-### v1.01 (Current)
+### v1.02 (Current)
 - **PWA Fixes**: Resolved GlobalStats component not displaying in PWA mode
 - **API Caching**: Enhanced caching strategies for better PWA performance
 - **Authentication**: Improved auth handling in PWA environment

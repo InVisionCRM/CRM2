@@ -11,6 +11,7 @@ interface GetLeadsOptions {
   sort?: SortField
   order?: SortOrder
   userId: string // Add userId as a required field
+  lastInteractionBefore?: string // ISO date string for filtering inactive leads
 }
 
 export async function getLeads(options: GetLeadsOptions): Promise<Lead[]> {
@@ -54,6 +55,14 @@ export async function getLeads(options: GetLeadsOptions): Promise<Lead[]> {
         { phone: { contains: options.search, mode: 'insensitive' } },
         { address: { contains: options.search, mode: 'insensitive' } },
       ]
+    }
+
+    // Filter by last interaction date if provided
+    if (options.lastInteractionBefore) {
+      const date = new Date(options.lastInteractionBefore)
+      where.updatedAt = {
+        lt: date
+      }
     }
 
     // Build orderBy

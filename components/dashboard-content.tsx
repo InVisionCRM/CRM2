@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Hero } from "@/components/ui/hero"
 import { GlobalStats } from "@/components/dashboard/global-stats"
 import { RecentActivities } from "@/components/dashboard/recent-activities"
@@ -8,10 +9,32 @@ import { RecentUploads } from "@/components/dashboard/recent-uploads"
 import { RecentEmails } from "@/components/dashboard/recent-emails"
 import { MyLeads } from "@/components/dashboard/my-leads"
 import { UpcomingEvents } from "@/components/dashboard/upcoming-events"
+import { LeadsSplashScreen } from "@/components/leads-splash-screen"
 
 export function DashboardContent() {
+  const [showSplashScreen, setShowSplashScreen] = useState(false)
+
+  useEffect(() => {
+    // Show splash screen only on first load
+    const hasSeenSplash = localStorage.getItem('hasSeenSplashToday')
+    const today = new Date().toDateString()
+    
+    if (hasSeenSplash !== today) {
+      setShowSplashScreen(true)
+      localStorage.setItem('hasSeenSplashToday', today)
+    }
+  }, [])
+
+  const handleCloseSplashScreen = () => {
+    setShowSplashScreen(false)
+  }
+
   return (
     <div className="flex-1 h-full overflow-hidden">
+      <LeadsSplashScreen 
+        isOpen={showSplashScreen} 
+        onClose={handleCloseSplashScreen} 
+      />
       {/* Hero Section */}
       <Hero />
       

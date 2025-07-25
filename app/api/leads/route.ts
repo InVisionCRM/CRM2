@@ -51,8 +51,9 @@ export async function GET(request: Request) {
     const search = url.searchParams.get("search")
     const sort = url.searchParams.get("sort") as SortField | undefined
     const order = url.searchParams.get("order") as SortOrder | undefined
+    const lastInteractionBefore = url.searchParams.get("lastInteractionBefore")
 
-    console.log('Query parameters:', { status, assignedTo, search, sort, order });
+    console.log('Query parameters:', { status, assignedTo, search, sort, order, lastInteractionBefore });
 
     // Fetch leads from the database with filters
     console.log('Calling getLeads with userId:', userId);
@@ -63,6 +64,7 @@ export async function GET(request: Request) {
       sort,
       order,
       userId: userId,
+      lastInteractionBefore: lastInteractionBefore || undefined,
     })
 
     console.log(`Successfully fetched ${leads.length} leads`);

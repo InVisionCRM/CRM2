@@ -102,7 +102,6 @@ const mainNavLinks = [
 
 const moreNavLinks = [
   { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
-  { href: "/submissions", label: "MySigner", icon: FileSignature },
   { href: "/drive", label: "Drive", icon: FileText },
   { href: "/gmail", label: "Gmail", icon: Mail },
   { href: "/templates", label: "Templates", icon: MessageSquare },
@@ -219,9 +218,10 @@ export default function AppSidebar() {
   return (
     <>
       <div className="fixed bottom-0 left-0 right-0 z-40 h-20 transform-gpu border-t/2 bg-opacity-70 border-t-primary/20 border-2 backdrop-blur-md bg-black/40 supports-[backdrop-filter]:bg-black/40 bg-transparent border-t-primary pb-[calc(env(safe-area-inset-bottom)+20px)] before:absolute before:inset-0 before:bg-gradient-to-t before:from-white/10 before:to-transparent before:pointer-events-none">
-        <div className="mx-auto grid h-full max-w-lg grid-cols-6 items-center relative">
+        <div className="mx-auto grid h-full max-w-lg grid-cols-7 items-center relative">
           <NavLink href={mainNavLinks[0].href} icon={mainNavLinks[0].icon} label={mainNavLinks[0].label} />
           <NavLink href={mainNavLinks[1].href} icon={mainNavLinks[1].icon} label={mainNavLinks[1].label} />
+          <NavLink href="/submissions" icon={FileSignature} label="Subs" />
           <div className="flex justify-center">
             <div className="relative">
               {/* Glowing background */}
@@ -237,20 +237,18 @@ export default function AppSidebar() {
             </div>
           </div>
           <NavLink href={mainNavLinks[2].href} icon={mainNavLinks[2].icon} label={mainNavLinks[2].label} />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-full flex flex-col items-center justify-center gap-1 transition-colors text-white/80 hover:text-foreground"
+          <button
+            className="flex flex-col items-center justify-center gap-1 h-full transition-colors text-white/80 hover:text-foreground relative"
             onClick={() => setIsBulletinBoardOpen(true)}
           >
             <Rss className="h-6 w-6" />
             <span className="text-sm font-medium">Feed</span>
             {unreadCount > 0 && (
-              <Badge variant="secondary" className="absolute -top-2 -right-2">
-                {unreadCount}
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center p-0 min-w-0">
+                {unreadCount > 99 ? '99+' : unreadCount}
               </Badge>
             )}
-          </Button>
+          </button>
           <MoreMenu />
         </div>
       </div>

@@ -20,6 +20,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { TrendingUp, FileText, CheckCircle, MessageSquare, Clock, User, Award, BarChart3, Activity, MapPin, Cloud, Sun, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, CloudFog } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { LeadStatus } from "@prisma/client"
@@ -204,6 +205,7 @@ export function GlobalStats() {
   const [isPWA, setIsPWA] = useState(false)
   const [isOnline, setIsOnline] = useState(true)
 
+
   // Debug logging for PWA issues
   useEffect(() => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
@@ -278,6 +280,8 @@ export function GlobalStats() {
       console.error('Error fetching zip code data:', error)
     }
   })
+
+
 
   // Macomb Township, MI coordinates
   const lat = 42.6655
@@ -392,70 +396,54 @@ export function GlobalStats() {
         className="w-full"
       >
         <CarouselContent>
-          {/* Slide 1: Core Stats */}
+          {/* Slide 1: Lead Status Counts */}
           <CarouselItem>
-            <Card className="h-[350px] sm:h-[400px] bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-slate-200 dark:border-slate-700">
-              <CardHeader className="pb-2 sm:pb-4">
-                <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-200 text-lg sm:text-xl">
-                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" /> Global Stats
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-3 sm:gap-6 md:grid-cols-4 h-full pb-6 sm:pb-8">
-                <StatCard title="Total Leads" value={totalLeads} icon={User} />
-                <StatCard title="Jobs Completed" value={totalJobsCompleted} icon={CheckCircle} />
-                <StatCard title="Contracts Signed" value={totalContractsSigned} icon={FileText} />
-                <StatCard title="Notes Left" value={totalNotesLeft} icon={MessageSquare} />
-              </CardContent>
-            </Card>
-          </CarouselItem>
-          
-          {/* Slide 2: Top Users */}
-          <CarouselItem>
-            <Card className="h-[350px] sm:h-[400px] bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-slate-200 dark:border-slate-700">
-              <CardHeader className="pb-2 sm:pb-4">
-                <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-200 text-lg sm:text-xl">
-                  <Award className="h-4 w-4 sm:h-5 sm:w-5" /> Top Performers
-                </CardTitle>
-                <CardDescription className="text-slate-600 dark:text-slate-400 text-sm">By total leads assigned</CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col justify-center items-center gap-3 sm:gap-4 md:flex-row md:justify-around h-full pb-6 sm:pb-8">
-                {topUsers.map((user, index) => (
-                  <div key={user.id} className="flex items-center gap-3 w-full md:w-auto">
-                    <Avatar className="h-10 w-10 sm:h-12 sm:w-12">
-                      <AvatarImage src={user.avatar} alt={user.name} />
-                      <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm sm:text-base">{index + 1}. {user.name}</p>
-                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">{user.leadCount} leads</p>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </CarouselItem>
-
-          {/* Slide 3: Lead Status Counts */}
-          <CarouselItem>
-            <Card className="h-[350px] sm:h-[400px] bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-slate-200 dark:border-slate-700">
+            <Card className="h-[280px] sm:h-[320px] border-slate-200 dark:border-slate-700">
               <CardHeader className="pb-2 sm:pb-4">
                 <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-200 text-lg sm:text-xl">
                   <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" /> Lead Status Overview
                 </CardTitle>
                 <CardDescription className="text-slate-600 dark:text-slate-400 text-sm">Current distribution of leads by status</CardDescription>
               </CardHeader>
-              <CardContent className="h-full pb-6 sm:pb-8 overflow-y-auto">
+              <CardContent className="pb-4 sm:pb-6 overflow-y-auto">
                 {statusData ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-                    {statusData.statusCounts.map(({ status, count, label }) => (
-                      <div key={status} className="flex items-center justify-between p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50">
-                        <div>
-                          <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300">{label}</p>
-                          <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-200">{count}</p>
-                        </div>
-                        <Badge className={cn("border text-xs", getStatusColor(status))}>
-                          {count}
-                        </Badge>
+                  <div className="grid grid-cols-3 gap-2 sm:gap-4 h-full">
+                    {/* Top Row */}
+                    {statusData.statusCounts.slice(0, 3).map(({ status, count, label }) => (
+                      <div key={status} className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50">
+                        <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">{label}</p>
+                        <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-200">{count}</p>
+                      </div>
+                    ))}
+                    
+                    {/* Middle Row - Left */}
+                    {statusData.statusCounts[3] && (
+                      <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50">
+                        <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">{statusData.statusCounts[3].label}</p>
+                        <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-200">{statusData.statusCounts[3].count}</p>
+                      </div>
+                    )}
+                    
+                    {/* Center - Total Leads */}
+                    <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border-2 border-primary bg-primary/10 dark:bg-primary/20">
+                      <p className="text-xs sm:text-sm font-medium text-primary text-center">Total</p>
+                      <p className="text-xl sm:text-3xl font-bold text-primary">{totalLeads}</p>
+                      <p className="text-xs text-primary/70">leads</p>
+                    </div>
+                    
+                    {/* Middle Row - Right */}
+                    {statusData.statusCounts[4] && (
+                      <div className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50">
+                        <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">{statusData.statusCounts[4].label}</p>
+                        <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-200">{statusData.statusCounts[4].count}</p>
+                      </div>
+                    )}
+                    
+                    {/* Bottom Row */}
+                    {statusData.statusCounts.slice(5, 8).map(({ status, count, label }) => (
+                      <div key={status} className="flex flex-col items-center justify-center p-2 sm:p-3 rounded-lg border border-slate-200 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50">
+                        <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">{label}</p>
+                        <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-200">{count}</p>
                       </div>
                     ))}
                   </div>
@@ -635,6 +623,8 @@ export function GlobalStats() {
           />
         ))}
       </div>
+
+
     </div>
   )
 } 

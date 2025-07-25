@@ -362,7 +362,7 @@ export const Hero = () => {
               className="mt-2"
             >
               <span className="text-xs text-white/60 font-mono tracking-wider">
-                v1.01
+                v1.02
               </span>
             </motion.div>
           </motion.div>

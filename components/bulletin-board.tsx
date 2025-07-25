@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { formatDistanceToNow } from "date-fns"
-import { Send, AtSign, Users, Loader2, MessageSquare, X, User, Link, Heart, Reply, MoreHorizontal } from "lucide-react"
+import { Send, AtSign, Users, Loader2, MessageSquare, X, User, Link, Heart, Reply, MoreHorizontal, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useSession } from "next-auth/react"
 import {
@@ -348,6 +348,63 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
     }
   };
 
+  const deleteMessage = async (messageId: string) => {
+    if (!session?.user) return;
+
+    try {
+      setMessages(prev => {
+        const updatedMessages = prev.filter(message => message.id !== messageId);
+        saveMessages(updatedMessages);
+        return updatedMessages;
+      });
+
+      // Dispatch custom event to notify sidebar of message deletion
+      window.dispatchEvent(new CustomEvent('bulletin-board-updated'));
+      
+      toast({
+        title: "Message Deleted",
+        description: "The message has been removed.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error Deleting Message",
+        description: "Failed to delete message. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteReply = async (messageId: string, replyId: string) => {
+    if (!session?.user) return;
+
+    try {
+      setMessages(prev => {
+        const updatedMessages = prev.map(message => {
+          if (message.id === messageId) {
+            const replies = message.replies || [];
+            const updatedReplies = replies.filter(reply => reply.id !== replyId);
+            return { ...message, replies: updatedReplies };
+          }
+          return message;
+        });
+        
+        saveMessages(updatedMessages);
+        return updatedMessages;
+      });
+
+      toast({
+        title: "Reply Deleted",
+        description: "The reply has been removed.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error Deleting Reply",
+        description: "Failed to delete reply. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Submit new message
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -494,9 +551,6 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
           <SheetTitle className="flex items-center gap-2 text-base sm:text-lg">
             <MessageSquare className="h-5 w-5" />
             Bulletin Board
-            <Badge variant="secondary" className="ml-auto text-xs">
-              {messages.length} messages
-            </Badge>
           </SheetTitle>
         </SheetHeader>
         
@@ -505,8 +559,7 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
           <Card className="shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-sm">
-                <AtSign className="h-4 w-4 text-muted-foreground" />
-                Post a Message
+                Post to Board
                 <span className="hidden sm:inline text-xs font-normal text-muted-foreground">
                   Use @ to mention team members or search leads
                 </span>
@@ -706,6 +759,15 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
                               <DropdownMenuItem onClick={() => navigator.clipboard.writeText(message.content)}>
                                 Copy message
                               </DropdownMenuItem>
+                              {(message.user.id === session?.user?.id || session?.user?.role === 'ADMIN') && (
+                                <DropdownMenuItem 
+                                  onClick={() => deleteMessage(message.id)}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete message
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -758,13 +820,25 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
                             {message.replies.map((reply) => (
                               <div key={reply.id} className="pl-3 sm:pl-4 border-l-2 border-gray-200 dark:border-gray-700">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-medium text-xs truncate">
-                                      {reply.user.name || reply.user.email}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground flex-shrink-0">
-                                      {formatDistanceToNow(new Date(reply.createdAt), { addSuffix: true })}
-                                    </span>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-xs truncate">
+                                        {reply.user.name || reply.user.email}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground flex-shrink-0">
+                                        {formatDistanceToNow(new Date(reply.createdAt), { addSuffix: true })}
+                                      </span>
+                                    </div>
+                                    {(reply.user.id === session?.user?.id || session?.user?.role === 'ADMIN') && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => deleteReply(message.id, reply.id)}
+                                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                    )}
                                   </div>
                                   <div className="text-sm text-muted-foreground break-words">
                                     {reply.content}

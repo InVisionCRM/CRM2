@@ -57,7 +57,7 @@ export function StatusDropdownMenu({
         <Button 
           variant="outline" 
           className={cn(
-            "flex items-center gap-1.5 text-lg h-10 px-3 w-full sm:w-[140px]", // Increased font size and height
+            "flex items-center gap-1 text-lg h-10 px-3 w-full sm:w-[100px]", // Reduced width
             disabled ? "cursor-not-allowed opacity-70" : "",
             triggerClassName
           )}
@@ -67,7 +67,7 @@ export function StatusDropdownMenu({
           <ChevronDown className="h-5 w-5 opacity-80" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-[400px] text-lg"> {/* Reduced width */}
+      <DropdownMenuContent className="w-[300px] text-lg"> {/* Reduced width */}
         <DropdownMenuLabel className="text-lg text-center">Filter by Status</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuRadioGroup 
