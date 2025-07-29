@@ -15,6 +15,7 @@ import { createStatusChangeActivity } from "@/lib/services/activities"
 import { getCurrentUser } from "@/lib/session"
 import { sendLeadDeletionNotification } from "@/lib/services/admin-notifications"
 import { createDeletionRequest } from "@/lib/services/deletion-approval"
+import { createLeadChatSpace, updateLeadChatStatus } from "@/lib/services/leadChatIntegration"
 
 export async function createLeadAction(
   data: {
@@ -117,6 +118,53 @@ export async function createLeadAction(
         }
     }
     */
+
+    // Create Google Chat space for the lead
+    if (session?.accessToken && lead) {
+      try {
+        // Get assigned user details if assigned
+        let assignedTo = undefined
+        if (data.assignedToId) {
+          const assignedUser = await prisma.user.findUnique({
+            where: { id: data.assignedToId },
+            select: { id: true, name: true, email: true }
+          })
+          if (assignedUser) {
+            assignedTo = {
+              id: assignedUser.id,
+              name: assignedUser.name || 'Unknown User',
+              email: assignedUser.email || ''
+            }
+          }
+        }
+
+        const chatResult = await createLeadChatSpace({
+          leadId: lead.id,
+          leadName: `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown Lead',
+          leadEmail: lead.email || undefined,
+          leadAddress: lead.address || undefined,
+          leadStatus: lead.status,
+          createdBy: {
+            id: userId,
+            name: session.user.name || 'Unknown User',
+            email: session.user.email || ''
+          },
+          assignedTo
+        }, session)
+
+        if (chatResult.success) {
+          console.log(`✅ Google Chat space created for lead ${lead.id}`)
+        } else {
+          console.error(`❌ Failed to create Google Chat space for lead ${lead.id}:`, chatResult.error)
+          // Don't fail lead creation if chat creation fails
+        }
+      } catch (chatError: any) {
+        console.error(`Error creating Google Chat space for lead ${lead.id}:`, chatError.message || chatError)
+        // Don't fail lead creation if chat creation fails
+      }
+    } else if (!session?.accessToken) {
+      console.warn("No Google access token found in session. Skipping Google Chat space creation for lead:", lead?.id || 'new lead')
+    }
 
     revalidatePath("/leads");
     revalidatePath("/dashboard")
@@ -288,6 +336,8 @@ export async function updateLeadStatus(
         return { success: true };
     }
 
+    const oldStatus = leadToUpdate.status
+    
     await prisma.lead.update({
       where: { id },
       data: {
@@ -301,6 +351,25 @@ export async function updateLeadStatus(
         },
       },
     });
+
+    // Update Google Chat with status change
+    if (session?.accessToken) {
+      try {
+        await updateLeadChatStatus(
+          id,
+          formatStatusLabel(oldStatus),
+          formatStatusLabel(status),
+          {
+            name: session.user.name || 'Unknown User',
+            email: session.user.email || ''
+          },
+          session
+        )
+      } catch (chatError: any) {
+        console.error(`Error updating Google Chat for lead ${id}:`, chatError.message || chatError)
+        // Don't fail status update if chat update fails
+      }
+    }
 
     // ---------- AUTO-SCHEDULER ----------
     // Map certain status transitions to calendar event types

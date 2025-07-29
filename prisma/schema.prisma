@@ -119,6 +119,7 @@ model Lead {
   updatedAt                DateTime      @updatedAt @db.Timestamptz(6)
   googleDriveFolderId      String?
   googleDriveUrl           String?
+  googleChatSpaceId        String?
   metadata                 Json?
   homeownerUpgrades        Decimal?
   insuranceScopeACV        Decimal?

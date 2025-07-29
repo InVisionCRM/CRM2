@@ -19,7 +19,8 @@
     "prisma:migrate": "prisma migrate deploy",
     "prisma:migrate:safe": "node scripts/migrate-db.js",
     "lighthouse": "npx lighthouse http://localhost:3000 --output-path=./lighthouse-report.html --view",
-    "analyze": "cross-env ANALYZE=true npm run build"
+    "analyze": "cross-env ANALYZE=true npm run build",
+    "create-chat-spaces": "npx tsx scripts/create-chat-spaces-for-existing-leads-simple.ts"
   },
   "dependencies": {
     "@auth/core": "latest",
