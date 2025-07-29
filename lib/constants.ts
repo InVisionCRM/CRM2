@@ -19,5 +19,6 @@ export const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/chat.spaces",
   "https://www.googleapis.com/auth/chat.messages",
   "https://www.googleapis.com/auth/chat.messages.create",
-  "https://www.googleapis.com/auth/chat.memberships"
+  "https://www.googleapis.com/auth/chat.memberships",
+  "https://www.googleapis.com/auth/chat.memberships.readonly"
 ]; 

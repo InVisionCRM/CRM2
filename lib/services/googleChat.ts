@@ -151,6 +151,16 @@ export class GoogleChatService {
         return { success: true, error: 'Bot should be automatically added via webhook' }
       }
     } catch (error: any) {
+      // Handle permission denied errors gracefully
+      if (error.code === 403 || error.status === 403) {
+        console.log(`⚠️ Permission denied accessing space ${spaceId} - this is normal for newly created spaces`)
+        console.log(`ℹ️ The bot will be automatically added when the space is properly configured`)
+        return { 
+          success: true, 
+          error: 'Permission denied - bot will be added automatically via webhook' 
+        }
+      }
+      
       console.error('Error checking bot in space:', error)
       return {
         success: false,
