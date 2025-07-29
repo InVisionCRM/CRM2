@@ -7,6 +7,7 @@ import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, 
 import { StatusChangeDrawer } from "@/components/leads/StatusChangeDrawer"
 import { LeadDetailTabs } from "@/components/leads/LeadDetailTabs"
 import { ActivityFeed } from "@/components/leads/ActivityFeed"
+import { LeadChatWidget } from "@/components/leads/lead-chat-widget"
 
 import { Button } from "@/components/ui/button"
 import { useLead } from "@/hooks/use-lead" // Corrected path
@@ -1544,9 +1545,14 @@ export default function LeadDetailPage() {
             </div>
           </div>
 
-          {/* Right column - Activity Feed only */}
-          <div className="w-full" ref={activityRef} id="activity-info">
+          {/* Right column - Activity Feed and Chat Widget */}
+          <div className="w-full space-y-6" ref={activityRef} id="activity-info">
             <ActivityFeed leadId={lead.id} key={refreshActivities} />
+            <LeadChatWidget 
+              leadId={lead.id}
+              leadName={`${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown Lead'}
+              leadStatus={lead.status}
+            />
           </div>
         </div>
 
