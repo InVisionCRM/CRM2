@@ -48,15 +48,13 @@ async function getAdminUsers() {
  */
 export async function createLeadChatSpace(
   leadData: LeadChatData,
-  session: any
+  session?: any
 ): Promise<{ success: boolean; spaceId?: string; error?: string }> {
   try {
-    // Initialize Google Chat service
+    // Initialize Google Chat service with service account
     const googleChat = new GoogleChatService({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      accessToken: session.accessToken as string,
-      refreshToken: session.refreshToken as string | undefined,
+      serviceAccountEmail: process.env.GOOGLE_SA_EMAIL!,
+      serviceAccountPrivateKey: process.env.GOOGLE_SA_PRIVATE_KEY!,
     })
 
     // Get all admin users
@@ -156,7 +154,7 @@ This chat room will be used for all communications related to this lead. You'll 
 export async function sendLeadChatMessage(
   leadId: string,
   message: string,
-  session: any
+  session?: any
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Get the lead and its chat space ID
@@ -173,12 +171,10 @@ export async function sendLeadChatMessage(
       return { success: false, error: "No chat space found for this lead" }
     }
 
-    // Initialize Google Chat service
+    // Initialize Google Chat service with service account
     const googleChat = new GoogleChatService({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      accessToken: session.accessToken as string,
-      refreshToken: session.refreshToken as string | undefined,
+      serviceAccountEmail: process.env.GOOGLE_SA_EMAIL!,
+      serviceAccountPrivateKey: process.env.GOOGLE_SA_PRIVATE_KEY!,
     })
 
     const result = await googleChat.sendMessage(lead.googleChatSpaceId, {
@@ -209,7 +205,7 @@ export async function updateLeadChatStatus(
   oldStatus: string,
   newStatus: string,
   updatedBy: { name: string; email: string },
-  session: any
+  session?: any
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const lead = await prisma.lead.findUnique({
@@ -226,10 +222,8 @@ export async function updateLeadChatStatus(
     }
 
     const googleChat = new GoogleChatService({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      accessToken: session.accessToken as string,
-      refreshToken: session.refreshToken as string | undefined,
+      serviceAccountEmail: process.env.GOOGLE_SA_EMAIL!,
+      serviceAccountPrivateKey: process.env.GOOGLE_SA_PRIVATE_KEY!,
     })
 
     const statusMessage = `📊 **Lead Status Updated**
@@ -256,7 +250,7 @@ export async function updateLeadChatStatus(
 /**
  * Get lead chat space information
  */
-export async function getLeadChatSpace(leadId: string, session: any): Promise<{ success: boolean; space?: any; error?: string }> {
+export async function getLeadChatSpace(leadId: string, session?: any): Promise<{ success: boolean; space?: any; error?: string }> {
   try {
     const lead = await prisma.lead.findUnique({
       where: { id: leadId },
@@ -268,10 +262,8 @@ export async function getLeadChatSpace(leadId: string, session: any): Promise<{ 
     }
 
     const googleChat = new GoogleChatService({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      accessToken: session.accessToken as string,
-      refreshToken: session.refreshToken as string | undefined,
+      serviceAccountEmail: process.env.GOOGLE_SA_EMAIL!,
+      serviceAccountPrivateKey: process.env.GOOGLE_SA_PRIVATE_KEY!,
     })
 
     return await googleChat.getSpace(lead.googleChatSpaceId)

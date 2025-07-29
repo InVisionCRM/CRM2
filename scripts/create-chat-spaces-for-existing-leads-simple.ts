@@ -3,16 +3,8 @@ import { createLeadChatSpace } from '../lib/services/leadChatIntegration'
 
 const prisma = new PrismaClient()
 
-// Mock session for the script - you'll need to replace with actual session data
-const mockSession = {
-  accessToken: process.env.GOOGLE_ACCESS_TOKEN,
-  refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
-  user: {
-    id: 'script-user',
-    name: 'Migration Script',
-    email: 'script@example.com'
-  }
-}
+// No session needed for service account authentication
+const mockSession = null
 
 async function getAdminUsers() {
   try {
@@ -92,10 +84,9 @@ async function main() {
     console.log('🚀 Starting Google Chat space creation for existing leads...')
 
     // Check environment variables
-    if (!process.env.GOOGLE_ACCESS_TOKEN) {
-      console.error('❌ Missing Google access token!')
-      console.error('Please set GOOGLE_ACCESS_TOKEN environment variable')
-      console.error('You can get this from your browser session or Google OAuth flow')
+    if (!process.env.GOOGLE_SA_EMAIL || !process.env.GOOGLE_SA_PRIVATE_KEY) {
+      console.error('❌ Missing Google Service Account credentials!')
+      console.error('Please ensure GOOGLE_SA_EMAIL and GOOGLE_SA_PRIVATE_KEY are set')
       process.exit(1)
     }
 

@@ -120,7 +120,7 @@ export async function createLeadAction(
     */
 
     // Create Google Chat space for the lead
-    if (session?.accessToken && lead) {
+    if (lead) {
       try {
         // Get assigned user details if assigned
         let assignedTo = undefined
@@ -150,7 +150,7 @@ export async function createLeadAction(
             email: session.user.email || ''
           },
           assignedTo
-        }, session)
+        })
 
         if (chatResult.success) {
           console.log(`✅ Google Chat space created for lead ${lead.id}`)
@@ -162,8 +162,6 @@ export async function createLeadAction(
         console.error(`Error creating Google Chat space for lead ${lead.id}:`, chatError.message || chatError)
         // Don't fail lead creation if chat creation fails
       }
-    } else if (!session?.accessToken) {
-      console.warn("No Google access token found in session. Skipping Google Chat space creation for lead:", lead?.id || 'new lead')
     }
 
     revalidatePath("/leads");
@@ -376,24 +374,21 @@ export async function updateLeadStatus(
       },
     });
 
-    // Update Google Chat with status change
-    if (session?.accessToken) {
-      try {
-        await updateLeadChatStatus(
-          id,
-          formatStatusLabel(oldStatus),
-          formatStatusLabel(status),
-          {
-            name: session.user.name || 'Unknown User',
-            email: session.user.email || ''
-          },
-          session
-        )
-      } catch (chatError: any) {
-        console.error(`Error updating Google Chat for lead ${id}:`, chatError.message || chatError)
-        // Don't fail status update if chat update fails
-      }
-    }
+            // Update Google Chat with status change
+        try {
+          await updateLeadChatStatus(
+            id,
+            formatStatusLabel(oldStatus),
+            formatStatusLabel(status),
+            {
+              name: session.user.name || 'Unknown User',
+              email: session.user.email || ''
+            }
+          )
+        } catch (chatError: any) {
+          console.error(`Error updating Google Chat for lead ${id}:`, chatError.message || chatError)
+          // Don't fail status update if chat update fails
+        }
 
     // ---------- AUTO-SCHEDULER ----------
     // Map certain status transitions to calendar event types
