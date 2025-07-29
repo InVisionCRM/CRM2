@@ -49,8 +49,7 @@ export class GoogleChatService {
       const space = await this.chat.spaces.create({
         requestBody: {
           displayName: options.displayName,
-          description: options.description,
-          spaceType: 'ROOM'
+          spaceType: 'SPACE'
         }
       })
 
@@ -93,6 +92,7 @@ export class GoogleChatService {
           console.log(`✅ Added ${email} to chat space ${spaceId}`)
         } catch (error: any) {
           console.error(`❌ Failed to add ${email} to chat space:`, error.message)
+          // Don't fail the entire operation if one member fails
         }
       })
 
