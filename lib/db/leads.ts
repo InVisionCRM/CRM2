@@ -357,13 +357,45 @@ export async function deleteLead(id: string, userId: string): Promise<{ success:
       return { success: false, error: "Unauthorized to delete this lead" }
     }
 
-    // Delete all related activities first
+    // Delete all related records first
     await prisma.activity.deleteMany({
       where: { leadId: id }
     })
 
-    // Delete all related files
     await prisma.file.deleteMany({
+      where: { leadId: id }
+    })
+
+    await prisma.appointment.deleteMany({
+      where: { leadId: id }
+    })
+
+    await prisma.contract.deleteMany({
+      where: { leadId: id }
+    })
+
+    await prisma.leadPhoto.deleteMany({
+      where: { leadId: id }
+    })
+
+    await prisma.visit.deleteMany({
+      where: { leadId: id }
+    })
+
+    await prisma.job_costs.deleteMany({
+      where: { leadId: id }
+    })
+
+    await prisma.payments.deleteMany({
+      where: { leadId: id }
+    })
+
+    await prisma.supplements.deleteMany({
+      where: { leadId: id }
+    })
+
+    // Delete vision marker if exists
+    await prisma.visionMarker.deleteMany({
       where: { leadId: id }
     })
 

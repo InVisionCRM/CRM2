@@ -52,6 +52,37 @@ export function LeadChatWidget({ leadId, leadName, leadStatus }: LeadChatWidgetP
     }
   }
 
+  const createChatSpace = async () => {
+    if (!session?.accessToken) {
+      toast.error("You need to be logged in with Google to create chat spaces")
+      return
+    }
+
+    setIsSending(true)
+    try {
+      const response = await fetch(`/api/leads/${leadId}/chat/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        toast.success("Chat space created successfully!")
+        // Refresh the chat space data
+        await fetchChatSpace()
+      } else {
+        const error = await response.json()
+        toast.error(error.error || "Failed to create chat space")
+      }
+    } catch (error) {
+      console.error('Error creating chat space:', error)
+      toast.error("Failed to create chat space")
+    } finally {
+      setIsSending(false)
+    }
+  }
+
   const sendMessage = async () => {
     if (!message.trim()) {
       toast.error("Please enter a message")
@@ -114,13 +145,30 @@ export function LeadChatWidget({ leadId, leadName, leadStatus }: LeadChatWidgetP
             Team Chat
           </CardTitle>
           <CardDescription>
-            No chat space found for this lead. Chat spaces are created automatically when leads are created.
+            No chat space found for this lead. Create one to enable team collaboration.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-muted-foreground py-4">
-            <MessageSquare className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <p>Chat space not available</p>
+          <div className="text-center space-y-4">
+            <MessageSquare className="h-12 w-12 mx-auto text-gray-400" />
+            <p className="text-muted-foreground">No chat space available for this lead</p>
+            <Button 
+              onClick={createChatSpace}
+              disabled={isSending}
+              className="mx-auto"
+            >
+              {isSending ? (
+                "Creating..."
+              ) : (
+                <>
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Create Chat Space
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              This will create a Google Chat space and add all admins and team members
+            </p>
           </div>
         </CardContent>
       </Card>

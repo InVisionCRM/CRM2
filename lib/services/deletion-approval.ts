@@ -124,6 +124,43 @@ export async function getPendingDeletionRequests(): Promise<DeletionRequest[]> {
 }
 
 /**
+ * Get a specific deletion request by ID
+ */
+export async function getDeletionRequestById(requestId: string): Promise<DeletionRequest | null> {
+  const request = await prisma.deletionRequest.findUnique({
+    where: { id: requestId }
+  })
+
+  if (!request) {
+    return null
+  }
+
+  return {
+    id: request.id,
+    leadId: request.leadId,
+    leadName: request.leadName,
+    leadEmail: request.leadEmail,
+    leadAddress: request.leadAddress,
+    leadStatus: request.leadStatus,
+    requestedBy: {
+      id: request.requestedById,
+      name: request.requestedByName,
+      email: request.requestedByEmail
+    },
+    reason: request.reason || undefined,
+    status: request.status as 'pending' | 'approved' | 'rejected',
+    createdAt: request.createdAt,
+    approvedBy: request.approvedById ? {
+      id: request.approvedById,
+      name: request.approvedByName!,
+      email: request.approvedByEmail!
+    } : undefined,
+    approvedAt: request.approvedAt || undefined,
+    rejectionReason: request.rejectionReason || undefined
+  }
+}
+
+/**
  * Approve a deletion request
  */
 export async function approveDeletionRequest(

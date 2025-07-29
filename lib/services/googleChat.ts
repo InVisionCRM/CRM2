@@ -23,37 +23,20 @@ export class GoogleChatService {
   private auth: any
 
   constructor(credentials: {
-    clientId?: string
-    clientSecret?: string
+    clientId: string
+    clientSecret: string
+    accessToken: string
     refreshToken?: string
-    accessToken?: string
-    // Service Account credentials
-    serviceAccountEmail?: string
-    serviceAccountPrivateKey?: string
   }) {
-    // Check if using service account
-    if (credentials.serviceAccountEmail && credentials.serviceAccountPrivateKey) {
-      // Use service account authentication
-      this.auth = new google.auth.JWT(
-        credentials.serviceAccountEmail,
-        undefined,
-        credentials.serviceAccountPrivateKey.replace(/\\n/g, '\n'),
-        ['https://www.googleapis.com/auth/chat.bot']
-      )
-    } else {
-      // Use OAuth2 authentication
-      this.auth = new google.auth.OAuth2(
-        credentials.clientId,
-        credentials.clientSecret
-      )
+    this.auth = new google.auth.OAuth2(
+      credentials.clientId,
+      credentials.clientSecret
+    )
 
-      if (credentials.accessToken) {
-        this.auth.setCredentials({
-          access_token: credentials.accessToken,
-          refresh_token: credentials.refreshToken
-        })
-      }
-    }
+    this.auth.setCredentials({
+      access_token: credentials.accessToken,
+      refresh_token: credentials.refreshToken
+    })
 
     this.chat = google.chat({ version: 'v1', auth: this.auth })
   }

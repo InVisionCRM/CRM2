@@ -16,7 +16,7 @@ export async function GET(
 
     const leadId = params.id
 
-    const result = await getLeadChatSpace(leadId)
+    const result = await getLeadChatSpace(leadId, session)
 
     if (!result.success) {
       return NextResponse.json(
@@ -60,7 +60,7 @@ export async function POST(
       )
     }
 
-    const result = await sendLeadChatMessage(leadId, message)
+    const result = await sendLeadChatMessage(leadId, message, session)
 
     if (!result.success) {
       return NextResponse.json(

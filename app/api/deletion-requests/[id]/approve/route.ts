@@ -3,7 +3,8 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { 
   approveDeletionRequest,
-  canApproveDeletions 
+  canApproveDeletions,
+  getDeletionRequestById
 } from "@/lib/services/deletion-approval"
 import { deleteLead } from "@/lib/db/leads"
 import { sendLeadDeletionNotification } from "@/lib/services/admin-notifications"
@@ -41,13 +42,11 @@ export async function POST(
     }
 
     // Get the approved request to get lead details
-    const { getPendingDeletionRequests } = await import("@/lib/services/deletion-approval")
-    const requests = await getPendingDeletionRequests()
-    const approvedRequest = requests.find(r => r.id === requestId)
+    const approvedRequest = await getDeletionRequestById(requestId)
 
     if (!approvedRequest) {
       return NextResponse.json(
-        { error: "Approved request not found" },
+        { error: "Deletion request not found" },
         { status: 404 }
       )
     }

@@ -119,50 +119,8 @@ export async function createLeadAction(
     }
     */
 
-    // Create Google Chat space for the lead
-    if (lead) {
-      try {
-        // Get assigned user details if assigned
-        let assignedTo = undefined
-        if (data.assignedToId) {
-          const assignedUser = await prisma.user.findUnique({
-            where: { id: data.assignedToId },
-            select: { id: true, name: true, email: true }
-          })
-          if (assignedUser) {
-            assignedTo = {
-              id: assignedUser.id,
-              name: assignedUser.name || 'Unknown User',
-              email: assignedUser.email || ''
-            }
-          }
-        }
-
-        const chatResult = await createLeadChatSpace({
-          leadId: lead.id,
-          leadName: `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown Lead',
-          leadEmail: lead.email || undefined,
-          leadAddress: lead.address || undefined,
-          leadStatus: lead.status,
-          createdBy: {
-            id: userId,
-            name: session.user.name || 'Unknown User',
-            email: session.user.email || ''
-          },
-          assignedTo
-        })
-
-        if (chatResult.success) {
-          console.log(`✅ Google Chat space created for lead ${lead.id}`)
-        } else {
-          console.error(`❌ Failed to create Google Chat space for lead ${lead.id}:`, chatResult.error)
-          // Don't fail lead creation if chat creation fails
-        }
-      } catch (chatError: any) {
-        console.error(`Error creating Google Chat space for lead ${lead.id}:`, chatError.message || chatError)
-        // Don't fail lead creation if chat creation fails
-      }
-    }
+    // Note: Google Chat spaces are now created on-demand via the chat widget
+    // Users can create chat spaces by clicking the "Create Chat Space" button in the lead detail page
 
     revalidatePath("/leads");
     revalidatePath("/dashboard")
@@ -375,19 +333,22 @@ export async function updateLeadStatus(
     });
 
             // Update Google Chat with status change
-        try {
-          await updateLeadChatStatus(
-            id,
-            formatStatusLabel(oldStatus),
-            formatStatusLabel(status),
-            {
-              name: session.user.name || 'Unknown User',
-              email: session.user.email || ''
-            }
-          )
-        } catch (chatError: any) {
-          console.error(`Error updating Google Chat for lead ${id}:`, chatError.message || chatError)
-          // Don't fail status update if chat update fails
+        if (session?.accessToken) {
+          try {
+            await updateLeadChatStatus(
+              id,
+              formatStatusLabel(oldStatus),
+              formatStatusLabel(status),
+              {
+                name: session.user.name || 'Unknown User',
+                email: session.user.email || ''
+              },
+              session
+            )
+          } catch (chatError: any) {
+            console.error(`Error updating Google Chat for lead ${id}:`, chatError.message || chatError)
+            // Don't fail status update if chat update fails
+          }
         }
 
     // ---------- AUTO-SCHEDULER ----------
