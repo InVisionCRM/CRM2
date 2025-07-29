@@ -202,13 +202,21 @@ export async function deleteLeadAction(id: string) {
   try {
     console.log("Deleting lead with ID:", id)
 
-    const success = await deleteLead(id)
-
-    if (!success) {
-      console.error(`Failed to delete lead with ID ${id}`)
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
       return {
         success: false,
-        message: "Failed to delete lead",
+        message: "Unauthorized - Please log in to delete leads",
+      }
+    }
+
+    const result = await deleteLead(id, session.user.id)
+
+    if (!result.success) {
+      console.error(`Failed to delete lead with ID ${id}:`, result.error)
+      return {
+        success: false,
+        message: result.error || "Failed to delete lead",
       }
     }
 

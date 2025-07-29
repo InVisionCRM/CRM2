@@ -24,15 +24,15 @@ export function ServiceWorkerRegistration() {
         const newWorker = registration.installing
         if (newWorker) {
           console.log('New service worker installing...')
-          
+
           newWorker.addEventListener('statechange', () => {
             console.log('Service worker state changed:', newWorker.state)
             
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('New service worker installed, update available')
+                console.log('New service worker installed, update available')
               // You can show an update notification here
             } else if (newWorker.state === 'installed') {
-              console.log('Service worker installed for the first time')
+                console.log('Service worker installed for the first time')
             }
           })
         }

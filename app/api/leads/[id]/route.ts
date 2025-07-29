@@ -2,6 +2,9 @@ import { NextResponse } from "next/server"
 import { getLeadById, updateLead } from "@/lib/db/leads"
 import { prisma } from "@/lib/prisma"
 import type { UpdateLeadInput } from "@/lib/db/leads"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { deleteLead } from "@/lib/db/leads"
 
 export async function GET(
   request: Request,
@@ -94,5 +97,31 @@ export async function DELETE(
   request: Request,
   { params: paramsPromise }: { params: Promise<{ id: string }> }
 ) {
-  return NextResponse.json({ error: "Delete not implemented" }, { status: 501 })
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const params = await paramsPromise
+    const id = params.id
+
+    const result = await deleteLead(id, session.user.id)
+
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error || "Failed to delete lead" },
+        { status: result.error === "Lead not found" ? 404 : 
+          result.error === "Unauthorized to delete this lead" ? 403 : 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true, message: "Lead deleted successfully" })
+  } catch (error) {
+    console.error("Error deleting lead:", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
+  }
 }

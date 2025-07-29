@@ -16,7 +16,7 @@ export function OfflineIndicator() {
       <Badge variant="destructive" className="flex items-center gap-2">
         <WifiOff className="h-3 w-3" />
         Offline
-      </Badge>
-    </div>
+              </Badge>
+        </div>
   )
 } 

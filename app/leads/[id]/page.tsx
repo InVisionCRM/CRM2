@@ -37,6 +37,19 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useSession } from "next-auth/react"
+import { useDeleteLead } from "@/hooks/use-delete-lead"
+import { UserRole } from "@prisma/client"
 
 // Quick Actions Button component
 interface QuickActionButtonProps {
@@ -913,6 +926,43 @@ export default function LeadDetailPage() {
   const [activeTab, setActiveTab] = useState<string>(initialTab)
 
   const { toast } = useToast()
+  const { data: session } = useSession()
+  const { deleteLead, isLoading: isDeleting } = useDeleteLead()
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState("")
+
+  // Check if user can delete this lead
+  const canDeleteLead = () => {
+    if (!session?.user?.id || !lead) return false
+    
+    // Admins can delete any lead
+    if (session.user.role === UserRole.ADMIN) return true
+    
+    // Users can only delete their assigned leads
+    return lead.assignedToId === session.user.id
+  }
+
+  const handleDelete = async () => {
+    if (!lead) return
+    
+    try {
+      await deleteLead(lead.id)
+      toast({
+        title: "Lead deleted",
+        description: "Lead has been successfully deleted",
+      })
+      router.push("/")
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete lead",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleteDialogOpen(false)
+      setDeleteConfirmation("")
+    }
+  }
 
   // Street View related state
   const [streetViewUrl, setStreetViewUrl] = useState<string>("")
@@ -1331,9 +1381,22 @@ export default function LeadDetailPage() {
         {/* Name and Claim Number Row */}
         <div className="w-full flex justify-between items-center mb-4">
           {/* Lead Name - Left */}
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold">
-            {lead.firstName && lead.lastName ? `${lead.firstName} ${lead.lastName}` : lead.email || lead.phone || "Lead Details"}
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold">
+              {lead.firstName && lead.lastName ? `${lead.firstName} ${lead.lastName}` : lead.email || lead.phone || "Lead Details"}
+            </h1>
+            {canDeleteLead() && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                className="text-red-600 border-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
+            )}
+          </div>
           
           {/* Claim Number - Right, above streetview */}
           {lead.claimNumber && (
@@ -1535,6 +1598,53 @@ export default function LeadDetailPage() {
             </p>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
+          setIsDeleteDialogOpen(open)
+          if (!open) setDeleteConfirmation("")
+        }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete your lead and remove its data from our servers.
+                Please type "delete" to confirm.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4">
+              <input
+                type="text"
+                value={deleteConfirmation}
+                onChange={(e) => setDeleteConfirmation(e.target.value)}
+                placeholder="Type 'delete' to confirm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => {
+                setIsDeleteDialogOpen(false)
+                setDeleteConfirmation("")
+              }} className="text-gray-400 hover:text-gray-300">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDelete} 
+                className="bg-red-600 hover:bg-red-700 text-white"
+                disabled={deleteConfirmation !== "delete" || isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </>
   )

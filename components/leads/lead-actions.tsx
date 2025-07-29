@@ -17,9 +17,10 @@ import { useToast } from "@/hooks/use-toast"
 import { useUpdateLead } from "@/hooks/use-update-lead"
 import { useDeleteLead } from "@/hooks/use-delete-lead"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Loader2, Trash, Edit, CheckCircle, XCircle } from "lucide-react"
 import type { Lead } from "@/types/lead"
-import { LeadStatus } from "@prisma/client"
+import { LeadStatus, UserRole } from "@prisma/client"
 
 interface LeadActionsProps {
   lead: Lead
@@ -28,9 +29,21 @@ interface LeadActionsProps {
 export function LeadActions({ lead }: LeadActionsProps) {
   const { toast } = useToast()
   const router = useRouter()
+  const { data: session } = useSession()
   const { updateLead, isLoading: isUpdating } = useUpdateLead()
   const { deleteLead, isLoading: isDeleting } = useDeleteLead()
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+
+  // Check if user can delete this lead
+  const canDeleteLead = () => {
+    if (!session?.user?.id) return false
+    
+    // Admins can delete any lead
+    if (session.user.role === UserRole.ADMIN) return true
+    
+    // Users can only delete their assigned leads
+    return lead.assignedToId === session.user.id
+  }
 
   const handleStatusUpdate = async (status: LeadStatus) => {
     try {
@@ -101,42 +114,44 @@ export function LeadActions({ lead }: LeadActionsProps) {
         Edit
       </Button>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogTrigger asChild>
-          <Button variant="outline" size="sm" className="text-red-600">
-            <Trash className="h-4 w-4 mr-1" />
-            Delete
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the lead and all associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault()
-                handleDelete()
-              }}
-              className="bg-red-600 hover:bg-red-700"
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                "Delete"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {canDeleteLead() && (
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm" className="text-red-600">
+              <Trash className="h-4 w-4 mr-1" />
+              Delete
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the lead and all associated data.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault()
+                  handleDelete()
+                }}
+                className="bg-red-600 hover:bg-red-700"
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   )
 }

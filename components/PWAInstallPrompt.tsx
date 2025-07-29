@@ -7,7 +7,7 @@ import { usePWA } from '@/hooks/usePWA'
 
 export function PWAInstallPrompt() {
   const { isInstalled, canInstall, installApp, dismissInstallPrompt } = usePWA()
-
+      
   // Don't show if already installed or no prompt available
   if (isInstalled || !canInstall) {
     return null
@@ -35,31 +35,31 @@ export function PWAInstallPrompt() {
             >
               <X className="h-4 w-4" />
             </Button>
-          </div>
+                    </div>
           <CardDescription>
             Install Purlin CRM for quick access and offline functionality
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="flex gap-2">
-            <Button
-              onClick={handleInstallClick}
+                      <Button
+                        onClick={handleInstallClick}
               className="flex-1"
-              size="sm"
-            >
+                        size="sm"
+                      >
               <Download className="h-4 w-4 mr-2" />
-              Install
-            </Button>
-            <Button
+                        Install
+                      </Button>
+                      <Button
               variant="outline"
-              onClick={handleDismiss}
-              size="sm"
+                        onClick={handleDismiss}
+                        size="sm"
             >
               Later
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+                </div>
   )
 } 

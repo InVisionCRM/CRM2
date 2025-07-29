@@ -103,6 +103,7 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
   const [replyContent, setReplyContent] = useState("")
   const [isSubmittingReply, setIsSubmittingReply] = useState(false)
   const [activeTab, setActiveTab] = useState<'general' | 'production' | 'purlin'>('general')
+  const [isSendingNotifications, setIsSendingNotifications] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null)
   const { toast } = useToast()
@@ -142,7 +143,7 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
             const readBy = message.readBy || [];
             if (!readBy.includes(session.user.id!)) {
               return { ...message, readBy: [...readBy, session.user.id!] };
-            }
+        }
             return message;
           });
           
@@ -330,6 +331,12 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
         return updatedMessages;
       });
 
+      // Extract mentioned users from reply and send notifications
+      const mentionedUsers = extractMentionedUsers(replyContent.trim());
+      if (mentionedUsers.length > 0) {
+        await sendMentionNotifications(mentionedUsers, replyContent.trim());
+      }
+
       setReplyContent("");
       setReplyingTo(null);
       
@@ -405,6 +412,105 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
     }
   };
 
+  // Helper function to extract mentioned users from message content
+  const extractMentionedUsers = (content: string): User[] => {
+    const mentionedUsers: User[] = [];
+    const mentionRegex = /@([a-zA-Z]+(?:\s+[a-zA-Z]+)*)(?=\s|$)/g;
+    const matches = content.match(mentionRegex);
+    
+    if (matches) {
+      for (const match of matches) {
+        const mentionName = match.slice(1).trim(); // Remove @ symbol and trim
+        const foundUser = users.find(user => {
+          // Check if the mention matches the user's name (case insensitive)
+          if (user.name) {
+            const userName = user.name.toLowerCase();
+            const mentionLower = mentionName.toLowerCase();
+            
+            // Exact match
+            if (userName === mentionLower) return true;
+            
+            // Partial match (first name or last name)
+            const nameParts = userName.split(' ');
+            if (nameParts.some(part => part === mentionLower)) return true;
+            
+            // Check if mention is contained in the full name
+            if (userName.includes(mentionLower)) return true;
+          }
+          
+          // Check if the mention matches the email (case insensitive)
+          if (user.email) {
+            const userEmail = user.email.toLowerCase();
+            const mentionLower = mentionName.toLowerCase();
+            
+            // Exact email match
+            if (userEmail === mentionLower) return true;
+            
+            // Email username match (before @)
+            const emailUsername = userEmail.split('@')[0];
+            if (emailUsername === mentionLower) return true;
+          }
+          
+          return false;
+        });
+        
+        if (foundUser && !mentionedUsers.find(u => u.id === foundUser.id)) {
+          mentionedUsers.push(foundUser);
+        }
+      }
+    }
+    
+    return mentionedUsers;
+  };
+
+  // Helper function to send mention notifications
+  const sendMentionNotifications = async (mentionedUsers: User[], messageContent: string) => {
+    if (mentionedUsers.length === 0) return;
+    
+    setIsSendingNotifications(true);
+    try {
+      const response = await fetch('/api/bulletin-board/mention-notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mentionedUsers,
+          senderName: session?.user?.name,
+          messageContent,
+          category: activeTab,
+          messageId: Date.now().toString()
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to send mention notifications');
+        toast({
+          title: "Notification Error",
+          description: "Failed to send mention notifications.",
+          variant: "destructive",
+        });
+      } else {
+        console.log(`📧 Sent mention notifications to ${mentionedUsers.length} users`);
+        if (mentionedUsers.length > 0) {
+          toast({
+            title: "Mentions Notified",
+            description: `Sent notifications to ${mentionedUsers.length} mentioned user${mentionedUsers.length > 1 ? 's' : ''}.`,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error sending mention notifications:', error);
+      toast({
+        title: "Notification Error",
+        description: "Failed to send mention notifications.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingNotifications(false);
+    }
+  };
+
   // Submit new message
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -474,6 +580,12 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
       setMentionQuery("")
       // Keep the current tab active after posting
       
+      // Extract mentioned users and send notifications
+      const mentionedUsers = extractMentionedUsers(newMessage.trim());
+      if (mentionedUsers.length > 0) {
+        await sendMentionNotifications(mentionedUsers, newMessage.trim());
+      }
+      
       // Dispatch custom event to notify sidebar of new message
       window.dispatchEvent(new CustomEvent('bulletin-board-updated'));
       
@@ -528,10 +640,10 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
             </a>
           )
         } else {
-          return (
-            <span key={index} className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1 rounded">
-              @{part}
-            </span>
+        return (
+          <span key={index} className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1 rounded">
+            @{part}
+          </span>
           )
         }
       }
@@ -542,7 +654,7 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
   // Filter messages based on active tab
   const filteredMessages = messages.filter(message => {
     return message.category === activeTab;
-  });
+    });
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -575,7 +687,7 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
                     value={newMessage}
                     onChange={(e) => handleTextareaChange(e.target.value)}
                     className="min-h-[80px] sm:min-h-[100px] resize-none pr-12 text-sm"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isSendingNotifications}
                     onKeyDown={(e) => {
                       if (e.key === 'Escape' && showMentionDropdown) {
                         setShowMentionDropdown(false);
@@ -583,6 +695,12 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
                       }
                     }}
                   />
+                  {isSendingNotifications && (
+                    <div className="absolute top-2 left-2 text-xs text-muted-foreground flex items-center gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Sending notifications...
+                    </div>
+                  )}
                   
                   {/* @Mention Dropdown */}
                   {showMentionDropdown && (
@@ -594,21 +712,21 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
                             Team Members
                           </div>
                           {filteredUsers.slice(0, 3).map((user) => (
-                            <button
-                              key={user.id}
-                              type="button"
+                        <button
+                          key={user.id}
+                          type="button"
                               onClick={() => insertMention(user, 'users')}
-                              className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                            >
-                              <AtSign className="h-4 w-4 text-muted-foreground" />
+                          className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                        >
+                          <AtSign className="h-4 w-4 text-muted-foreground" />
                               <div className="min-w-0 flex-1">
                                 <div className="font-medium truncate">{user.name || user.email}</div>
-                                {user.name && (
+                            {user.name && (
                                   <div className="text-xs text-muted-foreground truncate">{user.email}</div>
-                                )}
-                              </div>
-                            </button>
-                          ))}
+                            )}
+                          </div>
+                        </button>
+                      ))}
                         </>
                       )}
                       
@@ -656,9 +774,9 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
                     type="submit"
                     size="sm"
                     className="absolute bottom-2 right-2 h-8 w-8 p-0"
-                    disabled={!newMessage.trim() || isSubmitting}
+                    disabled={!newMessage.trim() || isSubmitting || isSendingNotifications}
                   >
-                    {isSubmitting ? (
+                    {isSubmitting || isSendingNotifications ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <Send className="h-4 w-4" />
@@ -782,16 +900,16 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
                                 value={replyContent}
                                 onChange={(e) => setReplyContent(e.target.value)}
                                 className="min-h-[50px] sm:min-h-[60px] resize-none text-sm"
-                                disabled={isSubmittingReply}
+                                disabled={isSubmittingReply || isSendingNotifications}
                               />
                               <div className="flex items-center gap-2 mt-2">
                                 <Button
                                   size="sm"
                                   onClick={() => submitReply(message.id)}
-                                  disabled={!replyContent.trim() || isSubmittingReply}
+                                  disabled={!replyContent.trim() || isSubmittingReply || isSendingNotifications}
                                   className="h-7 px-2 text-xs"
                                 >
-                                  {isSubmittingReply ? (
+                                  {isSubmittingReply || isSendingNotifications ? (
                                     <Loader2 className="h-3 w-3 animate-spin" />
                                   ) : (
                                     <Send className="h-3 w-3" />
@@ -859,4 +977,4 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
       </SheetContent>
     </Sheet>
   )
-}
+} 

@@ -89,8 +89,8 @@ self.addEventListener('fetch', (event) => {
           return caches.match(request);
         })
     );
-    return;
-  }
+      return;
+    }
 
   // Handle static assets with Cache First strategy
   if (url.pathname.includes('.') && !url.pathname.includes('/api/')) {
@@ -109,7 +109,7 @@ self.addEventListener('fetch', (event) => {
                   cache.put(request, responseClone);
                 });
               return fetchResponse;
-            });
+    });
         })
     );
     return;
@@ -121,7 +121,7 @@ self.addEventListener('fetch', (event) => {
       .then((response) => {
         // Clone the response before using it
         const responseClone = response.clone();
-        
+
         // Cache successful navigation responses
         if (response.status === 200) {
           caches.open(DYNAMIC_CACHE)

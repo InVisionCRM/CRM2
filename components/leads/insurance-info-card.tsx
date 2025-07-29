@@ -75,6 +75,7 @@ export function InsuranceInfoCard({
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(!initialInsuranceInfo)
   const [isSaving, setIsSaving] = useState(false)
+  const [showInsuranceList, setShowInsuranceList] = useState(false)
 
   const [insuranceInfo, setInsuranceInfo] = useState<InsuranceInfo>(
     initialInsuranceInfo || {
@@ -96,7 +97,7 @@ export function InsuranceInfoCard({
   }
 
   // For picking a company from the big array
-  const handleCompanyChange = (companyName: string) => {
+  const handleCompanySelect = (companyName: string) => {
     const company = insuranceCompanies.find((c) => c.name === companyName)
     if (company) {
       const newInfo = {
@@ -107,9 +108,8 @@ export function InsuranceInfoCard({
       }
       setInsuranceInfo(newInfo)
       onInsuranceInfoUpdate?.(newInfo)
-    } else {
-      handleInputChange("company", companyName)
     }
+    setShowInsuranceList(false)
   }
 
   // Save to DB via updateInsuranceInfoAction
@@ -190,20 +190,33 @@ export function InsuranceInfoCard({
               {/* Insurance Company */}
               <div className="space-y-1">
                 <Label htmlFor="company">Insurance Company</Label>
-                <select
+                <Input
                   id="company"
-                  aria-label="Insurance Company"
                   value={insuranceInfo.company || ""}
-                  onChange={(e) => handleCompanyChange(e.target.value)}
+                  onChange={(e) => handleInputChange("company", e.target.value)}
+                  placeholder="Enter insurance company name"
                   className="w-full h-10 px-3 py-2 text-sm rounded-md border border-input bg-background"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowInsuranceList(!showInsuranceList)}
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium cursor-pointer"
                 >
-                  <option value="">Select Insurance Company</option>
-                  {insuranceCompanies.map((c) => (
-                    <option key={c.name} value={c.name}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                  Open Insurance List
+                </button>
+                {showInsuranceList && (
+                  <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-gray-300 rounded-md shadow-lg">
+                    {insuranceCompanies.map((c) => (
+                      <div
+                        key={c.name}
+                        onClick={() => handleCompanySelect(c.name)}
+                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                      >
+                        {c.name}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Insurance Phone */}

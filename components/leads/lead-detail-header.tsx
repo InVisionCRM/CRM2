@@ -1,18 +1,32 @@
 "use client"
 
 import { useState } from "react"
-import { ArrowLeft, MoreVertical } from "lucide-react"
+import { ArrowLeft, MoreVertical, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
+import { useToast } from "@/hooks/use-toast"
+import { useDeleteLead } from "@/hooks/use-delete-lead"
 import { cn, getStatusColor, formatStatusLabel } from "@/lib/utils"
 import { AppointmentCountdown } from "@/components/leads/appointment-countdown"
 import { StatusGrid } from "@/components/status-grid"
 import { updateLeadStatus } from "@/app/actions/lead-actions"
-import { useToast } from "@/hooks/use-toast"
 import type { Lead, LeadStatus } from "@/types/lead"
+import { UserRole } from "@prisma/client"
 
 interface LeadDetailHeaderProps {
   lead: Lead
@@ -22,7 +36,22 @@ interface LeadDetailHeaderProps {
 
 export function LeadDetailHeader({ lead, adjusterAppointmentDate, adjusterAppointmentTime }: LeadDetailHeaderProps) {
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const { toast } = useToast()
+  const router = useRouter()
+  const { data: session } = useSession()
+  const { deleteLead, isLoading: isDeleting } = useDeleteLead()
+
+  // Check if user can delete this lead
+  const canDeleteLead = () => {
+    if (!session?.user?.id) return false
+    
+    // Admins can delete any lead
+    if (session.user.role === UserRole.ADMIN) return true
+    
+    // Users can only delete their assigned leads
+    return lead.assignedToId === session.user.id
+  }
 
   const handleStatusChange = async (status: LeadStatus | null) => {
     if (status === null) {
@@ -50,6 +79,25 @@ export function LeadDetailHeader({ lead, adjusterAppointmentDate, adjusterAppoin
         description: "An unexpected error occurred",
         variant: "destructive",
       })
+    }
+  }
+
+  const handleDelete = async () => {
+    try {
+      await deleteLead(lead.id)
+      toast({
+        title: "Lead deleted",
+        description: "Lead has been successfully deleted",
+      })
+      router.push("/")
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete lead",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeleteDialogOpen(false)
     }
   }
 
@@ -84,7 +132,15 @@ export function LeadDetailHeader({ lead, adjusterAppointmentDate, adjusterAppoin
             <DropdownMenuContent align="end">
               <DropdownMenuItem>Edit Lead</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsStatusDialogOpen(true)}>Change Status</DropdownMenuItem>
-              <DropdownMenuItem>Delete Lead</DropdownMenuItem>
+              {canDeleteLead() && (
+                <DropdownMenuItem 
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                  className="text-red-600 focus:text-red-600"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Lead
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -102,6 +158,30 @@ export function LeadDetailHeader({ lead, adjusterAppointmentDate, adjusterAppoin
               </div>
             </DialogContent>
           </Dialog>
+
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete the lead and all associated data.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleDelete()
+                  }}
+                  className="bg-red-600 hover:bg-red-700"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </header>

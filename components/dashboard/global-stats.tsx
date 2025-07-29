@@ -418,8 +418,8 @@ export function GlobalStats() {
                         onClick={() => handleStatusClick(status, label, false)}
                       >
                         <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">{label}</p>
-                        <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-200">{count}</p>
-                      </div>
+                          <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-200">{count}</p>
+                        </div>
                     ))}
                     
                     {/* Middle Row - Left */}
@@ -508,7 +508,7 @@ export function GlobalStats() {
                       >
                         <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">{label}</p>
                         <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-200">{count}</p>
-                      </div>
+                            </div>
                     ))}
                     
                     {/* Middle Row - Left */}
@@ -519,7 +519,7 @@ export function GlobalStats() {
                       >
                         <p className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 text-center">{userStatusData.statusCounts[3].label}</p>
                         <p className="text-lg sm:text-2xl font-bold text-slate-800 dark:text-slate-200">{userStatusData.statusCounts[3].count}</p>
-                      </div>
+                            </div>
                     )}
                     
                     {/* Center - Total Leads */}
@@ -527,7 +527,7 @@ export function GlobalStats() {
                       <p className="text-xs sm:text-sm font-medium text-primary text-center">Total</p>
                       <p className="text-xl sm:text-3xl font-bold text-primary">{userStatusData.statusCounts.reduce((sum, item) => sum + item.count, 0)}</p>
                       <p className="text-xs text-primary/70">leads</p>
-                    </div>
+                          </div>
                     
                     {/* Middle Row - Right */}
                     {userStatusData.statusCounts[4] && (

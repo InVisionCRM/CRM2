@@ -322,8 +322,33 @@ export async function updateLead(
   }
 }
 
-export async function deleteLead(id: string): Promise<boolean> {
+export async function deleteLead(id: string, userId: string): Promise<{ success: boolean; error?: string }> {
   try {
+    // Get the lead to check ownership and user role
+    const lead = await prisma.lead.findUnique({
+      where: { id },
+      select: { assignedToId: true }
+    })
+
+    if (!lead) {
+      return { success: false, error: "Lead not found" }
+    }
+
+    // Get user role to check authorization
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true }
+    })
+
+    if (!user) {
+      return { success: false, error: "User not found" }
+    }
+
+    // Check authorization: admins can delete any lead, users can only delete their assigned leads
+    if (user.role !== 'ADMIN' && lead.assignedToId !== userId) {
+      return { success: false, error: "Unauthorized to delete this lead" }
+    }
+
     // Delete all related activities first
     await prisma.activity.deleteMany({
       where: { leadId: id }
@@ -339,9 +364,9 @@ export async function deleteLead(id: string): Promise<boolean> {
       where: { id }
     })
 
-    return true
+    return { success: true }
   } catch (error) {
     console.error(`Error deleting lead with ID ${id}:`, error)
-    return false
+    return { success: false, error: "Failed to delete lead" }
   }
 }

@@ -269,9 +269,8 @@ export function InsuranceForm({
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isCustomCompany, setIsCustomCompany] = useState(false)
-  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false)
   const [showDamageTypeDropdown, setShowDamageTypeDropdown] = useState(false)
-  const companyDropdownRef = useRef<HTMLDivElement>(null)
+  const [showInsuranceList, setShowInsuranceList] = useState(false)
   const damageTypeDropdownRef = useRef<HTMLDivElement>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
@@ -368,9 +367,6 @@ export function InsuranceForm({
   // Handle click outside to close dropdowns
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (companyDropdownRef.current && !companyDropdownRef.current.contains(event.target as Node)) {
-        setShowCompanyDropdown(false)
-      }
       if (damageTypeDropdownRef.current && !damageTypeDropdownRef.current.contains(event.target as Node)) {
         setShowDamageTypeDropdown(false)
       }
@@ -420,7 +416,7 @@ export function InsuranceForm({
         setValue("insuranceSecondaryPhone", company.secondaryPhone || "")
       }
     }
-    setShowCompanyDropdown(false)
+    setShowInsuranceList(false)
   }
 
   const handleDamageTypeSelect = (damageType: string) => {
@@ -521,43 +517,7 @@ export function InsuranceForm({
     </div>
   )
 
-  // Custom dropdown component for insurance company
-  const CompanyDropdown = () => (
-    <div className="relative" ref={companyDropdownRef}>
-      <div
-        className={cn(
-          "flex items-center justify-between px-1 sm:p-1 bg-white bg-opacity-10 rounded-md cursor-pointer h-10 sm:h-12",
-          "border border-transparent",
-          showCompanyDropdown ? "hover:border-gray-600" : "cursor-not-allowed opacity-70",
-          "text-sm sm:text-base"
-        )}
-        onClick={() => !isReadOnly && !isLoading && setShowCompanyDropdown(!showCompanyDropdown)}
-      >
-        <span className={selectedCompany ? "text-white" : "text-white text-opacity-50"}>
-          {selectedCompany || "Select insurance company"}
-        </span>
-        <ChevronDown className="ml-2 h-4 w-4 text-white text-opacity-70" />
-      </div>
-      
-      {showCompanyDropdown && (
-        <div className="absolute z-50 w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg max-h-60 overflow-auto">
-          {INSURANCE_COMPANIES.map((company) => (
-            <div
-              key={company.name}
-              className={cn(
-                "px-3 sm:px-4 py-4 cursor-pointer hover:bg-zinc-700 flex justify-between items-center text-sm sm:text-base",
-                selectedCompany === company.name ? "bg-zinc-700" : ""
-              )}
-              onClick={() => handleCompanySelect(company.name)}
-            >
-              <span className="text-white">{company.name}</span>
-              {selectedCompany === company.name && <Check size={24} className="text-green-400" />}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
+
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 w-full relative p-1">
@@ -607,7 +567,35 @@ export function InsuranceForm({
             Insurance Company
           </Label>
           <div className="relative">
-            <CompanyDropdown />
+            <Input
+              id="insuranceCompany"
+              placeholder="Enter insurance company name"
+              {...register("insuranceCompany")}
+              disabled={isLoading || isReadOnly}
+              className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+            />
+            <button
+              type="button"
+              onClick={() => setShowInsuranceList(!showInsuranceList)}
+              className="text-blue-400 hover:text-blue-300 text-sm font-medium cursor-pointer mt-1"
+              disabled={isLoading || isReadOnly}
+            >
+              Open Insurance List
+            </button>
+            {showInsuranceList && (
+              <div className="absolute z-50 w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg max-h-60 overflow-auto">
+                {INSURANCE_COMPANIES.map((company) => (
+                  <div
+                    key={company.name}
+                    className="px-3 sm:px-4 py-4 cursor-pointer hover:bg-zinc-700 flex justify-between items-center text-sm sm:text-base"
+                    onClick={() => handleCompanySelect(company.name)}
+                  >
+                    <span className="text-white">{company.name}</span>
+                    {selectedCompany === company.name && <Check size={24} className="text-green-400" />}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           {isCustomCompany && (
             <Input

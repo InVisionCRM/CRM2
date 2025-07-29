@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.02] - 2024-12-19
+
+### Added
+- Email notifications for @mentions in bulletin board messages
+- New API endpoint `/api/bulletin-board/mention-notifications` for sending mention notifications
+- Enhanced mention detection with support for partial names, email usernames, and case-insensitive matching
+- Floating action button component for bulletin board access (currently disabled)
+- Visual feedback and loading states for mention notifications
+- Toast notifications to confirm when mention emails are sent
+
+### Changed
+- Updated bulletin board component to detect and process user mentions
+- Enhanced mention detection regex to handle various name formats
+- Improved user experience with notification status indicators
+- Added proper error handling for mention notification failures
+
+### Fixed
+- Improved mention detection accuracy for different name formats
+- Added duplicate mention prevention in notification system
+
 ## [Unreleased]
 
 ### Added

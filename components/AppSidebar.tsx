@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { CreateLeadForm } from "@/components/forms/CreateLeadForm"
 import { BulletinBoard } from "@/components/bulletin-board"
+import { BulletinBoardFloatingTag } from "@/components/bulletin-board-floating-tag"
 import {
   Sheet,
   SheetContent,
@@ -260,6 +261,10 @@ export default function AppSidebar() {
         isOpen={isBulletinBoardOpen} 
         onClose={() => setIsBulletinBoardOpen(false)} 
       />
+      {/* <BulletinBoardFloatingTag 
+        onOpen={() => setIsBulletinBoardOpen(true)}
+        unreadCount={unreadCount}
+      /> */}
     </>
   )
 } 

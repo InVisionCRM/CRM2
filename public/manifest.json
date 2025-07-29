@@ -94,7 +94,7 @@
         {
           "src": "/icons/shortcut-calendar.png",
           "sizes": "96x96"
-        }
+    }
       ]
     },
     {
@@ -106,7 +106,7 @@
         {
           "src": "/icons/shortcut-map.png",
           "sizes": "96x96"
-        }
+  }
       ]
     }
   ]
