@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server"
 import { getLeadById, updateLead } from "@/lib/db/leads"
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/db/prisma"
 import type { UpdateLeadInput } from "@/lib/db/leads"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { deleteLead } from "@/lib/db/leads"
 import { sendLeadDeletionNotification } from "@/lib/services/admin-notifications"
+import { createDeletionRequest } from "@/lib/services/deletion-approval"
 
 export async function GET(
   request: Request,
@@ -107,39 +108,51 @@ export async function DELETE(
     const params = await paramsPromise
     const id = params.id
 
-    const result = await deleteLead(id, session.user.id)
+    // Get request body for deletion reason
+    const body = await request.json().catch(() => ({}))
+    const reason = body.reason
 
-    if (!result.success) {
+    // Get lead details first
+    const lead = await prisma.lead.findUnique({
+      where: { id },
+      select: {
+        firstName: true,
+        lastName: true,
+        email: true,
+        address: true,
+        status: true,
+        createdAt: true
+      }
+    })
+
+    if (!lead) {
       return NextResponse.json(
-        { error: result.error || "Failed to delete lead" },
-        { status: result.error === "Lead not found" ? 404 : 
-          result.error === "Unauthorized to delete this lead" ? 403 : 500 }
+        { error: "Lead not found" },
+        { status: 404 }
       )
     }
 
-    // Send notification to admins if lead was successfully deleted
-    if (result.success && result.deletedLead && session?.accessToken) {
-      try {
-        const leadName = `${result.deletedLead.firstName || ''} ${result.deletedLead.lastName || ''}`.trim() || 'Unknown Lead'
-        
-        await sendLeadDeletionNotification({
-          leadId: id,
-          leadName,
-          leadEmail: result.deletedLead.email || '',
-          leadAddress: result.deletedLead.address || '',
-          deletedBy: result.deletedLead.deletedBy,
-          leadStatus: result.deletedLead.status,
-          createdAt: result.deletedLead.createdAt.toISOString()
-        }, session)
-      } catch (notificationError) {
-        console.error("Failed to send lead deletion notification:", notificationError)
-        // Don't fail the deletion if notification fails
-      }
-    }
+    // Create deletion request instead of immediately deleting
+    const deletionRequest = await createDeletionRequest(id, {
+      leadName: `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown Lead',
+      leadEmail: lead.email || '',
+      leadAddress: lead.address || '',
+      leadStatus: lead.status,
+      requestedBy: {
+        id: session.user.id,
+        name: session.user.name || 'Unknown User',
+        email: session.user.email || ''
+      },
+      reason
+    })
 
-    return NextResponse.json({ success: true, message: "Lead deleted successfully" })
+    return NextResponse.json({ 
+      success: true, 
+      message: "Deletion request created successfully. Waiting for admin approval.",
+      requestId: deletionRequest.id
+    })
   } catch (error) {
-    console.error("Error deleting lead:", error)
+    console.error("Error creating deletion request:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

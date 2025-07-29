@@ -71,6 +71,8 @@ model User {
   visionMarkers        VisionMarker[]
   visits               Visit[]
   bulletinMessages     BulletinMessage[]
+  deletionRequests     DeletionRequest[] @relation("DeletionRequestedBy")
+  approvedDeletions    DeletionRequest[] @relation("DeletionApprovedBy")
 }
 
 model BulletinMessage {
@@ -295,6 +297,34 @@ model RoutePoint {
 
   @@index([userId])
   @@index([timestamp])
+}
+
+model DeletionRequest {
+  id                String    @id @default(uuid()) @db.Uuid
+  leadId            String
+  leadName          String
+  leadEmail         String
+  leadAddress       String
+  leadStatus        String
+  requestedById     String    @db.Uuid
+  requestedByName   String
+  requestedByEmail  String
+  reason            String?
+  status            String    @default("pending") // pending, approved, rejected
+  createdAt         DateTime  @default(now()) @db.Timestamptz(6)
+  approvedById      String?   @db.Uuid
+  approvedByName    String?
+  approvedByEmail   String?
+  approvedAt        DateTime? @db.Timestamptz(6)
+  rejectionReason   String?
+  requestedBy       User      @relation("DeletionRequestedBy", fields: [requestedById], references: [id])
+  approvedBy        User?     @relation("DeletionApprovedBy", fields: [approvedById], references: [id])
+
+  @@index([leadId])
+  @@index([status])
+  @@index([requestedById])
+  @@index([approvedById])
+  @@index([createdAt])
 }
 
 model LeadPhoto {

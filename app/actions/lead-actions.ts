@@ -14,6 +14,7 @@ import { GoogleDriveService } from "@/lib/services/googleDrive"
 import { createStatusChangeActivity } from "@/lib/services/activities"
 import { getCurrentUser } from "@/lib/session"
 import { sendLeadDeletionNotification } from "@/lib/services/admin-notifications"
+import { createDeletionRequest } from "@/lib/services/deletion-approval"
 
 export async function createLeadAction(
   data: {
@@ -199,9 +200,9 @@ export async function updateLeadAction(
   }
 }
 
-export async function deleteLeadAction(id: string) {
+export async function deleteLeadAction(id: string, reason?: string) {
   try {
-    console.log("Deleting lead with ID:", id)
+    console.log("Creating deletion request for lead with ID:", id)
 
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
@@ -211,48 +212,53 @@ export async function deleteLeadAction(id: string) {
       }
     }
 
-    const result = await deleteLead(id, session.user.id)
+    // Get lead details first
+    const lead = await prisma.lead.findUnique({
+      where: { id },
+      select: {
+        firstName: true,
+        lastName: true,
+        email: true,
+        address: true,
+        status: true,
+        createdAt: true
+      }
+    })
 
-    if (!result.success) {
-      console.error(`Failed to delete lead with ID ${id}:`, result.error)
+    if (!lead) {
       return {
         success: false,
-        message: result.error || "Failed to delete lead",
+        message: "Lead not found",
       }
     }
 
-    // Send notification to admins if lead was successfully deleted
-    if (result.success && result.deletedLead && session?.accessToken) {
-      try {
-        const leadName = `${result.deletedLead.firstName || ''} ${result.deletedLead.lastName || ''}`.trim() || 'Unknown Lead'
-        
-        await sendLeadDeletionNotification({
-          leadId: id,
-          leadName,
-          leadEmail: result.deletedLead.email || '',
-          leadAddress: result.deletedLead.address || '',
-          deletedBy: result.deletedLead.deletedBy,
-          leadStatus: result.deletedLead.status,
-          createdAt: result.deletedLead.createdAt.toISOString()
-        }, session)
-      } catch (notificationError) {
-        console.error("Failed to send lead deletion notification:", notificationError)
-        // Don't fail the deletion if notification fails
-      }
-    }
+    // Create deletion request instead of immediately deleting
+    const deletionRequest = await createDeletionRequest(id, {
+      leadName: `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown Lead',
+      leadEmail: lead.email || '',
+      leadAddress: lead.address || '',
+      leadStatus: lead.status,
+      requestedBy: {
+        id: session.user.id,
+        name: session.user.name || 'Unknown User',
+        email: session.user.email || ''
+      },
+      reason
+    })
 
     revalidatePath("/leads")
     revalidatePath("/dashboard")
 
     return {
       success: true,
-      message: "Lead deleted successfully",
+      message: "Deletion request created successfully. Waiting for admin approval.",
+      requestId: deletionRequest.id
     }
   } catch (error) {
-    console.error("Error deleting lead:", error)
+    console.error("Error creating deletion request:", error)
     return {
       success: false,
-      message: error instanceof Error ? error.message : "Failed to delete lead",
+      message: error instanceof Error ? error.message : "Failed to create deletion request",
     }
   }
 }

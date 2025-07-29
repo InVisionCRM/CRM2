@@ -23,6 +23,7 @@ import {
   Sun,
   MessageSquare,
   Rss,
+  Shield,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -110,6 +111,7 @@ const moreNavLinks = [
   { href: "/route-planner", label: "Route Planner", icon: Route },
   { href: "/team", label: "Team", icon: Users },
   { href: "/contracts/general", label: "Contracts", icon: ClipboardList },
+  { href: "/admin/deletion-requests", label: "Deletion Requests", icon: Shield, adminOnly: true },
   { href: "/admin/users", label: "Settings", icon: Settings },
 ]
 
@@ -179,6 +181,12 @@ function MoreMenu() {
         <div className="grid grid-cols-3 gap-4 py-4">
           {moreNavLinks.map((link) => {
             const isActive = pathname === link.href
+            
+            // Skip admin-only links for non-admin users
+            if (link.adminOnly && session?.user?.role !== 'ADMIN') {
+              return null
+            }
+            
             return (
               <Link
                 key={link.href}
@@ -215,6 +223,7 @@ export default function AppSidebar() {
   const [isCreateLeadOpen, setIsCreateLeadOpen] = useState(false)
   const [isBulletinBoardOpen, setIsBulletinBoardOpen] = useState(false)
   const unreadCount = useUnreadMessageCount()
+  const { data: session } = useSession()
 
   return (
     <>
