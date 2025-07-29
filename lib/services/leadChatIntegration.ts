@@ -84,29 +84,29 @@ export async function createLeadChatSpace(
       members.push(leadData.assignedTo.email)
     }
 
-    // Create chat space with claim number if available
-    const claimNumber = leadData.leadClaimNumber || ''
-    const spaceName = claimNumber 
-      ? `Lead: ${leadData.leadName} - Claim#${claimNumber} - ${leadData.leadId}`
-      : `Lead: ${leadData.leadName} - ${leadData.leadId}`
+    // Create chat space with claim number - ALWAYS use claim number if available
+    const claimNumber = leadData.leadClaimNumber
+    if (!claimNumber) {
+      return { 
+        success: false, 
+        error: "Cannot create chat space: Claim number is required" 
+      }
+    }
     
-    const spaceDescription = `🏠 **Lead Chat Space Created**
+    const spaceName = `Lead: ${leadData.leadName} - Claim#${claimNumber} - ${leadData.leadId}`
+    
+    const spaceDescription = `🏠 **Lead Chat Space**
 
 **Lead:** ${leadData.leadName}
-${claimNumber ? `**Claim #:** ${claimNumber}` : ''}
+**Claim #:** ${claimNumber}
 **Status:** ${leadData.leadStatus}
 **Email:** ${leadData.leadEmail || 'Not provided'}
 **Address:** ${leadData.leadAddress || 'Not provided'}
 
-**Team:**
-• Created by: ${leadData.createdBy.name}
-${leadData.assignedTo ? `• Assigned to: ${leadData.assignedTo.name}` : ''}
-• All admins automatically added
-
 **Quick Links:**
 • 📊 [View in CRM](${process.env.NEXTAUTH_URL}/leads/${leadData.leadId})
 • 📍 [Street View](${leadData.leadAddress ? `https://maps.google.com/?q=${encodeURIComponent(leadData.leadAddress)}&t=k` : ''})
-• 📅 [Calendar](${process.env.NEXTAUTH_URL}/dashboard/calendar?leadId=${leadData.leadId})
+• 📅 [Google Calendar](https://calendar.google.com)
 
 **Available Commands:**
 • /status - Check lead status
@@ -114,6 +114,7 @@ ${leadData.assignedTo ? `• Assigned to: ${leadData.assignedTo.name}` : ''}
 • /photos - View lead photos
 • /contracts - Check contracts
 • /update [status] - Update status
+• /upload - Get upload instructions
 • /help - Show all commands`
 
     const result = await googleChat.createSpace({
@@ -130,34 +131,18 @@ ${leadData.assignedTo ? `• Assigned to: ${leadData.assignedTo.name}` : ''}
       })
 
       // Send welcome message to the chat
-      const welcomeMessage = `🎉 **New Lead Created!**
+      const welcomeMessage = `🎉 **Chat Space Created!**
 
-**Lead Details:**
-${claimNumber ? `• **Claim #:** ${claimNumber}` : ''}
-• **Name:** ${leadData.leadName}
-• **Email:** ${leadData.leadEmail || 'Not provided'}
-• **Address:** ${leadData.leadAddress || 'Not provided'}
-• **Status:** ${leadData.leadStatus}
-• **Created by:** ${leadData.createdBy.name}
-${leadData.assignedTo ? `• **Assigned to:** ${leadData.assignedTo.name}` : ''}
-
-**Team Members Added:**
-${members.map(email => `• ${email}`).join('\n')}
+**Lead:** ${leadData.leadName}
+**Claim #:** ${claimNumber}
+**Status:** ${leadData.leadStatus}
 
 **Quick Links:**
 • 📊 [View in CRM](${process.env.NEXTAUTH_URL}/leads/${leadData.leadId})
 • 📍 [Street View](${leadData.leadAddress ? `https://maps.google.com/?q=${encodeURIComponent(leadData.leadAddress)}&t=k` : ''})
-• 📅 [Schedule Appointment](${process.env.NEXTAUTH_URL}/dashboard/calendar?leadId=${leadData.leadId})
+• 📅 [Google Calendar](https://calendar.google.com)
 
-**Available Commands:**
-• /status - Check lead status
-• /files - List lead files  
-• /photos - View lead photos
-• /contracts - Check contracts
-• /update [status] - Update status
-• /help - Show all commands
-
-This chat room will be used for all communications related to this lead. You'll receive notifications for status changes, appointments, and other updates.`
+**Type /help to see available commands!**`
 
       await googleChat.sendMessage(result.spaceId, {
         text: welcomeMessage
@@ -291,13 +276,14 @@ export async function updateLeadChatStatus(
 **Quick Links:**
 • 📊 [View in CRM](${process.env.NEXTAUTH_URL}/leads/${leadId})
 • 📍 [Street View](${lead.address ? `https://maps.google.com/?q=${encodeURIComponent(lead.address)}&t=k` : ''})
-• 📅 [Schedule Appointment](${process.env.NEXTAUTH_URL}/dashboard/calendar?leadId=${leadId})
+• 📅 [Google Calendar](https://calendar.google.com)
 
 **Available Commands:**
 • /status - Check current status
 • /files - List uploaded documents
 • /photos - View lead photos
-• /contracts - Check contract status`
+• /contracts - Check contract status
+• /upload - Get upload instructions`
 
     const result = await googleChat.sendMessage(lead.googleChatSpaceId, {
       text: statusMessage

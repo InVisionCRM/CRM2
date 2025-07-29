@@ -26,6 +26,7 @@ export async function POST(
         email: true,
         address: true,
         status: true,
+        claimNumber: true,
         assignedToId: true,
         googleChatSpaceId: true
       }
