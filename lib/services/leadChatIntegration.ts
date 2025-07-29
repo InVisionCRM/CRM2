@@ -84,6 +84,9 @@ export async function createLeadChatSpace(
       members.push(leadData.assignedTo.email)
     }
 
+    // Note: Purlin_Bot will be automatically added to the space when it's created
+    // because the bot is configured as the webhook endpoint for the space
+
     // Create chat space with claim number - ALWAYS use claim number if available
     const claimNumber = leadData.leadClaimNumber
     if (!claimNumber) {
@@ -124,6 +127,9 @@ export async function createLeadChatSpace(
     })
 
     if (result.success && result.spaceId) {
+      // Ensure the bot is in the space
+      await googleChat.ensureBotInSpace(result.spaceId)
+      
       // Update the lead with the chat space ID
       await prisma.lead.update({
         where: { id: leadData.leadId },

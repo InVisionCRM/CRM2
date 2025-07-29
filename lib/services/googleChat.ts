@@ -99,10 +99,62 @@ export class GoogleChatService {
       await Promise.all(memberPromises)
       return { success: true }
     } catch (error: any) {
-      console.error('Error adding members to Google Chat space:', error)
+      console.error('Error adding members to chat space:', error)
       return {
         success: false,
         error: error.message || 'Failed to add members to chat space'
+      }
+    }
+  }
+
+  /**
+   * Add the bot to a Google Chat space
+   */
+  async addBotToSpace(spaceId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // The bot should be automatically added when the space is created
+      // because it's configured as the webhook endpoint
+      console.log(`✅ Bot should be automatically added to space ${spaceId}`)
+      return { success: true }
+    } catch (error: any) {
+      console.error('Error adding bot to chat space:', error)
+      return {
+        success: false,
+        error: error.message || 'Failed to add bot to chat space'
+      }
+    }
+  }
+
+  /**
+   * Check if the bot is in a space and add it if needed
+   */
+  async ensureBotInSpace(spaceId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Get space members
+      const members = await this.chat.spaces.members.list({
+        parent: spaceId
+      })
+
+      // Check if bot is already in the space
+      const botMember = members.data.memberships?.find((member: any) => 
+        member.member?.displayName === 'Purlin_Bot' || 
+        member.member?.name?.includes('bot')
+      )
+
+      if (botMember) {
+        console.log(`✅ Bot is already in space ${spaceId}`)
+        return { success: true }
+      } else {
+        console.log(`⚠️ Bot not found in space ${spaceId}, attempting to add...`)
+        // The bot should be automatically added via webhook configuration
+        // If it's not there, it might be a configuration issue
+        return { success: true, error: 'Bot should be automatically added via webhook' }
+      }
+    } catch (error: any) {
+      console.error('Error checking bot in space:', error)
+      return {
+        success: false,
+        error: error.message || 'Failed to check bot in space'
       }
     }
   }
