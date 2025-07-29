@@ -535,10 +535,10 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
             )}
           >
             <div className="flex flex-col items-center justify-center gap-1">
-              <div className="p-1 bg-white/10 rounded-md">
+              <div className="p-1 bg-white/10 rounded-md hidden sm:block">
                 <CalendarIcon className="h-4 w-4 text-blue-200" />
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex flex-col items-center gap-1">
                 <span className="text-xs leading-tight font-semibold text-blue-100">Schedule</span>
                 <ChevronDown className="h-3 w-3 text-blue-200 transition-transform duration-200 group-data-[state=open]:rotate-180" />
               </div>

@@ -514,11 +514,11 @@ export function LeadNotes({ leadId }: LeadNotesProps) {
                         />
                         <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate flex justify-between items-center">
                           <span>{img.name || `Photo ${index + 1}`}</span>
-                          {/* {img.stage && (
+                          {img.stage && (
                             <Badge className={`text-[0.65rem] px-1 py-0 h-4 ${getStageBadgeColor(img.stage)}`}>
                               {getStageDisplayName(img.stage)}
                             </Badge>
-                          )} */}
+                          )}
                         </div>
                       </div>
                     ))}

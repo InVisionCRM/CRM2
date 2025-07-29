@@ -626,42 +626,44 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
 
   // Custom dropdown component for insurance company
   const CompanyDropdown = () => (
-    <div className="relative">
-      <div
-        className={cn(
-          "flex items-center justify-between px-3 py-2 bg-slate-800/50 border-slate-700/50 rounded-md cursor-pointer h-10 text-slate-200",
-          "border transition-all duration-300 hover:border-opacity-70"
+    <div className="space-y-2">
+      <div className="relative">
+        <Input
+          value={insuranceFormData.insuranceCompany}
+          onChange={(e) => setInsuranceFormData({...insuranceFormData, insuranceCompany: e.target.value})}
+          placeholder="Enter insurance company name"
+          className="bg-slate-800/50 border-slate-700/50 text-slate-200"
+          style={{
+            borderColor: `rgba(${colors.border}, 0.3)`,
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
+          className="text-blue-400 hover:text-blue-300 text-sm font-medium cursor-pointer mt-1"
+        >
+          Open Insurance List
+        </button>
+        {showCompanyDropdown && (
+          <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-md shadow-lg max-h-60 overflow-auto">
+            {INSURANCE_COMPANIES.map((company) => (
+              <div
+                key={company.name}
+                className={cn(
+                  "px-3 py-2 cursor-pointer hover:bg-slate-700 flex justify-between items-center text-sm",
+                  insuranceFormData.insuranceCompany === company.name ? "bg-slate-700" : ""
+                )}
+                onClick={() => handleCompanySelect(company.name)}
+              >
+                <span className="text-slate-200">{company.name}</span>
+                {insuranceFormData.insuranceCompany === company.name && <CheckCircle2 size={16} className="text-green-400" />}
+              </div>
+            ))}
+          </div>
         )}
-        onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
-        style={{
-          borderColor: `rgba(${colors.border}, 0.3)`,
-        }}
-      >
-        <span className={insuranceFormData.insuranceCompany ? "text-slate-200" : "text-slate-500"}>
-          {insuranceFormData.insuranceCompany || "Company"}
-        </span>
-        <ChevronDown className="ml-2 h-4 w-4 text-slate-400" />
       </div>
-      
-      {showCompanyDropdown && (
-        <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-md shadow-lg max-h-60 overflow-auto">
-          {INSURANCE_COMPANIES.map((company) => (
-            <div
-              key={company.name}
-              className={cn(
-                "px-3 py-2 cursor-pointer hover:bg-slate-700 flex justify-between items-center text-sm",
-                insuranceFormData.insuranceCompany === company.name ? "bg-slate-700" : ""
-              )}
-              onClick={() => handleCompanySelect(company.name)}
-            >
-              <span className="text-slate-200">{company.name}</span>
-              {insuranceFormData.insuranceCompany === company.name && <CheckCircle2 size={16} className="text-green-400" />}
-            </div>
-          ))}
-        </div>
-      )}
-      </div>
-    )
+    </div>
+  )
 
   // Custom dropdown component for damage type
   const DamageTypeDropdown = () => (

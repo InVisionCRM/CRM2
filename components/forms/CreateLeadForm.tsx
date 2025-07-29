@@ -87,7 +87,6 @@ const createLeadSchema = z.object({
   notes: z.string().optional().or(z.literal("")),
   // Insurance fields (all optional)
   insuranceCompany: z.string().optional().or(z.literal("")),
-  customInsuranceCompany: z.string().optional().or(z.literal("")),
   insuranceEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
   insurancePhone: z.string().optional().or(z.literal("")),
   insuranceSecondaryPhone: z.string().optional().or(z.literal("")),
@@ -121,7 +120,7 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
   const [activeTab, setActiveTab] = useState("contact")
   
   // Insurance-related state
-  const [isCustomCompany, setIsCustomCompany] = useState(false)
+
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false)
   const [showDamageTypeDropdown, setShowDamageTypeDropdown] = useState(false)
   const companyDropdownRef = useRef<HTMLDivElement>(null)
@@ -146,8 +145,7 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
       status: LeadStatus.follow_ups,
       notes: "",
       // Insurance defaults - start with dropdown
-      insuranceCompany: "",
-      customInsuranceCompany: "",
+          insuranceCompany: "",
       insuranceEmail: "",
       insurancePhone: "",
       insuranceSecondaryPhone: "",
@@ -253,38 +251,27 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
     setShowDamageTypeDropdown(false)
   }
 
-  // Toggle to custom company input
-  const handleCustomCompanyToggle = () => {
-    setIsCustomCompany(true)
-    setValue("insuranceCompany", "")
-    setValue("insurancePhone", "")
-    setValue("insuranceSecondaryPhone", "")
-  }
 
-  // Return to company dropdown
-  const handleReturnToDropdown = () => {
-    setIsCustomCompany(false)
-    setValue("customInsuranceCompany", "")
-  }
 
   // Custom dropdown component for insurance company
   const CompanyDropdown = () => (
     <div className="space-y-2">
-      <div className="relative" ref={companyDropdownRef}>
-        <div
-          className={cn(
-            "flex items-center justify-between px-3 sm:p-4 bg-white bg-opacity-10 rounded-md cursor-pointer h-10 sm:h-12",
-            "border border-transparent hover:border-gray-600",
-            "text-sm sm:text-base"
-          )}
-          onClick={() => !isLoading && setShowCompanyDropdown(!showCompanyDropdown)}
+      <div className="relative">
+        <Input
+          id="insuranceCompany"
+          placeholder="Enter insurance company name"
+          {...register("insuranceCompany")}
+          disabled={isLoading}
+          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+        />
+        <button
+          type="button"
+          onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
+          className="text-blue-400 hover:text-blue-300 text-sm font-medium cursor-pointer mt-1"
+          disabled={isLoading}
         >
-          <span className={selectedCompany ? "text-white" : "text-white text-opacity-50"}>
-            {selectedCompany || "Select insurance company"}
-          </span>
-          <ChevronDown className="ml-2 h-4 w-4 text-white text-opacity-70" />
-        </div>
-        
+          Open Insurance List
+        </button>
         {showCompanyDropdown && (
           <div className="absolute z-50 w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg max-h-60 overflow-auto">
             {INSURANCE_COMPANIES.map((company) => (
@@ -303,13 +290,6 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
           </div>
         )}
       </div>
-      <button
-        type="button"
-        onClick={handleCustomCompanyToggle}
-        className="text-blue-400 hover:text-blue-300 cursor-pointer text-sm underline"
-      >
-        Not Listed? Enter custom company
-      </button>
     </div>
   )
 
@@ -356,13 +336,8 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
     try {
       // Prepare data for submission
       const submissionData = {
-        ...data,
-        // Use custom company name if provided, otherwise use selected company
-        insuranceCompany: data.customInsuranceCompany || data.insuranceCompany
+        ...data
       }
-      
-      // Remove customInsuranceCompany as it's not part of the API schema
-      delete submissionData.customInsuranceCompany
 
       console.log("Form data being submitted:", submissionData);
 
@@ -534,26 +509,7 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
                   <Label htmlFor="insuranceCompany" className="text-white text-opacity-90 text-sm sm:text-base">
                     Insurance Company
                   </Label>
-                  {!isCustomCompany ? (
-                    <CompanyDropdown />
-                  ) : (
-                    <div className="space-y-2">
-                      <Input
-                        id="customInsuranceCompany"
-                        placeholder="Enter company name"
-                        {...register("customInsuranceCompany")}
-                        disabled={isLoading}
-                        className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleReturnToDropdown}
-                        className="text-blue-400 hover:text-blue-300 cursor-pointer text-sm underline"
-                      >
-                        Select from list instead
-                      </button>
-                    </div>
-                  )}
+                  <CompanyDropdown />
                 </div>
 
                 <div className="space-y-1 sm:space-y-2">

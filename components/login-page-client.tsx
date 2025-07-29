@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { AlertCircle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt"
 
 export default function LoginPageClient() {
   const router = useRouter()
@@ -75,12 +76,17 @@ export default function LoginPageClient() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="absolute inset-0 flex items-center justify-center z-20"
           >
-            <Button
-              onClick={() => setIsLoginVisible(true)}
-              className="px-8 py-6 text-xl font-bold rounded-full shadow-lg bg-gradient-to-r from-lime-500 to-green-600 hover:from-lime-600 hover:to-green-700 text-white transform hover:scale-105 transition-transform duration-200"
-            >
-              Log In
-            </Button>
+            <div className="flex flex-col items-center gap-6">
+              <Button
+                onClick={() => setIsLoginVisible(true)}
+                className="px-8 py-6 text-xl font-bold rounded-full shadow-lg bg-gradient-to-r from-lime-500 to-green-600 hover:from-lime-600 hover:to-green-700 text-white transform hover:scale-105 transition-transform duration-200"
+              >
+                Log In
+              </Button>
+              <div className="flex justify-center">
+                <PWAInstallPrompt showOnlyOnLogin={true} />
+              </div>
+            </div>
           </motion.div>
         )}
 

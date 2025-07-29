@@ -6,7 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { Providers } from "./providers"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration"
-import { PWAInstallPrompt } from "@/components/PWAInstallPrompt"
+
 import { OfflineIndicator } from "@/components/OfflineIndicator"
 
 
@@ -142,7 +142,7 @@ export default function RootLayout({
         <ErrorBoundary>
           <Providers>
             {children}
-            <PWAInstallPrompt />
+
             <OfflineIndicator />
             <ServiceWorkerRegistration />
             <Analytics />

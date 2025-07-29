@@ -239,7 +239,7 @@ const AddNoteButton: React.FC<AddNoteButtonProps> = ({ leadId, onNoteAdded }) =>
         aria-haspopup="true"
       >
         <div className="flex flex-col items-center justify-center gap-1">
-          <div className="p-1 bg-white/10 rounded-md">
+          <div className="p-1 bg-white/10 rounded-md hidden sm:block">
             <NotebookPen className="h-4 w-4 text-[#e0e0e0]" />
           </div>
           <span className="text-xs leading-tight font-semibold text-[#e0e0e0]">Add Note</span>
@@ -548,11 +548,14 @@ const UploadDropdown: React.FC<UploadDropdownProps> = ({ leadId, lead }) => {
             )}
           >
             <div className="flex flex-col items-center justify-center gap-1">
-              <div className="p-1 bg-white/10 rounded-md">
+              <div className="p-1 bg-white/10 rounded-md hidden sm:block">
                 <Upload className="h-4 w-4 text-teal-200" />
               </div>
-              <div className="flex items-center gap-1">
-                <span className="text-xs leading-tight font-semibold text-teal-100">Upload</span>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-xs leading-tight font-semibold text-teal-100">
+                  <span className="sm:hidden">Docs</span>
+                  <span className="hidden sm:inline">Documents</span>
+                </span>
                 <ChevronDown className="h-3 w-3 text-teal-200 transition-transform duration-200 group-data-[state=open]:rotate-180" />
               </div>
             </div>
@@ -688,7 +691,9 @@ const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, la
   return (
     <Tag {...tagProps}>
       <div className="flex flex-col items-center justify-center gap-1">
-        {getIcon()}
+        <div className="hidden sm:block">
+          {getIcon()}
+        </div>
         <span className="text-xs leading-tight">{label}</span>
       </div>
     </Tag>
@@ -1481,16 +1486,16 @@ export default function LeadDetailPage() {
                           />
                         </div>
                         <div className="col-span-1 sm:flex-1">
-                          <UploadDropdown
-                            leadId={lead.id}
-                            lead={lead}
-                          />
-                        </div>
-                        <div className="col-span-1 sm:flex-1">
                           <QuickActionButton
                             onClick={handleOpenTemplatesDialog}
                             label="E-mail"
                             variant="email"
+                          />
+                        </div>
+                        <div className="col-span-1 sm:flex-1">
+                          <UploadDropdown
+                            leadId={lead.id}
+                            lead={lead}
                           />
                         </div>
                         <div className="col-span-1 sm:flex-1">
