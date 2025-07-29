@@ -13,7 +13,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { GoogleDriveService } from "@/lib/services/googleDrive"
 import { createStatusChangeActivity } from "@/lib/services/activities"
 import { getCurrentUser } from "@/lib/session"
-import { sendLeadDeletionNotification } from "@/lib/services/admin-notifications"
+import { sendLeadDeletionNotification, sendDeletionRequestNotification } from "@/lib/services/admin-notifications"
 import { createDeletionRequest } from "@/lib/services/deletion-approval"
 import { createLeadChatSpace, updateLeadChatStatus } from "@/lib/services/leadChatIntegration"
 
@@ -293,6 +293,30 @@ export async function deleteLeadAction(id: string, reason?: string) {
       },
       reason
     })
+
+    // Send notification to all admins about the deletion request
+    if (session?.accessToken) {
+      try {
+        await sendDeletionRequestNotification({
+          requestId: deletionRequest.id,
+          leadId: deletionRequest.leadId,
+          leadName: deletionRequest.leadName,
+          leadEmail: deletionRequest.leadEmail,
+          leadAddress: deletionRequest.leadAddress,
+          requestedBy: {
+            id: session.user.id,
+            name: session.user.name || 'Unknown User',
+            email: session.user.email || ''
+          },
+          reason: deletionRequest.reason,
+          leadStatus: deletionRequest.leadStatus,
+          createdAt: deletionRequest.createdAt.toISOString()
+        }, session)
+      } catch (notificationError) {
+        console.error("Failed to send deletion request notification:", notificationError)
+        // Don't fail the request creation if notification fails
+      }
+    }
 
     revalidatePath("/leads")
     revalidatePath("/dashboard")

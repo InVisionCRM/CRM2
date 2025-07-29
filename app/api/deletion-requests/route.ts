@@ -7,6 +7,7 @@ import {
   canApproveDeletions 
 } from "@/lib/services/deletion-approval"
 import { getLeadById } from "@/lib/db/leads"
+import { sendDeletionRequestNotification } from "@/lib/services/admin-notifications"
 
 // GET - Get all pending deletion requests (admin only)
 export async function GET() {
@@ -73,6 +74,30 @@ export async function POST(request: NextRequest) {
       },
       reason
     })
+
+    // Send notification to all admins about the deletion request
+    if (session?.accessToken) {
+      try {
+        await sendDeletionRequestNotification({
+          requestId: deletionRequest.id,
+          leadId: deletionRequest.leadId,
+          leadName: deletionRequest.leadName,
+          leadEmail: deletionRequest.leadEmail,
+          leadAddress: deletionRequest.leadAddress,
+          requestedBy: {
+            id: session.user.id,
+            name: session.user.name || 'Unknown User',
+            email: session.user.email || ''
+          },
+          reason: deletionRequest.reason,
+          leadStatus: deletionRequest.leadStatus,
+          createdAt: deletionRequest.createdAt.toISOString()
+        }, session)
+      } catch (notificationError) {
+        console.error("Failed to send deletion request notification:", notificationError)
+        // Don't fail the request creation if notification fails
+      }
+    }
 
     return NextResponse.json({ 
       success: true, 

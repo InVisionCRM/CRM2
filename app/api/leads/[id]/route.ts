@@ -5,7 +5,7 @@ import type { UpdateLeadInput } from "@/lib/db/leads"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { deleteLead } from "@/lib/db/leads"
-import { sendLeadDeletionNotification } from "@/lib/services/admin-notifications"
+import { sendLeadDeletionNotification, sendDeletionRequestNotification } from "@/lib/services/admin-notifications"
 import { createDeletionRequest } from "@/lib/services/deletion-approval"
 
 export async function GET(
@@ -145,6 +145,30 @@ export async function DELETE(
       },
       reason
     })
+
+    // Send notification to all admins about the deletion request
+    if (session?.accessToken) {
+      try {
+        await sendDeletionRequestNotification({
+          requestId: deletionRequest.id,
+          leadId: deletionRequest.leadId,
+          leadName: deletionRequest.leadName,
+          leadEmail: deletionRequest.leadEmail,
+          leadAddress: deletionRequest.leadAddress,
+          requestedBy: {
+            id: session.user.id,
+            name: session.user.name || 'Unknown User',
+            email: session.user.email || ''
+          },
+          reason: deletionRequest.reason,
+          leadStatus: deletionRequest.leadStatus,
+          createdAt: deletionRequest.createdAt.toISOString()
+        }, session)
+      } catch (notificationError) {
+        console.error("Failed to send deletion request notification:", notificationError)
+        // Don't fail the request creation if notification fails
+      }
+    }
 
     return NextResponse.json({ 
       success: true, 

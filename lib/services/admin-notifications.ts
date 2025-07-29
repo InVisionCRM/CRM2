@@ -17,6 +17,22 @@ export interface LeadDeletionNotificationData {
   createdAt: string
 }
 
+export interface DeletionRequestNotificationData {
+  requestId: string
+  leadId: string
+  leadName: string
+  leadEmail: string
+  leadAddress: string
+  requestedBy: {
+    id: string
+    name: string
+    email: string
+  }
+  reason?: string
+  leadStatus: string
+  createdAt: string
+}
+
 /**
  * Get all admin users from the database
  */
@@ -91,6 +107,56 @@ export async function sendLeadDeletionNotification(
 }
 
 /**
+ * Send deletion request notification to all admins
+ */
+export async function sendDeletionRequestNotification(
+  requestData: DeletionRequestNotificationData,
+  session: any
+) {
+  try {
+    // Get all admin users
+    const adminUsers = await getAdminUsers()
+    
+    if (adminUsers.length === 0) {
+      console.log("No admin users found to notify")
+      return
+    }
+
+    // Initialize Gmail service
+    const gmail = new GmailService({
+      accessToken: session.accessToken as string,
+      refreshToken: session.refreshToken as string | undefined,
+    })
+
+    // Create email content
+    const subject = `⚠️ Lead Deletion Request: ${requestData.leadName}`
+    const body = createDeletionRequestEmailBody(requestData)
+
+    // Send email to all admins
+    const emailPromises = adminUsers.map(async (admin) => {
+      try {
+        await gmail.sendEmail({
+          to: admin.email,
+          subject,
+          body
+        })
+        console.log(`📧 Deletion request notification sent to ${admin.email}`)
+      } catch (error) {
+        console.error(`❌ Failed to send notification to ${admin.email}:`, error)
+      }
+    })
+
+    // Wait for all emails to be sent
+    await Promise.all(emailPromises)
+    
+    console.log(`✅ Deletion request notifications sent to ${adminUsers.length} admin(s)`)
+  } catch (error) {
+    console.error("Error sending deletion request notifications:", error)
+    // Don't throw error to avoid breaking the request process
+  }
+}
+
+/**
  * Create email body for lead deletion notification
  */
 function createLeadDeletionEmailBody(data: LeadDeletionNotificationData): string {
@@ -121,6 +187,51 @@ Please review this deletion to ensure it was appropriate. If this was an error, 
 **System Information:**
 - Lead ID: ${data.leadId}
 - Deleted by User ID: ${data.deletedBy.id}
+
+This is an automated notification from the CRM system.
+
+Best regards,
+CRM Notification System`
+}
+
+/**
+ * Create email body for deletion request notification
+ */
+function createDeletionRequestEmailBody(data: DeletionRequestNotificationData): string {
+  const leadName = data.leadName || "Unknown Lead"
+  const leadEmail = data.leadEmail || "No email"
+  const leadAddress = data.leadAddress || "No address"
+  const requestTime = new Date().toLocaleString()
+  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  
+  return `Hi Admin,
+
+A lead deletion request has been submitted and requires your approval.
+
+**Lead Details:**
+- Name: ${leadName}
+- Email: ${leadEmail}
+- Address: ${leadAddress}
+- Status: ${data.leadStatus}
+- Created: ${data.createdAt}
+
+**Request Details:**
+- Requested by: ${data.requestedBy.name} (${data.requestedBy.email})
+- Request time: ${requestTime}
+${data.reason ? `- Reason: ${data.reason}` : ""}
+
+**Action Required:**
+Please review this deletion request and take action:
+
+**Quick Actions:**
+• ✅ Approve Deletion: ${baseUrl}/admin/deletion-requests
+• ❌ Reject Deletion: ${baseUrl}/admin/deletion-requests
+• 📋 View All Requests: ${baseUrl}/admin/deletion-requests
+
+**System Information:**
+- Request ID: ${data.requestId}
+- Lead ID: ${data.leadId}
+- Requested by User ID: ${data.requestedBy.id}
 
 This is an automated notification from the CRM system.
 
