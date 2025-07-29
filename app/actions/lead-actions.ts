@@ -13,6 +13,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { GoogleDriveService } from "@/lib/services/googleDrive"
 import { createStatusChangeActivity } from "@/lib/services/activities"
 import { getCurrentUser } from "@/lib/session"
+import { sendLeadDeletionNotification } from "@/lib/services/admin-notifications"
 
 export async function createLeadAction(
   data: {
@@ -217,6 +218,26 @@ export async function deleteLeadAction(id: string) {
       return {
         success: false,
         message: result.error || "Failed to delete lead",
+      }
+    }
+
+    // Send notification to admins if lead was successfully deleted
+    if (result.success && result.deletedLead && session?.accessToken) {
+      try {
+        const leadName = `${result.deletedLead.firstName || ''} ${result.deletedLead.lastName || ''}`.trim() || 'Unknown Lead'
+        
+        await sendLeadDeletionNotification({
+          leadId: id,
+          leadName,
+          leadEmail: result.deletedLead.email || '',
+          leadAddress: result.deletedLead.address || '',
+          deletedBy: result.deletedLead.deletedBy,
+          leadStatus: result.deletedLead.status,
+          createdAt: result.deletedLead.createdAt.toISOString()
+        }, session)
+      } catch (notificationError) {
+        console.error("Failed to send lead deletion notification:", notificationError)
+        // Don't fail the deletion if notification fails
       }
     }
 

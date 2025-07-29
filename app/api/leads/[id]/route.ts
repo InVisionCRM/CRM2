@@ -5,6 +5,7 @@ import type { UpdateLeadInput } from "@/lib/db/leads"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { deleteLead } from "@/lib/db/leads"
+import { sendLeadDeletionNotification } from "@/lib/services/admin-notifications"
 
 export async function GET(
   request: Request,
@@ -114,6 +115,26 @@ export async function DELETE(
         { status: result.error === "Lead not found" ? 404 : 
           result.error === "Unauthorized to delete this lead" ? 403 : 500 }
       )
+    }
+
+    // Send notification to admins if lead was successfully deleted
+    if (result.success && result.deletedLead && session?.accessToken) {
+      try {
+        const leadName = `${result.deletedLead.firstName || ''} ${result.deletedLead.lastName || ''}`.trim() || 'Unknown Lead'
+        
+        await sendLeadDeletionNotification({
+          leadId: id,
+          leadName,
+          leadEmail: result.deletedLead.email || '',
+          leadAddress: result.deletedLead.address || '',
+          deletedBy: result.deletedLead.deletedBy,
+          leadStatus: result.deletedLead.status,
+          createdAt: result.deletedLead.createdAt.toISOString()
+        }, session)
+      } catch (notificationError) {
+        console.error("Failed to send lead deletion notification:", notificationError)
+        // Don't fail the deletion if notification fails
+      }
     }
 
     return NextResponse.json({ success: true, message: "Lead deleted successfully" })

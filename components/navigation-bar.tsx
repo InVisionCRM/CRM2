@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 import { Calendar, List, Plus, User, Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -88,11 +88,14 @@ export function NavigationBar() {
                   <span className="text-white/70">Signed in as </span>
                   <span className="font-medium text-white">{session.user?.email}</span>
                 </div>
-                <Link href="/api/auth/signout">
-                  <Button variant="outline" size="sm" className="transition-all duration-200 hover:shadow-md border-white/20 text-white hover:bg-white/10">
-                    Sign Out
-                  </Button>
-                </Link>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="transition-all duration-200 hover:shadow-md border-white/20 text-white hover:bg-white/10"
+                  onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                >
+                  Sign Out
+                </Button>
               </>
             ) : (
               <Link href="/">

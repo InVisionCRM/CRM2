@@ -322,12 +322,20 @@ export async function updateLead(
   }
 }
 
-export async function deleteLead(id: string, userId: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteLead(id: string, userId: string): Promise<{ success: boolean; error?: string; deletedLead?: any }> {
   try {
-    // Get the lead to check ownership and user role
+    // Get the lead to check ownership and user role, including more details for notification
     const lead = await prisma.lead.findUnique({
       where: { id },
-      select: { assignedToId: true }
+      select: { 
+        assignedToId: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        address: true,
+        status: true,
+        createdAt: true
+      }
     })
 
     if (!lead) {
@@ -337,7 +345,7 @@ export async function deleteLead(id: string, userId: string): Promise<{ success:
     // Get user role to check authorization
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { role: true }
+      select: { role: true, name: true, email: true }
     })
 
     if (!user) {
@@ -364,7 +372,18 @@ export async function deleteLead(id: string, userId: string): Promise<{ success:
       where: { id }
     })
 
-    return { success: true }
+    // Return success with deleted lead data for notification
+    return { 
+      success: true,
+      deletedLead: {
+        ...lead,
+        deletedBy: {
+          id: userId,
+          name: user.name,
+          email: user.email
+        }
+      }
+    }
   } catch (error) {
     console.error(`Error deleting lead with ID ${id}:`, error)
     return { success: false, error: "Failed to delete lead" }
