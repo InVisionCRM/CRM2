@@ -8,6 +8,7 @@ export interface LeadChatData {
   leadEmail?: string
   leadAddress?: string
   leadStatus: string
+  leadClaimNumber?: string
   createdBy: {
     id: string
     name: string
@@ -83,18 +84,37 @@ export async function createLeadChatSpace(
       members.push(leadData.assignedTo.email)
     }
 
-    // Create chat space
-    const spaceName = `Lead: ${leadData.leadName} - ${leadData.leadId}`
-    const spaceDescription = `Chat room for lead: ${leadData.leadName}
+    // Create chat space with claim number if available
+    const claimNumber = leadData.leadClaimNumber || ''
+    const spaceName = claimNumber 
+      ? `Lead: ${leadData.leadName} - Claim#${claimNumber} - ${leadData.leadId}`
+      : `Lead: ${leadData.leadName} - ${leadData.leadId}`
     
-Lead Details:
-- Email: ${leadData.leadEmail || 'Not provided'}
-- Address: ${leadData.leadAddress || 'Not provided'}
-- Status: ${leadData.leadStatus}
-- Created by: ${leadData.createdBy.name}
-${leadData.assignedTo ? `- Assigned to: ${leadData.assignedTo.name}` : ''}
+    const spaceDescription = `🏠 **Lead Chat Space Created**
 
-CRM Link: ${process.env.NEXTAUTH_URL}/leads/${leadData.leadId}`
+**Lead:** ${leadData.leadName}
+${claimNumber ? `**Claim #:** ${claimNumber}` : ''}
+**Status:** ${leadData.leadStatus}
+**Email:** ${leadData.leadEmail || 'Not provided'}
+**Address:** ${leadData.leadAddress || 'Not provided'}
+
+**Team:**
+• Created by: ${leadData.createdBy.name}
+${leadData.assignedTo ? `• Assigned to: ${leadData.assignedTo.name}` : ''}
+• All admins automatically added
+
+**Quick Links:**
+• 📊 [View in CRM](${process.env.NEXTAUTH_URL}/leads/${leadData.leadId})
+• 📍 [Street View](${leadData.leadAddress ? `https://maps.google.com/?q=${encodeURIComponent(leadData.leadAddress)}&t=k` : ''})
+• 📅 [Calendar](${process.env.NEXTAUTH_URL}/dashboard/calendar?leadId=${leadData.leadId})
+
+**Available Commands:**
+• /status - Check lead status
+• /files - List lead files
+• /photos - View lead photos
+• /contracts - Check contracts
+• /update [status] - Update status
+• /help - Show all commands`
 
     const result = await googleChat.createSpace({
       displayName: spaceName,
@@ -113,27 +133,52 @@ CRM Link: ${process.env.NEXTAUTH_URL}/leads/${leadData.leadId}`
       const welcomeMessage = `🎉 **New Lead Created!**
 
 **Lead Details:**
-- **Name:** ${leadData.leadName}
-- **Email:** ${leadData.leadEmail || 'Not provided'}
-- **Address:** ${leadData.leadAddress || 'Not provided'}
-- **Status:** ${leadData.leadStatus}
-- **Created by:** ${leadData.createdBy.name}
-${leadData.assignedTo ? `- **Assigned to:** ${leadData.assignedTo.name}` : ''}
+${claimNumber ? `• **Claim #:** ${claimNumber}` : ''}
+• **Name:** ${leadData.leadName}
+• **Email:** ${leadData.leadEmail || 'Not provided'}
+• **Address:** ${leadData.leadAddress || 'Not provided'}
+• **Status:** ${leadData.leadStatus}
+• **Created by:** ${leadData.createdBy.name}
+${leadData.assignedTo ? `• **Assigned to:** ${leadData.assignedTo.name}` : ''}
 
 **Team Members Added:**
 ${members.map(email => `• ${email}`).join('\n')}
 
-This chat room will be used for all communications related to this lead. You'll receive notifications for status changes, appointments, and other updates.
+**Quick Links:**
+• 📊 [View in CRM](${process.env.NEXTAUTH_URL}/leads/${leadData.leadId})
+• 📍 [Street View](${leadData.leadAddress ? `https://maps.google.com/?q=${encodeURIComponent(leadData.leadAddress)}&t=k` : ''})
+• 📅 [Schedule Appointment](${process.env.NEXTAUTH_URL}/dashboard/calendar?leadId=${leadData.leadId})
 
-**Quick Actions:**
-• View lead in CRM: ${process.env.NEXTAUTH_URL}/leads/${leadData.leadId}
-• Update lead status
-• Schedule appointments
-• Add notes and activities`
+**Available Commands:**
+• /status - Check lead status
+• /files - List lead files  
+• /photos - View lead photos
+• /contracts - Check contracts
+• /update [status] - Update status
+• /help - Show all commands
+
+This chat room will be used for all communications related to this lead. You'll receive notifications for status changes, appointments, and other updates.`
 
       await googleChat.sendMessage(result.spaceId, {
         text: welcomeMessage
       })
+
+      // Send Street View image if address is available
+      if (leadData.leadAddress) {
+        try {
+          const streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=600x400&location=${encodeURIComponent(leadData.leadAddress)}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+          
+          await googleChat.sendMessage(result.spaceId, {
+            text: `📍 **Street View for ${leadData.leadName}**
+            
+${streetViewUrl}
+
+**Address:** ${leadData.leadAddress}`
+          })
+        } catch (streetViewError) {
+          console.error('Failed to send Street View:', streetViewError)
+        }
+      }
 
       console.log(`✅ Created Google Chat space for lead ${leadData.leadId}: ${result.spaceId}`)
       return { success: true, spaceId: result.spaceId }
@@ -217,7 +262,9 @@ export async function updateLeadChatStatus(
       select: {
         googleChatSpaceId: true,
         firstName: true,
-        lastName: true
+        lastName: true,
+        claimNumber: true,
+        address: true
       }
     })
 
@@ -232,12 +279,25 @@ export async function updateLeadChatStatus(
       refreshToken: session.refreshToken as string | undefined,
     })
 
-    const statusMessage = `📊 **Lead Status Updated**
+    const claimInfo = lead.claimNumber ? ` (Claim #${lead.claimNumber})` : ''
+    const statusMessage = `🔄 **Status Updated**
 
-**Lead:** ${lead.firstName || ''} ${lead.lastName || ''}
-**Status Changed:** ${oldStatus} → ${newStatus}
+**Lead:** ${lead.firstName || ''} ${lead.lastName || ''}${claimInfo}
+**Old Status:** ${oldStatus}
+**New Status:** ${newStatus}
 **Updated by:** ${updatedBy.name}
-**Time:** ${new Date().toLocaleString()}`
+**Updated at:** ${new Date().toLocaleString()}
+
+**Quick Links:**
+• 📊 [View in CRM](${process.env.NEXTAUTH_URL}/leads/${leadId})
+• 📍 [Street View](${lead.address ? `https://maps.google.com/?q=${encodeURIComponent(lead.address)}&t=k` : ''})
+• 📅 [Schedule Appointment](${process.env.NEXTAUTH_URL}/dashboard/calendar?leadId=${leadId})
+
+**Available Commands:**
+• /status - Check current status
+• /files - List uploaded documents
+• /photos - View lead photos
+• /contracts - Check contract status`
 
     const result = await googleChat.sendMessage(lead.googleChatSpaceId, {
       text: statusMessage

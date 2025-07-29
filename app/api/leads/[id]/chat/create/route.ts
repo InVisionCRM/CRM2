@@ -66,6 +66,7 @@ export async function POST(
       leadEmail: lead.email || undefined,
       leadAddress: lead.address || undefined,
       leadStatus: lead.status,
+      leadClaimNumber: lead.claimNumber || undefined,
       createdBy: {
         id: session.user.id,
         name: session.user.name || 'Unknown User',
