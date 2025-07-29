@@ -94,8 +94,8 @@ export function NavigationBar() {
                   className="transition-all duration-200 hover:shadow-md border-white/20 text-white hover:bg-white/10"
                   onClick={() => signOut({ callbackUrl: '/auth/signin' })}
                 >
-                  Sign Out
-                </Button>
+                    Sign Out
+                  </Button>
               </>
             ) : (
               <Link href="/">
