@@ -98,7 +98,7 @@ const mainNavLinks = [
   { href: "/dashboard", label: "Home", icon: Home },
   { href: "/leads", label: "Leads", icon: User },
   { href: "/map", label: "Map", icon: Map },
-  { label: "Feed", icon: Rss, action: "bulletin-board" },
+  { label: "Chat", icon: Rss, action: "bulletin-board" },
 ]
 
 const moreNavLinks = [
@@ -243,7 +243,7 @@ export default function AppSidebar() {
             onClick={() => setIsBulletinBoardOpen(true)}
           >
             <Rss className="h-6 w-6" />
-            <span className="text-sm font-medium">Feed</span>
+            <span className="text-sm font-medium">Chat</span>
             {unreadCount > 0 && (
               <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center p-0 min-w-0">
                 {unreadCount > 99 ? '99+' : unreadCount}

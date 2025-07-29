@@ -104,6 +104,10 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
   const [isSubmittingReply, setIsSubmittingReply] = useState(false)
   const [activeTab, setActiveTab] = useState<'general' | 'production' | 'purlin'>('general')
   const [isSendingNotifications, setIsSendingNotifications] = useState(false)
+  const [showReplyMentionDropdown, setShowReplyMentionDropdown] = useState(false)
+  const [replyMentionQuery, setReplyMentionQuery] = useState("")
+  const [replyCursorPosition, setReplyCursorPosition] = useState(0)
+  const [replyMentionType, setReplyMentionType] = useState<'users' | 'leads'>('users')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null)
   const { toast } = useToast()
@@ -215,6 +219,34 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
     }
   };
 
+  // Handle @mention input detection for replies
+  const handleReplyTextareaChange = (value: string) => {
+    setReplyContent(value);
+    
+    if (!replyTextareaRef.current) return;
+    
+    const cursorPos = replyTextareaRef.current.selectionStart;
+    const textBeforeCursor = value.substring(0, cursorPos);
+    
+    // Check for @mention patterns
+    const mentionMatch = textBeforeCursor.match(/@([a-zA-Z\s]*)$/);
+    
+    if (mentionMatch) {
+      const query = mentionMatch[1].trim();
+      setShowReplyMentionDropdown(true);
+      setReplyMentionQuery(query);
+      setReplyCursorPosition(cursorPos);
+      
+      // Search both users and leads in real-time
+      if (query.length > 0) {
+        searchLeads(query);
+      }
+    } else {
+      setShowReplyMentionDropdown(false);
+      setReplyMentionQuery("");
+    }
+  };
+
   // Insert mention into textarea
   const insertMention = (item: User | Lead, type: 'users' | 'leads') => {
     if (!textareaRef.current) return;
@@ -244,6 +276,39 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
       if (textareaRef.current) {
         textareaRef.current.focus();
         textareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }, 0);
+  };
+
+  // Insert mention into reply textarea
+  const insertReplyMention = (item: User | Lead, type: 'users' | 'leads') => {
+    if (!replyTextareaRef.current) return;
+    
+    const beforeCursor = replyContent.substring(0, replyCursorPosition);
+    const afterCursor = replyContent.substring(replyCursorPosition);
+    
+    let replacement = '';
+    if (type === 'users') {
+      const user = item as User;
+      replacement = `@${user.name || user.email}`;
+    } else {
+      const lead = item as Lead;
+      const leadName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || lead.email || 'Unknown Lead';
+      replacement = `@${leadName}`;
+    }
+    
+    const beforeAt = beforeCursor.replace(/@[a-zA-Z\s]*$/, '');
+    const newValue = `${beforeAt}${replacement} ${afterCursor}`;
+    const newCursorPos = beforeAt.length + replacement.length + 1;
+    
+    setReplyContent(newValue);
+    setShowReplyMentionDropdown(false);
+    setReplyMentionQuery("");
+    
+    setTimeout(() => {
+      if (replyTextareaRef.current) {
+        replyTextareaRef.current.focus();
+        replyTextareaRef.current.setSelectionRange(newCursorPos, newCursorPos);
       }
     }, 0);
   };
@@ -893,15 +958,83 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
                         {/* Reply Input */}
                         {replyingTo === message.id && (
                           <div className="mt-3 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 relative">
                               <Textarea
                                 ref={replyTextareaRef}
-                                placeholder="Write a reply..."
+                                placeholder="Write a reply... Use @ to mention users or leads"
                                 value={replyContent}
-                                onChange={(e) => setReplyContent(e.target.value)}
+                                onChange={(e) => handleReplyTextareaChange(e.target.value)}
                                 className="min-h-[50px] sm:min-h-[60px] resize-none text-sm"
                                 disabled={isSubmittingReply || isSendingNotifications}
                               />
+                              
+                              {/* Reply @Mention Dropdown */}
+                              {showReplyMentionDropdown && (
+                                <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                  {/* Team Members Section */}
+                                  {filteredUsers.length > 0 && (
+                                    <>
+                                      <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b">
+                                        Team Members
+                                      </div>
+                                      {filteredUsers.slice(0, 3).map((user) => (
+                                        <button
+                                          key={user.id}
+                                          type="button"
+                                          onClick={() => insertReplyMention(user, 'users')}
+                                          className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                        >
+                                          <AtSign className="h-4 w-4 text-muted-foreground" />
+                                          <div className="min-w-0 flex-1">
+                                            <div className="font-medium truncate">{user.name || user.email}</div>
+                                            {user.name && (
+                                              <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+                                            )}
+                                          </div>
+                                        </button>
+                                      ))}
+                                    </>
+                                  )}
+                                  
+                                  {/* Leads Section */}
+                                  <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b">
+                                    Leads
+                                  </div>
+                                  {isLoadingLeads ? (
+                                    <div className="px-3 py-2 text-sm text-muted-foreground flex items-center gap-2">
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                      Searching leads...
+                                    </div>
+                                  ) : filteredLeads.length > 0 ? (
+                                    filteredLeads.slice(0, 5).map((lead) => (
+                                      <button
+                                        key={lead.id}
+                                        type="button"
+                                        onClick={() => insertReplyMention(lead, 'leads')}
+                                        className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                                      >
+                                        <Link className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                        <div className="min-w-0 flex-1">
+                                          <div className="font-medium truncate">
+                                            {`${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unnamed Lead'}
+                                          </div>
+                                          {lead.email && (
+                                            <div className="text-xs text-muted-foreground truncate">{lead.email}</div>
+                                          )}
+                                        </div>
+                                      </button>
+                                    ))
+                                  ) : replyMentionQuery.length > 0 ? (
+                                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                                      No leads found
+                                    </div>
+                                  ) : (
+                                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                                      Type to search leads...
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                               <div className="flex items-center gap-2 mt-2">
                                 <Button
                                   size="sm"
@@ -959,7 +1092,7 @@ export function BulletinBoard({ isOpen, onClose }: BulletinBoardProps) {
                                     )}
                                   </div>
                                   <div className="text-sm text-muted-foreground break-words">
-                                    {reply.content}
+                                    {renderMessageContent(reply.content)}
                                   </div>
                                 </div>
                               </div>
