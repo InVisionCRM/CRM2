@@ -6,20 +6,7 @@ import { prisma } from "@/lib/db/prisma"
 // import { GOOGLE_CALENDAR_CONFIG } from "@/lib/config/google-calendar"
 import { GOOGLE_SCOPES } from "@/lib/constants"
 
-// Define all required Google Calendar scopes
-const GOOGLE_SCOPES_JOINED = [
-  "openid",
-  "email",
-  "profile",
-  "https://www.googleapis.com/auth/calendar",
-  "https://www.googleapis.com/auth/calendar.events",
-  "https://www.googleapis.com/auth/calendar.readonly",
-  "https://www.googleapis.com/auth/calendar.settings.readonly",
-  "https://www.googleapis.com/auth/drive",           // Full Drive access (read/write)
-  "https://www.googleapis.com/auth/drive.file",      // Access to files created/opened by app
-  "https://www.googleapis.com/auth/drive.readonly",
-  "https://www.googleapis.com/auth/drive.metadata.readonly"
-].join(" ")
+// Google OAuth scopes are defined in lib/constants.ts
 
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),

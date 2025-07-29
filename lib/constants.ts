@@ -14,5 +14,10 @@ export const GOOGLE_SCOPES = [
   // Gmail scopes (read, send, modify)
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/gmail.send",
-  "https://www.googleapis.com/auth/gmail.modify"
+  "https://www.googleapis.com/auth/gmail.modify",
+  // Google Chat scopes
+  "https://www.googleapis.com/auth/chat.spaces",
+  "https://www.googleapis.com/auth/chat.messages",
+  "https://www.googleapis.com/auth/chat.messages.create",
+  "https://www.googleapis.com/auth/chat.memberships"
 ]; 
