@@ -147,6 +147,7 @@ function MoreMenu() {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
+  const { data: session } = useSession()
 
   useEffect(() => {
     setMounted(true)
