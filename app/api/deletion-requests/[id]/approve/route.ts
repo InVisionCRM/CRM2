@@ -75,6 +75,7 @@ export async function POST(
             name: session.user.name || 'Unknown Admin',
             email: session.user.email || ''
           },
+          deletionReason: approvedRequest.reason, // Include the original deletion reason
           leadStatus: approvedRequest.leadStatus,
           createdAt: approvedRequest.createdAt.toISOString()
         }, session)
