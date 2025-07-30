@@ -1,6 +1,8 @@
 # Fixed Google Apps Script for CRM Chat Bot
 
-## 🎯 **Complete Apps Script Code:**
+## 🚨 **FIXED: "Cannot read properties of undefined (reading 'postData')"**
+
+### **Complete Fixed Apps Script Code:**
 
 Replace your current Apps Script code with this **FIXED** version:
 
@@ -12,7 +14,7 @@ function doPost(e) {
     if (!e || !e.postData) {
       console.log('No postData received, returning default response');
       return ContentService.createTextOutput(JSON.stringify({
-        text: "Hello! I'm your CRM Chat Bot. I'm ready to help with lead management."
+        text: "Hello! I'm Purlin_Bot and I'm working! 🎉"
       })).setMimeType(ContentService.MimeType.JSON);
     }
     
@@ -192,24 +194,23 @@ function handleDefault(data) {
 }
 
 function doGet(e) {
-  return ContentService.createTextOutput("CRM Chat Bot is running");
+  return ContentService.createTextOutput("Purlin_Bot is running!");
 }
 ```
 
-## ⚙️ **Key Fixes:**
+## 🔧 **Key Fixes:**
 
-1. **✅ Correct Domain**: Changed from `your-domain.com` to `crm.purlin.pro`
-2. **✅ File Upload Support**: Added `handleFileUpload` function
-3. **✅ File Type Detection**: Added `getFileType` function
-4. **✅ Better Error Handling**: Enhanced error messages
-5. **✅ Complete Integration**: All commands and file uploads work
+1. **✅ Fixed postData error** - Added proper null checks
+2. **✅ Better error handling** - Graceful fallbacks
+3. **✅ Correct domain URLs** - Using `crm.purlin.pro`
+4. **✅ Complete integration** - All commands and file uploads
 
 ## 🚀 **Setup Instructions:**
 
 1. **Copy the code above** into your Google Apps Script
-2. **Save and deploy** the Apps Script
-3. **Test the commands** in Google Chat
-4. **Test file uploads** by dragging files into chat
+2. **Save and deploy** as a new web app
+3. **Update your Google Chat app** with the new webhook URL
+4. **Test the commands** in Google Chat
 
 ## 🎯 **Test Commands:**
 
@@ -220,4 +221,4 @@ function doGet(e) {
 /upload - Get upload instructions
 ```
 
-**The Apps Script now has the correct URLs and should work properly! 🚀** 
+**This should fix the postData error and get your commands working! 🚀** 
