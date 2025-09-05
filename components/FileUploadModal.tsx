@@ -271,7 +271,7 @@ export function FileUploadModal({
 
         <div className="space-y-6">
           {/* File Upload Component */}
-          {!uploadResult && (
+          {uploadResults.length === 0 && (
             <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
               <FileUpload onChange={handleFileChange} />
             </div>
