@@ -1519,6 +1519,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
   const [editValue, setEditValue] = useState("")
   const [fileUploadModalOpen, setFileUploadModalOpen] = useState(false)
   const [selectedLeadForFiles, setSelectedLeadForFiles] = useState<string | null>(null)
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([])
+  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false)
 
   // Pagination logic
   const totalPages = Math.ceil(leads.length / pageSize)
@@ -1631,6 +1633,44 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
     }
   }
 
+  const fetchAddressSuggestions = async (input: string) => {
+    if (!input || input.length < 2) {
+      setAddressSuggestions([])
+      setShowAddressSuggestions(false)
+      return
+    }
+
+    try {
+      const response = await fetch('/api/places/autocomplete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ input }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setAddressSuggestions(data.predictions || [])
+        setShowAddressSuggestions(true)
+      } else {
+        console.error('Failed to fetch address suggestions')
+        setAddressSuggestions([])
+        setShowAddressSuggestions(false)
+      }
+    } catch (error) {
+      console.error('Error fetching address suggestions:', error)
+      setAddressSuggestions([])
+      setShowAddressSuggestions(false)
+    }
+  }
+
+  const handleAddressSuggestionSelect = (suggestion: any) => {
+    setEditValue(suggestion.description)
+    setShowAddressSuggestions(false)
+    setAddressSuggestions([])
+  }
+
   const SpreadsheetView = () => (
     <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
@@ -1680,7 +1720,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                   ) : (
                     <div className="flex items-center gap-2">
                       <span 
-                        className="text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded"
+                        className="text-sm font-medium text-white cursor-pointer hover:bg-gray-800 px-1 py-0.5 rounded"
                         onClick={() => handleEditStart(lead.id, 'name', lead.name || '')}
                       >
                         {lead.name || 'Click to add'}
@@ -1715,7 +1755,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded"
+                      className="text-sm text-white cursor-pointer hover:bg-gray-800 px-1 py-0.5 rounded"
                       onClick={() => handleEditStart(lead.id, 'phone', lead.phone || '')}
                     >
                       {lead.phone || 'Click to add'}
@@ -1747,7 +1787,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded truncate max-w-[150px] block"
+                      className="text-sm text-white cursor-pointer hover:bg-gray-800 px-1 py-0.5 rounded truncate max-w-[150px] block"
                       onClick={() => handleEditStart(lead.id, 'email', lead.email || '')}
                       title={lead.email || 'Click to add'}
                     >
@@ -1759,20 +1799,54 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                 {/* Address */}
                 <td className="px-3 py-2 whitespace-nowrap">
                   {editingCell?.leadId === lead.id && editingCell?.field === 'address' ? (
-                    <div className="flex gap-1 min-w-[280px]">
-                      <div className="flex-1">
-                        <AddressAutocomplete
-                          label=""
+                    <div className="flex gap-1 min-w-[280px] relative">
+                      <div className="flex-1 relative">
+                        <Input
                           value={editValue}
-                          onChange={setEditValue}
+                          onChange={(e) => {
+                            setEditValue(e.target.value)
+                            fetchAddressSuggestions(e.target.value)
+                          }}
+                          className="h-7 text-xs bg-white text-black border-gray-300"
                           placeholder="Enter address..."
-                          className="mb-0"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleEditSave(lead.id, 'address')
+                            if (e.key === 'Escape') {
+                              handleEditCancel()
+                              setShowAddressSuggestions(false)
+                            }
+                          }}
+                          onFocus={() => {
+                            if (editValue.length > 1) {
+                              fetchAddressSuggestions(editValue)
+                            }
+                          }}
+                          autoFocus
                         />
+                        {showAddressSuggestions && addressSuggestions.length > 0 && (
+                          <div className="absolute top-8 left-0 right-0 z-50 bg-black border border-gray-700 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                            {addressSuggestions.map((suggestion, index) => (
+                              <div
+                                key={suggestion.place_id || index}
+                                className="px-3 py-2 hover:bg-gray-800 cursor-pointer text-sm text-white border-b border-gray-700 last:border-b-0"
+                                onClick={() => handleAddressSuggestionSelect(suggestion)}
+                              >
+                                <div className="font-medium">{suggestion.structured_formatting?.main_text || suggestion.description}</div>
+                                {suggestion.structured_formatting?.secondary_text && (
+                                  <div className="text-gray-400 text-xs">{suggestion.structured_formatting.secondary_text}</div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'address')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-gray-800 text-white hover:bg-gray-700" onClick={() => handleEditSave(lead.id, 'address')}>
                         <Save className="h-3 w-3" />
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-white hover:bg-gray-800" onClick={() => {
+                        handleEditCancel()
+                        setShowAddressSuggestions(false)
+                      }}>
                         <X className="h-3 w-3" />
                       </Button>
                     </div>
