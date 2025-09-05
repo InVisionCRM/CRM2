@@ -26,7 +26,7 @@ interface Lead {
   insuranceDeductible: string | null
   claimNumber: string | null
   damageType: string | null
-  dateOfLoss: string | null
+  dateOfLoss: string | Date | null
 }
 
 interface Template {

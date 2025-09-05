@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { prisma } from '@/lib/db/prisma';
 
 export async function GET(req: Request) {
-  console.log('🔍 Checking if file exists in shared Google Drive');
+  console.log('🔍 Checking if file exists (database + Google Drive)');
   
   try {
     const { searchParams } = new URL(req.url);
@@ -17,6 +18,39 @@ export async function GET(req: Request) {
         error: 'Lead ID and file type are required' 
       }, { status: 400 });
     }
+
+    // First, check the database for files with matching category
+    console.log('🗃️ Checking database for files...');
+    const dbFiles = await prisma.file.findMany({
+      where: { 
+        leadId,
+        OR: [
+          { category: fileType },
+          { category: { contains: fileType } },
+          { name: { contains: fileType } }
+        ]
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 1
+    });
+
+    if (dbFiles.length > 0) {
+      const dbFile = dbFiles[0];
+      console.log('✅ Found file in database:', dbFile.name);
+      
+      return NextResponse.json({
+        success: true,
+        exists: true,
+        fileType,
+        leadId,
+        fileUrl: dbFile.url,
+        fileId: dbFile.driveFileId || dbFile.id,
+        source: 'database',
+        fileName: dbFile.name
+      });
+    }
+
+    console.log('📁 No files found in database, checking Google Drive...');
 
     // Use the same environment variables as contracts
     const { GOOGLE_SA_EMAIL, GOOGLE_SA_PRIVATE_KEY, SHARED_DRIVE_ID } = process.env;
@@ -51,9 +85,12 @@ export async function GET(req: Request) {
 
     const drive = google.drive({ version: 'v3', auth });
 
-    // Search for files with the specific fileType and leadId pattern
-    // Files are named like: fileType/LeadName/leadId.extension
-    const searchQuery = `name contains '${fileType}/' and name contains '/${leadId}.' and parents in '${SHARED_DRIVE_ID}' and trashed=false`;
+    // Search for files associated with this lead
+    // Files can be named in multiple patterns:
+    // 1. Custom filename: fileType/LeadName/leadId.extension
+    // 2. Fallback pattern: "File - FirstName LastName (ID leadId) - filename - date.extension"  
+    // 3. Or files stored with leadId in appProperties
+    const searchQuery = `(name contains '${leadId}' or appProperties has { key='leadId' and value='${leadId}' }) and parents in '${SHARED_DRIVE_ID}' and trashed=false`;
     
     console.log('🔍 Searching Google Drive with query:', searchQuery);
     
@@ -61,14 +98,41 @@ export async function GET(req: Request) {
       q: searchQuery,
       supportsAllDrives: true,
       includeItemsFromAllDrives: true,
-      fields: 'files(id, name, webViewLink, appProperties)',
-      pageSize: 1 // We only need to know if at least one exists
+      fields: 'files(id, name, webViewLink, appProperties, createdTime, mimeType)',
+      orderBy: 'createdTime desc', // Get the most recent file first
+      pageSize: 5 // Get a few files to analyze
     });
 
     const files = response.data.files || [];
-    const exists = files.length > 0;
-    const fileUrl = exists ? files[0].webViewLink : null;
-    const fileId = exists ? files[0].id : null;
+    let bestMatch = null;
+    
+    if (files.length > 0) {
+      // Find the best match with different priority levels:
+      // 1. Files with leadId in appProperties and matching fileType
+      const metadataMatch = files.find(file => 
+        file.appProperties?.leadId === leadId && 
+        file.appProperties?.fileType === fileType
+      );
+      
+      // 2. Files with custom filename pattern: fileType/LeadName/leadId.extension
+      const customMatch = files.find(file => 
+        file.name?.includes(`${fileType}/`) && 
+        file.name?.includes(`/${leadId}.`)
+      );
+      
+      // 3. Files with fallback pattern containing leadId and fileType context
+      const fallbackMatch = files.find(file => 
+        file.name?.includes(leadId) && 
+        (file.name?.includes('File -') || file.name?.includes('Photo -'))
+      );
+      
+      // Use the best available match
+      bestMatch = metadataMatch || customMatch || fallbackMatch || files[0];
+    }
+    
+    const exists = !!bestMatch;
+    const fileUrl = bestMatch?.webViewLink || null;
+    const fileId = bestMatch?.id || null;
     
     console.log(`📁 Search results:`, {
       query: searchQuery,
@@ -76,12 +140,13 @@ export async function GET(req: Request) {
       exists,
       fileUrl,
       fileId,
-      files: files.map(f => ({ id: f.id, name: f.name, webViewLink: f.webViewLink, appProperties: f.appProperties }))
+      bestMatchName: bestMatch?.name,
+      allFiles: files.map(f => ({ id: f.id, name: f.name, createdTime: f.createdTime, webViewLink: f.webViewLink }))
     });
     
     console.log(`📁 File exists check for ${fileType}/${leadId}: ${exists}`);
-    if (exists) {
-      console.log(`📄 Found file: ${files[0].name} at ${fileUrl} with ID ${fileId}`);
+    if (exists && bestMatch) {
+      console.log(`📄 Found best match: ${bestMatch.name} at ${fileUrl} with ID ${fileId}`);
     }
 
     const responseData = {
@@ -92,7 +157,9 @@ export async function GET(req: Request) {
       fileUrl,
       fileId,
       searchQuery,
-      filesFound: files.length
+      filesFound: files.length,
+      source: 'google-drive',
+      fileName: bestMatch?.name
     };
 
     console.log('📤 Sending existence check response:', responseData);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useGoogleDrive } from "@/lib/hooks/useGoogleDrive";
+import { useSharedGoogleDrive } from "@/lib/hooks/useSharedGoogleDrive";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
@@ -52,7 +52,10 @@ export function DriveFileManager() {
     navigateToFolder,
     navigateBack,
     currentFolderId,
-  } = useGoogleDrive();
+  } = useSharedGoogleDrive({
+    folderId: "0ALLiVXNBCH8OUk9PVA", // Your specific folder ID
+    fetchOnInit: true,
+  });
 
   const [isUploading, setIsUploading] = useState(false);
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
@@ -246,6 +249,8 @@ export function DriveFileManager() {
     }
   };
 
+
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -306,8 +311,8 @@ export function DriveFileManager() {
         <Button variant="ghost" size="icon" onClick={() => { /* Navigate to next, if history is kept */ }} disabled className="mr-2 disabled:opacity-50">
           <ChevronRight className="h-5 w-5" />
         </Button>
-        <span onClick={() => navigateToFolder({ id: process.env.NEXT_PUBLIC_GOOGLE_DRIVE_FOLDER_ID_DEFAULT || 'root', name: 'My Drive', mimeType: 'application/vnd.google-apps.folder'} as DriveFile)} className="hover:underline cursor-pointer">
-          My Drive
+        <span onClick={() => navigateToFolder({ id: "0ALLiVXNBCH8OUk9PVA", name: 'Shared Drive', mimeType: 'application/vnd.google-apps.folder'} as DriveFile)} className="hover:underline cursor-pointer">
+          Shared Drive
         </span>
         {folderPath.map((folder, index) => (
           <span key={folder.id} className="flex items-center">
@@ -465,8 +470,8 @@ export function DriveFileManager() {
       {/* Top Navigation Bar */}
       <div className="flex items-center px-4 py-2 border-b">
         <div className="flex items-center flex-1">
-          <img src="/google-drive-logo.png" alt="Drive" className="h-6 w-6 mr-2" />
-          <span className="text-xl font-normal text-gray-800">Drive</span>
+          <Folder className="h-6 w-6 mr-2 text-blue-500" />
+          <span className="text-xl font-normal text-gray-800">Shared Drive</span>
         </div>
         <div className="flex-1 max-w-3xl">
           <div className="relative">
@@ -511,7 +516,7 @@ export function DriveFileManager() {
               className="w-full justify-start text-gray-700 hover:bg-gray-100 rounded-full"
             >
               <Home className="h-4 w-4 mr-3" />
-              My Drive
+              Shared Drive
             </Button>
           </div>
         </div>
@@ -523,7 +528,14 @@ export function DriveFileManager() {
 
           {/* Files List */}
           <div className="p-4">
-            {viewMode === "list" ? renderListView() : renderGridView()}
+            {files && files.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No files found in this folder</p>
+                <p className="text-sm text-gray-400 mt-2">Total files: {files?.length || 0}</p>
+              </div>
+            ) : (
+              viewMode === "list" ? renderListView() : renderGridView()
+            )}
           </div>
         </div>
       </div>

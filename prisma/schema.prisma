@@ -250,19 +250,24 @@ model ClientIdSequence {
 }
 
 model File {
-  id        String   @id @default(cuid())
-  url       String
-  name      String
-  size      Int
-  type      String
-  category  String?
-  leadId    String
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
-  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  id              String   @id @default(cuid())
+  url             String   // Google Drive URL (primary for backward compatibility)
+  name            String
+  size            Int
+  type            String
+  category        String?
+  leadId          String
+  // Dual storage fields
+  blobUrl         String?  // Vercel Blob URL
+  driveFileId     String?  // Google Drive file ID
+  storageLocation String   @default("drive") // "drive", "blob", or "both"
+  createdAt       DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(6)
+  lead            Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
   @@index([category])
+  @@index([storageLocation])
 }
 
 model Contract {

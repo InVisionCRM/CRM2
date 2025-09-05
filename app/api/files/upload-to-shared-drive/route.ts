@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { prisma } from '@/lib/db/prisma';
 import { Readable } from 'stream';
+import { put } from '@vercel/blob';
+import { nanoid } from 'nanoid';
 
 export async function POST(req: Request) {
+  console.warn('⚠️ DEPRECATED: /api/files/upload-to-shared-drive is deprecated. Use /api/files/upload-dual instead.');
   console.log('📁 Uploading file to shared Google Drive');
   
   try {
@@ -155,19 +158,44 @@ export async function POST(req: Request) {
 
     console.log('✅ File uploaded to Shared Drive:', driveFileId);
 
-    // Create database record for the uploaded file
+    // Also upload to Vercel Blob for better performance
+    let blobUrl: string | null = null;
+    try {
+      console.log('📤 Also uploading to Vercel Blob...');
+      const uniqueId = nanoid();
+      const extension = file.name.split('.').pop() || 'bin';
+      const blobFileName = `${uniqueId}.${extension}`;
+      const blobPath = `leads/${leadId}/${fileType || 'files'}/${blobFileName}`;
+
+      const { url } = await put(blobPath, file, {
+        access: 'public',
+        addRandomSuffix: false,
+        contentType: file.type,
+        cacheControl: 'public, max-age=31536000, immutable',
+      });
+      
+      blobUrl = url;
+      console.log('✅ File also uploaded to Vercel Blob:', blobUrl);
+    } catch (blobError) {
+      console.warn('⚠️ Vercel Blob upload failed, continuing with Drive only:', blobError);
+    }
+
+    // Create database record for the uploaded file with dual storage
     try {
       const fileRecord = await prisma.file.create({
         data: {
-          url: webViewLink,
+          url: blobUrl || webViewLink, // Prefer Blob URL if available
           name: fileName,
           size: file.size,
           type: file.type,
           category: fileType,
-          leadId: leadId
+          leadId: leadId,
+          blobUrl,
+          driveFileId,
+          storageLocation: blobUrl ? 'both' : 'drive'
         }
       });
-      console.log('📝 Created database record for file:', fileRecord.id);
+      console.log('📝 Created database record for file with dual storage:', fileRecord.id);
     } catch (dbError) {
       console.error('⚠️ Failed to create database record, but file was uploaded to Drive:', dbError);
       // Don't fail the entire upload if database creation fails
@@ -181,11 +209,14 @@ export async function POST(req: Request) {
         originalName: file.name,
         mimeType: file.type,
         size: file.size,
-        url: webViewLink,
+        url: blobUrl || webViewLink, // Return Blob URL as primary if available
+        blobUrl,
+        driveUrl: webViewLink,
         webContentLink,
         thumbnailLink,
         driveFileId,
         fileType: fileType, // Include fileType in response
+        storageLocation: blobUrl ? 'both' : 'drive',
         uploadedAt: new Date()
       }
     };

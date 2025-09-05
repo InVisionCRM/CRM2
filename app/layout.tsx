@@ -145,7 +145,7 @@ export default function RootLayout({
 
             <OfflineIndicator />
             <ServiceWorkerRegistration />
-            <Analytics />
+            {process.env.NODE_ENV === 'production' && <Analytics />}
           </Providers>
         </ErrorBoundary>
       </body>

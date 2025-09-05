@@ -1,45 +1,33 @@
 import useSWR, { mutate } from "swr";
-import { useSession } from "next-auth/react";
-import { GoogleDriveService } from "@/lib/services/googleDrive";
 import type { DriveFile, ServiceResult } from "@/types/drive";
 import { useState } from "react";
 
-const SWR_KEY_PREFIX = "/api/drive";
+const SWR_KEY_PREFIX = "/api/files/list-drive-folder";
 
-interface UseGoogleDriveOptions {
+interface UseSharedGoogleDriveOptions {
   folderId?: string;
   mimeTypes?: string[];
   fetchOnInit?: boolean;
 }
 
-export function useGoogleDrive(options?: UseGoogleDriveOptions) {
-  const { data: session } = useSession();
+export function useSharedGoogleDrive(options?: UseSharedGoogleDriveOptions) {
   const { folderId, mimeTypes, fetchOnInit = true } = options || {};
   const [currentFolderId, setCurrentFolderId] = useState<string | undefined>(folderId);
   const [folderPath, setFolderPath] = useState<DriveFile[]>([]);
 
-  const getService = () => {
-    if (!session?.accessToken) {
-      throw new Error("No access token available. User might not be authenticated.");
-    }
-    return new GoogleDriveService({ accessToken: session.accessToken });
-  };
-
-  const swrKey = session?.accessToken 
-    ? `${SWR_KEY_PREFIX}?folderId=${currentFolderId || process.env.NEXT_PUBLIC_GOOGLE_DRIVE_FOLDER_ID_DEFAULT || ''}&mimeTypes=${(mimeTypes || []).join(',')}` 
-    : null;
+  const swrKey = `${SWR_KEY_PREFIX}?folderId=${currentFolderId || '0ALLiVXNBCH8OUk9PVA'}&mimeTypes=${(mimeTypes || []).join(',')}`;
 
   const fetcher = async (): Promise<ServiceResult<DriveFile[]>> => {
     try {
       const params = new URLSearchParams();
-      if (currentFolderId) {
-        params.append('folderId', currentFolderId);
-      }
+      const targetFolderId = currentFolderId || '0ALLiVXNBCH8OUk9PVA';
+      params.append('folderId', targetFolderId);
+      
       if (mimeTypes && mimeTypes.length > 0) {
         params.append('mimeTypes', mimeTypes.join(','));
       }
 
-      const response = await fetch(`/api/drive?${params.toString()}`);
+      const response = await fetch(`/api/files/list-drive-folder?${params.toString()}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -48,8 +36,8 @@ export function useGoogleDrive(options?: UseGoogleDriveOptions) {
       const result: ServiceResult<DriveFile[]> = await response.json();
       return result;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to fetch files from hook";
-      console.error("useGoogleDrive fetcher error:", error);
+      const message = error instanceof Error ? error.message : "Failed to fetch files from shared drive";
+      console.error("useSharedGoogleDrive fetcher error:", error);
       return { success: false, message };
     }
   };
@@ -59,7 +47,8 @@ export function useGoogleDrive(options?: UseGoogleDriveOptions) {
     fetcher, 
     {
       revalidateOnFocus: false,
-      // Add other SWR options as needed, mirroring useGoogleCalendar
+      refreshInterval: 0,
+      errorRetryCount: 3,
     }
   );
 
@@ -71,19 +60,29 @@ export function useGoogleDrive(options?: UseGoogleDriveOptions) {
 
   const fetchFiles = async (opts?: { folderId?: string; mimeTypes?: string[] }): Promise<ServiceResult<DriveFile[]>> => {
     try {
-      const service = getService();
-      const currentFolderId = opts?.folderId || folderId || process.env.NEXT_PUBLIC_GOOGLE_DRIVE_FOLDER_ID_DEFAULT;
-      const currentMimeTypes = opts?.mimeTypes || mimeTypes;
-      const result = await service.listFiles({ folderId: currentFolderId, mimeTypes: currentMimeTypes });
-      if (result.success && swrKey) {
-        // Potentially update SWR cache if the options match the current key
-        // For simplicity, we'll just revalidate if it was a general fetch.
-        // Or, if specific component needs update, it can call revalidateFiles.
-        const currentSWRKey = `${SWR_KEY_PREFIX}?folderId=${currentFolderId || ''}&mimeTypes=${(currentMimeTypes || []).join(',')}`;
-        if (currentSWRKey === swrKey || !opts) {
-             mutate(swrKey, result, false); // Update local SWR cache without revalidation
-        }
+      const params = new URLSearchParams();
+      const targetFolderId = opts?.folderId || currentFolderId || '0ALLiVXNBCH8OUk9PVA';
+      const targetMimeTypes = opts?.mimeTypes || mimeTypes;
+      
+      params.append('folderId', targetFolderId);
+      if (targetMimeTypes && targetMimeTypes.length > 0) {
+        params.append('mimeTypes', targetMimeTypes.join(','));
       }
+
+      const response = await fetch(`/api/files/list-drive-folder?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result: ServiceResult<DriveFile[]> = await response.json();
+      
+      // Update SWR cache if this matches current key
+      const currentSWRKey = `${SWR_KEY_PREFIX}?folderId=${targetFolderId || ''}&mimeTypes=${(targetMimeTypes || []).join(',')}`;
+      if (currentSWRKey === swrKey || !opts) {
+        mutate(swrKey, result, false);
+      }
+      
       return result;
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to fetch files";
@@ -102,7 +101,7 @@ export function useGoogleDrive(options?: UseGoogleDriveOptions) {
         formData.append('folderId', currentFolderId);
       }
 
-      const response = await fetch('/api/drive/upload', {
+      const response = await fetch('/api/files/upload-to-drive-folder', {
         method: 'POST',
         body: formData,
       });
@@ -125,7 +124,9 @@ export function useGoogleDrive(options?: UseGoogleDriveOptions) {
 
   const downloadFile = async (fileId: string): Promise<ServiceResult<ArrayBuffer>> => {
     try {
-      const response = await fetch(`/api/drive/${fileId}/download`);
+      const response = await fetch(`https://drive.google.com/file/d/${fileId}/view`, {
+        method: 'GET',
+      });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -142,7 +143,7 @@ export function useGoogleDrive(options?: UseGoogleDriveOptions) {
 
   const deleteFile = async (fileId: string): Promise<ServiceResult<void>> => {
     try {
-      const response = await fetch(`/api/drive/${fileId}`, {
+      const response = await fetch(`/api/files/delete-drive-file?fileId=${fileId}`, {
         method: 'DELETE',
       });
       
@@ -166,24 +167,24 @@ export function useGoogleDrive(options?: UseGoogleDriveOptions) {
     // Deleting a folder is the same as deleting a file in Google Drive API
     // This function provides a semantic wrapper.
     try {
-      console.log(`[useGoogleDrive] Attempting to delete folder: ${folderId}`);
+      console.log(`[useSharedGoogleDrive] Attempting to delete folder: ${folderId}`);
       const result = await deleteFile(folderId); // Reuses the existing deleteFile logic
       if (result.success) {
-        console.log(`[useGoogleDrive] Successfully deleted folder: ${folderId}, revalidating files.`);
+        console.log(`[useSharedGoogleDrive] Successfully deleted folder: ${folderId}, revalidating files.`);
       } else {
-        console.error(`[useGoogleDrive] Failed to delete folder: ${folderId}`, result.message);
+        console.error(`[useSharedGoogleDrive] Failed to delete folder: ${folderId}`, result.message);
       }
       return result;
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to delete folder in hook";
-      console.error(`[useGoogleDrive] Error in deleteFolder for ID ${folderId}:`, e);
+      console.error(`[useSharedGoogleDrive] Error in deleteFolder for ID ${folderId}:`, e);
       return { success: false, message };
     }
   };
 
   const createFolder = async (name: string, opts?: { parentId?: string }): Promise<ServiceResult<DriveFile>> => {
     try {
-      const response = await fetch('/api/drive/folder', {
+      const response = await fetch('/api/files/create-drive-folder', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -262,4 +263,4 @@ export function useGoogleDrive(options?: UseGoogleDriveOptions) {
     navigateBack,
     deleteFolder,
   };
-} 
+}

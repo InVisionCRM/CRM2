@@ -8,6 +8,8 @@ import { StatusChangeDrawer } from "@/components/leads/StatusChangeDrawer"
 import { LeadDetailTabs } from "@/components/leads/LeadDetailTabs"
 import { ActivityFeed } from "@/components/leads/ActivityFeed"
 import { LeadChatWidget } from "@/components/leads/lead-chat-widget"
+import { FileUploadModal } from "@/components/FileUploadModal"
+import { SimpleFileViewer } from "@/components/SimpleFileViewer"
 
 import { Button } from "@/components/ui/button"
 import { useLead } from "@/hooks/use-lead" // Corrected path
@@ -61,19 +63,7 @@ interface QuickActionButtonProps {
   variant?: 'default' | 'contract' | 'sign' | 'filemanager' | 'photos' | 'addnote' | 'email' | 'scopeofwork';
 }
 
-// File categories for upload
-const FILE_CATEGORIES = [
-  { key: 'general_contract', label: 'General Contract', color: 'orange' },
-  { key: 'estimate', label: 'Estimate', color: 'blue' },
-  { key: 'acv', label: 'ACV', color: 'emerald' },
-  { key: 'supplement', label: 'Supplement', color: 'red' },
-  { key: 'eagleview', label: 'EagleView', color: 'purple' },
-  { key: 'scope_of_work', label: 'SOW', color: 'rose' },
-  { key: 'warrenty', label: 'Warranty', color: 'indigo' },
-  { key: 'other', label: 'Other', color: 'gray' }
-] as const
-
-type FileCategoryKey = (typeof FILE_CATEGORIES)[number]['key']
+// Category-based uploads removed in favor of simplified flow
 
 // Add Note Button with Hover Dropdown component
 interface AddNoteButtonProps {
@@ -84,7 +74,8 @@ interface AddNoteButtonProps {
 // Upload Dropdown component
 interface UploadDropdownProps {
   leadId: string;
-  lead: any;
+  setFileUploadModalOpen: (open: boolean) => void;
+  setFileViewerOpen: (open: boolean) => void;
 }
 
 interface User {
@@ -236,8 +227,7 @@ const AddNoteButton: React.FC<AddNoteButtonProps> = ({ leadId, onNoteAdded }) =>
           "hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
         )}
         onClick={() => setIsOpen((v) => !v)}
-        aria-expanded={isOpen}
-        aria-haspopup="true"
+        aria-haspopup="menu"
       >
         <div className="flex flex-col items-center justify-center gap-1">
           <div className="p-1 bg-white/10 rounded-md hidden sm:block">
@@ -349,192 +339,7 @@ const AddNoteButton: React.FC<AddNoteButtonProps> = ({ leadId, onNoteAdded }) =>
   );
 };
 
-const UploadDropdown: React.FC<UploadDropdownProps> = ({ leadId, lead }) => {
-  const { toast } = useToast()
-  const [uploadedFileStatus, setUploadedFileStatus] = useState<Record<string, boolean>>({})
-  const [uploadedFileUrls, setUploadedFileUrls] = useState<Record<string, string>>({})
-  const [isCheckingFiles, setIsCheckingFiles] = useState<Record<string, boolean>>({})
-  const [isUploadingFile, setIsUploadingFile] = useState(false)
-  const [isDeletingFile, setIsDeletingFile] = useState<Record<string, boolean>>({})
-  const [currentUploadType, setCurrentUploadType] = useState<FileCategoryKey | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // Check if file exists
-  const checkFileExists = async (fileType: string) => {
-    if (!leadId) return { exists: false, fileUrl: null as string | null }
-    try {
-      const response = await fetch(`/api/files/check-file-exists?leadId=${leadId}&fileType=${fileType}`)
-      if (!response.ok) return { exists: false, fileUrl: null }
-      const data = await response.json()
-      return { exists: data.exists as boolean, fileUrl: data.fileUrl as string | null }
-    } catch {
-      return { exists: false, fileUrl: null }
-    }
-  }
-
-  // Refresh all file statuses
-  const refreshAllStatuses = async () => {
-    const checks = await Promise.all(
-      FILE_CATEGORIES.map(async ({ key }) => {
-        const res = await checkFileExists(key)
-        return { key, ...res }
-      })
-    )
-    const newStatus: Record<string, boolean> = {}
-    const newUrls: Record<string, string> = {}
-    checks.forEach(c => {
-      newStatus[c.key] = c.exists
-      if (c.exists && c.fileUrl) newUrls[c.key] = c.fileUrl
-    })
-    setUploadedFileStatus(newStatus)
-    setUploadedFileUrls(newUrls)
-  }
-
-  // Load file statuses on mount
-  useEffect(() => {
-    refreshAllStatuses()
-  }, [leadId])
-
-  // Handle file upload
-  const handleUploadFile = (fileType: FileCategoryKey) => {
-    setCurrentUploadType(fileType)
-    // Set accept attribute based on file type
-    if (fileInputRef.current) {
-      if (fileType === 'other') {
-        fileInputRef.current.accept = '*' // Accept all file types for "Other"
-      } else {
-        fileInputRef.current.accept = '.pdf,.doc,.docx' // Specific file types for other categories
-      }
-    }
-    fileInputRef.current?.click()
-  }
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !currentUploadType) return
-    setIsUploadingFile(true)
-
-    try {
-      // Get lead information for filename
-      const leadResponse = await fetch(`/api/leads/${leadId}`)
-      if (!leadResponse.ok) {
-        throw new Error('Failed to get lead information')
-      }
-      const leadData = await leadResponse.json()
-      
-      // Create custom filename
-      const leadName = `${leadData.firstName || 'Unknown'} ${leadData.lastName || 'Lead'}`.trim()
-      const fileExtension = file.name.split('.').pop() || 'pdf'
-      
-      let customFileName: string
-      if (currentUploadType === 'other') {
-        // For "Other" category, use the original filename structure from UploadToDriveSection
-        customFileName = `other/${leadName}/${file.name}`
-      } else {
-        // For specific categories, use the structured naming
-        customFileName = `${currentUploadType}/${leadName}/${leadId}.${fileExtension}`
-      }
-
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('leadId', leadId)
-      formData.append('fileType', currentUploadType)
-      formData.append('customFileName', customFileName)
-
-      const res = await fetch('/api/files/upload-to-shared-drive', { method: 'POST', body: formData })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Upload failed')
-      }
-      
-      const uploadResult = await res.json()
-      
-      // If this is a general contract upload, create a contract record to mark it as completed
-      if (currentUploadType === 'general_contract') {
-        try {
-          const contractResponse = await fetch('/api/contracts/manual-upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              leadId: leadId,
-              fileName: file.name,
-              pdfUrl: uploadResult.file?.url || null
-            })
-          })
-          
-          if (contractResponse.ok) {
-            const contractResult = await contractResponse.json()
-            console.log('✅ Contract record created for general contract upload:', contractResult.contractId)
-            toast({ 
-              title: 'Contract Status Updated', 
-              description: 'General contract uploaded and marked as completed!' 
-            })
-          } else {
-            const errorData = await contractResponse.json()
-            console.warn('⚠️ Failed to create contract record:', errorData.error)
-          }
-        } catch (contractError) {
-          console.error('⚠️ Failed to create contract record, but file was uploaded:', contractError)
-          // Don't fail the upload if contract creation fails
-        }
-      } else {
-        toast({ title: 'Success', description: `${currentUploadType === 'other' ? 'File' : currentUploadType} uploaded!` })
-      }
-      
-      await refreshAllStatuses()
-    } catch (err) {
-      toast({ title: 'Error', description: 'Upload failed', variant: 'destructive' })
-    } finally {
-      setIsUploadingFile(false)
-      setCurrentUploadType(null)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
-  }
-
-  // Handle file deletion
-  const handleDeleteFile = async (fileType: FileCategoryKey) => {
-    if (isDeletingFile[fileType]) return
-    setIsDeletingFile(prev => ({ ...prev, [fileType]: true }))
-    try {
-      const checkResponse = await fetch(`/api/files/check-file-exists?leadId=${leadId}&fileType=${fileType}`)
-      if (!checkResponse.ok) {
-        throw new Error('Failed to find file')
-      }
-      
-      const checkData = await checkResponse.json()
-      if (!checkData.exists || !checkData.fileId) {
-        throw new Error('File not found')
-      }
-      
-      const response = await fetch(`/api/files/delete-from-shared-drive?driveFileId=${checkData.fileId}`, { method: 'DELETE' })
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed')
-      }
-      toast({ title: 'Deleted', description: `${fileType === 'other' ? 'File' : fileType} removed` })
-      await refreshAllStatuses()
-    } catch {
-      toast({ title: 'Error', description: 'Delete failed', variant: 'destructive' })
-    } finally {
-      setIsDeletingFile(prev => ({ ...prev, [fileType]: false }))
-    }
-  }
-
-  // Get color classes for each file type
-  const getColorClasses = (color: string) => {
-    const colorMap: Record<string, string> = {
-      blue: 'from-blue-600/20 to-blue-500/20 border-blue-500/30 text-blue-300 hover:from-blue-600/20 hover:to-blue-500/20 hover:shadow-blue-500/20 hover:border-blue-500/30',
-      emerald: 'from-emerald-600/20 to-emerald-500/20 border-emerald-500/30 text-emerald-300 hover:from-emerald-600/20 hover:to-emerald-500/20 hover:shadow-emerald-500/20 hover:border-emerald-500/30',
-      red: 'from-red-600/20 to-red-500/20 border-red-500/30 text-red-300 hover:from-red-600/20 hover:to-red-500/20 hover:shadow-red-500/20 hover:border-red-500/30',
-      purple: 'from-purple-600/20 to-purple-500/20 border-purple-500/30 text-purple-300 hover:from-purple-600/20 hover:to-purple-500/20 hover:shadow-purple-500/20 hover:border-purple-500/30',
-      rose: 'from-rose-600/20 to-rose-500/20 border-rose-500/30 text-rose-300 hover:from-rose-600/20 hover:to-rose-500/20 hover:shadow-rose-500/20 hover:border-rose-500/30',
-      indigo: 'from-indigo-600/20 to-indigo-500/20 border-indigo-500/30 text-indigo-300 hover:from-indigo-600/20 hover:to-indigo-500/20 hover:shadow-indigo-500/20 hover:border-indigo-500/30',
-      orange: 'from-orange-600/20 to-orange-500/20 border-orange-500/30 text-orange-300 hover:from-orange-600/20 hover:to-orange-500/20 hover:shadow-orange-500/20 hover:border-orange-500/30',
-      gray: 'from-gray-600/20 to-gray-500/20 border-gray-500/30 text-gray-300 hover:from-gray-600/20 hover:to-gray-500/20 hover:shadow-gray-500/20 hover:border-gray-500/30'
-    }
-    return colorMap[color] || colorMap.blue
-  }
-
+const UploadDropdown: React.FC<UploadDropdownProps> = ({ leadId, setFileUploadModalOpen, setFileViewerOpen }) => {
   return (
     <div className="relative h-full">
       <DropdownMenu>
@@ -568,61 +373,24 @@ const UploadDropdown: React.FC<UploadDropdownProps> = ({ leadId, lead }) => {
           align="center"
           sideOffset={8}
         >
-          <div className="grid grid-cols-2 gap-2">
-            {FILE_CATEGORIES.map(({ key, label, color }) => (
-              <DropdownMenuItem
-                key={key}
-                disabled={isUploadingFile}
-                onClick={() => handleUploadFile(key)}
-                className={cn(
-                  "flex items-center justify-between gap-1 text-white hover:bg-gradient-to-r focus:bg-gradient-to-r cursor-pointer p-1.5 rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-lg border border-transparent",
-                  `hover:from-${getColorClasses(color)}.from/20 hover:to-${getColorClasses(color)}.to/20 focus:from-${getColorClasses(color)}.from/20 focus:to-${getColorClasses(color)}.to/20 hover:border-${getColorClasses(color)}.border/30`
-                )}
-              >
-                <div className="flex items-center gap-1.5">
-                  <div className={cn("p-1 rounded-md", `bg-gradient-to-br from-${getColorClasses(color)}.from/20 to-${getColorClasses(color)}.to/20`)}>
-                    <Upload className={cn("h-3 w-3", `text-${getColorClasses(color)}.icon`)} />
-                  </div>
-                  <span className="text-xs font-semibold">{label}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {isCheckingFiles[key] ? (
-                    <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
-                  ) : uploadedFileStatus[key] ? (
-                    <div className="flex items-center gap-1">
-                      <button onClick={(e) => { e.stopPropagation(); window.open(uploadedFileUrls[key], '_blank'); }} className="text-blue-400 hover:text-blue-300"><Eye className="h-3 w-3" /></button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDeleteFile(key); }} disabled={isDeletingFile[key]} className="text-red-400 hover:text-red-300">
-                        {isDeletingFile[key] ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              </DropdownMenuItem>
-            ))}
-            <div className="col-span-2 mt-1">
-              <DropdownMenuItem
-                asChild
-                className="flex items-center gap-2 text-white hover:bg-gradient-to-r hover:from-cyan-600/20 hover:to-cyan-500/20 focus:bg-gradient-to-r focus:from-cyan-600/20 focus:to-cyan-500/20 cursor-pointer p-1.5 rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-lg border border-transparent hover:border-cyan-500/30"
-              >
-                <a href={`/leads/${leadId}/files`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5">
-                  <div className="p-1 rounded-md bg-gradient-to-br from-cyan-500/20 to-cyan-600/20">
-                    <ExternalLink className="h-3 w-3 text-cyan-300" />
-                  </div>
-                  <span className="text-xs font-semibold">File Manager</span>
-                </a>
-              </DropdownMenuItem>
-            </div>
+          <div className="flex flex-col gap-2">
+            <DropdownMenuItem
+              onClick={() => setFileViewerOpen(true)}
+              className="flex items-center gap-2 text-white hover:bg-gradient-to-r hover:from-cyan-600/20 hover:to-cyan-500/20 focus:bg-gradient-to-r focus:from-cyan-600/20 focus:to-cyan-500/20 cursor-pointer p-2 rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-lg border border-transparent hover:border-cyan-500/30"
+            >
+              <Eye className="h-4 w-4 text-cyan-300" />
+              <span className="text-sm font-semibold">View Documents</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setFileUploadModalOpen(true)}
+              className="flex items-center gap-2 text-white hover:bg-gradient-to-r hover:from-teal-600/20 hover:to-teal-500/20 focus:bg-gradient-to-r focus:from-teal-600/20 focus:to-teal-500/20 cursor-pointer p-2 rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-lg border border-transparent hover:border-teal-500/30"
+            >
+              <Upload className="h-4 w-4 text-teal-300" />
+              <span className="text-sm font-semibold">Upload Documents</span>
+            </DropdownMenuItem>
           </div>
         </DropdownMenuContent>
       </DropdownMenu>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".pdf,.doc,.docx"
-        onChange={handleFileChange}
-        className="hidden"
-        aria-label="Upload file for document category"
-      />
     </div>
   )
 }
@@ -990,6 +758,8 @@ export default function LeadDetailPage() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
   const [scopeOfWorkDialogOpen, setScopeOfWorkDialogOpen] = useState(false);
+  const [fileUploadModalOpen, setFileUploadModalOpen] = useState(false);
+  const [fileViewerOpen, setFileViewerOpen] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false)
 
   // Add a reference to the activity feed for refreshing
@@ -1496,7 +1266,8 @@ export default function LeadDetailPage() {
                         <div className="col-span-1 sm:flex-1">
                           <UploadDropdown
                             leadId={lead.id}
-                            lead={lead}
+                            setFileUploadModalOpen={setFileUploadModalOpen}
+                            setFileViewerOpen={setFileViewerOpen}
                           />
                         </div>
                         <div className="col-span-1 sm:flex-1">
@@ -1597,6 +1368,28 @@ export default function LeadDetailPage() {
             onOpenChange={handleCloseScopeOfWorkDialog} 
           />
         )}
+
+        {/* File Upload Modal */}
+        <FileUploadModal
+          open={fileUploadModalOpen}
+          onOpenChange={setFileUploadModalOpen}
+          leadId={lead.id}
+          onUploadSuccess={() => {
+            // Refresh any file lists or trigger re-fetch
+            mutate();
+          }}
+        />
+
+        {/* Simple File Viewer */}
+        <SimpleFileViewer
+          open={fileViewerOpen}
+          onOpenChange={setFileViewerOpen}
+          leadId={lead.id}
+          onFileDeleted={() => {
+            // Refresh any file counts or data if needed
+            console.log('File deleted successfully');
+          }}
+        />
 
         <Dialog open={showLoadingDialog} onOpenChange={setShowLoadingDialog}>
           <DialogContent className="sm:max-w-md flex flex-col items-center justify-center p-6 gap-4">
