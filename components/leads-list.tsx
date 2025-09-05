@@ -86,6 +86,8 @@ import { StreetViewTooltip } from "@/components/leads/street-view-tooltip"
 import { LeadFiles } from "@/components/leads/lead-files"
 import { LeadPhotosTab } from "@/components/leads/tabs/LeadPhotosTab"
 import { motion, AnimatePresence } from "framer-motion"
+import { FileUpload } from "@/components/ui/file-upload"
+import { AddressAutocomplete } from "@/components/route-planner/address-autocomplete"
 
 // Insurance company list with phone numbers
 const INSURANCE_COMPANIES = [
@@ -1515,6 +1517,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
   const [viewMode, setViewMode] = useState<'cards' | 'spreadsheet'>('cards')
   const [editingCell, setEditingCell] = useState<{ leadId: string; field: string } | null>(null)
   const [editValue, setEditValue] = useState("")
+  const [fileUploadModalOpen, setFileUploadModalOpen] = useState(false)
+  const [selectedLeadForFiles, setSelectedLeadForFiles] = useState<string | null>(null)
 
   // Pagination logic
   const totalPages = Math.ceil(leads.length / pageSize)
@@ -1595,6 +1599,38 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
     }
   }
 
+  const handleFileUpload = (leadId: string) => {
+    setSelectedLeadForFiles(leadId)
+    setFileUploadModalOpen(true)
+  }
+
+  const handleFilesUploaded = async (files: File[]) => {
+    if (!selectedLeadForFiles) return
+    
+    try {
+      for (const file of files) {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('leadId', selectedLeadForFiles)
+        formData.append('fileType', 'file')
+
+        const response = await fetch('/api/files/upload-to-shared-drive', {
+          method: 'POST',
+          body: formData
+        })
+
+        if (!response.ok) {
+          console.error('Failed to upload file:', file.name)
+        }
+      }
+      
+      setFileUploadModalOpen(false)
+      setSelectedLeadForFiles(null)
+    } catch (error) {
+      console.error('Error uploading files:', error)
+    }
+  }
+
   const SpreadsheetView = () => (
     <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
@@ -1623,18 +1659,18 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                 {/* Name */}
                 <td className="px-3 py-2 whitespace-nowrap">
                   {editingCell?.leadId === lead.id && editingCell?.field === 'name' ? (
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 min-w-[200px]">
                       <Input
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="h-7 text-xs"
+                        className="h-7 text-xs min-w-[140px]"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleEditSave(lead.id, 'name')
                           if (e.key === 'Escape') handleEditCancel()
                         }}
                         autoFocus
                       />
-                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'name')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'name')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -1659,18 +1695,18 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                 {/* Phone */}
                 <td className="px-3 py-2 whitespace-nowrap">
                   {editingCell?.leadId === lead.id && editingCell?.field === 'phone' ? (
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 min-w-[180px]">
                       <Input
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="h-7 text-xs"
+                        className="h-7 text-xs min-w-[120px]"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleEditSave(lead.id, 'phone')
                           if (e.key === 'Escape') handleEditCancel()
                         }}
                         autoFocus
                       />
-                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'phone')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'phone')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -1690,11 +1726,11 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                 {/* Email */}
                 <td className="px-3 py-2 whitespace-nowrap">
                   {editingCell?.leadId === lead.id && editingCell?.field === 'email' ? (
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 min-w-[220px]">
                       <Input
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="h-7 text-xs"
+                        className="h-7 text-xs min-w-[160px]"
                         type="email"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleEditSave(lead.id, 'email')
@@ -1702,7 +1738,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                         }}
                         autoFocus
                       />
-                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'email')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'email')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -1723,18 +1759,17 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                 {/* Address */}
                 <td className="px-3 py-2 whitespace-nowrap">
                   {editingCell?.leadId === lead.id && editingCell?.field === 'address' ? (
-                    <div className="flex gap-1">
-                      <Input
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        className="h-7 text-xs"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleEditSave(lead.id, 'address')
-                          if (e.key === 'Escape') handleEditCancel()
-                        }}
-                        autoFocus
-                      />
-                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'address')}>
+                    <div className="flex gap-1 min-w-[280px]">
+                      <div className="flex-1">
+                        <AddressAutocomplete
+                          label=""
+                          value={editValue}
+                          onChange={setEditValue}
+                          placeholder="Enter address..."
+                          className="mb-0"
+                        />
+                      </div>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'address')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -1775,18 +1810,18 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                 {/* Insurance Company */}
                 <td className="px-3 py-2 whitespace-nowrap">
                   {editingCell?.leadId === lead.id && editingCell?.field === 'insuranceCompany' ? (
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 min-w-[200px]">
                       <Input
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="h-7 text-xs"
+                        className="h-7 text-xs min-w-[140px]"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleEditSave(lead.id, 'insuranceCompany')
                           if (e.key === 'Escape') handleEditCancel()
                         }}
                         autoFocus
                       />
-                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'insuranceCompany')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'insuranceCompany')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -1807,18 +1842,18 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                 {/* Insurance Phone */}
                 <td className="px-3 py-2 whitespace-nowrap">
                   {editingCell?.leadId === lead.id && editingCell?.field === 'insurancePhone' ? (
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 min-w-[180px]">
                       <Input
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="h-7 text-xs"
+                        className="h-7 text-xs min-w-[120px]"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleEditSave(lead.id, 'insurancePhone')
                           if (e.key === 'Escape') handleEditCancel()
                         }}
                         autoFocus
                       />
-                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'insurancePhone')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'insurancePhone')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -1838,18 +1873,18 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                 {/* Claim Number */}
                 <td className="px-3 py-2 whitespace-nowrap">
                   {editingCell?.leadId === lead.id && editingCell?.field === 'claimNumber' ? (
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 min-w-[200px]">
                       <Input
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="h-7 text-xs"
+                        className="h-7 text-xs min-w-[140px]"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleEditSave(lead.id, 'claimNumber')
                           if (e.key === 'Escape') handleEditCancel()
                         }}
                         autoFocus
                       />
-                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'claimNumber')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'claimNumber')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -1869,11 +1904,11 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                 {/* Date of Loss */}
                 <td className="px-3 py-2 whitespace-nowrap">
                   {editingCell?.leadId === lead.id && editingCell?.field === 'dateOfLoss' ? (
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 min-w-[160px]">
                       <Input
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="h-7 text-xs"
+                        className="h-7 text-xs min-w-[100px]"
                         placeholder="MM/DD/YY"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleEditSave(lead.id, 'dateOfLoss')
@@ -1881,7 +1916,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                         }}
                         autoFocus
                       />
-                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'dateOfLoss')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'dateOfLoss')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -1912,7 +1947,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                           ))}
                         </SelectContent>
                       </Select>
-                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'damageType')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'damageType')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -1932,18 +1967,18 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                 {/* Adjuster Name */}
                 <td className="px-3 py-2 whitespace-nowrap">
                   {editingCell?.leadId === lead.id && editingCell?.field === 'insuranceAdjusterName' ? (
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 min-w-[200px]">
                       <Input
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="h-7 text-xs"
+                        className="h-7 text-xs min-w-[140px]"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleEditSave(lead.id, 'insuranceAdjusterName')
                           if (e.key === 'Escape') handleEditCancel()
                         }}
                         autoFocus
                       />
-                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'insuranceAdjusterName')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'insuranceAdjusterName')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -1964,18 +1999,18 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                 {/* Adjuster Phone */}
                 <td className="px-3 py-2 whitespace-nowrap">
                   {editingCell?.leadId === lead.id && editingCell?.field === 'insuranceAdjusterPhone' ? (
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 min-w-[180px]">
                       <Input
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="h-7 text-xs"
+                        className="h-7 text-xs min-w-[120px]"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') handleEditSave(lead.id, 'insuranceAdjusterPhone')
                           if (e.key === 'Escape') handleEditCancel()
                         }}
                         autoFocus
                       />
-                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'insuranceAdjusterPhone')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'insuranceAdjusterPhone')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -2005,7 +2040,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 w-7 p-0"
+                      className="h-7 w-7 p-0 hover:bg-gray-100"
                       asChild
                     >
                       <Link href={`/leads/${lead.id}`}>
@@ -2015,10 +2050,18 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 w-7 p-0"
+                      className="h-7 w-7 p-0 hover:bg-gray-100"
                       onClick={() => onViewFiles(lead)}
                     >
                       <FileText className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0 hover:bg-gray-100"
+                      onClick={() => handleFileUpload(lead.id)}
+                    >
+                      <Upload className="h-3 w-3" />
                     </Button>
                   </div>
                 </td>
@@ -2090,6 +2133,23 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
       ) : (
         // Spreadsheet View
         <SpreadsheetView />
+      )}
+
+      {/* File Upload Modal */}
+      {fileUploadModalOpen && (
+        <Dialog open={fileUploadModalOpen} onOpenChange={setFileUploadModalOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Upload Files</DialogTitle>
+              <DialogDescription>
+                Upload files for this lead. You can drag and drop multiple files or click to browse.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <FileUpload onChange={handleFilesUploaded} />
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Pagination */}
