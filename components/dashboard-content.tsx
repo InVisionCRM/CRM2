@@ -16,12 +16,15 @@ export function DashboardContent() {
 
   useEffect(() => {
     // Show splash screen only on first load
-    const hasSeenSplash = localStorage.getItem('hasSeenSplashToday')
-    const today = new Date().toDateString()
-    
-    if (hasSeenSplash !== today) {
-      setShowSplashScreen(true)
-      localStorage.setItem('hasSeenSplashToday', today)
+    // Check if we're in the browser before accessing localStorage
+    if (typeof window !== 'undefined') {
+      const hasSeenSplash = localStorage.getItem('hasSeenSplashToday')
+      const today = new Date().toDateString()
+      
+      if (hasSeenSplash !== today) {
+        setShowSplashScreen(true)
+        localStorage.setItem('hasSeenSplashToday', today)
+      }
     }
   }, [])
 

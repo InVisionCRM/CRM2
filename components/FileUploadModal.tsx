@@ -361,10 +361,10 @@ export function FileUploadModal({
                 {/* Current File Info */}
                 {uploadProgress.currentFile && (
                   <div className="text-center">
-                    <p className="text-sm font-medium text-black/80 truncate">
+                    <p className="text-sm font-medium text-white truncate">
                       {uploadProgress.currentFile}
                     </p>
-                    <p className="text-xs text-black/50 mt-1">
+                    <p className="text-xs lime-500 mt-1">
                       File {currentUploadIndex + 1} of {filesWithNames.length}
                     </p>
                   </div>
@@ -396,10 +396,10 @@ export function FileUploadModal({
 
                 {/* Status */}
                 <div className="flex items-center justify-between text-xs">
-                  <span className={uploadProgress.stage === 'error' ? 'text-red-600' : 'text-black/60'}>
+                  <span className={uploadProgress.stage === 'error' ? 'text-red-600' : 'text-white'}>
                     {uploadProgress.message}
                   </span>
-                  <span className="text-black/40 font-mono">
+                  <span className="text-white font-mono">
                     {Math.round(uploadProgress.progress)}%
                   </span>
                 </div>
@@ -415,7 +415,7 @@ export function FileUploadModal({
                         key={stage}
                         className={`w-2 h-2 rounded-full transition-all duration-300 ${
                           isComplete
-                            ? 'bg-black/60 scale-110'
+                            ? 'bg-black/20 scale-110'
                             : isActive
                             ? 'bg-black/40 scale-125'
                             : 'bg-black/10'
@@ -442,7 +442,7 @@ export function FileUploadModal({
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-green-50 border border-green-200 rounded-lg p-4"
+              className="bg-gray-500/40 border border-green-200 rounded-lg p-4"
             >
               <div className="flex items-center gap-2 mb-3">
                 <CheckCircle className="h-5 w-5 text-green-500" />

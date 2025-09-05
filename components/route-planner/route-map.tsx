@@ -118,6 +118,9 @@ export function RouteMap({
       return
     }
 
+    // Only load script in browser environment
+    if (typeof window === 'undefined' || typeof document === 'undefined') return
+
     // Check if script is already loading
     const existingScript = document.querySelector('script[src*="maps.googleapis.com"]')
     if (existingScript) {

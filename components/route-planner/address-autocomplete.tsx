@@ -46,13 +46,15 @@ export function AddressAutocomplete({
 
   // Load recent addresses from localStorage
   useEffect(() => {
-    const stored = localStorage.getItem('route-planner-recent-addresses')
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored)
-        setRecentAddresses(parsed.slice(0, 5)) // Keep only last 5
-      } catch (error) {
-        console.error('Error loading recent addresses:', error)
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('route-planner-recent-addresses')
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          setRecentAddresses(parsed.slice(0, 5)) // Keep only last 5
+        } catch (error) {
+          console.error('Error loading recent addresses:', error)
+        }
       }
     }
   }, [])
@@ -63,7 +65,10 @@ export function AddressAutocomplete({
     
     const updated = [address, ...recentAddresses.filter(a => a !== address)].slice(0, 5)
     setRecentAddresses(updated)
-    localStorage.setItem('route-planner-recent-addresses', JSON.stringify(updated))
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('route-planner-recent-addresses', JSON.stringify(updated))
+    }
   }
 
   // Fetch address suggestions from Google Places API

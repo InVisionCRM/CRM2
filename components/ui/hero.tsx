@@ -46,6 +46,8 @@ export const Hero = () => {
   }, [session])
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+
     const handleScroll = () => {
       setScrollY(window.scrollY)
     }

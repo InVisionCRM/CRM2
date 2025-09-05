@@ -64,7 +64,9 @@ import {
   ChevronUp,
   ChevronsLeft,
   ChevronsRight,
-  ChevronLeft
+  ChevronLeft,
+  Table,
+  Grid3X3
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { LeadStatus } from "@prisma/client"
@@ -1510,6 +1512,9 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  const [viewMode, setViewMode] = useState<'cards' | 'spreadsheet'>('cards')
+  const [editingCell, setEditingCell] = useState<{ leadId: string; field: string } | null>(null)
+  const [editValue, setEditValue] = useState("")
 
   // Pagination logic
   const totalPages = Math.ceil(leads.length / pageSize)
@@ -1525,6 +1530,505 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
   const goToPage = (page: number) => {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)))
   }
+
+  const handleEditStart = (leadId: string, field: string, currentValue: string) => {
+    setEditingCell({ leadId, field })
+    setEditValue(currentValue || "")
+  }
+
+  const handleEditCancel = () => {
+    setEditingCell(null)
+    setEditValue("")
+  }
+
+  const handleEditSave = async (leadId: string, field: string) => {
+    try {
+      let endpoint = `/api/leads/${leadId}`
+      let body: any = {}
+      
+      // Determine which endpoint to use based on field
+      if (['insuranceCompany', 'insurancePhone', 'claimNumber', 'damageType', 'dateOfLoss', 'insuranceEmail'].includes(field)) {
+        endpoint = `/api/leads/${leadId}/insurance`
+        body[field] = editValue
+      } else if (['insuranceAdjusterName', 'insuranceAdjusterPhone', 'insuranceAdjusterEmail'].includes(field)) {
+        endpoint = `/api/leads/${leadId}/adjuster`
+        body[field] = editValue
+      } else {
+        // Basic lead fields
+        body[field] = editValue
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      })
+
+      if (response.ok) {
+        // Update the lead in the local state
+        const leadIndex = leads.findIndex(l => l.id === leadId)
+        if (leadIndex !== -1) {
+          (leads[leadIndex] as any)[field] = editValue
+        }
+        setEditingCell(null)
+        setEditValue("")
+      } else {
+        console.error('Failed to update lead field')
+      }
+    } catch (error) {
+      console.error('Error updating lead field:', error)
+    }
+  }
+
+  const handleStatusUpdate = async (leadId: string, newStatus: LeadStatus) => {
+    try {
+      await updateLeadStatus(leadId, newStatus)
+      // Update local state
+      const leadIndex = leads.findIndex(l => l.id === leadId)
+      if (leadIndex !== -1) {
+        leads[leadIndex].status = newStatus
+      }
+    } catch (error) {
+      console.error('Error updating status:', error)
+    }
+  }
+
+  const SpreadsheetView = () => (
+    <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[1400px]">
+          <thead className="bg-gray-50 border-b">
+            <tr>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Name</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Phone</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">Email</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Address</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Status</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Insurance Co.</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Ins. Phone</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Claim Number</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">DOL</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Damage Type</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Adjuster Name</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Adj. Phone</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Assigned To</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {currentLeads.map((lead) => (
+              <tr key={lead.id} className="hover:bg-gray-50">
+                {/* Name */}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {editingCell?.leadId === lead.id && editingCell?.field === 'name' ? (
+                    <div className="flex gap-1">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="h-7 text-xs"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleEditSave(lead.id, 'name')
+                          if (e.key === 'Escape') handleEditCancel()
+                        }}
+                        autoFocus
+                      />
+                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'name')}>
+                        <Save className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span 
+                        className="text-sm font-medium text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded"
+                        onClick={() => handleEditStart(lead.id, 'name', lead.name || '')}
+                      >
+                        {lead.name || 'Click to add'}
+                      </span>
+                      <Link href={`/leads/${lead.id}`} className="text-blue-600 hover:text-blue-800">
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </div>
+                  )}
+                </td>
+
+                {/* Phone */}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {editingCell?.leadId === lead.id && editingCell?.field === 'phone' ? (
+                    <div className="flex gap-1">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="h-7 text-xs"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleEditSave(lead.id, 'phone')
+                          if (e.key === 'Escape') handleEditCancel()
+                        }}
+                        autoFocus
+                      />
+                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'phone')}>
+                        <Save className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span 
+                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded"
+                      onClick={() => handleEditStart(lead.id, 'phone', lead.phone || '')}
+                    >
+                      {lead.phone || 'Click to add'}
+                    </span>
+                  )}
+                </td>
+
+                {/* Email */}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {editingCell?.leadId === lead.id && editingCell?.field === 'email' ? (
+                    <div className="flex gap-1">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="h-7 text-xs"
+                        type="email"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleEditSave(lead.id, 'email')
+                          if (e.key === 'Escape') handleEditCancel()
+                        }}
+                        autoFocus
+                      />
+                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'email')}>
+                        <Save className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span 
+                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded truncate max-w-[150px] block"
+                      onClick={() => handleEditStart(lead.id, 'email', lead.email || '')}
+                      title={lead.email || 'Click to add'}
+                    >
+                      {lead.email || 'Click to add'}
+                    </span>
+                  )}
+                </td>
+
+                {/* Address */}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {editingCell?.leadId === lead.id && editingCell?.field === 'address' ? (
+                    <div className="flex gap-1">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="h-7 text-xs"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleEditSave(lead.id, 'address')
+                          if (e.key === 'Escape') handleEditCancel()
+                        }}
+                        autoFocus
+                      />
+                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'address')}>
+                        <Save className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span 
+                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded truncate max-w-[200px] block"
+                      onClick={() => handleEditStart(lead.id, 'address', lead.address || '')}
+                      title={lead.address || 'Click to add'}
+                    >
+                      {parseAddressStreetAndCity(lead.address) || 'Click to add'}
+                    </span>
+                  )}
+                </td>
+
+                {/* Status */}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  <Select value={lead.status} onValueChange={(value: LeadStatus) => handleStatusUpdate(lead.id, value)}>
+                    <SelectTrigger className="h-7 text-xs border-gray-300">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="follow_ups">Follow Ups</SelectItem>
+                      <SelectItem value="scheduled">Scheduled</SelectItem>
+                      <SelectItem value="colors">Colors</SelectItem>
+                      <SelectItem value="acv">ACV</SelectItem>
+                      <SelectItem value="signed_contract">Signed Contract</SelectItem>
+                      <SelectItem value="job">Job</SelectItem>
+                      <SelectItem value="completed_jobs">Completed Jobs</SelectItem>
+                      <SelectItem value="zero_balance">Zero Balance</SelectItem>
+                      <SelectItem value="denied">Denied</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </td>
+
+                {/* Insurance Company */}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {editingCell?.leadId === lead.id && editingCell?.field === 'insuranceCompany' ? (
+                    <div className="flex gap-1">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="h-7 text-xs"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleEditSave(lead.id, 'insuranceCompany')
+                          if (e.key === 'Escape') handleEditCancel()
+                        }}
+                        autoFocus
+                      />
+                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'insuranceCompany')}>
+                        <Save className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span 
+                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded truncate max-w-[120px] block"
+                      onClick={() => handleEditStart(lead.id, 'insuranceCompany', lead.insuranceCompany || '')}
+                      title={lead.insuranceCompany || 'Click to add'}
+                    >
+                      {lead.insuranceCompany || 'Click to add'}
+                    </span>
+                  )}
+                </td>
+
+                {/* Insurance Phone */}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {editingCell?.leadId === lead.id && editingCell?.field === 'insurancePhone' ? (
+                    <div className="flex gap-1">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="h-7 text-xs"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleEditSave(lead.id, 'insurancePhone')
+                          if (e.key === 'Escape') handleEditCancel()
+                        }}
+                        autoFocus
+                      />
+                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'insurancePhone')}>
+                        <Save className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span 
+                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded"
+                      onClick={() => handleEditStart(lead.id, 'insurancePhone', lead.insurancePhone || '')}
+                    >
+                      {lead.insurancePhone || 'Click to add'}
+                    </span>
+                  )}
+                </td>
+
+                {/* Claim Number */}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {editingCell?.leadId === lead.id && editingCell?.field === 'claimNumber' ? (
+                    <div className="flex gap-1">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="h-7 text-xs"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleEditSave(lead.id, 'claimNumber')
+                          if (e.key === 'Escape') handleEditCancel()
+                        }}
+                        autoFocus
+                      />
+                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'claimNumber')}>
+                        <Save className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span 
+                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded"
+                      onClick={() => handleEditStart(lead.id, 'claimNumber', lead.claimNumber || '')}
+                    >
+                      {lead.claimNumber || 'Click to add'}
+                    </span>
+                  )}
+                </td>
+
+                {/* Date of Loss */}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {editingCell?.leadId === lead.id && editingCell?.field === 'dateOfLoss' ? (
+                    <div className="flex gap-1">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="h-7 text-xs"
+                        placeholder="MM/DD/YY"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleEditSave(lead.id, 'dateOfLoss')
+                          if (e.key === 'Escape') handleEditCancel()
+                        }}
+                        autoFocus
+                      />
+                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'dateOfLoss')}>
+                        <Save className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span 
+                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded"
+                      onClick={() => handleEditStart(lead.id, 'dateOfLoss', lead.dateOfLoss ? format(new Date(lead.dateOfLoss), 'MM/dd/yy') : '')}
+                    >
+                      {lead.dateOfLoss ? format(new Date(lead.dateOfLoss), 'MM/dd/yy') : 'Click to add'}
+                    </span>
+                  )}
+                </td>
+
+                {/* Damage Type */}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {editingCell?.leadId === lead.id && editingCell?.field === 'damageType' ? (
+                    <div className="flex gap-1">
+                      <Select value={editValue} onValueChange={setEditValue}>
+                        <SelectTrigger className="h-7 text-xs">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DAMAGE_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'damageType')}>
+                        <Save className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span 
+                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded"
+                      onClick={() => handleEditStart(lead.id, 'damageType', lead.damageType || '')}
+                    >
+                      {lead.damageType ? DAMAGE_TYPES.find(d => d.value === lead.damageType)?.label : 'Click to add'}
+                    </span>
+                  )}
+                </td>
+
+                {/* Adjuster Name */}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {editingCell?.leadId === lead.id && editingCell?.field === 'insuranceAdjusterName' ? (
+                    <div className="flex gap-1">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="h-7 text-xs"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleEditSave(lead.id, 'insuranceAdjusterName')
+                          if (e.key === 'Escape') handleEditCancel()
+                        }}
+                        autoFocus
+                      />
+                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'insuranceAdjusterName')}>
+                        <Save className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span 
+                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded truncate max-w-[120px] block"
+                      onClick={() => handleEditStart(lead.id, 'insuranceAdjusterName', lead.insuranceAdjusterName || '')}
+                      title={lead.insuranceAdjusterName || 'Click to add'}
+                    >
+                      {lead.insuranceAdjusterName || 'Click to add'}
+                    </span>
+                  )}
+                </td>
+
+                {/* Adjuster Phone */}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {editingCell?.leadId === lead.id && editingCell?.field === 'insuranceAdjusterPhone' ? (
+                    <div className="flex gap-1">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="h-7 text-xs"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleEditSave(lead.id, 'insuranceAdjusterPhone')
+                          if (e.key === 'Escape') handleEditCancel()
+                        }}
+                        autoFocus
+                      />
+                      <Button size="sm" className="h-7 w-7 p-0" onClick={() => handleEditSave(lead.id, 'insuranceAdjusterPhone')}>
+                        <Save className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span 
+                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded"
+                      onClick={() => handleEditStart(lead.id, 'insuranceAdjusterPhone', lead.insuranceAdjusterPhone || '')}
+                    >
+                      {lead.insuranceAdjusterPhone || 'Click to add'}
+                    </span>
+                  )}
+                </td>
+
+                {/* Assigned To */}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  <span className="text-sm text-gray-900">
+                    {getSalespersonInitials(lead.assignedTo)}
+                  </span>
+                </td>
+
+                {/* Actions */}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0"
+                      asChild
+                    >
+                      <Link href={`/leads/${lead.id}`}>
+                        <Eye className="h-3 w-3" />
+                      </Link>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0"
+                      onClick={() => onViewFiles(lead)}
+                    >
+                      <FileText className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
 
   if (isLoading) {
                         return (
@@ -1548,12 +2052,45 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
 
   return (
     <div className="space-y-4">
-      {/* Leads List - Responsive Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-4">
-        {currentLeads.map((lead) => (
-          <NeonLeadCard key={lead.id} lead={lead} />
-        ))}
-                  </div>
+      {/* View Toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button
+            variant={viewMode === 'cards' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('cards')}
+            className="flex items-center gap-2"
+          >
+            <Grid3X3 className="h-4 w-4" />
+            Cards
+          </Button>
+          <Button
+            variant={viewMode === 'spreadsheet' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('spreadsheet')}
+            className="flex items-center gap-2"
+          >
+            <Table className="h-4 w-4" />
+            Spreadsheet
+          </Button>
+        </div>
+        <div className="text-sm text-slate-400">
+          {leads.length} leads total
+        </div>
+      </div>
+
+      {/* Content based on view mode */}
+      {viewMode === 'cards' ? (
+        // Card View - Responsive Grid Layout
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-4">
+          {currentLeads.map((lead) => (
+            <NeonLeadCard key={lead.id} lead={lead} />
+          ))}
+        </div>
+      ) : (
+        // Spreadsheet View
+        <SpreadsheetView />
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (
