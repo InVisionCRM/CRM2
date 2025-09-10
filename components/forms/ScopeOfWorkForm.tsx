@@ -173,8 +173,8 @@ export default function ScopeOfWorkForm({ prefilledData }: ScopeOfWorkFormProps 
   }
 
   const handleNoteSelection = (note: string) => {
-    // Append the selected note to existing notes with a line break
-    const newNote = additionalNotes ? `${additionalNotes}\n• ${note}` : `• ${note}`
+    // Append the selected note to existing notes with a comma
+    const newNote = additionalNotes ? `${additionalNotes}, ${note}` : note
     setAdditionalNotes(newNote)
   }
 
