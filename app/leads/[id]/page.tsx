@@ -340,9 +340,21 @@ const AddNoteButton: React.FC<AddNoteButtonProps> = ({ leadId, onNoteAdded }) =>
 };
 
 const UploadDropdown: React.FC<UploadDropdownProps> = ({ leadId, setFileUploadModalOpen, setFileViewerOpen }) => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const handleViewDocuments = () => {
+    setFileViewerOpen(true);
+    setIsDropdownOpen(false);
+  };
+
+  const handleUploadDocuments = () => {
+    setFileUploadModalOpen(true);
+    setIsDropdownOpen(false);
+  };
+
   return (
     <div className="relative h-full">
-      <DropdownMenu>
+      <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
         <DropdownMenuTrigger asChild>
           <button
             className={cn(
@@ -362,7 +374,10 @@ const UploadDropdown: React.FC<UploadDropdownProps> = ({ leadId, setFileUploadMo
                   <span className="sm:hidden">Docs</span>
                   <span className="hidden sm:inline">Documents</span>
                 </span>
-                <ChevronDown className="h-3 w-3 text-teal-200 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                <ChevronDown className={cn(
+                  "h-3 w-3 text-teal-200 transition-transform duration-200",
+                  isDropdownOpen && "rotate-180"
+                )} />
               </div>
             </div>
           </button>
@@ -375,14 +390,14 @@ const UploadDropdown: React.FC<UploadDropdownProps> = ({ leadId, setFileUploadMo
         >
           <div className="flex flex-col gap-2">
             <DropdownMenuItem
-              onClick={() => setFileViewerOpen(true)}
+              onClick={handleViewDocuments}
               className="flex items-center gap-2 text-white hover:bg-gradient-to-r hover:from-cyan-600/20 hover:to-cyan-500/20 focus:bg-gradient-to-r focus:from-cyan-600/20 focus:to-cyan-500/20 cursor-pointer p-2 rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-lg border border-transparent hover:border-cyan-500/30"
             >
               <Eye className="h-4 w-4 text-cyan-300" />
               <span className="text-sm font-semibold">View Documents</span>
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => setFileUploadModalOpen(true)}
+              onClick={handleUploadDocuments}
               className="flex items-center gap-2 text-white hover:bg-gradient-to-r hover:from-teal-600/20 hover:to-teal-500/20 focus:bg-gradient-to-r focus:from-teal-600/20 focus:to-teal-500/20 cursor-pointer p-2 rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-lg border border-transparent hover:border-teal-500/30"
             >
               <Upload className="h-4 w-4 text-teal-300" />

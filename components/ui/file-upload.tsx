@@ -76,6 +76,14 @@ export const FileUpload = ({
           <p className="relative z-20 font-sans font-normal text-neutral-400 dark:text-neutral-400 text-base mt-2">
             Drag or drop your files here or click to upload
           </p>
+          <a 
+            href="https://www.adobe.com/acrobat/online/compress-pdf.html" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="relative z-20 text-blue-600 hover:text-blue-800 underline mt-2"
+          >
+            Compress Here
+          </a>
           <div className="relative w-full mt-10 max-w-xl mx-auto">
             {files.length > 0 &&
               files.map((file, idx) => (

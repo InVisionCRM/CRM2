@@ -88,6 +88,7 @@ import { LeadPhotosTab } from "@/components/leads/tabs/LeadPhotosTab"
 import { motion, AnimatePresence } from "framer-motion"
 import { FileUpload } from "@/components/ui/file-upload"
 import { AddressAutocomplete } from "@/components/route-planner/address-autocomplete"
+import { SimpleFileViewer } from "@/components/SimpleFileViewer"
 
 // Insurance company list with phone numbers
 const INSURANCE_COMPANIES = [
@@ -1510,15 +1511,17 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
   )
 }
 
-export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, onViewActivity: _onViewActivity, onViewFiles: _onViewFiles }: LeadsListProps) {
+export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, onViewActivity: _onViewActivity, onViewFiles }: LeadsListProps) {
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [pageSize, setPageSize] = useState(50)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
-  const [viewMode, setViewMode] = useState<'cards' | 'spreadsheet'>('cards')
+  const [viewMode, setViewMode] = useState<'cards' | 'spreadsheet'>('spreadsheet')
   const [editingCell, setEditingCell] = useState<{ leadId: string; field: string } | null>(null)
   const [editValue, setEditValue] = useState("")
   const [fileUploadModalOpen, setFileUploadModalOpen] = useState(false)
   const [selectedLeadForFiles, setSelectedLeadForFiles] = useState<string | null>(null)
+  const [fileViewerOpen, setFileViewerOpen] = useState(false)
+  const [selectedLeadForFileViewer, setSelectedLeadForFileViewer] = useState<string | null>(null)
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([])
   const [showAddressSuggestions, setShowAddressSuggestions] = useState(false)
 
@@ -1678,6 +1681,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
           <thead className="bg-gray-50 border-b">
             <tr>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Name</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Created</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Phone</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">Email</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Address</th>
@@ -1698,38 +1702,19 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
               <tr key={lead.id} className="hover:bg-gray-50">
                 {/* Name */}
                 <td className="px-3 py-2 whitespace-nowrap">
-                  {editingCell?.leadId === lead.id && editingCell?.field === 'name' ? (
-                    <div className="flex gap-1 min-w-[200px]">
-                      <Input
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        className="h-7 text-xs min-w-[140px]"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleEditSave(lead.id, 'name')
-                          if (e.key === 'Escape') handleEditCancel()
-                        }}
-                        autoFocus
-                      />
-                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'name')}>
-                        <Save className="h-3 w-3" />
-                      </Button>
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <span 
-                        className="text-sm font-medium text-white cursor-pointer hover:bg-gray-800 px-1 py-0.5 rounded"
-                        onClick={() => handleEditStart(lead.id, 'name', lead.name || '')}
-                      >
-                        {lead.name || 'Click to add'}
-                      </span>
-                      <Link href={`/leads/${lead.id}`} className="text-blue-600 hover:text-blue-800">
-                        <ExternalLink className="h-3 w-3" />
-                      </Link>
-                    </div>
-                  )}
+                  <Link 
+                    href={`/leads/${lead.id}`}
+                    className="text-sm font-medium text-black hover:text-blue-600 transition-colors cursor-pointer"
+                  >
+                    {lead.name || 'Click to view lead'}
+                  </Link>
+                </td>
+
+                {/* Created Date */}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  <span className="text-sm text-gray-900">
+                    {lead.createdAt ? format(new Date(lead.createdAt), 'MM/dd/yy') : 'N/A'}
+                  </span>
                 </td>
 
                 {/* Phone */}
@@ -1755,10 +1740,12 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className="text-sm text-white cursor-pointer hover:bg-gray-800 px-1 py-0.5 rounded"
+                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded ${
+                        lead.phone ? 'text-black' : 'text-blue-400'
+                      }`}
                       onClick={() => handleEditStart(lead.id, 'phone', lead.phone || '')}
                     >
-                      {lead.phone || 'Click to add'}
+                      {lead.phone || 'Add'}
                     </span>
                   )}
                 </td>
@@ -1787,11 +1774,13 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className="text-sm text-white cursor-pointer hover:bg-gray-800 px-1 py-0.5 rounded truncate max-w-[150px] block"
+                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded truncate max-w-[150px] block ${
+                        lead.email ? 'text-black' : 'text-blue-400'
+                      }`}
                       onClick={() => handleEditStart(lead.id, 'email', lead.email || '')}
-                      title={lead.email || 'Click to add'}
+                      title={lead.email || 'Add'}
                     >
-                      {lead.email || 'Click to add'}
+                      {lead.email || 'Add'}
                     </span>
                   )}
                 </td>
@@ -1852,11 +1841,13 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded truncate max-w-[200px] block"
+                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded truncate max-w-[200px] block ${
+                        lead.address ? 'text-gray-900' : 'text-blue-400'
+                      }`}
                       onClick={() => handleEditStart(lead.id, 'address', lead.address || '')}
-                      title={lead.address || 'Click to add'}
+                      title={lead.address || 'Add'}
                     >
-                      {parseAddressStreetAndCity(lead.address) || 'Click to add'}
+                      {parseAddressStreetAndCity(lead.address) || 'Add'}
                     </span>
                   )}
                 </td>
@@ -1904,11 +1895,13 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded truncate max-w-[120px] block"
+                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded truncate max-w-[120px] block ${
+                        lead.insuranceCompany ? 'text-gray-900' : 'text-blue-400'
+                      }`}
                       onClick={() => handleEditStart(lead.id, 'insuranceCompany', lead.insuranceCompany || '')}
-                      title={lead.insuranceCompany || 'Click to add'}
+                      title={lead.insuranceCompany || 'Add'}
                     >
-                      {lead.insuranceCompany || 'Click to add'}
+                      {lead.insuranceCompany || 'Add'}
                     </span>
                   )}
                 </td>
@@ -1936,10 +1929,12 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded"
+                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded ${
+                        lead.insurancePhone ? 'text-gray-900' : 'text-blue-400'
+                      }`}
                       onClick={() => handleEditStart(lead.id, 'insurancePhone', lead.insurancePhone || '')}
                     >
-                      {lead.insurancePhone || 'Click to add'}
+                      {lead.insurancePhone || 'Add'}
                     </span>
                   )}
                 </td>
@@ -1967,10 +1962,12 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded"
+                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded ${
+                        lead.claimNumber ? 'text-gray-900' : 'text-blue-400'
+                      }`}
                       onClick={() => handleEditStart(lead.id, 'claimNumber', lead.claimNumber || '')}
                     >
-                      {lead.claimNumber || 'Click to add'}
+                      {lead.claimNumber || 'Add'}
                     </span>
                   )}
                 </td>
@@ -1999,10 +1996,12 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded"
+                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded ${
+                        lead.dateOfLoss ? 'text-gray-900' : 'text-blue-400'
+                      }`}
                       onClick={() => handleEditStart(lead.id, 'dateOfLoss', lead.dateOfLoss ? format(new Date(lead.dateOfLoss), 'MM/dd/yy') : '')}
                     >
-                      {lead.dateOfLoss ? format(new Date(lead.dateOfLoss), 'MM/dd/yy') : 'Click to add'}
+                      {lead.dateOfLoss ? format(new Date(lead.dateOfLoss), 'MM/dd/yy') : 'Add'}
                     </span>
                   )}
                 </td>
@@ -2030,10 +2029,12 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded"
+                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded ${
+                        lead.damageType ? 'text-gray-900' : 'text-blue-400'
+                      }`}
                       onClick={() => handleEditStart(lead.id, 'damageType', lead.damageType || '')}
                     >
-                      {lead.damageType ? DAMAGE_TYPES.find(d => d.value === lead.damageType)?.label : 'Click to add'}
+                      {lead.damageType ? DAMAGE_TYPES.find(d => d.value === lead.damageType)?.label : 'Add'}
                     </span>
                   )}
                 </td>
@@ -2061,11 +2062,13 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded truncate max-w-[120px] block"
+                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded truncate max-w-[120px] block ${
+                        lead.insuranceAdjusterName ? 'text-gray-900' : 'text-blue-400'
+                      }`}
                       onClick={() => handleEditStart(lead.id, 'insuranceAdjusterName', lead.insuranceAdjusterName || '')}
-                      title={lead.insuranceAdjusterName || 'Click to add'}
+                      title={lead.insuranceAdjusterName || 'Add'}
                     >
-                      {lead.insuranceAdjusterName || 'Click to add'}
+                      {lead.insuranceAdjusterName || 'Add'}
                     </span>
                   )}
                 </td>
@@ -2093,10 +2096,12 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className="text-sm text-gray-900 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded"
+                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded ${
+                        lead.insuranceAdjusterPhone ? 'text-gray-900' : 'text-blue-400'
+                      }`}
                       onClick={() => handleEditStart(lead.id, 'insuranceAdjusterPhone', lead.insuranceAdjusterPhone || '')}
                     >
-                      {lead.insuranceAdjusterPhone || 'Click to add'}
+                      {lead.insuranceAdjusterPhone || 'Add'}
                     </span>
                   )}
                 </td>
@@ -2114,7 +2119,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 w-7 p-0 hover:bg-gray-100"
+                      className="h-7 w-7 p-0 bg-black text-white hover:bg-green-500 hover:text-white"
                       asChild
                     >
                       <Link href={`/leads/${lead.id}`}>
@@ -2124,15 +2129,18 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 w-7 p-0 hover:bg-gray-100"
-                      onClick={() => onViewFiles(lead)}
+                      className="h-7 w-7 p-0 bg-black text-white hover:bg-green-500 hover:text-white"
+                      onClick={() => {
+                        setSelectedLeadForFileViewer(lead.id);
+                        setFileViewerOpen(true);
+                      }}
                     >
                       <FileText className="h-3 w-3" />
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 w-7 p-0 hover:bg-gray-100"
+                      className="h-7 w-7 p-0 bg-black text-white hover:bg-green-500 hover:text-white"
                       onClick={() => handleFileUpload(lead.id)}
                     >
                       <Upload className="h-3 w-3" />
@@ -2289,6 +2297,24 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
               </Button>
           </div>
         </div>
+      )}
+
+      {/* Simple File Viewer */}
+      {selectedLeadForFileViewer && (
+        <SimpleFileViewer
+          open={fileViewerOpen}
+          onOpenChange={(open) => {
+            setFileViewerOpen(open);
+            if (!open) {
+              setSelectedLeadForFileViewer(null);
+            }
+          }}
+          leadId={selectedLeadForFileViewer}
+          onFileDeleted={() => {
+            // Optional: Add any refresh logic here if needed
+            console.log('File deleted from viewer');
+          }}
+        />
       )}
     </div>
   )

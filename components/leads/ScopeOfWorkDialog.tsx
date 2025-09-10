@@ -96,10 +96,11 @@ export function ScopeOfWorkDialog({ lead, open, onOpenChange }: ScopeOfWorkDialo
       const result = await response.json()
       console.log('✅ Scope of work submitted successfully:', result)
       
-      // Show success toast matching the contract sent message
+      // Show success toast with clear message
       toast({
-        title: "✅ Contract Sent Successfully!",
-        description: `Scope of Work has been sent to ${result.email || lead?.email}`,
+        title: "🎉 Document Successfully Sent!",
+        description: `The Scope of Work document has been sent to your client at ${result.email || lead?.email}. They will receive an email with the contract for review and signature.`,
+        duration: 5000,
       })
       
       // Reset form using the ref
@@ -188,7 +189,7 @@ export function ScopeOfWorkDialog({ lead, open, onOpenChange }: ScopeOfWorkDialo
             <AlertDialogCancel onClick={handleCancelConfirmation}>
               Go Back to Edit
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmSubmit} className="bg-blue-600 hover:bg-blue-700">
+            <AlertDialogAction onClick={handleConfirmSubmit} className="bg-white text-green-600 hover:bg-green-600 text-white">
               Confirm & Send
             </AlertDialogAction>
           </AlertDialogFooter>
