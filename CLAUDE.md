@@ -81,8 +81,8 @@ NextAuth.js handles Google OAuth with these key features:
 
 #### File Management (`lib/services/dualFileStorage.ts`)
 Implements dual storage strategy:
-- Primary: Google Drive for collaboration and permanence
-- Secondary: Vercel Blob for fast CDN access
+- Primary: Vercel Blob for fast CDN access
+- Secondary: Google Drive for collaboration and permanence
 - Automatic fallback and sync capabilities
 
 #### Google Drive Integration (`lib/hooks/useGoogleDrive.ts`)
@@ -129,10 +129,10 @@ if (!session) {
 #### File Upload Patterns
 Use the dual storage service for new file uploads:
 ```typescript
-import { DualFileStorage } from '@/lib/services/dualFileStorage'
+import { DualFileStorageService } from '@/lib/services/dualFileStorage'
 
-const dualStorage = new DualFileStorage(session.accessToken)
-const result = await dualStorage.uploadFile(file, leadId, category)
+const dualStorage = new DualFileStorageService(session.accessToken)
+const result = await dualStorage.uploadFile(file, { leadId, category })
 ```
 
 #### SWR Data Fetching

@@ -224,7 +224,11 @@ export default function AppSidebar() {
   const [isCreateLeadOpen, setIsCreateLeadOpen] = useState(false)
   const [isBulletinBoardOpen, setIsBulletinBoardOpen] = useState(false)
   const unreadCount = useUnreadMessageCount()
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
+
+  // Don't render sidebar if not authenticated
+  if (status === "loading") return null
+  if (!session) return null
 
   return (
     <>
