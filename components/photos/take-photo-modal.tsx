@@ -39,6 +39,8 @@ export default function TakePhotoModal({ open, onOpenChange, leadId, onPhotoSave
   const [saveNotice, setSaveNotice] = useState<string | null>(null)
   const [lastPhoto, setLastPhoto] = useState<{ id: string; url: string } | null>(null)
   const [quickEditOpen, setQuickEditOpen] = useState(false)
+  const [isDrawing, setIsDrawing] = useState(false)
+  const [isDrawDialogOpen, setIsDrawDialogOpen] = useState(false)
 
   const availableTags = [
     "Back Side","Before and After","Bottom","Clock In","Clock Out","Document","East Side",
@@ -132,6 +134,7 @@ export default function TakePhotoModal({ open, onOpenChange, leadId, onPhotoSave
     setIsListening(false)
     setSelectedTags([])
     setShowTagsDrawer(false)
+    setIsDrawing(false)
   }
 
   const savePhoto = async () => {
@@ -178,6 +181,14 @@ export default function TakePhotoModal({ open, onOpenChange, leadId, onPhotoSave
     } catch {}
   }
 
+  // Save drawing onto the current captured image (pre-save flow)
+  const handleCurrentDrawSave = (annotatedImageUrl: string) => {
+    setPhotoDataUrl(annotatedImageUrl)
+    setIsDrawing(false)
+    setIsDrawDialogOpen(false)
+    setShowDescriptionPopup(true)
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 m-0 max-w-full w-full h-[100vh] rounded-none overflow-hidden">
@@ -203,7 +214,7 @@ export default function TakePhotoModal({ open, onOpenChange, leadId, onPhotoSave
           </div>
 
           {/* Floating Description Popup */}
-          {photoTaken && showDescriptionPopup && (
+          {photoTaken && !isDrawDialogOpen && showDescriptionPopup && (
             <div className="fixed left-0 right-0 bottom-24 z-50 flex justify-center px-4">
               <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-black/5 px-3 py-2 w-full max-w-xl">
                 <div className="flex items-center gap-3">
@@ -236,7 +247,7 @@ export default function TakePhotoModal({ open, onOpenChange, leadId, onPhotoSave
                       variant="ghost"
                       size="icon"
                       className="h-9 w-9 text-gray-700 hover:bg-gray-100 rounded-full"
-                      onClick={() => setQuickEditOpen(true)}
+                      onClick={() => { setShowDescriptionPopup(false); setIsDrawing(true); setIsDrawDialogOpen(true) }}
                       aria-label="Draw"
                     >
                       <Pencil className="h-5 w-5" />
@@ -275,6 +286,27 @@ export default function TakePhotoModal({ open, onOpenChange, leadId, onPhotoSave
               </div>
             </div>
           )}
+
+          {/* Draw dialog over current capture */}
+          <Dialog open={isDrawDialogOpen} onOpenChange={(open) => { setIsDrawDialogOpen(open); if (!open) { setIsDrawing(false); setShowDescriptionPopup(true) } }}>
+            <DialogContent className="p-0 m-0 max-w-full w-full h-[100svh] rounded-none overflow-hidden">
+              <DialogHeader className="sr-only">
+                <DialogTitle>Draw</DialogTitle>
+              </DialogHeader>
+              <div className="relative w-full h-full">
+                {/* Back button overlay */}
+                <button className="absolute top-4 left-4 z-10 bg-white/90 text-black rounded px-3 py-1 shadow" onClick={() => { setIsDrawDialogOpen(false); setIsDrawing(false); setShowDescriptionPopup(true) }} aria-label="Back">Back</button>
+                <PhotoCanvas 
+                  imageUrl={photoDataUrl} 
+                  onSave={handleCurrentDrawSave} 
+                  saveLabel="Save" 
+                  undoLabel="Undo"
+                  overlayControls
+                  fullScreen
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Save confirmation */}
           {saveNotice && (

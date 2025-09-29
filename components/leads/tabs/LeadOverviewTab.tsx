@@ -19,7 +19,7 @@ import {
   SelectValue 
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import { updateLeadAssigneeAction } from "@/app/actions/lead-actions"
+import { updateLeadAction, updateLeadAssigneeAction } from "@/app/actions/lead-actions"
 import { getAssignableUsersAction } from "@/app/actions/user-actions"
 import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
@@ -172,6 +172,13 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
   const [databaseContracts, setDatabaseContracts] = useState<any[]>([]);
   const [isUploadingContract, setIsUploadingContract] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // How heard (lead source)
+  const [howHeard, setHowHeard] = useState<string | null>(() => {
+    const meta = (lead as any)?.metadata as Record<string, unknown> | null | undefined;
+    const value = typeof meta?.howHeard === 'string' ? meta?.howHeard : null;
+    return value ?? null;
+  });
+  const [isSavingHowHeard, setIsSavingHowHeard] = useState(false);
   // Additional upload handling for other lead summary documents
   const [currentUploadType, setCurrentUploadType] = useState<string | null>(null);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
@@ -265,6 +272,13 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
       setSelectedAssignee(lead.assignedToId || "unassigned");
     }
   }, [lead?.assignedToId]);
+
+  // Sync howHeard when lead changes
+  useEffect(() => {
+    const meta = (lead as any)?.metadata as Record<string, unknown> | null | undefined;
+    const value = typeof meta?.howHeard === 'string' ? meta?.howHeard : null;
+    setHowHeard(value ?? null);
+  }, [lead?.id]);
 
   // Function to refresh contract status (can be called from child components)
   const refreshContractStatus = async () => {
@@ -794,6 +808,44 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                 <div className="grid grid-cols-1 gap-1 pt-1">
                   <ContactItem label="Phone" value={lead.phone} type="phone" />
                   <ContactItem label="Address" value={addressDisplay !== "No address provided" ? addressDisplay : null} type="address" />
+              {/* How did you hear about us? */}
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium text-muted-foreground">How did you hear about us?</p>
+                <Select
+                  value={howHeard ?? undefined}
+                  onValueChange={async (val) => {
+                    if (!lead?.id) return;
+                    setIsSavingHowHeard(true);
+                    setHowHeard(val || null);
+                    try {
+                      const result = await updateLeadAction(lead.id, { metadata: { howHeard: val || null } });
+                      if (!result.success) {
+                        throw new Error(result.error || 'Failed to save');
+                      }
+                      toast({ title: "Saved", description: "Lead source updated." });
+                    } catch (e) {
+                      console.error(e);
+                      toast({ title: "Error", description: "Failed to update lead source.", variant: "destructive" });
+                    } finally {
+                      setIsSavingHowHeard(false);
+                    }
+                  }}
+                  disabled={isSavingHowHeard}
+                >
+                  <SelectTrigger className="h-8 px-2 text-xs">
+                    <SelectValue placeholder="Select source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="D2D">D2D</SelectItem>
+                    <SelectItem value="Referral">Referral</SelectItem>
+                    <SelectItem value="Flyer(door)">Flyer(door)</SelectItem>
+                    <SelectItem value="Flyer(mail)">Flyer(mail)</SelectItem>
+                    <SelectItem value="Facebook">Facebook</SelectItem>
+                    <SelectItem value="Instagram">Instagram</SelectItem>
+                    <SelectItem value="Website">Website</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
                 </div>
               </div>
             </div>

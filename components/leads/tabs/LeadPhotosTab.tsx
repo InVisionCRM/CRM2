@@ -513,7 +513,7 @@ const PhotoDialog = ({ photo, isOpen, onClose, onDelete, onUpdate, canDelete = t
                 <Button 
                   onClick={handleCropComplete}
                   disabled={!completedCrop?.width || !completedCrop?.height || isSaving}
-                  className="bg-[#59ff00] text-black hover:bg-[#59ff00]/90"
+                  className="bg-white text-black hover:bg-white/90"
                 >
                   {isSaving ? "Saving..." : "Apply Crop"}
                 </Button>
@@ -559,7 +559,7 @@ const PhotoDialog = ({ photo, isOpen, onClose, onDelete, onUpdate, canDelete = t
                 <Button 
                   onClick={handleSaveChanges}
                   disabled={isSaving}
-                  className="bg-[#59ff00] text-black hover:bg-[#59ff00]/90"
+                  className="bg-green-500/70 text-black hover:bg-green-500/90"
                 >
                   {isSaving ? "Saving..." : "Save Caption"}
                 </Button>
@@ -579,9 +579,9 @@ const PhotoDialog = ({ photo, isOpen, onClose, onDelete, onUpdate, canDelete = t
         </div>
         
         {!editMode && (
-          <div className="p-4 bg-muted/30">
+          <div className="p-4 bg-black">
             {photo.description && (
-              <p className="text-sm text-muted-foreground mb-2">{photo.description}</p>
+              <p className="text-sm text-white mb-2">{photo.description}</p>
             )}
             <div className="flex justify-between items-center text-xs text-muted-foreground">
               <span>Uploaded: {new Date(photo.createdAt).toLocaleString()}</span>
@@ -1855,7 +1855,7 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
             <Button 
               onClick={handleUpload} 
               disabled={isUploading || uploadFiles.length === 0}
-              className="bg-[#59ff00] text-black hover:bg-[#59ff00]/90"
+              className="bg-[#59ff00] text-white hover:bg-[#59ff00]/90"
             >
               {isUploading ? (
                 <>
@@ -1902,6 +1902,7 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
               variant="destructive" 
               onClick={handleBulkDelete}
               disabled={isDeletingBulk}
+              className="bg-black text-white hover:bg-black/90"
             >
               {isDeletingBulk ? "Deleting..." : "Delete"}
             </Button>

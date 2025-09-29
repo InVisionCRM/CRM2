@@ -7,7 +7,7 @@ import { createFile, deleteFile } from "@/lib/db/files"
 import { prisma } from "@/lib/db/prisma"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { LeadStatus, ActivityType, type Lead } from "@prisma/client"
+import { LeadStatus, ActivityType, Prisma, type Lead } from "@prisma/client"
 import { formatStatusLabel } from "@/lib/utils"
 import { v4 as uuidv4 } from 'uuid'
 import { GoogleDriveService } from "@/lib/services/googleDrive"
@@ -155,6 +155,8 @@ interface UpdateLeadParams {
   insuranceAdjusterName?: string;
   insuranceAdjusterPhone?: string;
   insuranceAdjusterEmail?: string;
+  // Optional JSON metadata field. We'll merge with existing metadata when provided
+  metadata?: Record<string, unknown>;
   // Add other fields as needed
 }
 
@@ -166,16 +168,30 @@ export async function updateLeadAction(
     // Get existing lead to compare changes
     const existingLead = await prisma.lead.findUnique({
       where: { id },
-      select: { status: true }
+      select: { status: true, metadata: true }
     });
     
     if (!existingLead) {
       return { success: false, error: "Lead not found" };
     }
-    
+
+    // Separate metadata from other fields so we can merge it safely
+    const { metadata, ...rest } = params;
+
+    // Build update payload
+    const updateData: Prisma.LeadUpdateInput = {
+      ...rest,
+    } as Prisma.LeadUpdateInput;
+
+    if (metadata !== undefined) {
+      const existingMetadata = (existingLead.metadata ?? {}) as Record<string, unknown>;
+      const mergedMetadata = { ...existingMetadata, ...metadata } as Prisma.InputJsonValue;
+      updateData.metadata = mergedMetadata;
+    }
+
     const updatedLead = await prisma.lead.update({
       where: { id },
-      data: params,
+      data: updateData,
     });
     
     // Create activity log if status was changed

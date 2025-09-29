@@ -11,9 +11,13 @@ interface PhotoCanvasProps {
   onSave: (annotatedImageUrl: string) => void
   initialAnnotations?: string
   isSaving?: boolean
+  saveLabel?: string
+  undoLabel?: string
+  fullScreen?: boolean
+  overlayControls?: boolean
 }
 
-export default function PhotoCanvas({ imageUrl, onSave, initialAnnotations, isSaving }: PhotoCanvasProps) {
+export default function PhotoCanvas({ imageUrl, onSave, initialAnnotations, isSaving, saveLabel, undoLabel, fullScreen, overlayControls }: PhotoCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
   const [lines, setLines] = useState<Array<{ points: Array<{ x: number; y: number }>; color: string; width: number }>>(
@@ -236,11 +240,11 @@ export default function PhotoCanvas({ imageUrl, onSave, initialAnnotations, isSa
   }
 
   return (
-    <div className="flex flex-col space-y-2">
-      <div className="relative border border-gray-300 rounded-lg overflow-hidden">
+    <div className={`flex flex-col ${overlayControls ? 'h-full w-full' : 'space-y-2'}`}>
+      <div className={`relative overflow-hidden ${fullScreen ? 'h-[100svh] w-[100vw]' : 'border border-gray-300 rounded-lg'}`}>
         <canvas
           ref={canvasRef}
-          className="touch-none w-full aspect-video bg-black"
+          className={`touch-none w-full ${fullScreen ? 'h-full' : 'aspect-video'} bg-black`}
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}
@@ -254,22 +258,41 @@ export default function PhotoCanvas({ imageUrl, onSave, initialAnnotations, isSa
             Loading image...
           </div>
         )}
+        {overlayControls && (
+          <div className="absolute bottom-4 left-0 right-0 px-4">
+            <div className="flex justify-between text-white">
+              <Button variant="outline" size="sm" onClick={handleUndo} disabled={lines.length === 0 || isSaving}>
+                <Undo className="h-4 w-4 mr-1 text-white" />
+                {undoLabel || "Undo"}
+              </Button>
+              <Button 
+                onClick={handleSave} 
+                size="sm" 
+                className="bg-[#a4c639] text-white hover:bg-[#8aaa2a] text-white"
+                disabled={isSaving}
+              >
+                {isSaving ? "Saving..." : (saveLabel || "Done")}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
-
-      <div className="flex justify-between">
-        <Button variant="outline" size="sm" onClick={handleUndo} disabled={lines.length === 0 || isSaving}>
-          <Undo className="h-4 w-4 mr-1" />
-          Undo
-        </Button>
-        <Button 
-          onClick={handleSave} 
-          size="sm" 
-          className="bg-[#a4c639] hover:bg-[#8aaa2a] text-black"
-          disabled={isSaving}
-        >
-          {isSaving ? "Saving..." : "Done"}
-        </Button>
-      </div>
+      {!overlayControls && (
+        <div className="flex justify-between text-white">
+          <Button variant="outline" size="sm" onClick={handleUndo} disabled={lines.length === 0 || isSaving}>
+            <Undo className="h-4 w-4 mr-1 text-white" />
+            {undoLabel || "Undo"}
+          </Button>
+          <Button 
+            onClick={handleSave} 
+            size="sm" 
+            className="bg-[#a4c639] text-white hover:bg-[#8aaa2a] text-white"
+            disabled={isSaving}
+          >
+            {isSaving ? "Saving..." : (saveLabel || "Done")}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
