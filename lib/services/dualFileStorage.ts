@@ -162,7 +162,7 @@ export class DualFileStorageService {
     }
 
     // Need absolute URL for server-side fetch
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXTAUTH_URL || `http://localhost:${process.env.PORT || 3000}`;
     const response = await fetch(`${baseUrl}/api/files/upload-to-shared-drive`, {
       method: 'POST',
       body: formData

@@ -142,7 +142,7 @@ Lead Details:
 ${creator ? `- Created by: ${creator.name}` : ''}
 ${assignedUser ? `- Assigned to: ${assignedUser.name}` : ''}
 
-CRM Link: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/leads/${lead.id}`
+CRM Link: ${process.env.NEXTAUTH_URL || `http://localhost:${process.env.PORT || 3000}`}/leads/${lead.id}`
 
     const result = await googleChat.createSpace({
       displayName: spaceName,
@@ -175,7 +175,7 @@ ${members.map(email => `• ${email}`).join('\n')}
 This chat room has been created for an existing lead. You'll receive notifications for status changes, appointments, and other updates.
 
 **Quick Actions:**
-• View lead in CRM: ${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/leads/${lead.id}
+• View lead in CRM: ${process.env.NEXTAUTH_URL || `http://localhost:${process.env.PORT || 3000}`}/leads/${lead.id}
 • Update lead status
 • Schedule appointments
 • Add notes and activities`

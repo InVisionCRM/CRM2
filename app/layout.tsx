@@ -5,9 +5,7 @@ import { Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Providers } from "./providers"
 import ErrorBoundary from "@/components/ErrorBoundary"
-import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration"
 
-import { OfflineIndicator } from "@/components/OfflineIndicator"
 
 
 const inter = Inter({ subsets: ["latin"] })
@@ -35,7 +33,7 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`),
   alternates: {
     canonical: "/",
   },
@@ -97,12 +95,6 @@ export const metadata: Metadata = {
       },
     ],
   },
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Purlin",
-  },
   viewport: {
     width: "device-width",
     initialScale: 1,
@@ -122,16 +114,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className="dark">
       <head>
-        {/* PWA Meta Tags */}
-        <meta name="application-name" content="Purlin CRM" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Purlin" />
-        <meta name="format-detection" content="telephone=no" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="msapplication-TileColor" content="#000000" />
-        <meta name="msapplication-tap-highlight" content="no" />
-        <meta name="theme-color" content="#000000" />
         
         {/* Performance optimizations */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -143,8 +125,6 @@ export default function RootLayout({
           <Providers>
             {children}
 
-            <OfflineIndicator />
-            <ServiceWorkerRegistration />
             {process.env.NODE_ENV === 'production' && <Analytics />}
           </Providers>
         </ErrorBoundary>

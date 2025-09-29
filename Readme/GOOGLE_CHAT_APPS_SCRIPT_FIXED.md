@@ -141,6 +141,7 @@ function getFileType(fileName) {
 
 function handleCommand(command, spaceId, userEmail) {
   try {
+  
     // Call your CRM API with the CORRECT domain
     const response = UrlFetchApp.fetch('https://crm.purlin.pro/api/chat/commands', {
       method: 'POST',

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { Camera, Upload, X, Info, Trash2, Check, Share2, Copy, Link, Mail, Download, Crop, Pencil, Type, Plus, ChevronDown } from "lucide-react"
+import { Camera, Upload, X, Info, Trash2, Check, Share2, Copy, Link, Mail, Download, Crop, Pencil, Type, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -22,14 +22,18 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import Image from "next/image"
 import { getLeadPhotos, uploadSinglePhoto, deletePhoto, updatePhoto } from "@/app/actions/photo-actions"
 import ReactCrop, { type Crop as ReactCropType } from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import PhotoCanvas from "@/components/photos/photo-canvas"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import TakePhotoModal from "@/components/photos/take-photo-modal"
 import { Progress } from "@/components/ui/progress"
+import { Checkbox } from "@/components/ui/checkbox"
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 // Types for photos
 interface Photo {
@@ -69,6 +73,7 @@ interface PhotoDialogProps {
   onUpdate?: (photoId: string, updates: PhotoUpdate) => void
   canDelete?: boolean
   claimNumber?: string
+  initialMode?: 'crop' | 'draw' | 'caption' | null
 }
 
 interface LeadPhotosTabProps {
@@ -117,6 +122,46 @@ const downloadImage = async (url: string, filename: string) => {
   link.click()
   document.body.removeChild(link)
   URL.revokeObjectURL(blobUrl)
+}
+
+// Extract tags stored inside square brackets at the end of the description
+function extractTagsFromDescription(description: string | null | undefined): string[] {
+  if (!description) return []
+  // Look for [tag1, tag2, ...] anywhere in the string
+  const match = description.match(/\[(.*?)\]/)
+  if (!match || !match[1]) return []
+  return match[1]
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
+// Group photos by local calendar day while preserving original order
+function groupPhotosByDate(items: Photo[]): Array<{ dateKey: string; items: Photo[] }> {
+  const bucket: Record<string, Photo[]> = {}
+  const order: string[] = []
+  for (const p of items) {
+    const d = new Date(p.createdAt)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    if (!bucket[key]) {
+      bucket[key] = []
+      order.push(key)
+    }
+    bucket[key].push(p)
+  }
+  return order.map((k) => ({ dateKey: k, items: bucket[k] }))
+}
+
+function formatDateHeader(dateKey: string): string {
+  const [y, m, d] = dateKey.split('-').map((s) => parseInt(s, 10))
+  const target = new Date(y, m - 1, d)
+  const today = new Date()
+  const startOf = (dt: Date) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate())
+  const diffMs = startOf(today).getTime() - startOf(target).getTime()
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24))
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return 'Yesterday'
+  return target.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 // Helper function to get cropped image data
@@ -168,9 +213,9 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 // PhotoDialog component
-const PhotoDialog = ({ photo, isOpen, onClose, onDelete, onUpdate, canDelete = true, claimNumber }: PhotoDialogProps) => {
+const PhotoDialog = ({ photo, isOpen, onClose, onDelete, onUpdate, canDelete = true, claimNumber, initialMode }: PhotoDialogProps) => {
   const [isDeleting, setIsDeleting] = useState(false)
-  const [editMode, setEditMode] = useState<'crop' | 'draw' | 'caption' | null>(null)
+  const [editMode, setEditMode] = useState<'crop' | 'draw' | 'caption' | null>(initialMode ?? null)
   const [crop, setCrop] = useState<ReactCropType>()
   const [completedCrop, setCompletedCrop] = useState<ReactCropType>()
   const [editedImageUrl, setEditedImageUrl] = useState<string>('')
@@ -186,6 +231,12 @@ const PhotoDialog = ({ photo, isOpen, onClose, onDelete, onUpdate, canDelete = t
       setCompletedCrop(undefined)
     }
   }, [photo])
+
+  useEffect(() => {
+    if (isOpen && initialMode) {
+      setEditMode(initialMode)
+    }
+  }, [isOpen, initialMode])
 
   const handleCropComplete = useCallback(async () => {
     if (!completedCrop || !photo) return
@@ -545,13 +596,7 @@ const PhotoDialog = ({ photo, isOpen, onClose, onDelete, onUpdate, canDelete = t
   )
 }
 
-// CameraModal for multi-capture with category selection
-const PHOTO_CATEGORIES = [
-  { value: "before build", label: "Before Build" },
-  { value: "during build", label: "During Build" },
-  { value: "after build", label: "After Build" },
-  { value: "misc", label: "Misc" },
-];
+// Removed category-based camera UI
 
 // Simple Draw Tool Modal
 function DrawModal({ open, onClose, imageUrl, onSave }: {
@@ -649,6 +694,9 @@ function DrawModal({ open, onClose, imageUrl, onSave }: {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-full w-full h-full p-4 m-0 rounded-none overflow-hidden sm:max-w-md sm:h-auto sm:rounded-lg sm:m-6">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Edit Photo</DialogTitle>
+        </DialogHeader>
         <div className="flex flex-col items-center gap-4 h-full">
           <div className="flex-1 flex items-center justify-center">
             <canvas
@@ -694,7 +742,7 @@ function CameraModal({ open, onClose, onUpload, leadId }: {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [captured, setCaptured] = useState<{ url: string; blob: Blob; category: string }[]>([]);
-  const [activeCategory, setActiveCategory] = useState(PHOTO_CATEGORIES[0].value);
+  const [activeCategory, setActiveCategory] = useState<string>("all");
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [drawIdx, setDrawIdx] = useState<number | null>(null);
@@ -780,6 +828,9 @@ function CameraModal({ open, onClose, onUpload, leadId }: {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-full w-full h-full p-0 m-0 rounded-none overflow-hidden sm:max-w-lg sm:h-auto sm:rounded-lg sm:m-6" style={{ maxWidth: 'none' }}>
+        <DialogHeader className="sr-only">
+          <DialogTitle>Take Photo</DialogTitle>
+        </DialogHeader>
         <div className="flex flex-col h-[100vh] sm:h-[80vh] bg-gray-500">
           <div className={`flex flex-col items-center justify-center relative ${isCameraMinimized ? 'h-32' : 'flex-1'} min-h-0 transition-all duration-300`}>
             {error ? (
@@ -795,35 +846,9 @@ function CameraModal({ open, onClose, onUpload, leadId }: {
               />
             )}
             <div className="absolute bottom-2 left-0 right-0 flex flex-col items-center gap-2">
-              <div className="flex gap-2 justify-center">
-                {PHOTO_CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.value}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${activeCategory === cat.value ? "bg-lime-400 text-black border-lime-400" : "bg-black/60 text-white border-white/20"}`}
-                    onClick={() => setActiveCategory(cat.value)}
-                    type="button"
-                  >
-                    {cat.label}
-                  </button>
-                ))}
-              </div>
+              {/* Category chips removed */}
               <div className="flex items-center gap-3">
-                {captured.length > 0 && (
-                  <Button
-                    onClick={() => setIsCameraMinimized(!isCameraMinimized)}
-                    className="bg-white/20 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg border-2 border-white/30"
-                    type="button"
-                  >
-                    {isCameraMinimized ? (
-                      <ChevronDown className="h-5 w-5" />
-                    ) : (
-                      <div className="flex flex-col items-center">
-                        <div className="w-2 h-1 bg-white rounded mb-0.5"></div>
-                        <div className="w-3 h-1 bg-white rounded"></div>
-                      </div>
-                    )}
-                  </Button>
-                )}
+                {/* Minimize button removed with categories */}
                 <Button
                   onClick={handleCapture}
                   className="bg-lime-400 text-black w-16 h-16 rounded-full flex items-center justify-center text-2xl shadow-lg border-4 border-white/30"
@@ -867,16 +892,7 @@ function CameraModal({ open, onClose, onUpload, leadId }: {
                         <Pencil className="h-3 w-3" />
                       </button>
                     </div>
-                    <select
-                      className="mt-1 w-full text-xs rounded bg-black/80 text-white border border-white/20 px-1 py-0.5 transition-all duration-300"
-                      value={photo.category}
-                      onChange={e => handleCategoryChange(idx, e.target.value)}
-                      title="Select photo category"
-                    >
-                      {PHOTO_CATEGORIES.map(cat => (
-                        <option key={cat.value} value={cat.value}>{cat.label}</option>
-                      ))}
-                    </select>
+                    {/* Category select removed */}
                   </div>
                 ))}
               </div>
@@ -906,11 +922,13 @@ function CameraModal({ open, onClose, onUpload, leadId }: {
 
 // Main PhotosTab component
 export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
+  const isMobile = useIsMobile()
   const [photos, setPhotos] = useState<Photo[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
   const [isPhotoDialogOpen, setIsPhotoDialogOpen] = useState(false)
+  const [dialogInitialMode, setDialogInitialMode] = useState<'crop' | 'draw' | 'caption' | null>(null)
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
   const [uploadFiles, setUploadFiles] = useState<File[]>([])
   const [uploadPreviews, setUploadPreviews] = useState<UploadPreview[]>([])
@@ -925,11 +943,14 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [currentUploadingFile, setCurrentUploadingFile] = useState<string | null>(null)
   const progressInterval = useRef<NodeJS.Timeout>()
+  // Category tabs removed; keep filter as 'all'
   const [activeCategory, setActiveCategory] = useState<string>("all")
   const fileInputCameraRef = useRef<HTMLInputElement>(null);
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
-  const [moveCategory, setMoveCategory] = useState<string>("");
-  const [isMoveDropdownOpen, setIsMoveDropdownOpen] = useState(false);
+  const [isTakePhotoModalOpen, setIsTakePhotoModalOpen] = useState(false);
+  // Removed move-to-category controls
+  // Ensure only one menu (context/dropdown) is open at a time
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   
   // Cleanup interval on unmount
   useEffect(() => {
@@ -979,9 +1000,9 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
           name: photo.name,
           description: photo.description,
           createdAt: photo.createdAt.toISOString(),
-          uploadedBy: photo.uploadedBy,
+          uploadedBy: undefined,
           leadId: photo.leadId,
-          category: photo.category
+          category: (photo as any).category
         }))
         setPhotos(transformedPhotos)
       } else {
@@ -1120,9 +1141,9 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
             name: result.photo.name,
             description: result.photo.description,
             createdAt: result.photo.createdAt.toISOString(),
-            uploadedBy: result.photo.uploadedBy,
+            uploadedBy: undefined,
             leadId: result.photo.leadId,
-            category: result.photo.category
+            category: (result.photo as any).category
           };
           setPhotos(prev => [newPhoto, ...prev]);
           uploadedPhotos.push(newPhoto)
@@ -1166,8 +1187,9 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
     }
   }
 
-  const openPhotoDialog = (photo: Photo) => {
+  const openPhotoDialog = (photo: Photo, mode: 'crop' | 'draw' | 'caption' | null = null) => {
     setSelectedPhoto(photo)
+    setDialogInitialMode(mode)
     setIsPhotoDialogOpen(true)
   }
 
@@ -1203,6 +1225,17 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
   const toggleSelectionMode = () => {
     setIsSelectionMode(!isSelectionMode)
     setSelectedPhotos(new Set())
+  }
+
+  const handleSelectAllChange = (checked: boolean | "indeterminate") => {
+    const shouldSelect = checked === true
+    setIsSelectionMode(shouldSelect)
+    if (shouldSelect) {
+      const allIds = filterPhotosByCategory(photos, activeCategory).map(p => p.id)
+      setSelectedPhotos(new Set(allIds))
+    } else {
+      setSelectedPhotos(new Set())
+    }
   }
 
   const togglePhotoSelection = (photoId: string, event: React.MouseEvent) => {
@@ -1373,6 +1406,44 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
     );
   };
 
+  // Handle upload from TakePhotoModal save (we already upload in modal; this just reflects state)
+  const handleTakePhotoSave = async (photoData: { dataUrl: string; name: string; stage: any; description?: string; tags?: string[] }) => {
+    try {
+      const base64Data = photoData.dataUrl.includes(',') ? photoData.dataUrl.split(',')[1] : photoData.dataUrl
+      // Merge tags into the description for persistence (server doesn't have a separate tags field yet)
+      const mergedDescription = photoData.tags && photoData.tags.length > 0
+        ? `${photoData.description ? `${photoData.description} ` : ''}[${photoData.tags.join(', ')}]`
+        : photoData.description
+      const serializedFile = {
+        name: `${photoData.name || `Photo_${Date.now()}`}.jpg`.replace(/\.jpg\.jpg$/i, '.jpg'),
+        type: 'image/jpeg',
+        size: Math.ceil((base64Data.length * 3) / 4),
+        base64Data,
+      }
+      const result = await uploadSinglePhoto(leadId, serializedFile, mergedDescription)
+      if (result.success && result.photo) {
+        const newPhoto: Photo = {
+          id: result.photo.id,
+          url: result.photo.url,
+          thumbnailUrl: result.photo.thumbnailUrl || result.photo.url,
+          name: result.photo.name,
+          description: result.photo.description,
+          createdAt: result.photo.createdAt.toISOString(),
+          uploadedBy: undefined,
+          leadId: result.photo.leadId,
+          category: (result.photo as any).category,
+        }
+        setPhotos(prev => [newPhoto, ...prev])
+        toast({ title: "Photo saved", description: newPhoto.name })
+      } else {
+        toast({ title: "Upload failed", description: result.error || "Failed to upload photo", variant: "destructive" })
+      }
+    } catch (e) {
+      console.error('Failed to save photo', e)
+      toast({ title: "Upload failed", description: "Unexpected error", variant: "destructive" })
+    }
+  }
+
   // Handle upload from camera modal
   const handleCameraModalUpload = async (photos: { blob: Blob; category: string }[]) => {
     setIsUploading(true);
@@ -1404,22 +1475,7 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
     toast({ title: "Photos uploaded", description: `${photos.length} photo(s) uploaded.` });
   };
 
-  // Move selected photos to a new category
-  const handleMoveCategory = async (category: string) => {
-    setIsMoveDropdownOpen(false);
-    setMoveCategory("");
-    // For each selected photo, update its category (frontend only for now)
-    setPhotos((prev) =>
-      prev.map((photo) =>
-        selectedPhotos.has(photo.id)
-          ? { ...photo, category }
-          : photo
-      )
-    );
-    setSelectedPhotos(new Set());
-    setIsSelectionMode(false);
-    toast({ title: "Photos moved", description: `Moved to ${category}` });
-  };
+  // Category moving removed
 
   if (isLoading) {
     return (
@@ -1438,98 +1494,47 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Camera Modal */}
-      <CameraModal
-        open={isCameraModalOpen}
-        onClose={() => setIsCameraModalOpen(false)}
-        onUpload={handleCameraModalUpload}
+    <div className="space-y-4 bg-white text-black p-2 sm:p-3 rounded-md">
+      {/* Take Photo Modal */}
+      <TakePhotoModal
+        open={isTakePhotoModalOpen}
+        onOpenChange={setIsTakePhotoModalOpen}
         leadId={leadId}
+        onPhotoSaved={(p) => {
+          const newPhoto: Photo = {
+            id: p.id,
+            url: p.url,
+            thumbnailUrl: p.thumbnailUrl || p.url,
+            name: p.name,
+            description: p.description,
+            createdAt: p.createdAt,
+            leadId: p.leadId,
+          }
+          setPhotos(prev => [newPhoto, ...prev])
+          toast({ title: "Photo saved", description: newPhoto.name })
+        }}
       />
-      {/* Category Tabs */}
-      <div className="overflow-x-auto pb-2 -mx-2">
-        <Tabs value={activeCategory} onValueChange={setActiveCategory} className="mb-2 min-w-[400px] sm:min-w-0 px-2">
-          <TabsList className="flex w-full min-w-[400px] sm:grid sm:grid-cols-5 gap-1 whitespace-nowrap">
-            <TabsTrigger value="before build" className="px-3 py-2 text-xs sm:text-sm">Before Build</TabsTrigger>
-            <TabsTrigger value="during build" className="px-3 py-2 text-xs sm:text-sm">During Build</TabsTrigger>
-            <TabsTrigger value="after build" className="px-3 py-2 text-xs sm:text-sm">After Build</TabsTrigger>
-            <TabsTrigger value="misc" className="px-3 py-2 text-xs sm:text-sm">Misc</TabsTrigger>
-            <TabsTrigger value="all" className="px-3 py-2 text-xs sm:text-sm">All</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+          {/* Category tabs removed */}
       {/* Select and bulk action controls - single row, responsive */}
       <div className="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center mb-2 w-full">
-        <div className="flex flex-1 gap-2">
-          <Button
-            variant={isSelectionMode ? "default" : "outline"}
-            size="sm"
-            onClick={toggleSelectionMode}
-            className={isSelectionMode ? "bg-muted flex-1" : "flex-1"}
-          >
-            {isSelectionMode ? "Cancel" : "Select"}
-          </Button>
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={isSelectionMode && selectedPhotos.size === filterPhotosByCategory(photos, activeCategory).length && selectedPhotos.size > 0}
+            onCheckedChange={handleSelectAllChange}
+            className="h-3.5 w-3.5 border-black/50 data-[state=checked]:bg-white data-[state=checked]:text-green-600"
+          />
+          <span className="text-xs">Select all</span>
           {isSelectionMode && selectedPhotos.size > 0 && (
-            <>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setIsDeleteDialogOpen(true)}
-                disabled={isDeletingBulk}
-                className="h-10 flex-1"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete ({selectedPhotos.size})
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-10 flex-1">
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Share
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={async (e) => {
-                    e.stopPropagation();
-                    await handleSharePhotos(photos.filter(p => selectedPhotos.has(p.id)))
-                  }}>
-                    <Share2 className="h-4 w-4 mr-2" />
-                    Share selected
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => {
-                    e.stopPropagation();
-                    handleGmailShare(photos.filter(p => selectedPhotos.has(p.id)))
-                  }}>
-                    <Mail className="h-4 w-4 mr-2" />
-                    Share via Gmail
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              {/* Move to Category Dropdown */}
-              <div className="relative flex-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1 h-10 w-full"
-                  onClick={() => setIsMoveDropdownOpen((v) => !v)}
-                >
-                  Move to Category <ChevronDown className="h-3 w-3" />
-                </Button>
-                {isMoveDropdownOpen && (
-                  <div className="absolute z-50 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded shadow-lg min-w-[160px]">
-                    {PHOTO_CATEGORIES.map((cat) => (
-                      <button
-                        key={cat.value}
-                        className="block w-full text-left px-4 py-2 text-sm hover:bg-lime-100 dark:hover:bg-lime-900"
-                        onClick={() => handleMoveCategory(cat.value)}
-                      >
-                        {cat.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              disabled={isDeletingBulk}
+              className="h-8 px-3 text-white"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete ({selectedPhotos.size})
+            </Button>
           )}
         </div>
         <div className="flex flex-1 gap-2">
@@ -1542,8 +1547,8 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
             type="button"
             variant="outline"
             size="sm"
-            className="flex items-center gap-2 flex-1 h-10"
-            onClick={() => setIsCameraModalOpen(true)}
+            className="flex items-center gap-2 flex-1 h-10 text-white hover:text-white"
+            onClick={() => setIsTakePhotoModalOpen(true)}
           >
             <Camera className="h-4 w-4" />
             Take Photos
@@ -1557,8 +1562,12 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
           <p className="text-xs text-muted-foreground mt-1 text-center">Upload photos to get started.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {filterPhotosByCategory(photos, activeCategory).map((photo) => (
+        <div className="space-y-6">
+          {groupPhotosByDate(filterPhotosByCategory(photos, activeCategory)).map(({ dateKey, items }) => (
+            <div key={dateKey} className="space-y-2">
+              <div className="text-md font-medium text-black-foreground px-1">{formatDateHeader(dateKey)}</div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {items.map((photo) => (
             <Card 
               key={photo.id} 
               className={`group relative cursor-pointer overflow-hidden ${
@@ -1568,13 +1577,72 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
             >
               <CardContent className="p-0">
                 <div className="relative aspect-square">
-                  <Image
-                    src={photo.thumbnailUrl}
-                    alt={photo.name}
-                    fill
-                    className="object-cover transition-transform group-hover:scale-105"
-                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                  />
+                  {!isMobile ? (
+                    <ContextMenu open={openMenuId === photo.id} onOpenChange={(v) => setOpenMenuId(v ? photo.id : null)}>
+                      <ContextMenuTrigger asChild>
+                        <Image
+                          src={photo.thumbnailUrl}
+                          alt={photo.name}
+                          fill
+                          className="object-cover transition-transform group-hover:scale-105"
+                          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                        />
+                      </ContextMenuTrigger>
+                      <ContextMenuContent className="w-48">
+                        <ContextMenuItem onClick={async (e) => { e.stopPropagation(); await handleSharePhotos([photo]); setOpenMenuId(null) }}>Share</ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onClick={(e) => { e.stopPropagation(); handleGmailShare([photo]); setOpenMenuId(null) }}>Share via Gmail</ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onClick={(e) => { e.stopPropagation(); openPhotoDialog(photo, 'crop'); setOpenMenuId(null) }}>Crop</ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onClick={(e) => { e.stopPropagation(); openPhotoDialog(photo, 'draw'); setOpenMenuId(null) }}>Draw</ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onClick={(e) => { e.stopPropagation(); openPhotoDialog(photo, 'caption'); setOpenMenuId(null) }}>Description</ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onClick={async (e) => { e.stopPropagation(); await downloadImage(photo.url, photo.name); setOpenMenuId(null) }}>Download</ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(photo.url); toast({ title: "Link copied", description: "Photo URL has been copied to clipboard" }); setOpenMenuId(null) }}>Copy link</ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onClick={(e) => { e.stopPropagation(); handleDeletePhoto(photo.id); setOpenMenuId(null) }} className="text-red-600">Delete</ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  ) : (
+                    <>
+                      <Image
+                        src={photo.thumbnailUrl}
+                        alt={photo.name}
+                        fill
+                        className="object-cover transition-transform group-hover:scale-105"
+                        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                      />
+                      <div className="absolute top-2 left-2 z-10" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu open={openMenuId === photo.id} onOpenChange={(v) => setOpenMenuId(v ? photo.id : null)}>
+                          <DropdownMenuTrigger asChild>
+                            <button className="h-8 w-8 rounded-md bg-white text-black flex items-center justify-center shadow border border-black/10" aria-label="More">
+                              <svg viewBox="0 0 20 20" className="h-4 w-4"><path d="M5 7l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-48">
+                            <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await handleSharePhotos([photo]); setOpenMenuId(null) }}>Share</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleGmailShare([photo]); setOpenMenuId(null) }}>Share via Gmail</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openPhotoDialog(photo); setOpenMenuId(null) }}>Crop</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openPhotoDialog(photo); setOpenMenuId(null) }}>Draw</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openPhotoDialog(photo); setOpenMenuId(null) }}>Description</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={async (e) => { e.stopPropagation(); await downloadImage(photo.url, photo.name); setOpenMenuId(null) }}>Download</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(photo.url); toast({ title: "Link copied", description: "Photo URL has been copied to clipboard" }); setOpenMenuId(null) }}>Copy link</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeletePhoto(photo.id); setOpenMenuId(null) }} className="text-red-600">Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </>
+                  )}
                             {!isSelectionMode && (
             <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex gap-1">
               {/* Delete Button */}
@@ -1635,28 +1703,39 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
             </div>
           )}
                   {isSelectionMode ? (
-                    <div 
-                      className={`absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity ${
-                        selectedPhotos.has(photo.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-                      }`}
-                      onClick={(e) => togglePhotoSelection(photo.id, e)}
-                    >
-                      <div className={`rounded-full p-2 ${
-                        selectedPhotos.has(photo.id) ? 'bg-primary' : 'bg-muted/50'
-                      }`}>
-                        <Check className={`h-6 w-6 ${
-                          selectedPhotos.has(photo.id) ? 'text-primary-foreground' : 'text-muted-foreground'
-                        }`} />
-                      </div>
+                    <div className="absolute top-2 right-2 z-10" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedPhotos.has(photo.id)}
+                        onCheckedChange={() => {
+                          const next = new Set(selectedPhotos)
+                          if (next.has(photo.id)) next.delete(photo.id)
+                          else next.add(photo.id)
+                          setSelectedPhotos(next)
+                        }}
+                        className="h-4 w-4 bg-white border-0 shadow data-[state=checked]:bg-white data-[state=checked]:text-black font-bold"
+                      />
                     </div>
                   ) : (
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Info className="h-6 w-6 text-white" />
+                    <div className="absolute inset-0 bg-white/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Info className="h-6 w-6 text-black" />
                     </div>
                   )}
-                </div>
-              </CardContent>
-            </Card>
+                        {/* First two tags parsed from description */}
+                        {extractTagsFromDescription(photo.description).length > 0 && (
+                          <div className="absolute left-2 bottom-2 flex gap-1 z-10">
+                            {extractTagsFromDescription(photo.description).slice(0, 2).map((t, i) => (
+                              <span key={i} className="px-1.5 py-0.5 text-[10px] rounded bg-white/90 text-black border border-black/20">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -1798,10 +1877,12 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
         onClose={() => {
           setIsPhotoDialogOpen(false)
           setSelectedPhoto(null)
+          setDialogInitialMode(null)
         }}
         onDelete={handleDeletePhoto}
         onUpdate={handleUpdatePhoto}
         claimNumber={claimNumber}
+        initialMode={dialogInitialMode}
       />
 
       {/* Bulk Delete Confirmation Dialog */}

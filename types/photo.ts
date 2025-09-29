@@ -11,6 +11,8 @@ export interface PhotoData {
   dataUrl: string
   stage: PhotoStage
   annotations?: string
+  description?: string
+  tags?: string[]
   createdAt: Date
   leadId?: string
 }

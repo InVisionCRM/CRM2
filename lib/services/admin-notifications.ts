@@ -202,7 +202,7 @@ function createDeletionRequestEmailBody(data: DeletionRequestNotificationData): 
   const leadEmail = data.leadEmail || "No email"
   const leadAddress = data.leadAddress || "No address"
   const requestTime = new Date().toLocaleString()
-  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  const baseUrl = process.env.NEXTAUTH_URL || `http://localhost:${process.env.PORT || 3000}`
   
   return `Hi Admin,
 

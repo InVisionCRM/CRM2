@@ -1354,9 +1354,9 @@ export default function LeadDetailPage() {
 
         {/* Photos Dialog */}
         <Dialog open={photosDialogOpen} onOpenChange={handleClosePhotosDialog}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Photos</DialogTitle>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white text-black">
+            <DialogHeader className="text-black">
+              <DialogTitle className="text-black">Photos</DialogTitle>
             </DialogHeader>
             <LeadPhotosTab 
               leadId={lead.id}
