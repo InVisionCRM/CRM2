@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 import { sendLeadDeletionNotification } from "@/lib/services/admin-notifications"
 import { prisma } from "@/lib/db/prisma"
 

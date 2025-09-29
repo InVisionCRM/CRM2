@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { CalendarAppointment } from "@/types/appointments"
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 // Access the storedAppointments from the parent API handlers

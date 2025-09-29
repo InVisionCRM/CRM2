@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/db/prisma"
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 import { UserRole } from "@prisma/client"
 
 export async function getAssignableUsersAction() {

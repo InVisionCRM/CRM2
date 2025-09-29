@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // Adjusted path
+import { authOptions } from "@/lib/auth"; // Adjusted path
 import { GoogleDriveService } from "@/lib/services/googleDrive";
 import { DriveFile } from "@/types/drive";
 

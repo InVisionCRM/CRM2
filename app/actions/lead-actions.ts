@@ -6,7 +6,7 @@ import { uploadToBlob } from "@/lib/blob"
 import { createFile, deleteFile } from "@/lib/db/files"
 import { prisma } from "@/lib/db/prisma"
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 import { LeadStatus, ActivityType, Prisma, type Lead } from "@prisma/client"
 import { formatStatusLabel } from "@/lib/utils"
 import { v4 as uuidv4 } from 'uuid'

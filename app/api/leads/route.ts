@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getLeads, createLead } from "@/lib/db/leads"
 import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 import { LeadStatus } from "@prisma/client"
 import type { SortField, SortOrder } from "@/app/leads/page"
 import { PrismaClient } from "@prisma/client"

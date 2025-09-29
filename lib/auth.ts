@@ -22,6 +22,6 @@ declare module "next-auth" {
   }
 }
 
-export { authOptions } from '@/app/api/auth/[...nextauth]/route';
+export { authOptions } from '@/lib/auth/options';
 
 // export const authOptions: NextAuthOptions = { ... }

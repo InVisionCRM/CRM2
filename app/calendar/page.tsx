@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth/next"
 import { redirect } from "next/navigation"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 import { CalendarView } from "@/components/calendar-view"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { WelcomeAnimationWrapper } from "@/components/welcome-animation-wrapper"
