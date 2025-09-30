@@ -106,7 +106,7 @@ export function FollowUpScheduler({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-white border-gray-200 text-gray-800 sm:max-w-md">
+      <DialogContent className="bg-white border-gray-200 text-black sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-lg font-medium flex items-center text-gray-900">
             <CalendarDays className="mr-2 h-5 w-5 text-primary" />
@@ -141,7 +141,7 @@ export function FollowUpScheduler({
                     onSelect={setDate}
                     initialFocus
                     disabled={(date) => isBefore(date, startOfToday()) || isBefore(addDays(startOfToday(), 30), date)}
-                    className="bg-white text-gray-800"
+                    className="bg-white text-black"
                   />
                 </PopoverContent>
               </Popover>
@@ -162,7 +162,7 @@ export function FollowUpScheduler({
                     )}
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="bg-white border-gray-200 text-gray-800">
+                <SelectContent className="bg-white border-gray-200 text-black">
                   <SelectGroup>
                     <SelectLabel>Morning</SelectLabel>
                     {TIME_SLOTS.filter((slot) => slot.display.includes("AM")).map((slot) => (
@@ -202,7 +202,7 @@ export function FollowUpScheduler({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add any details about the follow-up"
-              className="bg-white border-gray-300 text-gray-800 min-h-[80px] resize-none"
+              className="bg-white border-gray-300 text-black min-h-[80px] resize-none"
             />
           </div>
         </div>

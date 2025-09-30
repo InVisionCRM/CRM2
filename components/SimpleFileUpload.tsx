@@ -168,15 +168,15 @@ export function SimpleFileUpload({
         {isUploading ? (
           <div className="flex items-center">
             <div className="relative w-4 h-4 mr-2">
-              <div className="absolute inset-0 border border-white/30 rounded-full" />
+              <div className="absolute inset-0 border border-green-300 rounded-full" />
               <motion.div 
-                className="absolute inset-0 border-2 border-white border-r-transparent rounded-full"
+                className="absolute inset-0 border-2 border-green-600 border-r-transparent rounded-full"
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
               />
             </div>
             <div className="flex flex-col items-start">
-              <span className="text-xs leading-tight">
+              <span className="text-xs leading-tight text-white">
                 Uploading {currentUploadIndex + 1}/{filesWithNames.length}
               </span>
             </div>
@@ -200,20 +200,30 @@ export function SimpleFileUpload({
 
       {/* Filename Editor Dialog */}
       <Dialog open={showFilenameDialog} onOpenChange={setShowFilenameDialog}>
-        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto bg-white">
           <DialogHeader>
-            <DialogTitle>Edit Filenames ({filesWithNames.length} files)</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-black">Edit Filenames ({filesWithNames.length} files)</DialogTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setFilesWithNames([])}
+                className="text-red-600 border-red-200 hover:bg-red-50 bg-white"
+              >
+                Clear All
+              </Button>
+            </div>
           </DialogHeader>
           
           <div className="space-y-4">
             {filesWithNames.map((fileWithName) => (
-              <div key={fileWithName.id} className="border rounded-lg p-3 space-y-2">
+              <div key={fileWithName.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium truncate">
+                    <p className="text-sm font-medium text-black truncate">
                       {fileWithName.file.name}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-600">
                       {(fileWithName.file.size / (1024 * 1024)).toFixed(2)} MB
                     </p>
                   </div>
@@ -221,14 +231,14 @@ export function SimpleFileUpload({
                     variant="ghost"
                     size="icon"
                     onClick={() => removeFile(fileWithName.id)}
-                    className="h-8 w-8 text-gray-400 hover:text-red-500"
+                    className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50 bg-white"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor={`filename-${fileWithName.id}`} className="text-xs font-medium">
+                  <Label htmlFor={`filename-${fileWithName.id}`} className="text-xs font-medium text-black">
                     Custom Filename
                   </Label>
                   <div className="flex items-center gap-2">
@@ -238,14 +248,14 @@ export function SimpleFileUpload({
                         value={fileWithName.customName}
                         onChange={(e) => updateCustomName(fileWithName.id, e.target.value)}
                         placeholder="Enter custom filename"
-                        className="pr-16 text-sm"
+                        className="pr-16 text-sm bg-white border-gray-300 text-black placeholder-gray-500"
                       />
-                      <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600">
                         {getFileExtension(fileWithName.file.name)}
                       </div>
                     </div>
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-600">
                     Final: <span className="font-medium">{getFinalFileName(fileWithName)}</span>
                   </div>
                 </div>
@@ -253,13 +263,14 @@ export function SimpleFileUpload({
             ))}
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={handleCancel}>
+          <DialogFooter className="bg-white">
+            <Button variant="outline" onClick={handleCancel} className="border-red-600/60 text-white hover:bg-gray-50 bg-black">
               Cancel
             </Button>
             <Button 
               onClick={handleUpload} 
               disabled={filesWithNames.length === 0 || filesWithNames.some(f => !f.customName.trim())}
+              className="bg-green-600 hover:bg-green-700 text-black"
             >
               Upload {filesWithNames.length} Files
             </Button>

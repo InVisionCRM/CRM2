@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { CheckCircle, AlertCircle, Upload, Cloud, Database, X, Edit2, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { nanoid } from 'nanoid';
+import { AnimatedCircularProgressBar } from '@/components/ui/animated-circular-progress-bar';
 
 interface FileUploadModalProps {
   open: boolean;
@@ -98,6 +99,7 @@ export function FileUploadModal({
 
   const handleUpload = async () => {
     if (filesWithNames.length === 0) {
+      console.log(`⚠️ No files selected for upload`);
       toast({
         title: "No files selected",
         description: "Please select files to upload",
@@ -106,6 +108,7 @@ export function FileUploadModal({
       return;
     }
 
+    console.log(`📋 Starting upload process for ${filesWithNames.length} files:`, filesWithNames.map(f => f.file.name));
     setIsUploading(true);
     const results: any[] = [];
     
@@ -123,6 +126,7 @@ export function FileUploadModal({
         const finalFileName = getFinalFileName(fileWithName);
         
         // Stage 1: Starting upload
+        console.log(`🚀 Starting upload for file ${fileNumber}/${totalFiles}: ${finalFileName}`);
         setUploadProgress({
           stage: 'blob',
           progress: baseProgress,
@@ -133,6 +137,7 @@ export function FileUploadModal({
         await new Promise(resolve => setTimeout(resolve, 100));
 
         // Stage 2: Uploading to Vercel Blob
+        console.log(`📤 Uploading to Vercel Blob: ${finalFileName}`);
         setUploadProgress({
           stage: 'blob',
           progress: baseProgress + (fileProgressStep * 0.2),
@@ -153,6 +158,7 @@ export function FileUploadModal({
         }
 
         // Stage 3: Processing
+        console.log(`⚙️ Processing file: ${finalFileName}`);
         setUploadProgress({
           stage: 'blob',
           progress: baseProgress + (fileProgressStep * 0.4),
@@ -167,10 +173,14 @@ export function FileUploadModal({
         });
 
         if (!response.ok) {
+          console.error(`❌ Upload failed for ${finalFileName} with status ${response.status}`);
           throw new Error(`Upload failed for ${finalFileName} with status ${response.status}`);
         }
 
+        console.log(`✅ Vercel Blob upload successful: ${finalFileName}`);
+
         // Stage 4: Uploading to Google Drive
+        console.log(`☁️ Syncing to Google Drive: ${finalFileName}`);
         setUploadProgress({
           stage: 'drive',
           progress: baseProgress + (fileProgressStep * 0.7),
@@ -182,12 +192,15 @@ export function FileUploadModal({
         const result = await response.json();
 
         if (!result.success) {
+          console.error(`❌ API response failed for ${finalFileName}:`, result.message);
           throw new Error(result.message || `Upload failed for ${finalFileName}`);
         }
 
+        console.log(`✅ Google Drive sync successful: ${finalFileName}`);
         results.push(result);
         
         // Stage 5: Finalizing
+        console.log(`💾 Finalizing database entry: ${finalFileName}`);
         setUploadProgress({
           stage: 'database',
           progress: baseProgress + (fileProgressStep * 0.9),
@@ -199,6 +212,7 @@ export function FileUploadModal({
         await new Promise(resolve => setTimeout(resolve, 200));
 
         // File complete
+        console.log(`🎉 File upload complete: ${finalFileName}`);
         setUploadProgress({
           stage: 'database',
           progress: baseProgress + fileProgressStep,
@@ -211,6 +225,7 @@ export function FileUploadModal({
       }
 
       // Stage 5: Complete
+      console.log(`🏁 All uploads complete! ${filesWithNames.length} files processed successfully`);
       setUploadProgress({
         stage: 'complete',
         progress: 100,
@@ -226,6 +241,7 @@ export function FileUploadModal({
       });
 
     } catch (error) {
+      console.error(`💥 Upload process failed:`, error);
       setUploadProgress({
         stage: 'error',
         progress: 0,
@@ -238,6 +254,7 @@ export function FileUploadModal({
         variant: "destructive",
       });
     } finally {
+      console.log(`🔚 Upload process ended. isUploading: ${isUploading}`);
       setIsUploading(false);
     }
   };
@@ -289,6 +306,7 @@ export function FileUploadModal({
                   size="sm"
                   onClick={() => setFilesWithNames([])}
                   disabled={isUploading}
+                  className="text-white border-gray-300 hover:bg-gray-50"
                 >
                   Clear All
                 </Button>
@@ -328,7 +346,7 @@ export function FileUploadModal({
                             value={fileWithName.customName}
                             onChange={(e) => updateCustomName(fileWithName.id, e.target.value)}
                             placeholder="Enter custom filename"
-                            className="pr-16 text-sm"
+                            className="pr-16 text-sm bg-white border-gray-300 text-black placeholder-gray-500"
                             disabled={isUploading}
                           />
                           <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
@@ -346,66 +364,47 @@ export function FileUploadModal({
             </div>
           )}
 
-          {/* Minimalistic Progress Section */}
+          {/* Animated Circular Progress Section */}
           {(isUploading || uploadProgress.stage !== 'idle') && (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="relative"
+              className="relative bg-white border border-gray-200 rounded-xl p-6"
             >
-              {/* Backdrop */}
-              <div className="absolute inset-0 bg-black/5 backdrop-blur-sm rounded-xl" />
-              
-              {/* Content */}
-              <div className="relative p-6 space-y-4">
+              <div className="flex flex-col items-center space-y-4">
                 {/* Current File Info */}
                 {uploadProgress.currentFile && (
                   <div className="text-center">
-                    <p className="text-sm font-medium text-white truncate">
+                    <p className="text-sm font-medium text-black truncate">
                       {uploadProgress.currentFile}
                     </p>
-                    <p className="text-xs lime-500 mt-1">
+                    <p className="text-xs text-gray-600 mt-1">
                       File {currentUploadIndex + 1} of {filesWithNames.length}
                     </p>
                   </div>
                 )}
 
-                {/* Main Progress Bar */}
-                <div className="space-y-2">
-                  <div className="relative h-1 bg-black/10 rounded-full overflow-hidden">
-                    <motion.div
-                      className="absolute inset-y-0 left-0 bg-black/60 rounded-full"
-                      style={{ width: `${uploadProgress.progress}%` }}
-                      animate={{ width: `${uploadProgress.progress}%` }}
-                      transition={{ duration: 0.3, ease: "easeOut" }}
-                    />
-                  </div>
-                  
-                  {/* File Progress Bar (if available) */}
-                  {uploadProgress.fileProgress !== undefined && (
-                    <div className="relative h-0.5 bg-black/5 rounded-full overflow-hidden">
-                      <motion.div
-                        className="absolute inset-y-0 left-0 bg-black/30 rounded-full"
-                        style={{ width: `${uploadProgress.fileProgress}%` }}
-                        animate={{ width: `${uploadProgress.fileProgress}%` }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                      />
-                    </div>
-                  )}
+                {/* Animated Circular Progress Bar */}
+                <div className="flex justify-center">
+                  <AnimatedCircularProgressBar
+                    value={uploadProgress.progress}
+                    max={100}
+                    min={0}
+                    gaugePrimaryColor="#10b981" // green-500
+                    gaugeSecondaryColor="#e5e7eb" // gray-200
+                    className="text-black"
+                  />
                 </div>
 
                 {/* Status */}
-                <div className="flex items-center justify-between text-xs">
-                  <span className={uploadProgress.stage === 'error' ? 'text-red-600' : 'text-white'}>
+                <div className="text-center">
+                  <span className={`text-sm ${uploadProgress.stage === 'error' ? 'text-red-600' : 'text-black'}`}>
                     {uploadProgress.message}
-                  </span>
-                  <span className="text-white font-mono">
-                    {Math.round(uploadProgress.progress)}%
                   </span>
                 </div>
 
-                {/* Minimal Stage Dots */}
-                <div className="flex items-center justify-center gap-2 mt-4">
+                {/* Stage Indicators */}
+                <div className="flex items-center justify-center gap-2">
                   {['blob', 'drive', 'database', 'complete'].map((stage, index) => {
                     const isActive = uploadProgress.stage === stage;
                     const isComplete = index <= ['blob', 'drive', 'database', 'complete'].indexOf(uploadProgress.stage);
@@ -415,10 +414,10 @@ export function FileUploadModal({
                         key={stage}
                         className={`w-2 h-2 rounded-full transition-all duration-300 ${
                           isComplete
-                            ? 'bg-black/20 scale-110'
+                            ? 'bg-green-500 scale-110'
                             : isActive
-                            ? 'bg-black/40 scale-125'
-                            : 'bg-black/10'
+                            ? 'bg-green-300 scale-125'
+                            : 'bg-gray-200'
                         }`}
                         animate={isActive ? { 
                           scale: [1, 1.2, 1],
@@ -494,13 +493,14 @@ export function FileUploadModal({
                   variant="outline"
                   onClick={handleClose}
                   disabled={isUploading}
+                  className="text-black hover:bg-gray-50 bg-white border-gray-300"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleUpload}
                   disabled={filesWithNames.length === 0 || isUploading}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-green-600 hover:bg-green-700 text-white"
                 >
                   {isUploading 
                     ? `Uploading ${currentUploadIndex + 1}/${filesWithNames.length}...` 

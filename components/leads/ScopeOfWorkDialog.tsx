@@ -189,7 +189,7 @@ export function ScopeOfWorkDialog({ lead, open, onOpenChange }: ScopeOfWorkDialo
             <AlertDialogCancel onClick={handleCancelConfirmation}>
               Go Back to Edit
             </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmSubmit} className="bg-white text-green-600 hover:bg-green-600 text-white">
+            <AlertDialogAction onClick={handleConfirmSubmit} className="bg-white text-black hover:bg-green-600 hover:text-white">
               Confirm & Send
             </AlertDialogAction>
           </AlertDialogFooter>

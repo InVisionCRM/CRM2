@@ -498,7 +498,7 @@ export function DriveFileManager() {
         <div className="w-60 p-3 border-r">
           <Button
             onClick={() => document.getElementById("file-upload")?.click()}
-            className="w-full mb-2 bg-white hover:bg-gray-50 text-gray-800 border shadow-sm rounded-full"
+            className="w-full mb-2 bg-white hover:bg-gray-50 text-black border shadow-sm rounded-full"
           >
             <Upload className="h-4 w-4 mr-2" />
             New

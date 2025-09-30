@@ -148,7 +148,7 @@ export function SimpleFileViewer({
               variant="ghost"
               size="icon"
               onClick={() => onOpenChange(false)}
-              className="h-6 w-6"
+              className="h-6 w-6 text-black"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -159,12 +159,12 @@ export function SimpleFileViewer({
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-2 text-gray-600">Loading files...</span>
+              <span className="ml-2 text-gray-700">Loading files...</span>
             </div>
           ) : files.length === 0 ? (
             <div className="text-center py-12">
               <File className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">No files found for this lead</p>
+              <p className="text-gray-700">No files found for this lead</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -176,17 +176,17 @@ export function SimpleFileViewer({
                     key={file.id}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow group"
+                    className="group bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
                   >
                     {/* Thumbnail/Icon */}
-                    <div className="flex justify-center mb-3 h-24 items-center">
+                    <div className="flex justify-center mb-3 h-24 rounded-md items-center bg-gray-50">
                       {thumbnailUrl ? (
                         <Image
                           src={thumbnailUrl}
                           alt={file.name}
                           width={150}
                           height={150}
-                          className="max-h-24 max-w-24 object-cover rounded-md border"
+                          className="max-h-24 max-w-24 object-cover rounded-md border border-gray-200"
                           onError={(e) => {
                             // Fallback to icon if thumbnail fails to load
                             const target = e.target as HTMLImageElement;
@@ -202,23 +202,19 @@ export function SimpleFileViewer({
 
                     {/* File Info */}
                     <div className="text-center">
-                      <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate mb-1" title={file.name}>
+                      <h3 className="text-black mb-2 text-sm font-medium truncate" title={file.name}>
                         {file.name}
                       </h3>
-                      <p className="text-xs text-gray-500 mb-2">
-                        {formatFileSize(file.size)}
-                      </p>
-                      <p className="text-xs text-gray-400 mb-3">
-                        {new Date(file.uploadedAt).toLocaleDateString()}
-                      </p>
+                      <p className="text-xs text-gray-600 mb-1">{formatFileSize(file.size)}</p>
+                      <p className="text-xs text-gray-600 mb-3">{new Date(file.uploadedAt).toLocaleDateString()}</p>
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="mt-2 flex gap-2">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1 text-xs"
+                        className="flex-1 text-xs bg-white text-black border-gray-300"
                         onClick={() => window.open(file.url, '_blank')}
                       >
                         <ExternalLink className="h-3 w-3 mr-1" />
@@ -227,7 +223,7 @@ export function SimpleFileViewer({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1 text-xs"
+                        className="flex-1 text-xs bg-white text-black border-gray-300"
                         onClick={() => {
                           const link = document.createElement('a');
                           link.href = file.blobUrl || file.url;
@@ -241,7 +237,7 @@ export function SimpleFileViewer({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="px-2 text-red-600 hover:bg-red-50"
+                        className="px-2 bg-white text-red-600 border-red-200 hover:bg-red-50"
                         onClick={() => handleDelete(file.id, file.name)}
                         disabled={deletingFileId === file.id}
                       >
@@ -260,8 +256,8 @@ export function SimpleFileViewer({
         </div>
 
         {files.length > 0 && (
-          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex justify-between items-center text-sm text-gray-500">
+          <div className="mt-6 pt-4 border-t border-gray-200">
+            <div className="flex justify-between items-center text-sm text-gray-700">
               <span>{files.length} file{files.length !== 1 ? 's' : ''} total</span>
               <Button
                 variant="outline"

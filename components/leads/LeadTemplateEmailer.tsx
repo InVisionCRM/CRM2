@@ -472,11 +472,11 @@ export function LeadTemplateEmailer({ lead, open, onOpenChange }: LeadTemplateEm
               <div className="space-y-6">
                 <Tabs defaultValue="email" className="w-full">
                   <TabsList className="grid w-full grid-cols-2 h-12 bg-gray-100 rounded-lg p-1">
-                    <TabsTrigger value="email" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md text-gray-900 data-[state=active]:text-gray-900">
+                    <TabsTrigger value="email" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md text-black data-[state=active]:text-black">
                       <Mail className="h-4 w-4 mr-2" />
                       Email Template
                     </TabsTrigger>
-                    <TabsTrigger value="text" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md text-gray-900 data-[state=active]:text-gray-900">
+                    <TabsTrigger value="text" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md text-black data-[state=active]:text-black">
                       <MessageSquare className="h-4 w-4 mr-2" />
                       Text Message
                     </TabsTrigger>
