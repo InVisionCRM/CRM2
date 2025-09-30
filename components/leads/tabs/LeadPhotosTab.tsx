@@ -34,6 +34,10 @@ import { Progress } from "@/components/ui/progress"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { FileUpload } from "@/components/ui/file-upload"
+import { motion } from "motion/react"
+import { nanoid } from "nanoid"
+import { AnimatedCircularProgressBar } from "@/components/ui/animated-circular-progress-bar"
 
 // Types for photos
 interface Photo {
@@ -88,11 +92,27 @@ interface UploadPreview {
   originalName: string
 }
 
+// Add new interface for files with custom names
+interface FileWithCustomName {
+  file: File
+  customName: string
+  id: string
+}
+
 // Add new interface for tracking individual file progress
 interface UploadProgressTracker {
   preparing: number;
   uploading: number;
   finalizing: number;
+}
+
+// Add upload progress interface
+interface UploadProgress {
+  stage: 'idle' | 'blob' | 'drive' | 'database' | 'complete' | 'error';
+  progress: number;
+  message: string;
+  currentFile?: string;
+  fileProgress?: number;
 }
 
 // Helper function to create Gmail share link
@@ -932,7 +952,15 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
   const [uploadFiles, setUploadFiles] = useState<File[]>([])
   const [uploadPreviews, setUploadPreviews] = useState<UploadPreview[]>([])
+  const [filesWithNames, setFilesWithNames] = useState<FileWithCustomName[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgressState, setUploadProgressState] = useState<UploadProgress>({
+    stage: 'idle',
+    progress: 0,
+    message: ''
+  })
+  const [currentUploadIndex, setCurrentUploadIndex] = useState<number>(0)
+  const [uploadResults, setUploadResults] = useState<any[]>([])
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set())
   const [isSelectionMode, setIsSelectionMode] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -1023,6 +1051,27 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
     }
   }, [leadId]);
 
+  // Helper functions for file names
+  const getFileExtension = (filename: string) => {
+    const lastDotIndex = filename.lastIndexOf('.');
+    return lastDotIndex > 0 ? filename.substring(lastDotIndex) : '';
+  };
+
+  const getFinalFileName = (fileWithName: FileWithCustomName) => {
+    const extension = getFileExtension(fileWithName.file.name);
+    return fileWithName.customName.trim() + extension;
+  };
+
+  const updateCustomName = (id: string, newName: string) => {
+    setFilesWithNames(prev => 
+      prev.map(f => f.id === id ? { ...f, customName: newName } : f)
+    );
+  };
+
+  const removeFile = (id: string) => {
+    setFilesWithNames(prev => prev.filter(f => f.id !== id));
+  };
+
   // Function to create file previews
   const createPreviews = (files: File[]) => {
     const previews: UploadPreview[] = []
@@ -1045,6 +1094,23 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
       reader.readAsDataURL(file)
     })
   }
+  
+  // Handle file change from FileUpload component
+  const handleFileUploadChange = (files: File[]) => {
+    const newFilesWithNames = files.map(file => {
+      const originalName = file.name;
+      const lastDotIndex = originalName.lastIndexOf('.');
+      const nameWithoutExtension = lastDotIndex > 0 ? originalName.substring(0, lastDotIndex) : originalName;
+      
+      return {
+        file,
+        customName: nameWithoutExtension,
+        id: nanoid()
+      };
+    });
+    
+    setFilesWithNames(newFilesWithNames);
+  };
 
   // Focus input when editing name
   useEffect(() => {
@@ -1099,32 +1165,60 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
 
   const handleUpload = async () => {
     if (!leadId) {
+      console.log(`⚠️ No lead ID provided for upload`);
       toast({ title: "Error", description: "Lead ID is required", variant: "destructive" })
       return
     }
     
-    if (uploadFiles.length === 0) {
+    if (filesWithNames.length === 0) {
+      console.log(`⚠️ No files selected for upload`);
       toast({ title: "No files selected", description: "Please select at least one photo to upload", variant: "destructive" })
       return
     }
 
+    console.log(`📋 Starting upload process for ${filesWithNames.length} photos:`, filesWithNames.map(f => f.file.name));
     setIsUploading(true)
-    setUploadProgress(0)
-    const totalFiles = uploadFiles.length
-    const uploadedPhotos = []
-    const failedUploads = []
+    const results: any[] = []
+    const totalFiles = filesWithNames.length
 
-    for (let i = 0; i < totalFiles; i++) {
-      const file = uploadFiles[i]
-      const preview = uploadPreviews[i]
-      setCurrentUploadingFile(`Uploading ${preview.name} (${i + 1}/${totalFiles})...`)
-      
-      try {
+    try {
+      for (let i = 0; i < totalFiles; i++) {
+        const fileWithName = filesWithNames[i]
+        const { file } = fileWithName
+        
+        setCurrentUploadIndex(i)
+        const fileNumber = i + 1
+        const baseProgress = (i * 100) / totalFiles
+        const fileProgressStep = 100 / totalFiles
+        
+        const finalFileName = getFinalFileName(fileWithName)
+        
+        // Stage 1: Starting upload
+        console.log(`🚀 Starting upload for photo ${fileNumber}/${totalFiles}: ${finalFileName}`)
+        setUploadProgressState({
+          stage: 'blob',
+          progress: baseProgress,
+          fileProgress: 0,
+          currentFile: finalFileName,
+          message: `Preparing ${finalFileName}...`
+        })
+        await new Promise(resolve => setTimeout(resolve, 100))
+
+        // Stage 2: Uploading
+        console.log(`📤 Uploading photo: ${finalFileName}`)
+        setUploadProgressState({
+          stage: 'blob',
+          progress: baseProgress + (fileProgressStep * 0.4),
+          fileProgress: 40,
+          currentFile: finalFileName,
+          message: `Uploading ${finalFileName}...`
+        })
+
         // Prepare file for upload
         const buffer = await file.arrayBuffer()
         const base64Data = Buffer.from(buffer).toString('base64')
         const serializedFile = {
-          name: preview.name, // Use the (possibly edited) name from preview
+          name: finalFileName,
           type: file.type,
           size: file.size,
           base64Data
@@ -1133,8 +1227,25 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
         // Upload photo
         const result = await uploadSinglePhoto(leadId, serializedFile)
         
-        if (result.success && result.photo) {
-          const newPhoto = {
+        if (!result.success) {
+          console.error(`❌ Upload failed for ${finalFileName}:`, result.error)
+          throw new Error(result.error || `Failed to upload ${finalFileName}`)
+        }
+
+        console.log(`✅ Photo uploaded successfully: ${finalFileName}`)
+        
+        // Stage 3: Finalizing
+        console.log(`💾 Finalizing: ${finalFileName}`)
+        setUploadProgressState({
+          stage: 'database',
+          progress: baseProgress + (fileProgressStep * 0.9),
+          fileProgress: 90,
+          currentFile: finalFileName,
+          message: `Finalizing...`
+        })
+
+        if (result.photo) {
+          const newPhoto: Photo = {
             id: result.photo.id,
             url: result.photo.url,
             thumbnailUrl: result.photo.thumbnailUrl || result.photo.url,
@@ -1144,46 +1255,65 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
             uploadedBy: undefined,
             leadId: result.photo.leadId,
             category: (result.photo as any).category
-          };
-          setPhotos(prev => [newPhoto, ...prev]);
-          uploadedPhotos.push(newPhoto)
-        } else {
-          throw new Error(result.error || `Failed to upload ${file.name}`)
+          }
+          setPhotos(prev => [newPhoto, ...prev])
+          results.push(result)
         }
-      } catch (error) {
-        console.error(`Error uploading ${file.name}:`, error)
-        failedUploads.push(file.name)
-      } finally {
-        // Update progress
-        setUploadProgress(((i + 1) / totalFiles) * 100)
+
+        await new Promise(resolve => setTimeout(resolve, 200))
+
+        // Photo complete
+        console.log(`🎉 Photo upload complete: ${finalFileName}`)
+        setUploadProgressState({
+          stage: 'database',
+          progress: baseProgress + fileProgressStep,
+          fileProgress: 100,
+          currentFile: finalFileName,
+          message: `${finalFileName} uploaded successfully`
+        })
+
+        await new Promise(resolve => setTimeout(resolve, 300))
       }
-    }
 
-    setIsUploading(false)
-    setCurrentUploadingFile(null)
-
-    // Show results
-    if (uploadedPhotos.length > 0) {
-      toast({
-        title: "Upload Complete",
-        description: `Successfully uploaded ${uploadedPhotos.length} photo${uploadedPhotos.length > 1 ? 's' : ''}.`,
+      // All complete
+      console.log(`🏁 All uploads complete! ${filesWithNames.length} photos processed successfully`)
+      setUploadProgressState({
+        stage: 'complete',
+        progress: 100,
+        message: `All ${filesWithNames.length} photos uploaded successfully!`
       })
-    }
 
-    if (failedUploads.length > 0) {
+      setUploadResults(results)
+
       toast({
-        title: "Some uploads failed",
-        description: `Failed to upload: ${failedUploads.join(", ")}`,
+        title: "🎉 Upload Successful!",
+        description: `${filesWithNames.length} photo${filesWithNames.length > 1 ? 's' : ''} uploaded successfully`,
+      })
+
+      // Close dialog after a short delay
+      setTimeout(() => {
+        setIsUploadDialogOpen(false)
+        setFilesWithNames([])
+        setUploadProgressState({ stage: 'idle', progress: 0, message: '' })
+        setUploadResults([])
+      }, 1500)
+
+    } catch (error) {
+      console.error(`💥 Upload process failed:`, error)
+      setUploadProgressState({
+        stage: 'error',
+        progress: 0,
+        message: error instanceof Error ? error.message : 'Upload failed'
+      })
+
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
         variant: "destructive",
       })
-    }
-
-    // Close dialog and reset state
-    if (failedUploads.length === 0) {
-      setIsUploadDialogOpen(false)
-      setUploadFiles([])
-      setUploadPreviews([])
-      setUploadProgress(0)
+    } finally {
+      console.log(`🔚 Upload process ended. isUploading: ${isUploading}`)
+      setIsUploading(false)
     }
   }
 
@@ -1742,131 +1872,229 @@ export function LeadPhotosTab({ leadId, claimNumber }: LeadPhotosTabProps) {
 
       {/* Upload Dialog */}
       <Dialog open={isUploadDialogOpen} onOpenChange={(open) => {
-        setIsUploadDialogOpen(open)
-        if (!open) {
-          setUploadFiles([])
-          setUploadPreviews([])
-          setUploadProgress(0)
-          if (progressInterval.current) {
-            clearInterval(progressInterval.current)
-          }
+        if (!open && !isUploading) {
+          setIsUploadDialogOpen(false)
+          setFilesWithNames([])
+          setUploadProgressState({ stage: 'idle', progress: 0, message: '' })
+          setUploadResults([])
         }
       }}>
-        <DialogContent className="max-w-2xl">
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="photos">Select</Label>
-              <Input
-                id="photos"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleFileChange}
-                className="mt-1.5"
-              />
-            </div>
-
-            {/* Preview Grid */}
-            {uploadPreviews.length > 0 && (
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 mt-4">
-                {uploadPreviews.map((preview, index) => (
-                  <div key={index} className="relative group">
-                    <div className="relative aspect-square border rounded-md overflow-hidden bg-muted">
-                      <Image
-                        src={preview.previewUrl}
-                        alt={preview.name}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 25vw, 16vw"
-                      />
-                      <button
-                        onClick={() => removePreview(index)}
-                        className="absolute top-0.5 right-0.5 bg-black/50 hover:bg-black/70 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                        aria-label={`Remove ${preview.name}`}
-                      >
-                        <X className="h-3 w-3 text-white" />
-                      </button>
-                    </div>
-                    <div className="mt-0.5">
-                      {editingNameIndex === index ? (
-                        <Input
-                          ref={nameInputRef}
-                          defaultValue={preview.name}
-                          onBlur={(e) => handleNameEdit(index, e.target.value)}
-                          onKeyDown={(e) => handleNameKeyDown(e, index)}
-                          className="h-6 text-xs py-0.5"
-                        />
-                      ) : (
-                        <button
-                          onClick={() => setEditingNameIndex(index)}
-                          className="w-full text-left text-[10px] text-muted-foreground group/name flex items-center gap-1 hover:text-foreground"
-                          title="Click to edit name"
-                        >
-                          <div className="truncate flex-1">
-                            {preview.name}
-                            <span className="text-muted-foreground/50">
-                              {`.${preview.originalName.split('.').pop()}`}
-                            </span>
-                          </div>
-                          <Pencil className="h-2.5 w-2.5 opacity-0 group-hover/name:opacity-100 transition-opacity shrink-0" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {isUploading && (
-              <div className="space-y-2">
-                <Progress 
-                  value={uploadProgress} 
-                  className="h-2 transition-all duration-300"
-                />
-                {currentUploadingFile && (
-                  <p className="text-sm text-muted-foreground text-center">
-                    {currentUploadingFile}
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground/80 text-center">
-                  {Math.round(uploadProgress)}%
-                </p>
-              </div>
-            )}
-
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setUploadFiles([])
-                  setUploadPreviews([])
-                  setUploadProgress(0)
-                  if (progressInterval.current) {
-                    clearInterval(progressInterval.current)
-                  }
-                }}
-                disabled={isUploading}
-              >
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button 
-              onClick={handleUpload} 
-              disabled={isUploading || uploadFiles.length === 0}
-              className="bg-[#59ff00] text-white hover:bg-[#59ff00]/90"
-            >
-              {isUploading ? (
-                <>
-                  <span className="animate-spin mr-2">⏳</span>
-                  Uploading {uploadFiles.length} photo{uploadFiles.length > 1 ? 's' : ''}...
-                </>
-              ) : (
-                `Upload ${uploadFiles.length} photo${uploadFiles.length > 1 ? 's' : ''}`
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto bg-white">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-black">Upload Photos ({filesWithNames.length} files)</DialogTitle>
+              {filesWithNames.length > 0 && !isUploading && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFilesWithNames([])}
+                  className="text-red-600 border-red-200 hover:bg-red-50 bg-white"
+                >
+                  Clear All
+                </Button>
               )}
-            </Button>
-          </DialogFooter>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* File Upload Component */}
+            {uploadResults.length === 0 && filesWithNames.length === 0 && (
+              <div className="border-2 border-dashed border-gray-200 rounded-lg">
+                <FileUpload onChange={handleFileUploadChange} />
+              </div>
+            )}
+
+            {/* Multiple Files Editor */}
+            {filesWithNames.length > 0 && uploadResults.length === 0 && (
+              <div className="space-y-4">
+                <div className="max-h-64 overflow-y-auto space-y-3">
+                  {filesWithNames.map((fileWithName) => (
+                    <div key={fileWithName.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-black truncate">
+                            {fileWithName.file.name}
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            {(fileWithName.file.size / (1024 * 1024)).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeFile(fileWithName.id)}
+                          disabled={isUploading}
+                          className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50 bg-white"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor={`filename-${fileWithName.id}`} className="text-xs font-medium text-black">
+                          Custom Filename
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 relative">
+                            <Input
+                              id={`filename-${fileWithName.id}`}
+                              value={fileWithName.customName}
+                              onChange={(e) => updateCustomName(fileWithName.id, e.target.value)}
+                              placeholder="Enter custom filename"
+                              className="pr-16 text-sm bg-white border-gray-300 text-black placeholder-gray-500"
+                              disabled={isUploading}
+                            />
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-600">
+                              {getFileExtension(fileWithName.file.name)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          Final: <span className="font-medium">{getFinalFileName(fileWithName)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Animated Circular Progress Section */}
+            {(isUploading || uploadProgressState.stage !== 'idle') && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="relative bg-white border border-gray-200 rounded-xl p-6"
+              >
+                <div className="flex flex-col items-center space-y-4">
+                  {/* Current File Info */}
+                  {uploadProgressState.currentFile && (
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-black truncate">
+                        {uploadProgressState.currentFile}
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Photo {currentUploadIndex + 1} of {filesWithNames.length}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Animated Circular Progress Bar */}
+                  <div className="flex justify-center">
+                    <AnimatedCircularProgressBar
+                      value={uploadProgressState.progress}
+                      max={100}
+                      min={0}
+                      gaugePrimaryColor="#10b981"
+                      gaugeSecondaryColor="#e5e7eb"
+                      className="text-black"
+                    />
+                  </div>
+
+                  {/* Status */}
+                  <div className="text-center">
+                    <span className={`text-sm ${uploadProgressState.stage === 'error' ? 'text-red-600' : 'text-black'}`}>
+                      {uploadProgressState.message}
+                    </span>
+                  </div>
+
+                  {/* Stage Indicators */}
+                  <div className="flex items-center justify-center gap-2">
+                    {['blob', 'database', 'complete'].map((stage, index) => {
+                      const isActive = uploadProgressState.stage === stage;
+                      const isComplete = index <= ['blob', 'database', 'complete'].indexOf(uploadProgressState.stage);
+                      
+                      return (
+                        <motion.div
+                          key={stage}
+                          className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                            isComplete
+                              ? 'bg-green-500 scale-110'
+                              : isActive
+                              ? 'bg-green-300 scale-125'
+                              : 'bg-gray-200'
+                          }`}
+                          animate={isActive ? { 
+                            scale: [1, 1.2, 1],
+                            opacity: [0.4, 0.8, 0.4]
+                          } : {}}
+                          transition={{ 
+                            duration: 1.2, 
+                            repeat: isActive ? Infinity : 0,
+                            ease: "easeInOut"
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Upload Results */}
+            {uploadResults.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-green-50 border border-green-200 rounded-lg p-4"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <Check className="h-5 w-5 text-green-500" />
+                  <h3 className="font-medium text-green-800">Upload Successful!</h3>
+                </div>
+                
+                <div className="space-y-3 text-sm text-green-700">
+                  <div>
+                    <strong>Photos Uploaded:</strong> {uploadResults.length}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3">
+              {uploadResults.length === 0 && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsUploadDialogOpen(false)
+                      setFilesWithNames([])
+                      setUploadProgressState({ stage: 'idle', progress: 0, message: '' })
+                    }}
+                    disabled={isUploading}
+                    className="text-black hover:bg-gray-50 bg-white border-gray-300"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleUpload}
+                    disabled={filesWithNames.length === 0 || isUploading}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {isUploading 
+                      ? `Uploading ${currentUploadIndex + 1}/${filesWithNames.length}...` 
+                      : `Upload ${filesWithNames.length} Photo${filesWithNames.length !== 1 ? 's' : ''}`
+                    }
+                  </Button>
+                </>
+              )}
+              
+              {uploadResults.length > 0 && (
+                <Button 
+                  onClick={() => {
+                    setIsUploadDialogOpen(false)
+                    setFilesWithNames([])
+                    setUploadProgressState({ stage: 'idle', progress: 0, message: '' })
+                    setUploadResults([])
+                  }} 
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  Done
+                </Button>
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

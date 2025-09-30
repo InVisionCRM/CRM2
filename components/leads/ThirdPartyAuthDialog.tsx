@@ -98,21 +98,21 @@ const ThirdPartyAuthDialog: React.FC<ThirdPartyAuthDialogProps> = ({ open, onOpe
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg bg-white text-black border-gray-200">
         <DialogHeader>
-          <DialogTitle>3rd Party Authorization Contract</DialogTitle>
+          <DialogTitle className="text-lg font-medium text-gray-900">3rd Party Authorization Contract</DialogTitle>
         </DialogHeader>
         {step === "form" && (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {Object.entries(fieldLabels).map(([field, label]) => (
               <div key={field} className="flex flex-col gap-1">
-                <label className="font-medium text-sm" htmlFor={field}>{label}</label>
+                <label className="font-medium text-sm text-gray-900" htmlFor={field}>{label}</label>
                 <Input
                   id={field}
                   {...register(field as keyof ThirdPartyAuthForm)}
                   type={field === "email" ? "email" : "text"}
                   autoComplete="off"
-                  className={errors[field as keyof ThirdPartyAuthForm] ? "border-red-500" : ""}
+                  className={`bg-white border-gray-300 text-black placeholder-gray-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 ${errors[field as keyof ThirdPartyAuthForm] ? "border-red-500" : ""}`}
                 />
                 {errors[field as keyof ThirdPartyAuthForm] && (
                   <span className="text-xs text-red-500">{errors[field as keyof ThirdPartyAuthForm]?.message as string}</span>
@@ -121,26 +121,26 @@ const ThirdPartyAuthDialog: React.FC<ThirdPartyAuthDialogProps> = ({ open, onOpe
             ))}
             {error && <div className="text-red-500 text-sm">{error}</div>}
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-              <Button type="submit" disabled={!isValid}>Send to client to sign</Button>
+              <Button type="button" variant="ghost" onClick={onClose} className="text-gray-700 hover:bg-gray-100">Cancel</Button>
+              <Button type="submit" disabled={!isValid} className="bg-blue-600 text-white hover:bg-blue-700">Send to client to sign</Button>
             </DialogFooter>
           </form>
         )}
         {step === "confirm" && (
           <div className="space-y-4">
-            <div className="text-base font-semibold">Confirm the following information before sending:</div>
+            <div className="text-base font-semibold text-gray-900">Confirm the following information before sending:</div>
             <div className="grid grid-cols-1 gap-2">
               {Object.entries(fieldLabels).map(([field, label]) => (
-                <div key={field} className="flex flex-col gap-0.5 p-2 rounded bg-slate-100/80">
-                  <span className="text-xs text-gray-500">{label}</span>
+                <div key={field} className="flex flex-col gap-0.5 p-3 rounded bg-gray-50 border border-gray-200">
+                  <span className="text-xs text-gray-600">{label}</span>
                   <span className="font-medium text-gray-900">{getValues()[field as keyof ThirdPartyAuthForm]}</span>
                 </div>
               ))}
             </div>
             {error && <div className="text-red-500 text-sm">{error}</div>}
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={onBack}>Go back and edit</Button>
-              <Button type="button" onClick={onConfirm} loading={loading} disabled={loading}>
+              <Button type="button" variant="ghost" onClick={onBack} className="text-gray-700 hover:bg-gray-100">Go back and edit</Button>
+              <Button type="button" onClick={onConfirm} loading={loading} disabled={loading} className="bg-blue-600 text-white hover:bg-blue-700">
                 {loading ? "Sending..." : "Proceed and send to client"}
               </Button>
             </DialogFooter>
@@ -149,7 +149,7 @@ const ThirdPartyAuthDialog: React.FC<ThirdPartyAuthDialogProps> = ({ open, onOpe
         {step === "success" && (
           <div className="flex flex-col items-center justify-center gap-4 py-8">
             <div className="text-green-600 text-2xl font-bold">Contract sent!</div>
-            <Button onClick={onClose}>Close</Button>
+            <Button onClick={onClose} className="bg-blue-600 text-white hover:bg-blue-700">Close</Button>
           </div>
         )}
       </DialogContent>
