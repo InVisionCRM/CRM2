@@ -45,6 +45,7 @@ export function PhotoAssignmentCard({ lead }: PhotoAssignmentCardProps) {
   const [photoCount, setPhotoCount] = useState(0);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentAssignmentId, setCurrentAssignmentId] = useState<string>("");
+  const [isUnassigning, setIsUnassigning] = useState(false);
 
   const borderClass = hasPhotoAssignment
     ? "border-green-500 border-2"
@@ -59,6 +60,7 @@ export function PhotoAssignmentCard({ lead }: PhotoAssignmentCardProps) {
         
         if (response.ok && result.assignments && result.assignments.length > 0) {
           const assignment = result.assignments[0]; // Get the most recent assignment
+          console.log('Found existing assignment:', assignment);
           setHasPhotoAssignment(true);
           setCurrentAssignmentId(assignment.id);
           
@@ -98,10 +100,16 @@ export function PhotoAssignmentCard({ lead }: PhotoAssignmentCardProps) {
   };
 
   const handleUnassign = async () => {
+    setIsUnassigning(true);
     try {
+      console.log('Attempting to unassign with ID:', currentAssignmentId);
+      
       const response = await fetch(`/api/photo-assignments?assignmentId=${currentAssignmentId}`, {
         method: 'DELETE'
       });
+
+      const result = await response.json();
+      console.log('Unassign response:', { status: response.status, result });
 
       if (response.ok) {
         toast({
@@ -115,15 +123,17 @@ export function PhotoAssignmentCard({ lead }: PhotoAssignmentCardProps) {
         setCurrentAssignmentId("");
         setIsModalOpen(false);
       } else {
-        throw new Error('Failed to unassign roofer');
+        throw new Error(result.error || 'Failed to unassign roofer');
       }
     } catch (error) {
       console.error('Error unassigning roofer:', error);
       toast({
         title: "Error unassigning roofer",
-        description: "Failed to remove assignment. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to remove assignment. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsUnassigning(false);
     }
   };
 
@@ -290,6 +300,11 @@ export function PhotoAssignmentCard({ lead }: PhotoAssignmentCardProps) {
                     <strong>Photos:</strong> {photoCount} on file
                   </p>
                 )}
+                {isEditMode && (
+                  <p className="text-xs text-gray-500">
+                    <strong>Assignment ID:</strong> {currentAssignmentId}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -313,12 +328,25 @@ export function PhotoAssignmentCard({ lead }: PhotoAssignmentCardProps) {
                   </Button>
                   
                   <Button
-                    onClick={handleUnassign}
+                    onClick={() => {
+                      console.log('Unassign button clicked!');
+                      handleUnassign();
+                    }}
                     variant="destructive"
-                    className="w-full bg-red-600 text-white hover:bg-red-700"
+                    disabled={isUnassigning}
+                    className="w-full bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Unassign Roofer
+                    {isUnassigning ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Unassigning...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Unassign Roofer
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
