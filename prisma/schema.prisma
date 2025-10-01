@@ -135,6 +135,7 @@ model Lead {
   job_costs                job_costs[]
   payments                 payments[]
   supplements              supplements[]
+  photoAssignments         PhotoAssignment[]
 
   @@index([assignedToId], map: "idx_leads_assigned_to")
   @@index([status], map: "idx_leads_status")
@@ -522,4 +523,19 @@ enum SupplementStatus {
   PENDING
   APPROVED
   DENIED
+}
+
+model PhotoAssignment {
+  id              String    @id @default(cuid())
+  leadId          String
+  contractorPhone String
+  assignedAt      DateTime  @default(now()) @db.Timestamptz(6)
+  assignedBy      String
+  notes           String?
+  completedAt     DateTime? @db.Timestamptz(6)
+  lead            Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  
+  @@index([contractorPhone])
+  @@index([leadId])
+  @@index([assignedAt])
 }

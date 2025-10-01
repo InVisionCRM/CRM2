@@ -32,6 +32,7 @@ import { LeadTemplateEmailer } from "@/components/leads/LeadTemplateEmailer"
 import { JobCompletionCard } from "@/components/leads/JobCompletionCard"
 import { format, parseISO } from "date-fns"
 import { ClientContractsDropdown } from "@/components/leads/ClientContractsDropdown"
+import { PhotoAssignmentCard } from "@/components/leads/PhotoAssignmentCard"
 import { Textarea } from "@/components/ui/textarea"
 import {
   DropdownMenu,
@@ -1235,6 +1236,9 @@ export default function LeadDetailPage() {
                         <div className="w-28">
                           <JobCompletionCard lead={lead} />
                         </div>
+                        <div className="w-28">
+                          <PhotoAssignmentCard lead={lead} />
+                        </div>
                       </div>
                       
                       <img
@@ -1417,6 +1421,7 @@ export default function LeadDetailPage() {
             </p>
           </DialogContent>
         </Dialog>
+
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
