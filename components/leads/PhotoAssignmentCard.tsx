@@ -27,6 +27,11 @@ const roofingCrews: RoofingCrew[] = [
     id: "fish-jc",
     name: "Fish Jc Construction Services",
     phone: "7344869890"
+  },
+  {
+    id: "osso-homes",
+    name: "Osso Homes LLC",
+    phone: "3137994479"
   }
   // Add more crews here as needed
 ];
