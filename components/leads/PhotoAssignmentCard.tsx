@@ -411,11 +411,11 @@ export function PhotoAssignmentCard({ lead }: PhotoAssignmentCardProps) {
                         <SelectItem 
                           key={crew.id} 
                           value={crew.id}
-                          className="text-black hover:bg-gray-100"
+                          className="bg black text-white hover:bg-gray-100"
                         >
                           <div className="flex flex-col">
-                            <span className="font-medium">{crew.name}</span>
-                            <span className="text-xs text-gray-500">{crew.phone}</span>
+                            <span className="font-medium bg black text-white">{crew.name}</span>
+                            <span className="text-xs bg black text-white">{crew.phone}</span>
                           </div>
                         </SelectItem>
                       ))}
