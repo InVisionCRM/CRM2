@@ -17,7 +17,6 @@ import type { LeadFile } from "@/types/documents"
 import { 
   MapPin, 
   Phone, 
-  Mail, 
   Clock, 
   User, 
   Shield, 
@@ -81,6 +80,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { InlineEditDialog } from "@/components/leads/inline-edit-dialog"
 import { StreetViewTooltip } from "@/components/leads/street-view-tooltip"
 import { LeadFiles } from "@/components/leads/lead-files"
@@ -89,6 +89,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { FileUpload } from "@/components/ui/file-upload"
 import { AddressAutocomplete } from "@/components/route-planner/address-autocomplete"
 import { SimpleFileViewer } from "@/components/SimpleFileViewer"
+import TakePhotoDrawer from "@/components/photos/take-photo-drawer"
 
 // Insurance company list with phone numbers
 const INSURANCE_COMPANIES = [
@@ -139,6 +140,7 @@ interface LeadsListProps {
   assignedTo?: string | null
   onViewActivity: (lead: LeadSummary) => void
   onViewFiles: (lead: LeadSummary) => void
+  onUserFilter?: (userId: string | null) => void
 }
 
 interface EventCreationData {
@@ -341,7 +343,7 @@ const getSalespersonInitials = (name: string | null | undefined): string => {
   return name.split(' ').map(n => n[0]).join('').toUpperCase()
 }
 
-function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?: string }) {
+function NeonLeadCard({ lead, className = "", isFilteredByUser = false }: { lead: LeadSummary, className?: string, isFilteredByUser?: boolean }) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
@@ -820,6 +822,12 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
                   {/* Left: Lead Details */}
                   <div className="flex items-center gap-2 min-w-0">
                     Lead Details
+                    {isFilteredByUser && (
+                      <div className="flex items-center gap-1">
+                        <User className="h-3 w-3 text-blue-400" />
+                        <span className="text-xs text-blue-400">Filtered</span>
+                      </div>
+                    )}
                     <div 
                       className="w-3 h-3 rounded-full animate-pulse"
                       style={{
@@ -1034,7 +1042,12 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
                           </div>
                         <div className="flex items-center gap-2 text-slate-300">
                           <User className="h-4 w-4" />
-                          <span className="text-sm"> {lead.assignedTo || "Unassigned"}</span>
+                          <span className="text-sm">{lead.assignedTo || "Unassigned"}</span>
+                          {lead.assignedToId && (
+                            <span className="text-xs text-slate-500 font-mono bg-slate-800/50 px-1 py-0.5 rounded">
+                              {lead.assignedToId.substring(0, 8)}...
+                            </span>
+                          )}
                         </div>
                           </div>
                       <div className="space-y-3">
@@ -1044,7 +1057,7 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
                       </div>
                         <div className="flex items-center gap-2 text-slate-300">
                           <Activity className="h-4 w-4" />
-                          <span className="text-sm">Last Activity: {formatDate(lead.lastActivity)}</span>
+                          <span className="text-sm">Last Activity: {lead.latestActivity ? formatDate(lead.latestActivity.createdAt) : "N/A"}</span>
                         </div>
                       </div>
                     </div>
@@ -1506,12 +1519,13 @@ function NeonLeadCard({ lead, className = "" }: { lead: LeadSummary, className?:
         onChange={handleFileChange}
         style={{ display: 'none' }}
         accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
+        aria-label="File upload input"
       />
                         </div>
   )
 }
 
-export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, onViewActivity: _onViewActivity, onViewFiles }: LeadsListProps) {
+export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, onViewActivity: _onViewActivity, onViewFiles, onUserFilter }: LeadsListProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
@@ -1524,6 +1538,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
   const [selectedLeadForFileViewer, setSelectedLeadForFileViewer] = useState<string | null>(null)
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([])
   const [showAddressSuggestions, setShowAddressSuggestions] = useState(false)
+  const [photoDrawerOpen, setPhotoDrawerOpen] = useState(false)
+  const [selectedLeadForPhotos, setSelectedLeadForPhotos] = useState<string | null>(null)
 
   // Pagination logic
   const totalPages = Math.ceil(leads.length / pageSize)
@@ -1609,6 +1625,12 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
     setFileUploadModalOpen(true)
   }
 
+  const handleTakePhotos = (leadId: string) => {
+    setSelectedLeadForPhotos(leadId)
+    setPhotoDrawerOpen(true)
+  }
+
+
   const handleFilesUploaded = async (files: File[]) => {
     if (!selectedLeadForFiles) return
     
@@ -1674,6 +1696,12 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
     setAddressSuggestions([])
   }
 
+  const handlePhotoSave = (photoData: any) => {
+    // Handle photo saving logic here
+    console.log('Photo saved:', photoData)
+    // You can add API call to save photo to your backend
+  }
+
   const SpreadsheetView = () => (
     <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
@@ -1682,6 +1710,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
             <tr>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Name</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Created</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Actions</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Phone</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">Email</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Address</th>
@@ -1694,7 +1723,6 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Adjuster Name</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Adj. Phone</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Assigned To</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -1715,6 +1743,83 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                   <span className="text-sm text-gray-900">
                     {lead.createdAt ? format(new Date(lead.createdAt), 'MM/dd/yy') : 'N/A'}
                   </span>
+                </td>
+
+                {/* Actions */}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  <TooltipProvider>
+                    <div className="flex gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0 bg-black text-white hover:bg-green-500 hover:text-white"
+                            asChild
+                          >
+                            <Link href={`/leads/${lead.id}`}>
+                              <Eye className="h-3 w-3" />
+                            </Link>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>View Lead</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0 bg-black text-white hover:bg-green-500 hover:text-white"
+                            onClick={() => {
+                              setSelectedLeadForFileViewer(lead.id);
+                              setFileViewerOpen(true);
+                            }}
+                          >
+                            <FileText className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>View Files</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0 bg-black text-white hover:bg-green-500 hover:text-white"
+                            onClick={() => handleFileUpload(lead.id)}
+                          >
+                            <Upload className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Upload Files</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 w-7 p-0 bg-black text-white hover:bg-purple-500 hover:text-white"
+                            onClick={() => handleTakePhotos(lead.id)}
+                          >
+                            <Camera className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Take Photos</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </TooltipProvider>
                 </td>
 
                 {/* Phone */}
@@ -2109,43 +2214,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                 {/* Assigned To */}
                 <td className="px-3 py-2 whitespace-nowrap">
                   <span className="text-sm text-gray-900">
-                    {getSalespersonInitials(lead.assignedTo)}
+                    {lead.assignedTo || "Unassigned"}
                   </span>
-                </td>
-
-                {/* Actions */}
-                <td className="px-3 py-2 whitespace-nowrap">
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 bg-black text-white hover:bg-green-500 hover:text-white"
-                      asChild
-                    >
-                      <Link href={`/leads/${lead.id}`}>
-                        <Eye className="h-3 w-3" />
-                      </Link>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 bg-black text-white hover:bg-green-500 hover:text-white"
-                      onClick={() => {
-                        setSelectedLeadForFileViewer(lead.id);
-                        setFileViewerOpen(true);
-                      }}
-                    >
-                      <FileText className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 bg-black text-white hover:bg-green-500 hover:text-white"
-                      onClick={() => handleFileUpload(lead.id)}
-                    >
-                      <Upload className="h-3 w-3" />
-                    </Button>
-                  </div>
                 </td>
               </tr>
             ))}
@@ -2209,7 +2279,11 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
         // Card View - Responsive Grid Layout
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-4">
           {currentLeads.map((lead) => (
-            <NeonLeadCard key={lead.id} lead={lead} />
+            <NeonLeadCard 
+              key={lead.id} 
+              lead={lead} 
+              isFilteredByUser={!!_assignedTo}
+            />
           ))}
         </div>
       ) : (
@@ -2314,6 +2388,21 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
             // Optional: Add any refresh logic here if needed
             console.log('File deleted from viewer');
           }}
+        />
+      )}
+
+      {/* Take Photo Drawer */}
+      {selectedLeadForPhotos && (
+        <TakePhotoDrawer
+          open={photoDrawerOpen}
+          onOpenChange={(open) => {
+            setPhotoDrawerOpen(open);
+            if (!open) {
+              setSelectedLeadForPhotos(null);
+            }
+          }}
+          onSavePhoto={handlePhotoSave}
+          leadId={selectedLeadForPhotos}
         />
       )}
     </div>

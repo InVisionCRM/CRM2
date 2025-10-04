@@ -36,7 +36,8 @@ export default function LeadsPage() {
       try {
         const result = await getAssignableUsersAction()
         if (result.success && result.users) {
-          setUsers(result.users.map(u => ({ id: u.id, name: u.name || "Unnamed User", email: u.email || "" })));
+          const mappedUsers = result.users.map(u => ({ id: u.id, name: u.name || "Unnamed User", email: u.email || "" }));
+          setUsers(mappedUsers);
         } else {
           console.error("Failed to fetch users:", result.message);
           setUsers([]);

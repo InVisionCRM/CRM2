@@ -16,6 +16,7 @@ export interface LeadSummary {
   insurancePolicyNumber?: string | null
   insurancePhone?: string | null
   insuranceSecondaryPhone?: string | null
+  insuranceEmail?: string | null
   insuranceDeductible?: string | null
   dateOfLoss?: Date | null
   damageType?: string | null

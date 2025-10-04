@@ -62,7 +62,6 @@ export function StatusDropdownMenu({
             triggerClassName
           )}
         >
-          <span>Status:</span>
           <span className="font-medium">{getActiveStatusTriggerLabel()}</span>
           <ChevronDown className="h-5 w-5 opacity-80" />
         </Button>

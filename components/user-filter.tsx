@@ -11,15 +11,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 export type UserOption = {
   id: string
   name: string
+  email?: string
 }
 
-// Default mock users
-const defaultUsers: UserOption[] = [
-  { id: "user1", name: "Mike Johnson" },
-  { id: "user2", name: "Lisa Brown" },
-  { id: "user3", name: "David Smith" },
-  { id: "user4", name: "Sarah Wilson" },
-]
 
 interface UserFilterProps {
   users: UserOption[]
@@ -31,6 +25,9 @@ interface UserFilterProps {
 export function UserFilter({ users, selectedUser, onUserChange, isLoading = false }: UserFilterProps) {
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<string | null>(selectedUser)
+
+  // Use only real users from database
+  const displayUsers = users
 
   const handleUserChange = (userId: string | null) => {
     setSelected(userId)
@@ -45,8 +42,15 @@ export function UserFilter({ users, selectedUser, onUserChange, isLoading = fals
     return last ? `${first} ${last[0]}.` : first;
   }
 
-  const selectedUserName = selected ? users.find((user) => user.id === selected)?.name || "Users" : "Users";
-  const selectedUserShort = selected && users.find((user) => user.id === selected) ? formatShortName(users.find((user) => user.id === selected)!.name) : "Users";
+  // Helper to get just first name
+  function getFirstName(name: string): string {
+    const [first] = name.split(" ");
+    return first || name;
+  }
+
+  const selectedUserDisplay = selected && displayUsers.find((user) => user.id === selected) 
+    ? getFirstName(displayUsers.find((user) => user.id === selected)!.name)
+    : "Users";
 
   if (isLoading) {
     return <Skeleton className="h-10 w-14" />
@@ -59,10 +63,13 @@ export function UserFilter({ users, selectedUser, onUserChange, isLoading = fals
           variant="outline" 
           role="combobox" 
           aria-expanded={open} 
-          className="w-full sm:w-[120px] justify-between bg-black/20 backdrop-blur-sm border-white/20 hover:bg-black/30 text-lg px-2"
+          className={`w-full sm:w-[120px] justify-between backdrop-blur-sm text-sm px-2 ${
+            selected 
+              ? "bg-blue-500/20 border-blue-400/50 hover:bg-blue-500/30" 
+              : "bg-black/20 border-white/20 hover:bg-black/30"
+          }`}
         >
-          <User className="mr-2 h-5 w-5" />
-          <span className="truncate">{selectedUserShort}</span>
+          <span className="truncate">{selectedUserDisplay}</span>
           <ChevronsUpDown className="ml-2 h-5 w-5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -70,7 +77,9 @@ export function UserFilter({ users, selectedUser, onUserChange, isLoading = fals
         <Command>
           <CommandInput placeholder="Search users..." className="bg-transparent text-lg" />
           <CommandList className="max-h-[200px] overflow-y-auto">
-            <CommandEmpty className="text-white/70 text-lg">No user found.</CommandEmpty>
+            <CommandEmpty className="text-white/70 text-lg">
+              {users.length === 0 ? "No users in database" : "No user found."}
+            </CommandEmpty>
             <CommandGroup>
               <CommandItem
                 onSelect={() => {
@@ -82,7 +91,7 @@ export function UserFilter({ users, selectedUser, onUserChange, isLoading = fals
                 <Check className={cn("mr-2 h-5 w-5", !selected ? "opacity-100" : "opacity-0")} />
                 Users
               </CommandItem>
-              {users.map((user) => (
+              {displayUsers.map((user) => (
                 <CommandItem
                   key={user.id}
                   onSelect={() => {
@@ -92,7 +101,7 @@ export function UserFilter({ users, selectedUser, onUserChange, isLoading = fals
                   className="cursor-pointer hover:bg-white/10 text-lg py-3"
                 >
                   <Check className={cn("mr-2 h-5 w-5", selected === user.id ? "opacity-100" : "opacity-0")} />
-                  {formatShortName(user.name)}
+                  <span>{formatShortName(user.name)}</span>
                 </CommandItem>
               ))}
             </CommandGroup>

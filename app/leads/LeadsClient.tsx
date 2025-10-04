@@ -350,6 +350,7 @@ export default function LeadsClient({
             assignedTo={selectedUser} 
             onViewActivity={handleViewActivity}
             onViewFiles={handleViewFiles}
+            onUserFilter={onUserChange}
           />
         )}
       </div>
