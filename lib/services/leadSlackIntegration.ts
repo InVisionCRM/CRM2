@@ -50,12 +50,18 @@ async function getAdminUsers() {
 export async function createLeadSlackChannel(
   leadData: LeadSlackData
 ): Promise<{ success: boolean; channelId?: string; channelName?: string; error?: string }> {
+  console.log('🔍 [SLACK SERVICE] createLeadSlackChannel called with:', leadData)
+
   try {
     // Initialize Slack service
+    console.log('🔍 [SLACK SERVICE] Initializing SlackService...')
     const slack = new SlackService()
+    console.log('🔍 [SLACK SERVICE] SlackService initialized successfully')
 
     // Get all admin users
+    console.log('🔍 [SLACK SERVICE] Fetching admin users...')
     const adminUsers = await getAdminUsers()
+    console.log('🔍 [SLACK SERVICE] Admin users found:', adminUsers.length)
 
     // Prepare member email list
     const memberEmails: string[] = []
@@ -78,22 +84,30 @@ export async function createLeadSlackChannel(
       memberEmails.push(leadData.assignedTo.email)
     }
 
+    console.log('🔍 [SLACK SERVICE] Member emails to add:', memberEmails)
+
     // Find Slack user IDs from emails
     const memberIds: string[] = []
     for (const email of memberEmails) {
+      console.log('🔍 [SLACK SERVICE] Looking up Slack user for:', email)
       const userResult = await slack.findUserByEmail(email)
       if (userResult.success && userResult.userId) {
+        console.log('🔍 [SLACK SERVICE] Found Slack user ID:', userResult.userId)
         memberIds.push(userResult.userId)
       } else {
-        console.warn(`Could not find Slack user for email: ${email}`)
+        console.warn(`⚠️ [SLACK SERVICE] Could not find Slack user for email: ${email}`, userResult.error)
       }
     }
+
+    console.log('🔍 [SLACK SERVICE] Total Slack user IDs found:', memberIds.length)
 
     // Create channel name - use claim number if available, otherwise use lead ID
     const claimNumber = leadData.leadClaimNumber
     const channelName = claimNumber
       ? `lead-${claimNumber}-${leadData.leadId.substring(0, 8)}`
       : `lead-${leadData.leadId.substring(0, 12)}`
+
+    console.log('🔍 [SLACK SERVICE] Creating channel with name:', channelName)
 
     // Create the channel
     const createResult = await slack.createChannel({
@@ -102,12 +116,17 @@ export async function createLeadSlackChannel(
       members: memberIds
     })
 
+    console.log('🔍 [SLACK SERVICE] Channel creation result:', createResult)
+
     if (!createResult.success || !createResult.channelId) {
+      console.error('❌ [SLACK SERVICE] Channel creation failed:', createResult.error)
       return {
         success: false,
         error: createResult.error || 'Failed to create channel'
       }
     }
+
+    console.log('✅ [SLACK SERVICE] Channel created successfully:', createResult.channelId)
 
     const channelId = createResult.channelId
     const fullChannelName = createResult.channelName || channelName
@@ -219,7 +238,12 @@ export async function createLeadSlackChannel(
       channelName: fullChannelName
     }
   } catch (error: any) {
-    console.error("Error creating lead Slack channel:", error)
+    console.error("❌ [SLACK SERVICE] Error creating lead Slack channel:", error)
+    console.error("❌ [SLACK SERVICE] Error stack:", error.stack)
+    console.error("❌ [SLACK SERVICE] Error message:", error.message)
+    if (error.data) {
+      console.error("❌ [SLACK SERVICE] Error data:", error.data)
+    }
     return {
       success: false,
       error: error.message || "Failed to create lead Slack channel"

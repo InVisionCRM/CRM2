@@ -32,6 +32,8 @@ export class SlackService {
    */
   async createChannel(options: CreateChannelOptions): Promise<{ success: boolean; channelId?: string; channelName?: string; error?: string }> {
     try {
+      console.log('🔍 [SLACK CLIENT] createChannel called with:', options)
+
       // Slack channel names must be lowercase, no spaces, and use hyphens
       const sanitizedName = options.name
         .toLowerCase()
@@ -39,10 +41,15 @@ export class SlackService {
         .replace(/--+/g, '-') // Replace multiple hyphens with single
         .substring(0, 80) // Slack channel name limit
 
+      console.log('🔍 [SLACK CLIENT] Sanitized channel name:', sanitizedName)
+
+      console.log('🔍 [SLACK CLIENT] Calling Slack API conversations.create...')
       const result = await this.client.conversations.create({
         name: sanitizedName,
         is_private: options.isPrivate || false
       })
+
+      console.log('🔍 [SLACK CLIENT] Slack API response:', result)
 
       if (!result.ok || !result.channel) {
         return {
@@ -65,7 +72,12 @@ export class SlackService {
         channelName
       }
     } catch (error: any) {
-      console.error('Error creating Slack channel:', error)
+      console.error('❌ [SLACK CLIENT] Error creating Slack channel:', error)
+      console.error('❌ [SLACK CLIENT] Error message:', error.message)
+      console.error('❌ [SLACK CLIENT] Error code:', error.code)
+      if (error.data) {
+        console.error('❌ [SLACK CLIENT] Error data:', JSON.stringify(error.data, null, 2))
+      }
       return {
         success: false,
         error: error.message || 'Failed to create channel'

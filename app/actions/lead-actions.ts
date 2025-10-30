@@ -15,7 +15,7 @@ import { createStatusChangeActivity } from "@/lib/services/activities"
 import { getCurrentUser } from "@/lib/session"
 import { sendLeadDeletionNotification, sendDeletionRequestNotification } from "@/lib/services/admin-notifications"
 import { createDeletionRequest } from "@/lib/services/deletion-approval"
-import { createLeadChatSpace, updateLeadChatStatus } from "@/lib/services/leadChatIntegration"
+// import { createLeadChatSpace, updateLeadChatStatus } from "@/lib/services/leadChatIntegration"
 import { createLeadSlackChannel, updateLeadSlackStatus } from "@/lib/services/leadSlackIntegration"
 
 export async function createLeadAction(
@@ -124,14 +124,35 @@ export async function createLeadAction(
     // Users can create chat spaces by clicking the "Create Chat Space" button in the lead detail page
 
     // Automatically create Slack channel for new leads
+    console.log('🔍 [SLACK DEBUG] Starting Slack channel creation process...')
+    console.log('🔍 [SLACK DEBUG] Session exists:', !!session)
+    console.log('🔍 [SLACK DEBUG] Session user:', session?.user ? 'YES' : 'NO')
+
     if (session?.user) {
+      console.log('🔍 [SLACK DEBUG] Session user details:', {
+        id: session.user.id,
+        name: session.user.name,
+        email: session.user.email
+      })
+
       try {
+        console.log('🔍 [SLACK DEBUG] Checking for assigned user...')
         const assignedTo = data.assignedToId ? await prisma.user.findUnique({
           where: { id: data.assignedToId },
           select: { id: true, name: true, email: true }
         }) : undefined
 
-        await createLeadSlackChannel({
+        console.log('🔍 [SLACK DEBUG] Assigned user:', assignedTo || 'None')
+
+        console.log('🔍 [SLACK DEBUG] Calling createLeadSlackChannel with data:', {
+          leadId: lead.id,
+          leadName: `${data.firstName} ${data.lastName}`.trim(),
+          leadEmail: data.email,
+          leadAddress: data.address,
+          leadStatus: lead.status,
+        })
+
+        const result = await createLeadSlackChannel({
           leadId: lead.id,
           leadName: `${data.firstName} ${data.lastName}`.trim(),
           leadEmail: data.email,
@@ -149,11 +170,20 @@ export async function createLeadAction(
             email: assignedTo.email || ''
           } : undefined
         })
-        console.log(`✅ Slack channel automatically created for lead ${lead.id}`)
+
+        console.log('🔍 [SLACK DEBUG] createLeadSlackChannel result:', result)
+
+        if (result.success) {
+          console.log(`✅ Slack channel automatically created for lead ${lead.id}`)
+        } else {
+          console.error(`❌ Slack channel creation returned failure for lead ${lead.id}:`, result.error)
+        }
       } catch (slackError) {
         console.error(`❌ Failed to create Slack channel for lead ${lead.id}:`, slackError)
         // Don't fail lead creation if Slack channel creation fails
       }
+    } else {
+      console.log('⚠️ [SLACK DEBUG] No session user found, skipping Slack channel creation')
     }
 
     revalidatePath("/leads");
@@ -382,24 +412,24 @@ export async function updateLeadStatus(
       },
     });
 
-            // Update Google Chat with status change
-        if (session?.accessToken) {
-          try {
-            await updateLeadChatStatus(
-              id,
-              formatStatusLabel(oldStatus),
-              formatStatusLabel(status),
-              {
-                name: session.user.name || 'Unknown User',
-                email: session.user.email || ''
-              },
-              session
-            )
-          } catch (chatError: any) {
-            console.error(`Error updating Google Chat for lead ${id}:`, chatError.message || chatError)
-            // Don't fail status update if chat update fails
-          }
-        }
+            // Update Google Chat with status change - DISABLED
+        // if (session?.accessToken) {
+        //   try {
+        //     await updateLeadChatStatus(
+        //       id,
+        //       formatStatusLabel(oldStatus),
+        //       formatStatusLabel(status),
+        //       {
+        //         name: session.user.name || 'Unknown User',
+        //         email: session.user.email || ''
+        //       },
+        //       session
+        //     )
+        //   } catch (chatError: any) {
+        //     console.error(`Error updating Google Chat for lead ${id}:`, chatError.message || chatError)
+        //     // Don't fail status update if chat update fails
+        //   }
+        // }
 
         // Update Slack channel with status change
         try {

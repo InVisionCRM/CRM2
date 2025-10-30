@@ -3,6 +3,7 @@ import { Lead, ActivityType, LeadStatus, UserRole } from '@prisma/client'
 import { nanoid } from "nanoid"
 import crypto from "crypto"
 import type { SortField, SortOrder } from "@/app/leads/page"
+import { createLeadSlackChannel } from "@/lib/services/leadSlackIntegration"
 
 interface GetLeadsOptions {
   status?: LeadStatus | null
@@ -262,6 +263,58 @@ export async function createLead(data: CreateLeadInput): Promise<Lead> {
         leadId: lead.id,
       }
     })
+
+    // Create Slack channel for the new lead
+    console.log('🔍 [CREATE LEAD] Attempting to create Slack channel for lead:', lead.id)
+    try {
+      // Get user information for Slack integration
+      const creator = await prisma.user.findUnique({
+        where: { id: data.userId },
+        select: { id: true, name: true, email: true }
+      })
+
+      const assignedUser = data.assignedToId ? await prisma.user.findUnique({
+        where: { id: data.assignedToId },
+        select: { id: true, name: true, email: true }
+      }) : null
+
+      if (creator) {
+        console.log('🔍 [CREATE LEAD] Creator found:', creator.email)
+        console.log('🔍 [CREATE LEAD] Assigned user:', assignedUser?.email || 'None')
+
+        const result = await createLeadSlackChannel({
+          leadId: lead.id,
+          leadName: `${lead.firstName} ${lead.lastName}`.trim(),
+          leadEmail: lead.email || undefined,
+          leadAddress: lead.address || undefined,
+          leadStatus: lead.status,
+          leadClaimNumber: lead.claimNumber || undefined,
+          createdBy: {
+            id: creator.id,
+            name: creator.name || 'Unknown User',
+            email: creator.email || ''
+          },
+          assignedTo: assignedUser ? {
+            id: assignedUser.id,
+            name: assignedUser.name || 'Unknown User',
+            email: assignedUser.email || ''
+          } : undefined
+        })
+
+        console.log('🔍 [CREATE LEAD] Slack channel creation result:', result)
+
+        if (result.success) {
+          console.log(`✅ [CREATE LEAD] Slack channel created for lead ${lead.id}`)
+        } else {
+          console.error(`❌ [CREATE LEAD] Slack channel creation failed: ${result.error}`)
+        }
+      } else {
+        console.error('❌ [CREATE LEAD] Creator user not found:', data.userId)
+      }
+    } catch (slackError) {
+      console.error(`❌ [CREATE LEAD] Error creating Slack channel:`, slackError)
+      // Don't fail lead creation if Slack fails
+    }
 
     return lead
   } catch (error) {
