@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
-import { createLeadSlackChannel } from '@/lib/services/leadSlackIntegration'
+import { createLeadSlackChannel, updateLeadSlackStatus } from '@/lib/services/leadSlackIntegration'
 import crypto from 'crypto'
 
 /**
@@ -39,6 +39,222 @@ function verifySlackRequest(request: NextRequest, body: string): boolean {
     Buffer.from(mySignature),
     Buffer.from(slackSignature)
   )
+}
+
+/**
+ * Handle button click for changing lead status
+ */
+async function handleStatusChangeButton(payload: any) {
+  console.log('🔍 [SLACK INTERACT] Handling status change button click')
+
+  try {
+    const actionId = payload.actions[0]?.action_id
+    const leadId = actionId?.replace('change_status_', '')
+
+    if (!leadId) {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+    }
+
+    // Get lead details
+    const lead = await prisma.lead.findUnique({
+      where: { id: leadId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        status: true
+      }
+    })
+
+    if (!lead) {
+      return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
+    }
+
+    const leadName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown'
+    const slackToken = process.env.SLACK_BOT_TOKEN
+
+    // Open modal
+    const modalResponse = await fetch('https://slack.com/api/views.open', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${slackToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        trigger_id: payload.trigger_id,
+        view: {
+          type: 'modal',
+          callback_id: `change_status_modal_${lead.id}`,
+          title: {
+            type: 'plain_text',
+            text: 'Change Lead Status'
+          },
+          submit: {
+            type: 'plain_text',
+            text: 'Update Status'
+          },
+          close: {
+            type: 'plain_text',
+            text: 'Cancel'
+          },
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `*Lead:* ${leadName}\n*Current Status:* ${lead.status}`
+              }
+            },
+            {
+              type: 'divider'
+            },
+            {
+              type: 'input',
+              block_id: 'status_block',
+              label: {
+                type: 'plain_text',
+                text: 'New Status'
+              },
+              element: {
+                type: 'static_select',
+                action_id: 'status_select',
+                placeholder: {
+                  type: 'plain_text',
+                  text: 'Select new status'
+                },
+                options: [
+                  { text: { type: 'plain_text', text: '👀 Follow Ups' }, value: 'follow_ups' },
+                  { text: { type: 'plain_text', text: '✍️ Signed Contract' }, value: 'signed_contract' },
+                  { text: { type: 'plain_text', text: '📆 Scheduled' }, value: 'scheduled' },
+                  { text: { type: 'plain_text', text: '🎨 Colors' }, value: 'colors' },
+                  { text: { type: 'plain_text', text: '💰 ACV' }, value: 'acv' },
+                  { text: { type: 'plain_text', text: '🚧 Job' }, value: 'job' },
+                  { text: { type: 'plain_text', text: '✅ Completed Jobs' }, value: 'completed_jobs' },
+                  { text: { type: 'plain_text', text: '📄💯 Zero Balance' }, value: 'zero_balance' },
+                  { text: { type: 'plain_text', text: '💀 Denied' }, value: 'denied' }
+                ]
+              }
+            }
+          ]
+        }
+      })
+    })
+
+    return NextResponse.json({})
+  } catch (error) {
+    console.error('❌ [SLACK INTERACT] Error handling status change button:', error)
+    return NextResponse.json({ error: 'Error' }, { status: 500 })
+  }
+}
+
+/**
+ * Handle modal submission for changing lead status
+ */
+async function handleStatusChangeModal(payload: any) {
+  console.log('🔍 [SLACK INTERACT] Handling status change modal submission')
+
+  try {
+    const callbackId = payload.view.callback_id
+    const leadId = callbackId.replace('change_status_modal_', '')
+
+    // Extract new status from modal
+    const values = payload.view.state.values
+    const newStatus = values.status_block?.status_select?.selected_option?.value
+
+    if (!newStatus) {
+      return {
+        response_action: 'errors',
+        errors: {
+          status_block: 'Please select a status'
+        }
+      }
+    }
+
+    // Get lead and user info
+    const lead = await prisma.lead.findUnique({
+      where: { id: leadId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        status: true
+      }
+    })
+
+    if (!lead) {
+      return {
+        response_action: 'errors',
+        errors: {
+          status_block: 'Lead not found'
+        }
+      }
+    }
+
+    const oldStatus = lead.status
+
+    // Get Slack user email
+    const slackToken = process.env.SLACK_BOT_TOKEN
+    const slackUserId = payload.user.id
+
+    const userInfoResponse = await fetch(`https://slack.com/api/users.info?user=${slackUserId}`, {
+      headers: {
+        'Authorization': `Bearer ${slackToken}`
+      }
+    })
+    const userInfo = await userInfoResponse.json()
+
+    if (!userInfo.ok || !userInfo.user?.profile?.email) {
+      throw new Error('Could not retrieve user email from Slack')
+    }
+
+    const userEmail = userInfo.user.profile.email
+    const userName = userInfo.user.name || 'Unknown User'
+
+    // Update lead status in database
+    await prisma.lead.update({
+      where: { id: leadId },
+      data: { status: newStatus }
+    })
+
+    // Create activity
+    const crmUser = await prisma.user.findUnique({
+      where: { email: userEmail },
+      select: { id: true, name: true }
+    })
+
+    if (crmUser) {
+      await prisma.activity.create({
+        data: {
+          leadId: leadId,
+          userId: crmUser.id,
+          type: 'NOTE',
+          description: `Status changed from ${oldStatus} to ${newStatus} via Slack`
+        }
+      })
+    }
+
+    // Update Slack channel (rename + post message)
+    const updateResult = await updateLeadSlackStatus(
+      leadId,
+      oldStatus,
+      newStatus,
+      { name: userName, email: userEmail }
+    )
+
+    console.log('✅ [SLACK INTERACT] Status updated successfully')
+
+    return {
+      response_action: 'clear'
+    }
+  } catch (error) {
+    console.error('❌ [SLACK INTERACT] Error changing status:', error)
+    return {
+      response_action: 'errors',
+      errors: {
+        status_block: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      }
+    }
+  }
 }
 
 /**
@@ -297,23 +513,33 @@ export async function POST(request: NextRequest) {
     let response
 
     switch (payload.type) {
+      case 'block_actions':
+        // Handle button clicks and other block actions
+        const actionId = payload.actions[0]?.action_id
+
+        if (actionId?.startsWith('change_status_')) {
+          return await handleStatusChangeButton(payload)
+        }
+
+        console.error('❌ [SLACK INTERACT] Unknown action_id:', actionId)
+        return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
+
       case 'view_submission':
         // Handle modal submissions
         const callbackId = payload.view.callback_id
 
-        switch (callbackId) {
-          case 'create_lead_modal':
-            response = await handleCreateLeadModal(payload)
-            break
-
-          default:
-            console.error('❌ [SLACK INTERACT] Unknown callback_id:', callbackId)
-            response = {
-              response_action: 'errors',
-              errors: {
-                base: 'Unknown form submission'
-              }
+        if (callbackId === 'create_lead_modal') {
+          response = await handleCreateLeadModal(payload)
+        } else if (callbackId?.startsWith('change_status_modal_')) {
+          response = await handleStatusChangeModal(payload)
+        } else {
+          console.error('❌ [SLACK INTERACT] Unknown callback_id:', callbackId)
+          response = {
+            response_action: 'errors',
+            errors: {
+              base: 'Unknown form submission'
             }
+          }
         }
         break
 

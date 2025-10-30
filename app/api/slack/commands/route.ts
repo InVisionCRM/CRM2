@@ -356,6 +356,248 @@ async function handleNewLeadCommand(triggerId: string) {
 }
 
 /**
+ * Handle /cs command (change status)
+ * Search for a lead and allow changing its status
+ */
+async function handleStatusCommand(text: string, triggerId: string, userId: string) {
+  console.log('🔍 [SLACK CMD] /cs command called with text:', text)
+
+  if (!text || text.trim() === '') {
+    return {
+      response_type: 'ephemeral',
+      text: '❌ Please provide a search term (name or claim number)',
+      blocks: [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: '*Usage:* `/cs [first name or last name or claim #]`\n\n*Examples:*\n• `/cs John`\n• `/cs Smith`\n• `/cs 12345`'
+          }
+        }
+      ]
+    }
+  }
+
+  const searchTerm = text.trim()
+
+  try {
+    // Search leads by first name, last name, or claim number
+    const leads = await prisma.lead.findMany({
+      where: {
+        OR: [
+          { firstName: { contains: searchTerm, mode: 'insensitive' } },
+          { lastName: { contains: searchTerm, mode: 'insensitive' } },
+          { claimNumber: { contains: searchTerm, mode: 'insensitive' } }
+        ]
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        claimNumber: true,
+        status: true,
+        address: true
+      },
+      take: 10
+    })
+
+    if (leads.length === 0) {
+      return {
+        response_type: 'ephemeral',
+        text: `❌ No leads found matching "${searchTerm}"`
+      }
+    }
+
+    // If only one lead found, open modal immediately
+    if (leads.length === 1) {
+      const lead = leads[0]
+      return await openStatusChangeModal(triggerId, lead)
+    }
+
+    // If multiple leads found, show selection
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
+
+    const blocks: any[] = [
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*Found ${leads.length} leads matching "${searchTerm}". Click a button to change status:*`
+        }
+      },
+      {
+        type: 'divider'
+      }
+    ]
+
+    leads.forEach(lead => {
+      const leadName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown'
+      const claimInfo = lead.claimNumber ? ` | Claim #${lead.claimNumber}` : ''
+      const statusInfo = lead.status ? ` | ${formatStatus(lead.status)}` : ''
+
+      blocks.push({
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*${leadName}*${claimInfo}${statusInfo}\n📍 ${lead.address || 'No address'}`
+        },
+        accessory: {
+          type: 'button',
+          text: {
+            type: 'plain_text',
+            text: 'Change Status'
+          },
+          value: lead.id,
+          action_id: `change_status_${lead.id}`
+        }
+      })
+    })
+
+    return {
+      response_type: 'ephemeral',
+      blocks
+    }
+  } catch (error) {
+    console.error('❌ [SLACK CMD] Error in /status command:', error)
+    return {
+      response_type: 'ephemeral',
+      text: '❌ Error searching for leads. Please try again.'
+    }
+  }
+}
+
+/**
+ * Open modal to change lead status
+ */
+async function openStatusChangeModal(triggerId: string, lead: any) {
+  const slackToken = process.env.SLACK_BOT_TOKEN
+  if (!slackToken) {
+    return {
+      response_type: 'ephemeral',
+      text: '❌ Slack integration not configured.'
+    }
+  }
+
+  const leadName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown'
+
+  try {
+    const modalResponse = await fetch('https://slack.com/api/views.open', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${slackToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        trigger_id: triggerId,
+        view: {
+          type: 'modal',
+          callback_id: `change_status_modal_${lead.id}`,
+          title: {
+            type: 'plain_text',
+            text: 'Change Lead Status'
+          },
+          submit: {
+            type: 'plain_text',
+            text: 'Update Status'
+          },
+          close: {
+            type: 'plain_text',
+            text: 'Cancel'
+          },
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `*Lead:* ${leadName}\n*Current Status:* ${formatStatus(lead.status)}`
+              }
+            },
+            {
+              type: 'divider'
+            },
+            {
+              type: 'input',
+              block_id: 'status_block',
+              label: {
+                type: 'plain_text',
+                text: 'New Status'
+              },
+              element: {
+                type: 'static_select',
+                action_id: 'status_select',
+                placeholder: {
+                  type: 'plain_text',
+                  text: 'Select new status'
+                },
+                options: [
+                  {
+                    text: { type: 'plain_text', text: '👀 Follow Ups' },
+                    value: 'follow_ups'
+                  },
+                  {
+                    text: { type: 'plain_text', text: '✍️ Signed Contract' },
+                    value: 'signed_contract'
+                  },
+                  {
+                    text: { type: 'plain_text', text: '📆 Scheduled' },
+                    value: 'scheduled'
+                  },
+                  {
+                    text: { type: 'plain_text', text: '🎨 Colors' },
+                    value: 'colors'
+                  },
+                  {
+                    text: { type: 'plain_text', text: '💰 ACV' },
+                    value: 'acv'
+                  },
+                  {
+                    text: { type: 'plain_text', text: '🚧 Job' },
+                    value: 'job'
+                  },
+                  {
+                    text: { type: 'plain_text', text: '✅ Completed Jobs' },
+                    value: 'completed_jobs'
+                  },
+                  {
+                    text: { type: 'plain_text', text: '📄💯 Zero Balance' },
+                    value: 'zero_balance'
+                  },
+                  {
+                    text: { type: 'plain_text', text: '💀 Denied' },
+                    value: 'denied'
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      })
+    })
+
+    const modalData = await modalResponse.json()
+
+    if (!modalData.ok) {
+      console.error('❌ [SLACK CMD] Failed to open modal:', modalData)
+      return {
+        response_type: 'ephemeral',
+        text: `❌ Failed to open modal: ${modalData.error || 'Unknown error'}`
+      }
+    }
+
+    return {
+      response_type: 'ephemeral',
+      text: ''
+    }
+  } catch (error) {
+    console.error('❌ [SLACK CMD] Error opening modal:', error)
+    return {
+      response_type: 'ephemeral',
+      text: '❌ Error opening status change form. Please try again.'
+    }
+  }
+}
+
+/**
  * Handle /myleads command
  * Show all leads assigned to the user
  */
@@ -562,6 +804,10 @@ export async function POST(request: NextRequest) {
         response = await handleNewLeadCommand(params.get('trigger_id') || '')
         break
 
+      case '/cs':
+        response = await handleStatusCommand(text, params.get('trigger_id') || '', userId)
+        break
+
       case '/myleads':
         // For /myleads, we need to get the user's email
         // Slack doesn't always provide user_email in slash command payload
@@ -624,7 +870,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     status: 'ok',
     message: 'Slack commands endpoint is working',
-    availableCommands: ['/lead', '/myleads', '/newlead'],
+    availableCommands: ['/lead', '/myleads', '/newlead', '/cs'],
     timestamp: new Date().toISOString()
   })
 }
