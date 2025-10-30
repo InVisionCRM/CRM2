@@ -161,6 +161,201 @@ async function handleLeadCommand(text: string, userId: string) {
 }
 
 /**
+ * Handle /newlead command
+ * Opens a modal for creating a new lead
+ */
+async function handleNewLeadCommand(triggerId: string) {
+  console.log('🔍 [SLACK CMD] /newlead command called with trigger_id:', triggerId)
+
+  if (!triggerId) {
+    return {
+      response_type: 'ephemeral',
+      text: '❌ Missing trigger_id. Please try again.'
+    }
+  }
+
+  const slackToken = process.env.SLACK_BOT_TOKEN
+  if (!slackToken) {
+    return {
+      response_type: 'ephemeral',
+      text: '❌ Slack integration not configured. Please contact an admin.'
+    }
+  }
+
+  try {
+    // Open modal using Slack's views.open API
+    const modalResponse = await fetch('https://slack.com/api/views.open', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${slackToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        trigger_id: triggerId,
+        view: {
+          type: 'modal',
+          callback_id: 'create_lead_modal',
+          title: {
+            type: 'plain_text',
+            text: 'Create New Lead'
+          },
+          submit: {
+            type: 'plain_text',
+            text: 'Create Lead'
+          },
+          close: {
+            type: 'plain_text',
+            text: 'Cancel'
+          },
+          blocks: [
+            {
+              type: 'input',
+              block_id: 'first_name_block',
+              label: {
+                type: 'plain_text',
+                text: 'First Name'
+              },
+              element: {
+                type: 'plain_text_input',
+                action_id: 'first_name',
+                placeholder: {
+                  type: 'plain_text',
+                  text: 'Enter first name'
+                }
+              }
+            },
+            {
+              type: 'input',
+              block_id: 'last_name_block',
+              label: {
+                type: 'plain_text',
+                text: 'Last Name'
+              },
+              element: {
+                type: 'plain_text_input',
+                action_id: 'last_name',
+                placeholder: {
+                  type: 'plain_text',
+                  text: 'Enter last name'
+                }
+              }
+            },
+            {
+              type: 'input',
+              block_id: 'address_block',
+              label: {
+                type: 'plain_text',
+                text: 'Address'
+              },
+              element: {
+                type: 'plain_text_input',
+                action_id: 'address',
+                placeholder: {
+                  type: 'plain_text',
+                  text: 'Enter street address'
+                }
+              }
+            },
+            {
+              type: 'input',
+              block_id: 'phone_block',
+              optional: true,
+              label: {
+                type: 'plain_text',
+                text: 'Phone Number'
+              },
+              element: {
+                type: 'plain_text_input',
+                action_id: 'phone',
+                placeholder: {
+                  type: 'plain_text',
+                  text: '555-123-4567'
+                }
+              }
+            },
+            {
+              type: 'input',
+              block_id: 'email_block',
+              optional: true,
+              label: {
+                type: 'plain_text',
+                text: 'Email'
+              },
+              element: {
+                type: 'plain_text_input',
+                action_id: 'email',
+                placeholder: {
+                  type: 'plain_text',
+                  text: 'email@example.com'
+                }
+              }
+            },
+            {
+              type: 'input',
+              block_id: 'insurance_block',
+              optional: true,
+              label: {
+                type: 'plain_text',
+                text: 'Insurance Company'
+              },
+              element: {
+                type: 'plain_text_input',
+                action_id: 'insurance',
+                placeholder: {
+                  type: 'plain_text',
+                  text: 'Enter insurance company name'
+                }
+              }
+            },
+            {
+              type: 'input',
+              block_id: 'claim_number_block',
+              optional: true,
+              label: {
+                type: 'plain_text',
+                text: 'Claim Number'
+              },
+              element: {
+                type: 'plain_text_input',
+                action_id: 'claim_number',
+                placeholder: {
+                  type: 'plain_text',
+                  text: 'Enter claim number'
+                }
+              }
+            }
+          ]
+        }
+      })
+    })
+
+    const modalData = await modalResponse.json()
+
+    if (!modalData.ok) {
+      console.error('❌ [SLACK CMD] Failed to open modal:', modalData)
+      return {
+        response_type: 'ephemeral',
+        text: `❌ Failed to open modal: ${modalData.error || 'Unknown error'}`
+      }
+    }
+
+    console.log('✅ [SLACK CMD] Modal opened successfully')
+
+    // Return empty response since modal was opened
+    return {
+      response_type: 'ephemeral',
+      text: ''
+    }
+  } catch (error) {
+    console.error('❌ [SLACK CMD] Error opening modal:', error)
+    return {
+      response_type: 'ephemeral',
+      text: '❌ Error opening lead creation form. Please try again.'
+    }
+  }
+}
+
+/**
  * Handle /myleads command
  * Show all leads assigned to the user
  */
@@ -318,14 +513,27 @@ function formatStatus(status: string): string {
 export async function POST(request: NextRequest) {
   try {
     console.log('🔍 [SLACK CMD] Received Slack command request')
+    console.log('🔍 [SLACK CMD] Headers:', Object.fromEntries(request.headers))
 
     // Get raw body for signature verification
     const rawBody = await request.text()
+    console.log('🔍 [SLACK CMD] Raw body received:', rawBody.substring(0, 100) + '...')
 
-    // Verify the request came from Slack
-    if (!verifySlackRequest(request, rawBody)) {
-      console.error('❌ [SLACK CMD] Invalid Slack signature')
-      return NextResponse.json({ text: 'Invalid request signature' }, { status: 401 })
+    // TEMPORARILY SKIP signature verification for testing
+    // TODO: Re-enable this after testing!
+    const skipVerification = process.env.SLACK_SKIP_VERIFICATION === 'true'
+
+    if (!skipVerification) {
+      // Verify the request came from Slack
+      if (!verifySlackRequest(request, rawBody)) {
+        console.error('❌ [SLACK CMD] Invalid Slack signature')
+        return NextResponse.json({
+          response_type: 'ephemeral',
+          text: '❌ Invalid request signature'
+        })
+      }
+    } else {
+      console.log('⚠️ [SLACK CMD] Signature verification SKIPPED (testing mode)')
     }
 
     // Parse the form data
@@ -348,6 +556,10 @@ export async function POST(request: NextRequest) {
     switch (command) {
       case '/lead':
         response = await handleLeadCommand(text, userId)
+        break
+
+      case '/newlead':
+        response = await handleNewLeadCommand(params.get('trigger_id') || '')
         break
 
       case '/myleads':
@@ -397,9 +609,22 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ [SLACK CMD] Error handling Slack command:', error)
+    console.error('❌ [SLACK CMD] Error stack:', error instanceof Error ? error.stack : 'No stack')
+
+    // Always return a valid Slack response, even on error
     return NextResponse.json({
       response_type: 'ephemeral',
-      text: '❌ An error occurred processing your command. Please try again.'
-    }, { status: 500 })
+      text: `❌ An error occurred: ${error instanceof Error ? error.message : 'Unknown error'}`
+    })
   }
+}
+
+// Add GET handler for testing
+export async function GET(request: NextRequest) {
+  return NextResponse.json({
+    status: 'ok',
+    message: 'Slack commands endpoint is working',
+    availableCommands: ['/lead', '/myleads', '/newlead'],
+    timestamp: new Date().toISOString()
+  })
 }

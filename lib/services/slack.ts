@@ -138,15 +138,20 @@ export class SlackService {
   /**
    * Send a message to a channel
    */
-  async sendMessage(channelId: string, message: SlackMessage): Promise<{ success: boolean; error?: string }> {
+  async sendMessage(channelId: string, message: SlackMessage): Promise<{ success: boolean; error?: string; timestamp?: string }> {
     try {
-      await this.client.chat.postMessage({
+      const result = await this.client.chat.postMessage({
         channel: channelId,
         text: message.text || '',
-        blocks: message.blocks
+        blocks: message.blocks,
+        unfurl_links: true,  // Enable link unfurling for Google Drive links
+        unfurl_media: true   // Enable media unfurling
       })
 
-      return { success: true }
+      return {
+        success: true,
+        timestamp: result.ts  // Return message timestamp for pinning
+      }
     } catch (error: any) {
       console.error('Error sending message to Slack channel:', error)
       return {
@@ -242,6 +247,60 @@ export class SlackService {
       return {
         success: false,
         error: error.message || 'Failed to set channel topic'
+      }
+    }
+  }
+
+  /**
+   * Rename a Slack channel
+   */
+  async renameChannel(channelId: string, newName: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const result = await this.client.conversations.rename({
+        channel: channelId,
+        name: newName
+      })
+
+      if (!result.ok) {
+        return {
+          success: false,
+          error: 'Failed to rename channel'
+        }
+      }
+
+      return { success: true }
+    } catch (error: any) {
+      console.error('Error renaming Slack channel:', error)
+      return {
+        success: false,
+        error: error.message || 'Failed to rename channel'
+      }
+    }
+  }
+
+  /**
+   * Pin a message to a channel
+   */
+  async pinMessage(channelId: string, messageTimestamp: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const result = await this.client.pins.add({
+        channel: channelId,
+        timestamp: messageTimestamp
+      })
+
+      if (!result.ok) {
+        return {
+          success: false,
+          error: 'Failed to pin message'
+        }
+      }
+
+      return { success: true }
+    } catch (error: any) {
+      console.error('Error pinning message to Slack channel:', error)
+      return {
+        success: false,
+        error: error.message || 'Failed to pin message'
       }
     }
   }

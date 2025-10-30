@@ -31,8 +31,11 @@ npm run pwa:screenshots    # Generate PWA screenshots only
 npm run analyze            # Bundle analyzer
 npm run lighthouse         # Run Lighthouse performance audit
 
-# Google Chat integration
-npm run create-chat-spaces # Create chat spaces for existing leads
+# Integrations
+npm run create-chat-spaces      # Create Google Chat spaces for existing leads
+npm run create-slack-channels   # Create Slack channels for existing leads
+npm run populate-slack-channels # Add welcome messages to existing Slack channels
+npm run rename-slack-channels   # Rename Slack channels with status prefixes (auto-sort)
 ```
 
 ## Architecture Overview

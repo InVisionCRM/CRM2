@@ -2,13 +2,53 @@ import { prisma } from "@/lib/db/prisma"
 import { SlackService } from "./slack"
 import { UserRole } from "@prisma/client"
 
+/**
+ * Map lead status to numbered abbreviation prefix for channel naming
+ * This ensures channels auto-sort by status in the correct order
+ */
+export function getStatusPrefix(status: string): string {
+  const statusMap: Record<string, string> = {
+    'follow_ups': '1-fup',
+    'signed_contract': '2-sign',
+    'scheduled': '3-sched',
+    'colors': '4-color',
+    'acv': '5-acv',
+    'job': '6-job',
+    'completed_jobs': '7-comp',
+    'zero_balance': '8-zero',
+    'denied': '9-deny'
+  }
+  return statusMap[status.toLowerCase()] || '0-unk'
+}
+
+/**
+ * Generate channel name with numbered status abbreviation prefix
+ * Format: {number}-{abbrev}-lead-firstname-lastname
+ * Example: 1-fup-lead-john-doe
+ */
+export function generateChannelName(firstName: string, lastName: string, status: string): string {
+  const prefix = getStatusPrefix(status)
+  const sanitizedFirstName = firstName.toLowerCase().trim()
+  const sanitizedLastName = lastName.toLowerCase().trim()
+
+  return lastName
+    ? `${prefix}-lead-${sanitizedFirstName}-${sanitizedLastName}`
+    : `${prefix}-lead-${sanitizedFirstName}`
+}
+
 export interface LeadSlackData {
   leadId: string
   leadName: string
   leadEmail?: string
+  leadPhone?: string
   leadAddress?: string
   leadStatus: string
   leadClaimNumber?: string
+  leadInsuranceCompany?: string
+  leadDateOfLoss?: Date
+  leadDamageType?: string
+  googleDriveFolderId?: string
+  googleDriveUrl?: string
   createdBy: {
     id: string
     name: string
@@ -101,11 +141,14 @@ export async function createLeadSlackChannel(
 
     console.log('🔍 [SLACK SERVICE] Total Slack user IDs found:', memberIds.length)
 
-    // Create channel name - use claim number if available, otherwise use lead ID
-    const claimNumber = leadData.leadClaimNumber
-    const channelName = claimNumber
-      ? `lead-${claimNumber}-${leadData.leadId.substring(0, 8)}`
-      : `lead-${leadData.leadId.substring(0, 12)}`
+    // Create channel name with status prefix: {status}-lead-firstname-lastname
+    // Extract first and last name from leadName
+    const nameParts = leadData.leadName.split(' ')
+    const firstName = nameParts[0] || 'unknown'
+    const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : ''
+
+    // Build channel name with status prefix (e.g., 1-lead-john-doe)
+    const channelName = generateChannelName(firstName, lastName, leadData.leadStatus)
 
     console.log('🔍 [SLACK SERVICE] Creating channel with name:', channelName)
 
@@ -141,12 +184,18 @@ export async function createLeadSlackChannel(
     })
 
     // Set channel topic with lead info
-    const claimInfo = claimNumber ? ` | Claim #${claimNumber}` : ''
+    const claimInfo = leadData.leadClaimNumber ? ` | Claim #${leadData.leadClaimNumber}` : ''
     const topic = `Lead: ${leadData.leadName}${claimInfo} | Status: ${leadData.leadStatus}`
     await slack.setChannelTopic(channelId, topic)
 
     // Send welcome message to the channel
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
+
+    // Format date of loss
+    const dateOfLoss = leadData.leadDateOfLoss
+      ? new Date(leadData.leadDateOfLoss).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : 'null'
+
     const welcomeMessage = {
       text: `🎉 Lead Channel Created: ${leadData.leadName}`,
       blocks: [
@@ -162,19 +211,43 @@ export async function createLeadSlackChannel(
           fields: [
             {
               type: "mrkdwn",
-              text: `*Claim #:*\n${claimNumber || 'Not yet assigned'}`
-            },
-            {
-              type: "mrkdwn",
               text: `*Status:*\n${leadData.leadStatus}`
             },
             {
               type: "mrkdwn",
-              text: `*Email:*\n${leadData.leadEmail || 'Not provided'}`
+              text: `*Salesperson:*\n${leadData.assignedTo?.name || 'null'}`
             },
             {
               type: "mrkdwn",
-              text: `*Address:*\n${leadData.leadAddress || 'Not provided'}`
+              text: `*Phone:*\n${leadData.leadPhone || 'null'}`
+            },
+            {
+              type: "mrkdwn",
+              text: `*Email:*\n${leadData.leadEmail || 'null'}`
+            },
+            {
+              type: "mrkdwn",
+              text: `*Address:*\n${leadData.leadAddress || 'null'}`
+            },
+            {
+              type: "mrkdwn",
+              text: `*Claim #:*\n${leadData.leadClaimNumber || 'null'}`
+            },
+            {
+              type: "mrkdwn",
+              text: `*Insurance:*\n${leadData.leadInsuranceCompany || 'null'}`
+            },
+            {
+              type: "mrkdwn",
+              text: `*Date of Loss:*\n${dateOfLoss}`
+            },
+            {
+              type: "mrkdwn",
+              text: `*Damage Type:*\n${leadData.leadDamageType || 'null'}`
+            },
+            {
+              type: "mrkdwn",
+              text: `*Created By:*\n${leadData.createdBy.name}`
             }
           ]
         },
@@ -200,7 +273,54 @@ export async function createLeadSlackChannel(
       ]
     }
 
-    await slack.sendMessage(channelId, welcomeMessage)
+    // Send welcome message and pin it
+    const welcomeResult = await slack.sendMessage(channelId, welcomeMessage)
+
+    if (welcomeResult.success && welcomeResult.timestamp) {
+      // Pin the welcome message
+      const pinResult = await slack.pinMessage(channelId, welcomeResult.timestamp)
+      if (pinResult.success) {
+        console.log('✅ [SLACK SERVICE] Welcome message pinned')
+      } else {
+        console.error('❌ [SLACK SERVICE] Failed to pin welcome message:', pinResult.error)
+      }
+    }
+
+    // Post Google Drive folder link (for Drive app unfurling)
+    if (leadData.googleDriveFolderId || leadData.googleDriveUrl) {
+      const driveUrl = leadData.googleDriveUrl || `https://drive.google.com/drive/folders/${leadData.googleDriveFolderId}`
+
+      await slack.sendMessage(channelId, {
+        text: `📁 *Lead Files*\n\nAll files for this lead are stored here:\n${driveUrl}\n\n_Tip: The Google Drive app will show file previews and updates in the Files tab._`,
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `📁 *Lead Files*\n\nAll files for this lead are stored in Google Drive:`
+            }
+          },
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `<${driveUrl}|📂 Open Drive Folder>`
+            }
+          },
+          {
+            type: "context",
+            elements: [
+              {
+                type: "mrkdwn",
+                text: "_💡 Install the Google Drive app in Slack to see file previews and updates automatically_"
+              }
+            ]
+          }
+        ]
+      })
+
+      console.log('✅ [SLACK SERVICE] Google Drive folder link posted')
+    }
 
     // Send Street View image if address is available
     if (leadData.leadAddress && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
@@ -328,8 +448,28 @@ export async function updateLeadSlackStatus(
     const claimInfo = lead.claimNumber ? ` (Claim #${lead.claimNumber})` : ''
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
 
+    // Rename channel with new status prefix
+    const firstName = lead.firstName || 'unknown'
+    const lastName = lead.lastName || ''
+    const newChannelName = generateChannelName(firstName, lastName, newStatus)
+
+    console.log(`🔍 [SLACK SERVICE] Renaming channel from ${lead.slackChannelName} to ${newChannelName}`)
+    const renameResult = await slack.renameChannel(lead.slackChannelId, newChannelName)
+
+    if (renameResult.success) {
+      // Update database with new channel name
+      await prisma.lead.update({
+        where: { id: leadId },
+        data: { slackChannelName: newChannelName }
+      })
+      console.log(`✅ [SLACK SERVICE] Channel renamed successfully`)
+    } else {
+      console.error(`❌ [SLACK SERVICE] Failed to rename channel: ${renameResult.error}`)
+    }
+
     // Update channel topic
-    const topic = `Lead: ${leadName} | Claim #${lead.claimNumber} | Status: ${newStatus}`
+    const topicClaimInfo = lead.claimNumber ? ` | Claim #${lead.claimNumber}` : ''
+    const topic = `Lead: ${leadName}${topicClaimInfo} | Status: ${newStatus}`
     await slack.setChannelTopic(lead.slackChannelId, topic)
 
     // Send status update message

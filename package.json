@@ -16,7 +16,10 @@
     "prisma:migrate:safe": "node scripts/migrate-db.js",
     "lighthouse": "npx lighthouse http://localhost:3000 --output-path=./lighthouse-report.html --view",
     "analyze": "cross-env ANALYZE=true npm run build",
-    "create-chat-spaces": "npx tsx scripts/create-chat-spaces-for-existing-leads-simple.ts"
+    "create-chat-spaces": "npx tsx scripts/create-chat-spaces-for-existing-leads-simple.ts",
+    "create-slack-channels": "npx tsx scripts/create-slack-channels-for-existing-leads.ts",
+    "populate-slack-channels": "npx tsx scripts/populate-slack-channels.ts",
+    "rename-slack-channels": "npx tsx scripts/rename-slack-channels-with-status.ts"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.27.0",

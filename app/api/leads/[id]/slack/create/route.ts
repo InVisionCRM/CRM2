@@ -24,10 +24,16 @@ export async function POST(
         firstName: true,
         lastName: true,
         email: true,
+        phone: true,
         address: true,
         status: true,
         claimNumber: true,
+        insuranceCompany: true,
+        dateOfLoss: true,
+        damageType: true,
         assignedToId: true,
+        googleDriveFolderId: true,
+        googleDriveUrl: true,
         slackChannelId: true
       }
     })
@@ -65,9 +71,15 @@ export async function POST(
       leadId: lead.id,
       leadName: `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unknown Lead',
       leadEmail: lead.email || undefined,
+      leadPhone: lead.phone || undefined,
       leadAddress: lead.address || undefined,
       leadStatus: lead.status,
-      leadClaimNumber: lead.claimNumber,
+      leadClaimNumber: lead.claimNumber || undefined,
+      leadInsuranceCompany: lead.insuranceCompany || undefined,
+      leadDateOfLoss: lead.dateOfLoss || undefined,
+      leadDamageType: lead.damageType || undefined,
+      googleDriveFolderId: lead.googleDriveFolderId || undefined,
+      googleDriveUrl: lead.googleDriveUrl || undefined,
       createdBy: {
         id: session.user.id,
         name: session.user.name || 'Unknown User',
