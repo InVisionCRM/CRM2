@@ -262,7 +262,7 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
           placeholder="Enter insurance company name"
           {...register("insuranceCompany")}
           disabled={isLoading}
-          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+          className="bg-gray-300/50 bg-opacity-10 border-0 text-slate-950 placeholder:text-slate-950 placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
         />
         <button
           type="button"
@@ -273,17 +273,17 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
           Open Insurance List
         </button>
         {showCompanyDropdown && (
-          <div className="absolute z-50 w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg max-h-60 overflow-auto">
+          <div className="absolute z-50 w-full mt-1 bg-gray-300 border border-zinc-700 rounded-md shadow-lg max-h-60 overflow-auto">
             {INSURANCE_COMPANIES.map((company) => (
               <div
                 key={company.name}
                 className={cn(
-                  "px-3 sm:px-4 py-4 cursor-pointer hover:bg-zinc-700 flex justify-between items-center text-sm sm:text-base",
-                  selectedCompany === company.name ? "bg-zinc-700" : ""
+                  "px-3 sm:px-4 py-4 cursor-pointer hover:bg-gray-400 flex justify-between items-center text-sm sm:text-base",
+                  selectedCompany === company.name ? "bg-gray-400" : ""
                 )}
                 onClick={() => handleCompanySelect(company.name)}
               >
-                <span className="text-white">{company.name}</span>
+                <span className="text-slate-950">{company.name}</span>
                 {selectedCompany === company.name && <Check size={24} className="text-green-400" />}
               </div>
             ))}
@@ -298,30 +298,30 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
     <div className="relative" ref={damageTypeDropdownRef}>
       <div
         className={cn(
-          "flex items-center justify-between px-3 sm:p-4 bg-white bg-opacity-10 rounded-md cursor-pointer h-10 sm:h-12",
+          "flex items-center justify-between px-3 sm:p-4 bg-gray-300/50 bg-opacity-10 rounded-md cursor-pointer h-10 sm:h-12",
           "border border-transparent hover:border-gray-600",
           "text-sm sm:text-base"
         )}
         onClick={() => !isLoading && setShowDamageTypeDropdown(!showDamageTypeDropdown)}
       >
-        <span className={selectedDamageType ? "text-white" : "text-white text-opacity-50"}>
+        <span className={selectedDamageType ? "text-slate-950" : "text-slate-950 text-opacity-50"}>
           {selectedDamageType ? DAMAGE_TYPES.find(d => d.value === selectedDamageType)?.label : "Select damage type"}
         </span>
-        <ChevronDown className="ml-2 h-4 w-4 text-white text-opacity-70" />
+        <ChevronDown className="ml-2 h-4 w-4 text-slate-950 text-opacity-70" />
       </div>
       
       {showDamageTypeDropdown && (
-        <div className="absolute z-50 w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-md shadow-lg max-h-60 overflow-auto">
+        <div className="absolute z-50 w-full mt-1 bg-gray-300 border border-zinc-700 rounded-md shadow-lg max-h-60 overflow-auto">
           {DAMAGE_TYPES.map((damageType) => (
             <div
               key={damageType.value}
               className={cn(
-                "px-3 sm:px-4 py-4 cursor-pointer hover:bg-zinc-700 flex justify-between items-center text-sm sm:text-base",
-                selectedDamageType === damageType.value ? "bg-zinc-700" : ""
+                "px-3 sm:px-4 py-4 cursor-pointer hover:bg-gray-400 flex justify-between items-center text-sm sm:text-base",
+                selectedDamageType === damageType.value ? "bg-gray-400" : ""
               )}
               onClick={() => handleDamageTypeSelect(damageType.value)}
             >
-              <span className="text-white">{damageType.label}</span>
+              <span className="text-slate-950">{damageType.label}</span>
               {selectedDamageType === damageType.value && <Check size={24} className="text-green-400" />}
             </div>
           ))}
@@ -399,12 +399,12 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name</Label>
-                  <Input id="firstName" placeholder="First name" {...register("first_name")} disabled={isLoading} autoComplete="off" />
+                  <Input id="firstName" placeholder="First name" {...register("first_name")} disabled={isLoading} autoComplete="off" className="bg-gray-300/50 text-slate-950 placeholder:text-slate-950 placeholder:text-opacity-50" />
                   {errors.first_name && <p className="text-red-500 text-xs mt-1">{errors.first_name.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="last_name">Last Name</Label>
-                  <Input id="lastName" placeholder="Last name" {...register("last_name")} disabled={isLoading} autoComplete="off" />
+                  <Input id="lastName" placeholder="Last name" {...register("last_name")} disabled={isLoading} autoComplete="off" className="bg-gray-300/50 text-slate-950 placeholder:text-slate-950 placeholder:text-opacity-50" />
                   {errors.last_name && <p className="text-red-500 text-xs mt-1">{errors.last_name.message}</p>}
                 </div>
               </div>
@@ -413,7 +413,7 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
                 <Label htmlFor="email">Email</Label>
                 <div className="flex">
                   <div className="relative flex-1">
-                    <Input id="email" type="email" placeholder="Email address" {...register("email")} disabled={isLoading} className="w-full pr-20" autoComplete="off" />
+                    <Input id="email" type="email" placeholder="Email address" {...register("email")} disabled={isLoading} className="w-full pr-20 bg-gray-300/50 text-slate-950 placeholder:text-slate-950 placeholder:text-opacity-50" autoComplete="off" />
                     <div className="absolute right-0 top-0 h-full flex items-center">
                       <button type="button" onClick={() => completeEmailWithDomain("@gmail.com")} disabled={isLoading} className="px-1.5 h-full">G</button>
                       <button type="button" onClick={() => completeEmailWithDomain("@yahoo.com")} disabled={isLoading} className="px-1.5 h-full">Y</button>
@@ -425,7 +425,7 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
 
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" placeholder="Phone number" {...register("phone")} disabled={isLoading} autoComplete="off" />
+                <Input id="phone" placeholder="Phone number" {...register("phone")} disabled={isLoading} autoComplete="off" className="bg-gray-300/50 text-slate-950 placeholder:text-slate-950 placeholder:text-opacity-50" />
                 {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
               </div>
 
@@ -450,31 +450,24 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
                       styles={{
                         control: (base) => ({
                           ...base,
-                          backgroundColor: "rgb(0 0 0 / 0.8)",
-                          borderColor: "rgb(255 255 255 / 0.2)",
-                          "&:hover": {
-                            borderColor: "rgb(255 255 255 / 0.3)",
-                          },
+                          backgroundColor: "rgba(203, 213, 225, 0.5)",
                         }),
                         menu: (base) => ({
                           ...base,
-                          backgroundColor: "rgb(0 0 0 / 0.8)",
-                          backdropFilter: "blur(12px)",
-                          border: "1px solid rgb(255 255 255 / 0.2)",
+                          backgroundColor: "rgba(203, 213, 225, 0.5)",
                         }),
-                        option: (base, state) => ({
+                        option: (base) => ({
                           ...base,
-                          backgroundColor: state.isFocused ? "rgb(255 255 255 / 0.1)" : "transparent",
-                          color: "white",
+                          color: "#0f172a",
                           cursor: "pointer",
                         }),
                         singleValue: (base) => ({
                           ...base,
-                          color: "white",
+                          color: "#0f172a",
                         }),
                         input: (base) => ({
                           ...base,
-                          color: "white",
+                          color: "#0f172a",
                         }),
                       }}
                     />
@@ -486,7 +479,7 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select defaultValue={LeadStatus.follow_ups} onValueChange={(value) => setValue("status", value)} disabled={isLoading}>
-                  <SelectTrigger id="status">
+                  <SelectTrigger id="status" className="bg-gray-300/50 text-slate-950">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -499,21 +492,21 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
 
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
-                <Input id="notes" placeholder="Additional notes" {...register("notes")} disabled={isLoading} autoComplete="off" />
+                <Input id="notes" placeholder="Additional notes" {...register("notes")} disabled={isLoading} autoComplete="off" className="bg-gray-300/50 text-slate-950 placeholder:text-slate-950 placeholder:text-opacity-50" />
               </div>
             </TabsContent>
 
             <TabsContent value="insurance" className="space-y-4 mt-6">
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <div className="space-y-1 sm:space-y-2">
-                  <Label htmlFor="insuranceCompany" className="text-white text-opacity-90 text-sm sm:text-base">
+                  <Label htmlFor="insuranceCompany" className="text-slate-950 text-opacity-90 text-sm sm:text-base">
                     Insurance Company
                   </Label>
                   <CompanyDropdown />
                 </div>
 
                 <div className="space-y-1 sm:space-y-2">
-                  <Label htmlFor="insurancePolicyNumber" className="text-white text-opacity-90 text-sm sm:text-base">
+                  <Label htmlFor="insurancePolicyNumber" className="text-slate-950 text-opacity-90 text-sm sm:text-base">
                     Policy Number
                   </Label>
                   <Input
@@ -521,12 +514,12 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
                     placeholder="Enter policy number"
                     {...register("insurancePolicyNumber")}
                     disabled={isLoading}
-                    className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+                    className="bg-gray-300/50 bg-opacity-10 border-0 text-slate-950 placeholder:text-slate-950 placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
                   />
                 </div>
 
                 <div className="space-y-1 sm:space-y-2">
-                  <Label htmlFor="claimNumber" className="text-white text-opacity-90 text-sm sm:text-base">
+                  <Label htmlFor="claimNumber" className="text-slate-950 text-opacity-90 text-sm sm:text-base">
                     Claim Number
                   </Label>
                   <Input
@@ -534,12 +527,12 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
                     placeholder="Enter claim number (if available)"
                     {...register("claimNumber")}
                     disabled={isLoading}
-                    className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+                    className="bg-gray-300/50 bg-opacity-10 border-0 text-slate-950 placeholder:text-slate-950 placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
                   />
                 </div>
 
                 <div className="space-y-1 sm:space-y-2">
-                  <Label htmlFor="insuranceEmail" className="text-white text-opacity-90 text-sm sm:text-base">
+                  <Label htmlFor="insuranceEmail" className="text-slate-950 text-opacity-90 text-sm sm:text-base">
                     Insurance Email
                   </Label>
                   <Input
@@ -548,7 +541,7 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
                     placeholder="Enter insurance email"
                     {...register("insuranceEmail")}
                     disabled={isLoading}
-                    className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+                    className="bg-gray-300/50 bg-opacity-10 border-0 text-slate-950 placeholder:text-slate-950 placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
                   />
                   {errors.insuranceEmail && <p className="text-red-500 text-xs mt-1">{errors.insuranceEmail.message}</p>}
                 </div>
@@ -556,7 +549,7 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
 
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <div className="space-y-1 sm:space-y-2">
-                  <Label htmlFor="insurancePhone" className="text-white text-opacity-90 text-sm sm:text-base">
+                  <Label htmlFor="insurancePhone" className="text-slate-950 text-opacity-90 text-sm sm:text-base">
                     Insurance Phone
                   </Label>
                   <Input
@@ -564,12 +557,12 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
                     placeholder="Primary phone number"
                     {...register("insurancePhone")}
                     disabled={isLoading}
-                    className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+                    className="bg-gray-300/50 bg-opacity-10 border-0 text-slate-950 placeholder:text-slate-950 placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
                   />
                 </div>
 
                 <div className="space-y-1 sm:space-y-2">
-                  <Label htmlFor="insuranceSecondaryPhone" className="text-white text-opacity-90 text-sm sm:text-base">
+                  <Label htmlFor="insuranceSecondaryPhone" className="text-slate-950 text-opacity-90 text-sm sm:text-base">
                     Secondary Phone
                   </Label>
                   <Input
@@ -577,14 +570,14 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
                     placeholder="Optional secondary number"
                     {...register("insuranceSecondaryPhone")}
                     disabled={isLoading}
-                    className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+                    className="bg-gray-300/50 bg-opacity-10 border-0 text-slate-950 placeholder:text-slate-950 placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                 <div className="space-y-1 sm:space-y-2">
-                  <Label htmlFor="dateOfLoss" className="text-white text-opacity-90 text-sm sm:text-base">
+                  <Label htmlFor="dateOfLoss" className="text-slate-950 text-opacity-90 text-sm sm:text-base">
                     Date of Loss
                   </Label>
                   <Controller
@@ -595,7 +588,7 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
                         {...field}
                         id="dateOfLoss"
                         placeholder="MM/DD/YY"
-                        className="bg-white bg-opacity-10 border-transparent hover:border-gray-600 text-white h-10 sm:h-12"
+                        className="bg-gray-300/50 bg-opacity-10 border-transparent hover:border-gray-600 text-slate-950 h-10 sm:h-12"
                         maxLength={8}
                         onChange={(e) => {
                           let value = e.target.value.replace(/\D/g, '');
@@ -617,7 +610,7 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
                 </div>
 
                 <div className="space-y-1 sm:space-y-2">
-                  <Label htmlFor="damageType" className="text-white text-opacity-90 text-sm sm:text-base">
+                  <Label htmlFor="damageType" className="text-slate-950 text-opacity-90 text-sm sm:text-base">
                     Damage Type
                   </Label>
                   <DamageTypeDropdown />
@@ -629,7 +622,7 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
 
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>Cancel</Button>
-              <Button type="submit" disabled={isLoading} className="bg-lime-600 hover:bg-lime-700 text-black">
+              <Button type="submit" disabled={isLoading} className="bg-lime-600 hover:bg-lime-700 text-white">
                 {isLoading ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</>) : "Create Lead"}
               </Button>
             </div>

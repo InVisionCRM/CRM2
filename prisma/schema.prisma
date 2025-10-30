@@ -120,6 +120,8 @@ model Lead {
   googleDriveFolderId      String?
   googleDriveUrl           String?
   googleChatSpaceId        String?
+  slackChannelId           String?
+  slackChannelName         String?
   metadata                 Json?
   homeownerUpgrades        Decimal?
   insuranceScopeACV        Decimal?

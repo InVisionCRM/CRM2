@@ -63,6 +63,7 @@
     "@radix-ui/react-toggle-group": "1.1.1",
     "@radix-ui/react-tooltip": "1.1.6",
     "@react-spring/web": "^10.0.1",
+    "@slack/web-api": "^7.12.0",
     "@tabler/icons-react": "^3.34.1",
     "@tsparticles/engine": "^3.8.1",
     "@tsparticles/react": "^3.0.0",

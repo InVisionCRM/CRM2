@@ -16,6 +16,7 @@ import { getCurrentUser } from "@/lib/session"
 import { sendLeadDeletionNotification, sendDeletionRequestNotification } from "@/lib/services/admin-notifications"
 import { createDeletionRequest } from "@/lib/services/deletion-approval"
 import { createLeadChatSpace, updateLeadChatStatus } from "@/lib/services/leadChatIntegration"
+import { createLeadSlackChannel, updateLeadSlackStatus } from "@/lib/services/leadSlackIntegration"
 
 export async function createLeadAction(
   data: {
@@ -121,6 +122,39 @@ export async function createLeadAction(
 
     // Note: Google Chat spaces are now created on-demand via the chat widget
     // Users can create chat spaces by clicking the "Create Chat Space" button in the lead detail page
+
+    // Automatically create Slack channel for new leads
+    if (session?.user) {
+      try {
+        const assignedTo = data.assignedToId ? await prisma.user.findUnique({
+          where: { id: data.assignedToId },
+          select: { id: true, name: true, email: true }
+        }) : undefined
+
+        await createLeadSlackChannel({
+          leadId: lead.id,
+          leadName: `${data.firstName} ${data.lastName}`.trim(),
+          leadEmail: data.email,
+          leadAddress: data.address,
+          leadStatus: lead.status,
+          leadClaimNumber: undefined,
+          createdBy: {
+            id: session.user.id,
+            name: session.user.name || 'Unknown User',
+            email: session.user.email || ''
+          },
+          assignedTo: assignedTo ? {
+            id: assignedTo.id,
+            name: assignedTo.name || 'Unknown User',
+            email: assignedTo.email || ''
+          } : undefined
+        })
+        console.log(`✅ Slack channel automatically created for lead ${lead.id}`)
+      } catch (slackError) {
+        console.error(`❌ Failed to create Slack channel for lead ${lead.id}:`, slackError)
+        // Don't fail lead creation if Slack channel creation fails
+      }
+    }
 
     revalidatePath("/leads");
     revalidatePath("/dashboard")
@@ -365,6 +399,22 @@ export async function updateLeadStatus(
             console.error(`Error updating Google Chat for lead ${id}:`, chatError.message || chatError)
             // Don't fail status update if chat update fails
           }
+        }
+
+        // Update Slack channel with status change
+        try {
+          await updateLeadSlackStatus(
+            id,
+            formatStatusLabel(oldStatus),
+            formatStatusLabel(status),
+            {
+              name: session?.user?.name || 'Unknown User',
+              email: session?.user?.email || ''
+            }
+          )
+        } catch (slackError: any) {
+          console.error(`Error updating Slack for lead ${id}:`, slackError.message || slackError)
+          // Don't fail status update if Slack update fails
         }
 
     // ---------- AUTO-SCHEDULER ----------
