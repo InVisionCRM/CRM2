@@ -66,6 +66,15 @@ const shingleBrands = [
         colors: ["Charcoal", "Pewter Gray", "Weathered Wood"]
       }
     ]
+  },
+  {
+    brand: "Cambridge",
+    lines: [
+      {
+        type: "Premium",
+        colors: ["Dual Black", "Weathered Wood", "Charcoal Grey", "Driftwood", "Dual Grey", "Dual Brown", "EarthTone Cedar", "Harvard Slate"]
+      }
+    ]
   }
 ]
 
@@ -224,7 +233,17 @@ export default function ScopeOfWorkForm({ prefilledData }: ScopeOfWorkFormProps 
       "Hickory": "#B45309",
       "Pewter Gray": "#9CA3AF",
       "Barkwood": "#B45309",
-      "Charcoal": "#374151"
+      "Charcoal": "#374151",
+
+      // Cambridge Colors
+      "Dual Black": "#000000",
+      "Weathered Wood": "#A8A29E",
+      "Charcoal Grey": "#374151",
+      "Driftwood": "#D6D3D1",
+      "Dual Grey": "#6B7280",
+      "Dual Brown": "#B45309",
+      "EarthTone Cedar": "#92400E",
+      "Harvard Slate": "#64748B"
     }
     
     return colorMap[colorName] || "#9CA3AF"
@@ -278,7 +297,7 @@ export default function ScopeOfWorkForm({ prefilledData }: ScopeOfWorkFormProps 
                 <div className="space-y-3">
                   <label className="text-sm font-medium text-gray-700">Quick Select Roof Specification</label>
                   <Tabs value={selectedBrand} onValueChange={handleBrandChange} className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-sm">
+                    <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-sm">
                       {shingleBrands.map((brand) => (
                         <TabsTrigger 
                           key={brand.brand} 
@@ -338,11 +357,11 @@ export default function ScopeOfWorkForm({ prefilledData }: ScopeOfWorkFormProps 
               </div>
               <div className="flex flex-wrap gap-4 mt-4">
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="ventilation_existing" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="ventilation_existing" className="checkbox border-gray-400 bg-white" />
                   Pre-Existing Ventilation
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="addingYes" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="addingYes" className="checkbox border-gray-400 bg-white" />
                   Adding Ventilation
                 </label>
               </div>
@@ -360,22 +379,22 @@ export default function ScopeOfWorkForm({ prefilledData }: ScopeOfWorkFormProps 
             <div className="bg-gray-50 rounded-sm p-4 border border-gray-100">
               <div className="flex flex-wrap gap-4">
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="guttersDownspouts" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="guttersDownspouts" className="checkbox border-gray-400 bg-white" />
                   Gutters/Downspouts
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="guttersNone" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="guttersNone" className="checkbox border-gray-400 bg-white" />
                   None
                 </label>
               </div>
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Gutter Size:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="gutterSizeStandard" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="gutterSizeStandard" className="checkbox border-gray-400 bg-white" />
                   Standard Size
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="gutterSizeOverSized" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="gutterSizeOverSized" className="checkbox border-gray-400 bg-white" />
                   Oversized
                 </label>
               </div>
@@ -383,22 +402,22 @@ export default function ScopeOfWorkForm({ prefilledData }: ScopeOfWorkFormProps 
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Gutter Guards:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="gutterGuardsYes" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="gutterGuardsYes" className="checkbox border-gray-400 bg-white" />
                   Yes
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="gutterGuardsNo" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="gutterGuardsNo" className="checkbox border-gray-400 bg-white" />
                   No
                 </label>
               </div>
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Gutter Guards Warranty:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="warrantyYes" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="warrantyYes" className="checkbox border-gray-400 bg-white" />
                   Yes
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="warrantyNo" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="warrantyNo" className="checkbox border-gray-400 bg-white" />
                   No
                 </label>
               </div>
@@ -423,38 +442,38 @@ export default function ScopeOfWorkForm({ prefilledData }: ScopeOfWorkFormProps 
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Shutters:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="shutterReset" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="shutterReset" className="checkbox border-gray-400 bg-white" />
                   Detach & Reset Existing
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="shutterReplace" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="shutterReplace" className="checkbox border-gray-400 bg-white" />
                   Replace with New
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="shutterRemove" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="shutterRemove" className="checkbox border-gray-400 bg-white" />
                   Remove & Discard
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="shutterNA" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="shutterNA" className="checkbox border-gray-400 bg-white" />
                   N/A
                 </label>
               </div>
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Scope:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="facia" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="facia" className="checkbox border-gray-400 bg-white" />
                   Facia
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="soffit" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="soffit" className="checkbox border-gray-400 bg-white" />
                   Soffit
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="wraps" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="wraps" className="checkbox border-gray-400 bg-white" />
                   Wraps
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="sidingNo" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="sidingNo" className="checkbox border-gray-400 bg-white" />
                   None
                 </label>
               </div>
@@ -479,26 +498,26 @@ export default function ScopeOfWorkForm({ prefilledData }: ScopeOfWorkFormProps 
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Ownership:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="solarOwned" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="solarOwned" className="checkbox border-gray-400 bg-white" />
                   Owned
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="solarLeased" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="solarLeased" className="checkbox border-gray-400 bg-white" />
                   Leased
                 </label>
               </div>
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Critter Cage:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="critterYes" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="critterYes" className="checkbox border-gray-400 bg-white" />
                   Yes
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="critterNo" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="critterNo" className="checkbox border-gray-400 bg-white" />
                   No
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="critterUnknown" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="critterUnknown" className="checkbox border-gray-400 bg-white" />
                   Unknown
                 </label>
               </div>
@@ -529,52 +548,52 @@ export default function ScopeOfWorkForm({ prefilledData }: ScopeOfWorkFormProps 
               <div className="flex flex-wrap gap-4">
                 <span className="text-gray-600 font-medium">Satellite:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="dishKeep" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="dishKeep" className="checkbox border-gray-400 bg-white" />
                   Keep
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="dishDispose" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="dishDispose" className="checkbox border-gray-400 bg-white" />
                   Dispose
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="dishNone" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="dishNone" className="checkbox border-gray-400 bg-white" />
                   No Dish Exists
                 </label>
               </div>
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Detached Structure:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="detachedYes" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="detachedYes" className="checkbox border-gray-400 bg-white" />
                   Yes
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="detachedNo" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="detachedNo" className="checkbox border-gray-400 bg-white" />
                   No
                 </label>
               </div>
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Work on Detached Structure:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="detachedWorkYes" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="detachedWorkYes" className="checkbox border-gray-400 bg-white" />
                   Yes
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="detachedWorkNo" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="detachedWorkNo" className="checkbox border-gray-400 bg-white" />
                   No
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="detachedWorkTBD" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="detachedWorkTBD" className="checkbox border-gray-400 bg-white" />
                   TBD
                 </label>
               </div>
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Driveway Damage:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="drivewayDamage" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="drivewayDamage" className="checkbox border-gray-400 bg-white" />
                   Yes
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="miscDescription" className="checkbox checkbox-sm border-gray-400 bg-white" />
+                  <input type="checkbox" name="miscDescription" className="checkbox border-gray-400 bg-white" />
                   No
                 </label>
               </div>

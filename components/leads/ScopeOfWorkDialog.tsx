@@ -151,6 +151,7 @@ export function ScopeOfWorkDialog({ lead, open, onOpenChange }: ScopeOfWorkDialo
             <div className="flex justify-end gap-3">
               <Button 
                 type="button" 
+                className="bg-red-500 text-white hover:bg-white hover:text-red-500"
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
                 disabled={isSubmitting}
@@ -160,7 +161,7 @@ export function ScopeOfWorkDialog({ lead, open, onOpenChange }: ScopeOfWorkDialo
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-green-600 text-white hover:bg-green-800"
               >
                 {isSubmitting ? (
                   <>

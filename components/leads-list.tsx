@@ -14,13 +14,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { format, addHours, parseISO, formatDistanceToNow } from "date-fns"
 import type { LeadSummary } from "@/types/dashboard"
 import type { LeadFile } from "@/types/documents"
-import { 
-  MapPin, 
-  Phone, 
-  Clock, 
-  User, 
-  Shield, 
-  FileText, 
+import {
+  MapPin,
+  Phone,
+  Clock,
+  User,
+  Shield,
+  FileText,
   Calendar,
   Edit,
   Save,
@@ -65,7 +65,8 @@ import {
   ChevronsRight,
   ChevronLeft,
   Table,
-  Grid3X3
+  Grid3X3,
+  Mail
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { LeadStatus } from "@prisma/client"
@@ -320,6 +321,21 @@ const getDropdownItemColor = (status: string) => {
     case "zero_balance": return "text-green-300 hover:bg-green-600/10"
     case "denied": return "text-red-400 hover:bg-red-500/10"
     default: return "text-gray-400 hover:bg-gray-500/10"
+  }
+}
+
+const getStatusTextColor = (status: string) => {
+  switch (status) {
+    case "scheduled": return "text-blue-400"
+    case "signed_contract": return "text-green-400"
+    case "completed_jobs": return "text-emerald-400"
+    case "follow_ups": return "text-yellow-400"
+    case "acv": return "text-purple-400"
+    case "job": return "text-orange-400"
+    case "colors": return "text-indigo-400"
+    case "zero_balance": return "text-green-300"
+    case "denied": return "text-red-400"
+    default: return "text-gray-400"
   }
 }
 
@@ -1708,13 +1724,14 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
         <table className="w-full min-w-[1400px]">
           <thead className="bg-gray-50 border-b">
             <tr>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Name</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] max-w-[150px]">Name</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Created</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Actions</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Phone</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Status</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Assigned To</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">Email</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Address</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Status</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Phone</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Insurance Co.</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Ins. Phone</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Claim Number</th>
@@ -1722,17 +1739,17 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Damage Type</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Adjuster Name</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Adj. Phone</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Assigned To</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {currentLeads.map((lead) => (
               <tr key={lead.id} className="hover:bg-gray-50">
                 {/* Name */}
-                <td className="px-3 py-2 whitespace-nowrap">
-                  <Link 
+                <td className="px-3 py-2 whitespace-nowrap max-w-[150px]">
+                  <Link
                     href={`/leads/${lead.id}`}
-                    className="text-sm font-medium text-black hover:text-blue-600 transition-colors cursor-pointer"
+                    className="text-sm font-medium text-black hover:text-blue-600 transition-colors cursor-pointer block truncate"
+                    title={lead.name || 'Click to view lead'}
                   >
                     {lead.name || 'Click to view lead'}
                   </Link>
@@ -1822,37 +1839,31 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                   </TooltipProvider>
                 </td>
 
-                {/* Phone */}
+                {/* Status */}
                 <td className="px-3 py-2 whitespace-nowrap">
-                  {editingCell?.leadId === lead.id && editingCell?.field === 'phone' ? (
-                    <div className="flex gap-1 min-w-[180px]">
-                      <Input
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        className="h-7 text-xs min-w-[120px]"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') handleEditSave(lead.id, 'phone')
-                          if (e.key === 'Escape') handleEditCancel()
-                        }}
-                        autoFocus
-                      />
-                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'phone')}>
-                        <Save className="h-3 w-3" />
-                      </Button>
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <span 
-                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded ${
-                        lead.phone ? 'text-black' : 'text-blue-400'
-                      }`}
-                      onClick={() => handleEditStart(lead.id, 'phone', lead.phone || '')}
-                    >
-                      {lead.phone || 'Add'}
-                    </span>
-                  )}
+                  <Select value={lead.status} onValueChange={(value: LeadStatus) => handleStatusUpdate(lead.id, value)}>
+                    <SelectTrigger className={`h-7 text-xs border-gray-300 ${getStatusTextColor(lead.status)}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="follow_ups" className={getDropdownItemColor("follow_ups")}>Follow Ups</SelectItem>
+                      <SelectItem value="scheduled" className={getDropdownItemColor("scheduled")}>Scheduled</SelectItem>
+                      <SelectItem value="colors" className={getDropdownItemColor("colors")}>Colors</SelectItem>
+                      <SelectItem value="acv" className={getDropdownItemColor("acv")}>ACV</SelectItem>
+                      <SelectItem value="signed_contract" className={getDropdownItemColor("signed_contract")}>Signed Contract</SelectItem>
+                      <SelectItem value="job" className={getDropdownItemColor("job")}>Job</SelectItem>
+                      <SelectItem value="completed_jobs" className={getDropdownItemColor("completed_jobs")}>Completed Jobs</SelectItem>
+                      <SelectItem value="zero_balance" className={getDropdownItemColor("zero_balance")}>Zero Balance</SelectItem>
+                      <SelectItem value="denied" className={getDropdownItemColor("denied")}>Denied</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </td>
+
+                {/* Assigned To */}
+                <td className="px-3 py-2 whitespace-nowrap">
+                  <span className="text-sm text-gray-900">
+                    {lead.assignedTo || "Unassigned"}
+                  </span>
                 </td>
 
                 {/* Email */}
@@ -1957,24 +1968,37 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                   )}
                 </td>
 
-                {/* Status */}
+                {/* Phone */}
                 <td className="px-3 py-2 whitespace-nowrap">
-                  <Select value={lead.status} onValueChange={(value: LeadStatus) => handleStatusUpdate(lead.id, value)}>
-                    <SelectTrigger className="h-7 text-xs border-gray-300">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="follow_ups">Follow Ups</SelectItem>
-                      <SelectItem value="scheduled">Scheduled</SelectItem>
-                      <SelectItem value="colors">Colors</SelectItem>
-                      <SelectItem value="acv">ACV</SelectItem>
-                      <SelectItem value="signed_contract">Signed Contract</SelectItem>
-                      <SelectItem value="job">Job</SelectItem>
-                      <SelectItem value="completed_jobs">Completed Jobs</SelectItem>
-                      <SelectItem value="zero_balance">Zero Balance</SelectItem>
-                      <SelectItem value="denied">Denied</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {editingCell?.leadId === lead.id && editingCell?.field === 'phone' ? (
+                    <div className="flex gap-1 min-w-[180px]">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="h-7 text-xs min-w-[120px]"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleEditSave(lead.id, 'phone')
+                          if (e.key === 'Escape') handleEditCancel()
+                        }}
+                        autoFocus
+                      />
+                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'phone')}>
+                        <Save className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <span
+                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded ${
+                        lead.phone ? 'text-black' : 'text-blue-400'
+                      }`}
+                      onClick={() => handleEditStart(lead.id, 'phone', lead.phone || '')}
+                    >
+                      {lead.phone || 'Add'}
+                    </span>
+                  )}
                 </td>
 
                 {/* Insurance Company */}
@@ -2209,13 +2233,6 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                       {lead.insuranceAdjusterPhone || 'Add'}
                     </span>
                   )}
-                </td>
-
-                {/* Assigned To */}
-                <td className="px-3 py-2 whitespace-nowrap">
-                  <span className="text-sm text-gray-900">
-                    {lead.assignedTo || "Unassigned"}
-                  </span>
                 </td>
               </tr>
             ))}

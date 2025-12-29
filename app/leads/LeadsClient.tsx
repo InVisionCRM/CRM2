@@ -295,7 +295,7 @@ export default function LeadsClient({
   const userFilterTriggerText = selectedUser ? users.find(u => u.id === selectedUser)?.name || "Unknown User" : "All";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-1">
       <div className="flex items-center gap-2 sm:gap-3">
         <UserFilter 
           users={users} 
