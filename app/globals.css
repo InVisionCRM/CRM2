@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile-friendly checkbox styling */
+.checkbox-touch {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  cursor: pointer;
+  appearance: none;
+  border-radius: 4px;
+  border: 2px solid #9ca3af;
+  background: white;
+  position: relative;
+}
+
+.checkbox-touch:checked {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.checkbox-touch:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 20px;
+  font-weight: bold;
+}
+
 body { /* Added from styles/globals.css */
   font-family: Arial, Helvetica, sans-serif;
 }

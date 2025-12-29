@@ -54,9 +54,8 @@ export function ScopeOfWorkDialog({ lead, open, onOpenChange }: ScopeOfWorkDialo
 
     // Transform checkboxes: checked = '✓', unchecked = ''
     checkboxFields.forEach(field => {
-      if (data[field] !== undefined) {
-        data[field] = data[field] === 'on' || data[field] === true ? '✓' : ''
-      }
+      // If checkbox exists in FormData, it was checked
+      data[field] = formDataObj.has(field) ? '✓' : ''
     })
 
     // Convert number fields

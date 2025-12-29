@@ -237,7 +237,6 @@ export default function ScopeOfWorkForm({ prefilledData }: ScopeOfWorkFormProps 
 
       // Cambridge Colors
       "Dual Black": "#000000",
-      "Weathered Wood": "#A8A29E",
       "Charcoal Grey": "#374151",
       "Driftwood": "#D6D3D1",
       "Dual Grey": "#6B7280",
@@ -357,11 +356,11 @@ export default function ScopeOfWorkForm({ prefilledData }: ScopeOfWorkFormProps 
               </div>
               <div className="flex flex-wrap gap-4 mt-4">
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="ventilation_existing" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="ventilation_existing" className="checkbox-touch" />
                   Pre-Existing Ventilation
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="addingYes" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="addingYes" className="checkbox-touch" />
                   Adding Ventilation
                 </label>
               </div>
@@ -379,22 +378,22 @@ export default function ScopeOfWorkForm({ prefilledData }: ScopeOfWorkFormProps 
             <div className="bg-gray-50 rounded-sm p-4 border border-gray-100">
               <div className="flex flex-wrap gap-4">
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="guttersDownspouts" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="guttersDownspouts" className="checkbox-touch" />
                   Gutters/Downspouts
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="guttersNone" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="guttersNone" className="checkbox-touch" />
                   None
                 </label>
               </div>
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Gutter Size:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="gutterSizeStandard" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="gutterSizeStandard" className="checkbox-touch" />
                   Standard Size
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="gutterSizeOverSized" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="gutterSizeOverSized" className="checkbox-touch" />
                   Oversized
                 </label>
               </div>
@@ -402,22 +401,22 @@ export default function ScopeOfWorkForm({ prefilledData }: ScopeOfWorkFormProps 
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Gutter Guards:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="gutterGuardsYes" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="gutterGuardsYes" className="checkbox-touch" />
                   Yes
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="gutterGuardsNo" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="gutterGuardsNo" className="checkbox-touch" />
                   No
                 </label>
               </div>
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Gutter Guards Warranty:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="warrantyYes" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="warrantyYes" className="checkbox-touch" />
                   Yes
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="warrantyNo" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="warrantyNo" className="checkbox-touch" />
                   No
                 </label>
               </div>
@@ -442,38 +441,38 @@ export default function ScopeOfWorkForm({ prefilledData }: ScopeOfWorkFormProps 
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Shutters:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="shutterReset" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="shutterReset" className="checkbox-touch" />
                   Detach & Reset Existing
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="shutterReplace" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="shutterReplace" className="checkbox-touch" />
                   Replace with New
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="shutterRemove" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="shutterRemove" className="checkbox-touch" />
                   Remove & Discard
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="shutterNA" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="shutterNA" className="checkbox-touch" />
                   N/A
                 </label>
               </div>
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Scope:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="facia" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="facia" className="checkbox-touch" />
                   Facia
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="soffit" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="soffit" className="checkbox-touch" />
                   Soffit
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="wraps" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="wraps" className="checkbox-touch" />
                   Wraps
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="sidingNo" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="sidingNo" className="checkbox-touch" />
                   None
                 </label>
               </div>
@@ -498,26 +497,26 @@ export default function ScopeOfWorkForm({ prefilledData }: ScopeOfWorkFormProps 
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Ownership:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="solarOwned" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="solarOwned" className="checkbox-touch" />
                   Owned
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="solarLeased" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="solarLeased" className="checkbox-touch" />
                   Leased
                 </label>
               </div>
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Critter Cage:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="critterYes" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="critterYes" className="checkbox-touch" />
                   Yes
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="critterNo" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="critterNo" className="checkbox-touch" />
                   No
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="critterUnknown" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="critterUnknown" className="checkbox-touch" />
                   Unknown
                 </label>
               </div>
@@ -548,52 +547,52 @@ export default function ScopeOfWorkForm({ prefilledData }: ScopeOfWorkFormProps 
               <div className="flex flex-wrap gap-4">
                 <span className="text-gray-600 font-medium">Satellite:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="dishKeep" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="dishKeep" className="checkbox-touch" />
                   Keep
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="dishDispose" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="dishDispose" className="checkbox-touch" />
                   Dispose
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="dishNone" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="dishNone" className="checkbox-touch" />
                   No Dish Exists
                 </label>
               </div>
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Detached Structure:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="detachedYes" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="detachedYes" className="checkbox-touch" />
                   Yes
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="detachedNo" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="detachedNo" className="checkbox-touch" />
                   No
                 </label>
               </div>
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Work on Detached Structure:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="detachedWorkYes" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="detachedWorkYes" className="checkbox-touch" />
                   Yes
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="detachedWorkNo" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="detachedWorkNo" className="checkbox-touch" />
                   No
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="detachedWorkTBD" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="detachedWorkTBD" className="checkbox-touch" />
                   TBD
                 </label>
               </div>
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Driveway Damage:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="drivewayDamage" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="drivewayDamage" className="checkbox-touch" />
                   Yes
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="miscDescription" className="checkbox border-gray-400 bg-white" />
+                  <input type="checkbox" name="miscDescription" className="checkbox-touch" />
                   No
                 </label>
               </div>
