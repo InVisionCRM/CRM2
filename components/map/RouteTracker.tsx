@@ -170,8 +170,7 @@ export function useRouteTracker({
   return { isTracking, toggleTracking, error };
 }
 
-// Example DaisyUI Button (ensure DaisyUI is set up in your project)
-// You might want to customize this further or place it in a different part of your UI
+// Compact toggle for map overlay - matches knock counter / zoom control styling
 export function RouteTrackerToggle() {
   const { isTracking, toggleTracking, error } = useRouteTracker({
     bufferTime: 10000, // 10 seconds
@@ -179,15 +178,19 @@ export function RouteTrackerToggle() {
   });
 
   return (
-    <div className="p-4 my-4 bg-base-200 rounded-lg shadow">
-      <button 
-        onClick={toggleTracking} 
-        className={`btn ${isTracking ? 'btn-error' : 'btn-success'}`}
+    <div className="bg-green-800/40 backdrop-blur-sm shadow-md rounded-lg p-2 border border-lime-400/90">
+      <button
+        onClick={toggleTracking}
+        className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors ${
+          isTracking
+            ? 'bg-red-600 hover:bg-red-700 text-white'
+            : 'bg-lime-600 hover:bg-lime-700 text-black'
+        }`}
       >
-        {isTracking ? 'Stop Knock Session' : 'Start Knock Session'}
+        {isTracking ? 'Stop GPS Track' : 'Start GPS Track'}
       </button>
-      {error && <p className="text-error mt-2 text-sm">Error: {error}</p>}
-      {isTracking && <p className="text-info mt-2 text-sm">Tracking active...</p>}
+      {error && <p className="text-red-400 mt-1 text-xs">Error: {error}</p>}
+      {isTracking && <p className="text-lime-300 mt-1 text-xs">Tracking...</p>}
     </div>
   );
 } 

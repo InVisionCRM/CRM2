@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button"; // Import Button
 import Link from "next/link"
 // import KnockCounter from "@/components/map/knock-counter"; // Removed import
 import { StreetViewImage } from "@/components/map/street-view-image"
+import { RouteTrackerToggle } from "@/components/map/RouteTracker"
 
 // Helper function to validate status from API
 function isValidStatus(status: any): status is PropertyVisitStatus | "New" | "Search" {
@@ -471,7 +472,7 @@ export default function MapPage() {
 
         {/* Knock Counter Display - top left */}
         {knockCount !== null && (
-          <div className="absolute top-[200px] left-4 z-10 bg-green-800/40 backdrop-blur-sm shadow-md rounded-lg p-2 flex items-center space-x-2 border border-lime-400/90">
+          <div className="absolute top-[260px] left-4 z-10 bg-green-800/40 backdrop-blur-sm shadow-md rounded-lg p-2 flex items-center space-x-2 border border-lime-400/90">
             <DoorOpen className="h-8 w-8 text-white" />
             <span className="font-semibold text-base-content">
               {knockCount}
@@ -480,8 +481,13 @@ export default function MapPage() {
           </div>
         )}
 
-        {/* Zoom Control Buttons - Top Left Below Counter */}
-        <div className="absolute top-[80px] left-4 z-10 flex flex-col gap-2">
+        {/* Route Tracker (GPS) - Start/Stop knock session */}
+        <div className="absolute top-[80px] left-4 z-10">
+          <RouteTrackerToggle />
+        </div>
+
+        {/* Zoom Control Buttons - Top Left Below Route Tracker */}
+        <div className="absolute top-[160px] left-4 z-10 flex flex-col gap-2">
           <Button 
             className="btn text-xs h-8 w-16" // Added .btn for glass, adjusted size/text
             onClick={() => handleZoomChange(20)} 

@@ -193,7 +193,7 @@ export function ContactForm({
 
   const emailDomainButtonStyle = {
     backgroundColor: "transparent",
-    color: "#ffffff",
+    color: "inherit",
     border: "none",
     height: "100%",
     padding: "0 8px",
@@ -212,7 +212,7 @@ export function ContactForm({
           variant="ghost"
           size="icon"
           onClick={onCancel}
-          className="absolute top-0 right-0 text-white hover:text-gray-300 h-8 w-8 mt-1 mr-1"
+          className="absolute top-0 right-0 text-muted-foreground hover:text-foreground h-8 w-8 mt-1 mr-1"
         >
           <X className="h-5 w-5" />
           <span className="sr-only">Close</span>
@@ -220,7 +220,7 @@ export function ContactForm({
       )}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label htmlFor="firstName" className="text-white text-opacity-90">
+          <Label htmlFor="firstName" className="text-foreground">
             First Name
           </Label>
           <Input
@@ -228,7 +228,7 @@ export function ContactForm({
             placeholder="First name"
             {...register("firstName")}
             disabled={isLoading || isReadOnly}
-            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50"
+            className="bg-input/50 border-input text-foreground placeholder:text-muted-foreground"
           />
           {errors.firstName && (
             <p className="text-red-400 text-xs mt-1">{errors.firstName.message}</p>
@@ -236,7 +236,7 @@ export function ContactForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="lastName" className="text-white text-opacity-90">
+          <Label htmlFor="lastName" className="text-foreground">
             Last Name
           </Label>
           <Input
@@ -244,7 +244,7 @@ export function ContactForm({
             placeholder="Last name"
             {...register("lastName")}
             disabled={isLoading || isReadOnly}
-            className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50"
+            className="bg-input/50 border-input text-foreground placeholder:text-muted-foreground"
           />
           {errors.lastName && (
             <p className="text-red-400 text-xs mt-1">{errors.lastName.message}</p>
@@ -253,7 +253,7 @@ export function ContactForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="email" className="text-white text-opacity-90">
+        <Label htmlFor="email" className="text-foreground">
           Email
         </Label>
         <div className="flex">
@@ -264,7 +264,7 @@ export function ContactForm({
               placeholder="Email address"
               {...register("email")}
               disabled={isLoading || isReadOnly}
-              className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50 w-full pr-20"
+              className="bg-input/50 border-input text-foreground placeholder:text-muted-foreground w-full pr-20"
             />
             <div className="absolute right-0 top-0 h-full flex items-center">
               <button
@@ -272,7 +272,7 @@ export function ContactForm({
                 onClick={() => completeEmailWithDomain('@gmail.com')}
                 disabled={isLoading || isReadOnly}
                 style={emailDomainButtonStyle}
-                className="hover:bg-white/10 rounded-sm"
+                className="hover:bg-muted rounded-sm"
                 title="Add Gmail"
               >
                 <img src="https://cdn-icons-png.flaticon.com/512/281/281769.png" alt="Gmail" className="w-5 h-5" />
@@ -282,7 +282,7 @@ export function ContactForm({
                 onClick={() => completeEmailWithDomain('@yahoo.com')}
                 disabled={isLoading || isReadOnly}
                 style={emailDomainButtonStyle}
-                className="hover:bg-white/10 rounded-sm"
+                className="hover:bg-muted rounded-sm"
                 title="Add Yahoo"
               >
                 <img src="https://cdn-icons-png.flaticon.com/512/281/281773.png" alt="Yahoo" className="w-5 h-5" />
@@ -296,7 +296,7 @@ export function ContactForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="phone" className="text-white text-opacity-90">
+        <Label htmlFor="phone" className="text-foreground">
           Phone
         </Label>
         <Input
@@ -304,7 +304,7 @@ export function ContactForm({
           placeholder="Phone number"
           {...register("phone")}
           disabled={isLoading || isReadOnly}
-          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50"
+          className="bg-input/50 border-input text-foreground placeholder:text-muted-foreground"
         />
         {errors.phone && (
           <p className="text-red-400 text-xs mt-1">{errors.phone.message}</p>
@@ -312,7 +312,7 @@ export function ContactForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="address" className="text-white text-opacity-90">
+        <Label htmlFor="address" className="text-foreground">
           Address
         </Label>
         <Input
@@ -320,7 +320,7 @@ export function ContactForm({
           placeholder="Full address"
           {...register("address")}
           disabled={isLoading || isReadOnly}
-          className="bg-white bg-opacity-10 border-0 text-white placeholder:text-white placeholder:text-opacity-50"
+          className="bg-input/50 border-input text-foreground placeholder:text-muted-foreground"
         />
       </div>
 

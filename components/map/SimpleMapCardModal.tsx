@@ -239,7 +239,7 @@ export function SimpleMapCardModal({
             {/* Expanded Contact Form Modal */}
             {isExpanded && (
               <Dialog open={isExpanded} onOpenChange={() => setIsExpanded(false)}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-md bg-background text-foreground">
                   <DialogTitle>Contact Information</DialogTitle>
                   <div className="space-y-4">
                     {initialLeadId ? (

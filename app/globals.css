@@ -262,12 +262,24 @@ body {
   height: 100%;
 }
 
-/* Update the CSS to exclude the map container */
+/* Update the CSS to exclude the map container.
+   WARNING: Excludes [role="dialog"] so modals/forms retain proper contrast.
+   This rule can cause white-on-white or black-on-black if dialogs are inside. */
 .fullscreen-map-container,
 .fullscreen-map-container *:not(.map-container) {
   color-scheme: light !important;
   background-color: white;
   color: black;
+}
+/* Restore theme-aware styling for dialogs inside map container */
+.fullscreen-map-container [role="dialog"] {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  color-scheme: unset !important;
+}
+.fullscreen-map-container [role="dialog"] * {
+  background-color: unset !important;
+  color: unset !important;
 }
 
 /* Add specific styling for the map container */
