@@ -253,83 +253,6 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
 
 
 
-  // Custom dropdown component for insurance company
-  const CompanyDropdown = () => (
-    <div className="space-y-2">
-      <div className="relative">
-        <Input
-          id="insuranceCompany"
-          placeholder="Enter insurance company name"
-          {...register("insuranceCompany")}
-          disabled={isLoading}
-          className="bg-gray-300/50 bg-opacity-10 border-0 text-slate-950 placeholder:text-slate-950 placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
-        />
-        <button
-          type="button"
-          onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
-          className="text-blue-400 hover:text-blue-300 text-sm font-medium cursor-pointer mt-1"
-          disabled={isLoading}
-        >
-          Open Insurance List
-        </button>
-        {showCompanyDropdown && (
-          <div className="absolute z-50 w-full mt-1 bg-gray-300 border border-zinc-700 rounded-md shadow-lg max-h-60 overflow-auto">
-            {INSURANCE_COMPANIES.map((company) => (
-              <div
-                key={company.name}
-                className={cn(
-                  "px-3 sm:px-4 py-4 cursor-pointer hover:bg-gray-400 flex justify-between items-center text-sm sm:text-base",
-                  selectedCompany === company.name ? "bg-gray-400" : ""
-                )}
-                onClick={() => handleCompanySelect(company.name)}
-              >
-                <span className="text-slate-950">{company.name}</span>
-                {selectedCompany === company.name && <Check size={24} className="text-green-400" />}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-
-  // Custom dropdown component for damage type
-  const DamageTypeDropdown = () => (
-    <div className="relative" ref={damageTypeDropdownRef}>
-      <div
-        className={cn(
-          "flex items-center justify-between px-3 sm:p-4 bg-gray-300/50 bg-opacity-10 rounded-md cursor-pointer h-10 sm:h-12",
-          "border border-transparent hover:border-gray-600",
-          "text-sm sm:text-base"
-        )}
-        onClick={() => !isLoading && setShowDamageTypeDropdown(!showDamageTypeDropdown)}
-      >
-        <span className={selectedDamageType ? "text-slate-950" : "text-slate-950 text-opacity-50"}>
-          {selectedDamageType ? DAMAGE_TYPES.find(d => d.value === selectedDamageType)?.label : "Select damage type"}
-        </span>
-        <ChevronDown className="ml-2 h-4 w-4 text-slate-950 text-opacity-70" />
-      </div>
-      
-      {showDamageTypeDropdown && (
-        <div className="absolute z-50 w-full mt-1 bg-gray-300 border border-zinc-700 rounded-md shadow-lg max-h-60 overflow-auto">
-          {DAMAGE_TYPES.map((damageType) => (
-            <div
-              key={damageType.value}
-              className={cn(
-                "px-3 sm:px-4 py-4 cursor-pointer hover:bg-gray-400 flex justify-between items-center text-sm sm:text-base",
-                selectedDamageType === damageType.value ? "bg-gray-400" : ""
-              )}
-              onClick={() => handleDamageTypeSelect(damageType.value)}
-            >
-              <span className="text-slate-950">{damageType.label}</span>
-              {selectedDamageType === damageType.value && <Check size={24} className="text-green-400" />}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-
   const onSubmit = async (data: CreateLeadFormValues) => {
     setIsLoading(true)
     setError(null)
@@ -502,7 +425,42 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
                   <Label htmlFor="insuranceCompany" className="text-slate-950 text-opacity-90 text-sm sm:text-base">
                     Insurance Company
                   </Label>
-                  <CompanyDropdown />
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Input
+                        id="insuranceCompany"
+                        placeholder="Enter insurance company name"
+                        {...register("insuranceCompany")}
+                        disabled={isLoading}
+                        className="bg-gray-300/50 bg-opacity-10 border-0 text-slate-950 placeholder:text-slate-950 placeholder:text-opacity-50 h-10 sm:h-12 text-sm sm:text-base"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCompanyDropdown(!showCompanyDropdown)}
+                        className="text-blue-400 hover:text-blue-300 text-sm font-medium cursor-pointer mt-1"
+                        disabled={isLoading}
+                      >
+                        Open Insurance List
+                      </button>
+                      {showCompanyDropdown && (
+                        <div className="absolute z-50 w-full mt-1 bg-gray-300 border border-zinc-700 rounded-md shadow-lg max-h-60 overflow-auto">
+                          {INSURANCE_COMPANIES.map((company) => (
+                            <div
+                              key={company.name}
+                              className={cn(
+                                "px-3 sm:px-4 py-4 cursor-pointer hover:bg-gray-400 flex justify-between items-center text-sm sm:text-base",
+                                selectedCompany === company.name ? "bg-gray-400" : ""
+                              )}
+                              onClick={() => handleCompanySelect(company.name)}
+                            >
+                              <span className="text-slate-950">{company.name}</span>
+                              {selectedCompany === company.name && <Check size={24} className="text-green-400" />}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-1 sm:space-y-2">
@@ -613,7 +571,39 @@ export function CreateLeadForm({ open, onOpenChange, onSuccess }: CreateLeadForm
                   <Label htmlFor="damageType" className="text-slate-950 text-opacity-90 text-sm sm:text-base">
                     Damage Type
                   </Label>
-                  <DamageTypeDropdown />
+                  <div className="relative" ref={damageTypeDropdownRef}>
+                    <div
+                      className={cn(
+                        "flex items-center justify-between px-3 sm:p-4 bg-gray-300/50 bg-opacity-10 rounded-md cursor-pointer h-10 sm:h-12",
+                        "border border-transparent hover:border-gray-600",
+                        "text-sm sm:text-base"
+                      )}
+                      onClick={() => !isLoading && setShowDamageTypeDropdown(!showDamageTypeDropdown)}
+                    >
+                      <span className={selectedDamageType ? "text-slate-950" : "text-slate-950 text-opacity-50"}>
+                        {selectedDamageType ? DAMAGE_TYPES.find(d => d.value === selectedDamageType)?.label : "Select damage type"}
+                      </span>
+                      <ChevronDown className="ml-2 h-4 w-4 text-slate-950 text-opacity-70" />
+                    </div>
+
+                    {showDamageTypeDropdown && (
+                      <div className="absolute z-50 w-full mt-1 bg-gray-300 border border-zinc-700 rounded-md shadow-lg max-h-60 overflow-auto">
+                        {DAMAGE_TYPES.map((damageType) => (
+                          <div
+                            key={damageType.value}
+                            className={cn(
+                              "px-3 sm:px-4 py-4 cursor-pointer hover:bg-gray-400 flex justify-between items-center text-sm sm:text-base",
+                              selectedDamageType === damageType.value ? "bg-gray-400" : ""
+                            )}
+                            onClick={() => handleDamageTypeSelect(damageType.value)}
+                          >
+                            <span className="text-slate-950">{damageType.label}</span>
+                            {selectedDamageType === damageType.value && <Check size={24} className="text-green-400" />}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </TabsContent>
