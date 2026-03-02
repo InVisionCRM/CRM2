@@ -17,6 +17,8 @@ interface RoutePoint {
 interface RouteVisualizerProps {
   since: string | null; // ISO date string for when to start fetching points from
   mapInstance: Map | null; // Pass the map instance directly
+  /** When set, fetch this user's route (requires admin/manager). Omit for current user. */
+  userId?: string | null;
   routeLayerId?: string;
   routeSourceId?: string;
   lineColor?: string;
@@ -29,10 +31,11 @@ const DEFAULT_ROUTE_SOURCE_ID = 'user-route-source';
 export function RouteVisualizer({
   since,
   mapInstance,
+  userId = null,
   routeLayerId = DEFAULT_ROUTE_LAYER_ID,
   routeSourceId = DEFAULT_ROUTE_SOURCE_ID,
   lineColor = '#1DA1F2', // A nice blue, consider making this a prop or theme variable
-  lineWidth = 3,
+  lineWidth = 10,
 }: RouteVisualizerProps) {
   const [routePoints, setRoutePoints] = useState<RoutePoint[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,7 +52,10 @@ export function RouteVisualizer({
       setIsLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/tracking/points?since=${encodeURIComponent(since)}`);
+        const url = new URL('/api/tracking/points', window.location.origin);
+        url.searchParams.set('since', since);
+        if (userId) url.searchParams.set('userId', userId);
+        const response = await fetch(url.toString());
         if (!response.ok) {
           const errData = await response.json();
           throw new Error(errData.error || `Failed to fetch route points: ${response.statusText}`);
@@ -68,7 +74,7 @@ export function RouteVisualizer({
     };
 
     fetchRoute();
-  }, [since, mapInstance]);
+  }, [since, mapInstance, userId]);
 
   // Update map with route layer
   useEffect(() => {

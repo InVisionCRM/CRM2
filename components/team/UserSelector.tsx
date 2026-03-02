@@ -37,13 +37,15 @@ export function UserSelector({ users, selectedUserId }: UserSelectorProps) {
         Select User
       </label>
       <Select value={selectedUserId} onValueChange={handleUserChange}>
-        <SelectTrigger id="user-select-trigger" className="w-[240px] bg-white"> {/* Shadcn typically handles its own styling, added bg-white for clarity */}
+        <SelectTrigger id="user-select-trigger" className="w-[240px] bg-white text-black border-slate-300">
           <SelectValue placeholder="Select a user" />
         </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Users</SelectItem>
+        <SelectContent className="bg-white text-black border-slate-200">
+          <SelectItem value="all" className="text-black focus:bg-slate-100 focus:text-black">
+            All Users
+          </SelectItem>
           {users.map((user) => (
-            <SelectItem key={user.id} value={user.id}>
+            <SelectItem key={user.id} value={user.id} className="text-black focus:bg-slate-100 focus:text-black">
               {user.name}
             </SelectItem>
           ))}

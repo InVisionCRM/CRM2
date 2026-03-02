@@ -2,7 +2,14 @@
 
 import { UserSelector } from '@/components/team/UserSelector'
 import { prisma } from '@/lib/db/prisma'
-import { KnockStatus } from '@prisma/client'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 export interface User {
   id: string
@@ -64,6 +71,43 @@ async function getMetrics(userId: string | 'all'): Promise<UserMetrics> {
   };
 }
 
+export interface LeaderboardEntry {
+  userId: string
+  name: string
+  count: number
+}
+
+async function getLeaderboard(): Promise<LeaderboardEntry[]> {
+  const twelveHoursAgo = new Date();
+  twelveHoursAgo.setHours(twelveHoursAgo.getHours() - 12);
+
+  const grouped = await prisma.visit.groupBy({
+    by: ['userId'],
+    where: {
+      createdAt: { gte: twelveHoursAgo },
+      userId: { not: null },
+    },
+    _count: { id: true },
+  });
+
+  const withKnocks = grouped.filter((g) => g._count.id > 0);
+  if (withKnocks.length === 0) return [];
+
+  const users = await prisma.user.findMany({
+    where: { id: { in: withKnocks.map((g) => g.userId as string) } },
+    select: { id: true, name: true, email: true },
+  });
+  const userById = Object.fromEntries(users.map((u) => [u.id, u]));
+
+  return withKnocks
+    .map((g) => ({
+      userId: g.userId as string,
+      name: userById[g.userId as string]?.name ?? userById[g.userId as string]?.email ?? 'Unknown',
+      count: g._count.id,
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
 function MetricCard({ title, value, description }: { title: string; value: number; description?: string }) {
   return (
     <div className="bg-card text-card-foreground shadow-lg rounded-xl p-6 border">
@@ -81,8 +125,11 @@ export default async function TeamPage({
   searchParams: { userId?: string }
 }) {
   const selectedUserId = searchParams?.userId || 'all';
-  const users = await getUsers();
-  const metrics = await getMetrics(selectedUserId);
+  const [users, metrics, leaderboard] = await Promise.all([
+    getUsers(),
+    getMetrics(selectedUserId),
+    getLeaderboard(),
+  ]);
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -102,6 +149,32 @@ export default async function TeamPage({
           <MetricCard title="Total Leads Assigned" value={metrics.totalLeadsAssigned} description="Indicates the sum of all leads assigned." />
         </div>
       </section>
+
+      {leaderboard.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-xl font-semibold mb-4">Knock leaderboard (last 12 hours)</h2>
+          <div className="rounded-lg border bg-card overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>#</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead className="text-right">Knocks</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {leaderboard.map((row, i) => (
+                  <TableRow key={row.userId}>
+                    <TableCell>{i + 1}</TableCell>
+                    <TableCell>{row.name}</TableCell>
+                    <TableCell className="text-right">{row.count}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

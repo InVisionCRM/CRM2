@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useCallback, useRef, useEffect } from "react"
-import { SearchBar } from "@/components/ui/search-bar"
 import debounce from 'lodash.debounce'
+import { Search } from "lucide-react"
 
 interface AddressSearchProps {
   onAddressSelect: (result: {
@@ -70,10 +70,9 @@ export function AddressSearch({ onAddressSelect }: AddressSearchProps) {
     setSearchValue(prediction.description)
     setPredictions([])
 
-    // Get lat/lng for the selected address
     const geocoder = new window.google.maps.Geocoder()
     try {
-      const result = await new Promise((resolve, reject) => {
+      const result = await new Promise<{ geometry: { location: { lat: () => number; lng: () => number } } }>((resolve, reject) => {
         geocoder.geocode({ placeId: prediction.place_id }, (results: any, status: any) => {
           if (status === "OK") {
             resolve(results[0])
@@ -97,8 +96,7 @@ export function AddressSearch({ onAddressSelect }: AddressSearchProps) {
   }
 
   return (
-    <div className="relative w-full max-w-md">
-      {/* Custom inline search input without fixed positioning */}
+    <div className="relative w-64 sm:w-72">
       <div className="relative">
         <input
           type="text"
@@ -108,22 +106,21 @@ export function AddressSearch({ onAddressSelect }: AddressSearchProps) {
             setSearchValue(value)
             searchAddress(value)
           }}
-          placeholder="Search for an address..."
-          className="w-full px-4 py-3 bg-slate-800/50 text-white placeholder-white/50 border border-slate-600/50 rounded-lg focus:border-[#59ff00]/80 focus:outline-none focus:ring-1 focus:ring-[#59ff00]/50 transition-colors"
+          placeholder="Search address..."
+          className="w-full text-sm px-3 py-2 pl-8 bg-slate-800/90 text-white placeholder-white/50 border border-slate-600 rounded-md focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500/50"
         />
-        <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-          <svg className="h-4 w-4 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+        <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+          <Search className="h-3.5 w-3.5 text-white/50" />
         </div>
       </div>
-      
+
       {predictions.length > 0 && (
-        <div className="absolute w-full mt-1 bg-black/50 border border-[#59ff00]/20 rounded-lg overflow-hidden z-50 backdrop-blur-md">
-          {predictions.map((prediction, index) => (
+        <div className="absolute w-full mt-1 bg-white border border-slate-300 rounded-md overflow-hidden z-50 shadow-lg text-sm text-black">
+          {predictions.map((prediction) => (
             <button
               key={prediction.place_id}
-              className="w-full px-4 py-2 text-left text-white hover:bg-[#59ff00]/10 transition-colors"
+              type="button"
+              className="w-full px-3 py-1.5 text-left text-black hover:bg-slate-100 transition-colors"
               onClick={() => handleResultSelect(prediction)}
             >
               {prediction.description}

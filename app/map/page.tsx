@@ -10,7 +10,7 @@ import { AddressSearch } from "@/components/map/address-search"
 // Remove Google-specific MarkerData import
 // import type { MarkerData } from "@/components/map/google-map" 
 import { PropertyVisitStatus } from "@/components/map/types"
-import { DoorOpen, Home } from 'lucide-react'; // Icon for counter
+import { DoorOpen, Home, ChevronDown, ChevronUp } from 'lucide-react'
 import { SimpleMapCardModal } from "@/components/map/SimpleMapCardModal"
 import { MapProvider } from "@/components/map/map-context" 
 import { Button } from "@/components/ui/button"; // Import Button
@@ -18,7 +18,15 @@ import { Button } from "@/components/ui/button"; // Import Button
 import Link from "next/link"
 // import KnockCounter from "@/components/map/knock-counter"; // Removed import
 import { StreetViewImage } from "@/components/map/street-view-image"
-import { RouteTrackerToggle } from "@/components/map/RouteTracker"
+import { RouteTrackerAuto } from "@/components/map/RouteTracker"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
 // Helper function to validate status from API
 function isValidStatus(status: any): status is PropertyVisitStatus | "New" | "Search" {
@@ -53,6 +61,8 @@ export default function MapPage() {
   const [selectedModalData, setSelectedModalData] = useState<ModalData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [knockCount, setKnockCount] = useState<number | null>(null)
+  const [leaderboard, setLeaderboard] = useState<{ userId?: string; name: string; count: number }[]>([])
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false)
   // Use MapboxMapRef type for the ref
   const mapRef = useRef<MapboxMapRef>(null) 
   const { toast } = useToast()
@@ -153,6 +163,7 @@ export default function MapPage() {
         } else {
             const data = await response.json();
             setKnockCount(data.count);
+            setLeaderboard(Array.isArray(data.leaderboard) ? data.leaderboard : []);
         }
     } catch (error) {
         console.error("Error fetching knock count:", error);
@@ -453,41 +464,70 @@ export default function MapPage() {
   return (
     <MapProvider>
       <div className="relative h-screen w-screen overflow-hidden">
-        
-        {/* AddressSearch with Home Button */}
-        <div className="absolute top-4 left-4-translate-x-1/2 z-20 w-full max-w-md px-4 flex gap-[75px] items-center">
-          <Link href="/" className="shrink-0">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-10 sm:h-12 w-10 sm:w-12 rounded-full bg-black/50 backdrop-blur-sm border-[#59ff00] hover:bg-[#59ff00]/10 hover:border-[#59ff00]/80"
-            >
-              <Home className="h-5 w-5 text-white/50" />
-            </Button>
-          </Link>
-          <AddressSearch 
-            onAddressSelect={handleAddressSelect}
-          />
+        {/* Top bar: home left, search centered, no overlap */}
+        <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between gap-4 px-4 pt-4 pb-2 pointer-events-none">
+          <div className="pointer-events-auto shrink-0">
+            <Link href="/">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 rounded-full bg-slate-800/90 backdrop-blur-sm border-slate-600 text-white/80 hover:bg-slate-700 hover:border-slate-500"
+              >
+                <Home className="h-5 w-5" />
+              </Button>
+            </Link>
+          </div>
+          <div className="absolute left-1/2 -translate-x-1/2 flex justify-center pointer-events-auto">
+            <AddressSearch onAddressSelect={handleAddressSelect} />
+          </div>
+          <div className="w-10 shrink-0" aria-hidden />
         </div>
 
-        {/* Knock Counter Display - top left */}
+        {/* Knock Counter + collapsible Leaderboard - bottom-1/4 left-4 */}
         {knockCount !== null && (
-          <div className="absolute top-[260px] left-4 z-10 bg-green-800/40 backdrop-blur-sm shadow-md rounded-lg p-2 flex items-center space-x-2 border border-lime-400/90">
-            <DoorOpen className="h-8 w-8 text-white" />
-            <span className="font-semibold text-base-content">
-              {knockCount}
-            </span>
-            <span className="text-xs text-base-content/70"></span>
+          <div className="absolute bottom-[25%] left-4 z-10 flex flex-col gap-0">
+            <button
+              type="button"
+              onClick={() => setLeaderboardOpen((o) => !o)}
+              className={`bg-green-800/40 backdrop-blur-sm shadow-md p-2 flex items-center justify-between gap-2 border border-lime-400/90 w-full min-w-[120px] hover:bg-green-800/60 transition-colors ${leaderboardOpen && leaderboard.length > 0 ? 'rounded-t-lg border-b-0' : 'rounded-lg'}`}
+            >
+              <div className="flex items-center space-x-2">
+                <DoorOpen className="h-8 w-8 text-white shrink-0" />
+                <span className="font-semibold text-white">{knockCount}</span>
+              </div>
+              {leaderboard.length > 0 && (
+                <span className="text-white/80">
+                  {leaderboardOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </span>
+              )}
+            </button>
+            {leaderboardOpen && leaderboard.length > 0 && (
+              <div className="bg-white rounded-b-lg border border-t-0 border-slate-200 shadow-md overflow-hidden max-h-48 overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-slate-200 bg-slate-50">
+                      <TableHead className="text-black font-medium">#</TableHead>
+                      <TableHead className="text-black font-medium">Name</TableHead>
+                      <TableHead className="text-black font-medium text-right">Knocks</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {leaderboard.map((row, i) => (
+                      <TableRow key={row.userId ?? `${row.name}-${i}`} className="border-slate-200">
+                        <TableCell className="text-black">{i + 1}</TableCell>
+                        <TableCell className="text-black">{row.name}</TableCell>
+                        <TableCell className="text-black text-right">{row.count}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Route Tracker (GPS) - Start/Stop knock session */}
-        <div className="absolute top-[80px] left-4 z-10">
-          <RouteTrackerToggle />
-        </div>
-
-        {/* Zoom Control Buttons - Top Left Below Route Tracker */}
-        <div className="absolute top-[160px] left-4 z-10 flex flex-col gap-2">
+        {/* Map controls (Zoom) - top-1/2 right-4 */}
+        <div className="absolute top-1/2 -translate-y-1/2 right-4 z-10 flex flex-col gap-2">
           <Button 
             className="btn text-xs h-8 w-16" // Added .btn for glass, adjusted size/text
             onClick={() => handleZoomChange(20)} 
@@ -513,6 +553,9 @@ export default function MapPage() {
             Far
           </Button>
         </div>
+
+        {/* GPS route tracking runs in background when on map (no UI) */}
+        <RouteTrackerAuto />
 
         {/* Map Container with fixed styling */}
         <div className="absolute inset-0" style={{ zIndex: 0 }}>

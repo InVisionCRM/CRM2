@@ -35,6 +35,7 @@ interface MapboxMapProps {
     mapStyle?: string;
     searchResultMarker?: MapboxMarkerData | null; // Optional marker for search results
     showUserLocation?: boolean; // Prop to control showing user location
+    onMapReady?: (map: Map) => void; // Called when the map has finished loading (e.g. for route overlay)
 }
 
 // Define the functions exposed via the ref
@@ -59,6 +60,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>((
         mapStyle = "mapbox://styles/invisionpjm/cm966bqbg00br01qugzbw7vef",
         searchResultMarker,
         showUserLocation = true, // Default to showing user location
+        onMapReady,
     },
     ref
 ) => {
@@ -128,6 +130,7 @@ const MapboxMap = forwardRef<MapboxMapRef, MapboxMapProps>((
                 console.log("[MapboxMap] Map Loaded");
                 setMapLoaded(true);
                 setIsLoading(false);
+                onMapReady?.(map);
 
                 // Add standard controls
                 map.addControl(new mapboxgl.NavigationControl(), "top-right");

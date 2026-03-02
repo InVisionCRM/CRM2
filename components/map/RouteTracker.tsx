@@ -9,10 +9,12 @@ interface RoutePointInput {
 interface UseRouteTrackerProps {
   bufferTime?: number; // in milliseconds
   minDistanceFilter?: number; // in meters
+  /** When true, start tracking as soon as the component mounts (e.g. when user is on the map). */
+  autoStart?: boolean;
 }
 
-const DEFAULT_BUFFER_TIME = 10000; // 10 seconds
-const DEFAULT_MIN_DISTANCE_FILTER = 20; // 20 meters
+const DEFAULT_BUFFER_TIME = 3000; // 3 seconds
+const DEFAULT_MIN_DISTANCE_FILTER = 1; // 1 meters
 
 function haversineDistance(coords1: {lat: number, lng: number}, coords2: {lat: number, lng: number}): number {
     const R = 6371e3; // metres
@@ -33,9 +35,17 @@ function haversineDistance(coords1: {lat: number, lng: number}, coords2: {lat: n
 export function useRouteTracker({
   bufferTime = DEFAULT_BUFFER_TIME,
   minDistanceFilter = DEFAULT_MIN_DISTANCE_FILTER,
+  autoStart = true
 }: UseRouteTrackerProps = {}) {
   const [isTracking, setIsTracking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Auto-start tracking when on the map (e.g. door-knock session)
+  useEffect(() => {
+    if (autoStart) {
+      setIsTracking(true);
+    }
+  }, [autoStart]);
   const pointBufferRef = useRef<RoutePointInput[]>([]);
   const watchIdRef = useRef<number | null>(null);
   const lastSentPointRef = useRef<{lat: number, lng: number} | null>(null);
@@ -170,27 +180,12 @@ export function useRouteTracker({
   return { isTracking, toggleTracking, error };
 }
 
-// Compact toggle for map overlay - matches knock counter / zoom control styling
-export function RouteTrackerToggle() {
-  const { isTracking, toggleTracking, error } = useRouteTracker({
-    bufferTime: 10000, // 10 seconds
-    minDistanceFilter: 20, // 20 meters
+/** Runs GPS route tracking in the background when on the map. Renders nothing. */
+export function RouteTrackerAuto() {
+  useRouteTracker({
+    bufferTime: 3000,
+    minDistanceFilter: 1,
+    autoStart: true,
   });
-
-  return (
-    <div className="bg-green-800/40 backdrop-blur-sm shadow-md rounded-lg p-2 border border-lime-400/90">
-      <button
-        onClick={toggleTracking}
-        className={`w-full px-3 py-2 rounded text-sm font-medium transition-colors ${
-          isTracking
-            ? 'bg-red-600 hover:bg-red-700 text-white'
-            : 'bg-lime-600 hover:bg-lime-700 text-black'
-        }`}
-      >
-        {isTracking ? 'Stop GPS Track' : 'Start GPS Track'}
-      </button>
-      {error && <p className="text-red-400 mt-1 text-xs">Error: {error}</p>}
-      {isTracking && <p className="text-lime-300 mt-1 text-xs">Tracking...</p>}
-    </div>
-  );
+  return null;
 } 

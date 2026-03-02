@@ -54,6 +54,8 @@ export async function POST(request: Request) {
   }
 } 
 
+const ALLOWED_VIEW_OTHER_ROUTES = ['ADMIN', 'MANAGER'];
+
 export async function GET(request: NextRequest) {
   try {
     const currentUser = await getCurrentUser();
@@ -63,6 +65,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const sinceParam = searchParams.get('since');
+    const userIdParam = searchParams.get('userId');
 
     if (!sinceParam) {
       return NextResponse.json({ error: '`since` query parameter is required' }, { status: 400 });
@@ -73,7 +76,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '`since` query parameter must be a valid ISO date string' }, { status: 400 });
     }
 
-    const routePoints = await getRouteForSession(currentUser.id, sinceDate);
+    let targetUserId = currentUser.id;
+    if (userIdParam && userIdParam !== currentUser.id) {
+      if (!ALLOWED_VIEW_OTHER_ROUTES.includes(currentUser.role ?? '')) {
+        return NextResponse.json(
+          { error: 'You do not have permission to view another user\'s route' },
+          { status: 403 }
+        );
+      }
+      targetUserId = userIdParam;
+    }
+
+    const routePoints = await getRouteForSession(targetUserId, sinceDate);
 
     return NextResponse.json(routePoints, { status: 200 });
 
