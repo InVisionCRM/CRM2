@@ -10,7 +10,13 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { to, subject, text, cc } = body;
+  const { to, subject, text, cc, html } = body as {
+    to?: string;
+    subject?: string;
+    text?: string;
+    cc?: string;
+    html?: string;
+  };
   if (!to || !subject || !text) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
@@ -21,7 +27,13 @@ export async function POST(request: NextRequest) {
   });
 
   try {
-    const resp = await gmail.sendEmail({ to, subject, body: text, cc });
+    const resp = await gmail.sendEmail({
+      to,
+      subject,
+      body: text,
+      cc,
+      html: typeof html === "string" && html.trim() ? html : undefined,
+    });
     return NextResponse.json({ success: true, data: resp });
   } catch (e: any) {
     console.error("Gmail sendEmail error:", e);

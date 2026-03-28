@@ -476,7 +476,7 @@ export function LeadNotes({ leadId }: LeadNotesProps) {
           </div>
         ) : notes.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground">No notes yet</div>
-        ) :
+        ) : (
           <div className="space-y-4">
             {notes.map((note) => (
               <div key={note.id} className="border rounded-lg p-3">

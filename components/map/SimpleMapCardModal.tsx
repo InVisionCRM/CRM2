@@ -120,7 +120,6 @@ export function SimpleMapCardModal({
       toast({
         title: "Success!",
         description: "Lead has been created successfully.",
-        duration: 5000,
       })
       setShowSuccessDialog(true)
     }
@@ -246,7 +245,7 @@ export function SimpleMapCardModal({
                       <ContactForm
                         initialData={contactInitialValues}
                         leadId={initialLeadId}
-                        onSuccess={handleFormSuccess}
+                        onSuccess={(leadId: string, isNewLead?: boolean) => handleFormSuccess(leadId, isNewLead ?? false)}
                       />
                     ) : (
                       <div className="text-center text-gray-500 dark:text-gray-400 py-4">

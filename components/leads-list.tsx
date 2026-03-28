@@ -72,8 +72,16 @@ import { cn } from "@/lib/utils"
 import { LeadStatus } from "@prisma/client"
 import { updateLeadStatus } from "@/app/actions/lead-actions"
 import { useToast } from "@/components/ui/use-toast"
-import { useSession } from "next-auth/react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Drawer, DrawerContent, DrawerTrigger, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 import {
@@ -359,7 +367,19 @@ const getSalespersonInitials = (name: string | null | undefined): string => {
   return name.split(' ').map(n => n[0]).join('').toUpperCase()
 }
 
-function NeonLeadCard({ lead, className = "", isFilteredByUser = false }: { lead: LeadSummary, className?: string, isFilteredByUser?: boolean }) {
+function NeonLeadCard({
+  lead,
+  className = "",
+  isFilteredByUser = false,
+  onOpenReviewPreview,
+  isSendingGoogleReview,
+}: {
+  lead: LeadSummary
+  className?: string
+  isFilteredByUser?: boolean
+  onOpenReviewPreview?: (leadId: string) => void
+  isSendingGoogleReview?: boolean
+}) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
@@ -1078,7 +1098,7 @@ function NeonLeadCard({ lead, className = "", isFilteredByUser = false }: { lead
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button 
                         size="sm" 
                         className="border-2 transition-all duration-300 hover:scale-105"
@@ -1095,6 +1115,29 @@ function NeonLeadCard({ lead, className = "", isFilteredByUser = false }: { lead
                           View Lead
                         </Link>
                       </Button>
+                      {onOpenReviewPreview && (
+                        <Button
+                          size="sm"
+                          type="button"
+                          disabled={!lead.email || isSendingGoogleReview}
+                          className="min-w-[132px] border-2 transition-all duration-300 hover:scale-105 disabled:opacity-50 px-4"
+                          style={{
+                            backgroundColor: `rgba(${colors.shadow}, 0.2)`,
+                            borderColor: `rgba(${colors.border}, 0.5)`,
+                            color: colors.glow,
+                            boxShadow: `0 0 10px rgba(${colors.shadow}, 0.3)`,
+                          }}
+                          onClick={() => onOpenReviewPreview(lead.id)}
+                          title={lead.email ? "Preview and send Google review request" : "Add an email address first"}
+                        >
+                          {isSendingGoogleReview ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Star className="h-4 w-4 mr-2 shrink-0" />
+                          )}
+                          Review
+                        </Button>
+                      )}
                     </div>
 
                     {/* Note Section with Overlaid Send Button */}
@@ -1542,6 +1585,7 @@ function NeonLeadCard({ lead, className = "", isFilteredByUser = false }: { lead
 }
 
 export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, onViewActivity: _onViewActivity, onViewFiles, onUserFilter }: LeadsListProps) {
+  const { toast } = useToast()
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
@@ -1556,6 +1600,27 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
   const [showAddressSuggestions, setShowAddressSuggestions] = useState(false)
   const [photoDrawerOpen, setPhotoDrawerOpen] = useState(false)
   const [selectedLeadForPhotos, setSelectedLeadForPhotos] = useState<string | null>(null)
+  const [sendingReviewLeadId, setSendingReviewLeadId] = useState<string | null>(null)
+  const [reviewPreview, setReviewPreview] = useState<{
+    open: boolean
+    leadId: string | null
+    to: string
+    subject: string
+    text: string
+    html: string
+    loading: boolean
+    error: string | null
+  }>({
+    open: false,
+    leadId: null,
+    to: "",
+    subject: "",
+    text: "",
+    html: "",
+    loading: false,
+    error: null,
+  })
+  const [reviewSentConfirmEmail, setReviewSentConfirmEmail] = useState<string | null>(null)
 
   // Pagination logic
   const totalPages = Math.ceil(leads.length / pageSize)
@@ -1718,6 +1783,92 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
     // You can add API call to save photo to your backend
   }
 
+  const openReviewPreview = async (leadId: string) => {
+    setReviewPreview({
+      open: true,
+      leadId,
+      to: "",
+      subject: "",
+      text: "",
+      html: "",
+      loading: true,
+      error: null,
+    })
+    try {
+      const res = await fetch("/api/gmail/review-request/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leadId,
+          assetBaseUrl: typeof window !== "undefined" ? window.location.origin : undefined,
+        }),
+      })
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string
+        to?: string
+        subject?: string
+        text?: string
+        html?: string
+      }
+      if (!res.ok) {
+        throw new Error(data.error || "Could not load preview")
+      }
+      setReviewPreview((prev) => ({
+        ...prev,
+        loading: false,
+        to: data.to ?? "",
+        subject: data.subject ?? "",
+        text: data.text ?? "",
+        html: data.html ?? "",
+        error: null,
+      }))
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Something went wrong"
+      setReviewPreview((prev) => ({
+        ...prev,
+        loading: false,
+        error: message,
+      }))
+    }
+  }
+
+  const sendGoogleReviewFromPreview = async () => {
+    const leadId = reviewPreview.leadId
+    if (!leadId) return
+    setSendingReviewLeadId(leadId)
+    try {
+      const res = await fetch("/api/gmail/review-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadId }),
+      })
+      const data = (await res.json().catch(() => ({}))) as { error?: string }
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to send email")
+      }
+      const sentTo = reviewPreview.to
+      setReviewPreview({
+        open: false,
+        leadId: null,
+        to: "",
+        subject: "",
+        text: "",
+        html: "",
+        loading: false,
+        error: null,
+      })
+      setReviewSentConfirmEmail(sentTo)
+    } catch (e: unknown) {
+      toast({
+        title: "Could not send email",
+        description: e instanceof Error ? e.message : "Something went wrong",
+        variant: "destructive",
+      })
+    } finally {
+      setSendingReviewLeadId(null)
+    }
+  }
+
   const SpreadsheetView = () => (
     <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
@@ -1726,7 +1877,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
             <tr>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] max-w-[150px]">Name</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Created</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Actions</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[220px]">Actions</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Status</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Assigned To</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">Email</th>
@@ -1835,6 +1986,22 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                           <p>Take Photos</p>
                         </TooltipContent>
                       </Tooltip>
+
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 min-w-[92px] px-2 gap-1.5 bg-black text-white hover:bg-amber-500 hover:text-white disabled:opacity-40 text-xs font-medium"
+                        disabled={!lead.email || sendingReviewLeadId === lead.id}
+                        onClick={() => openReviewPreview(lead.id)}
+                        aria-label="Preview and send Google review request"
+                      >
+                        {sendingReviewLeadId === lead.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                        ) : (
+                          <Star className="h-3 w-3 shrink-0" />
+                        )}
+                        Review
+                      </Button>
                     </div>
                   </TooltipProvider>
                 </td>
@@ -2296,10 +2463,12 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
         // Card View - Responsive Grid Layout
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-4">
           {currentLeads.map((lead) => (
-            <NeonLeadCard 
-              key={lead.id} 
-              lead={lead} 
+            <NeonLeadCard
+              key={lead.id}
+              lead={lead}
               isFilteredByUser={!!_assignedTo}
+              onOpenReviewPreview={openReviewPreview}
+              isSendingGoogleReview={sendingReviewLeadId === lead.id}
             />
           ))}
         </div>
@@ -2309,6 +2478,150 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
       )}
 
       {/* File Upload Modal */}
+      <Dialog
+        open={reviewPreview.open}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReviewPreview({
+              open: false,
+              leadId: null,
+              to: "",
+              subject: "",
+              text: "",
+              html: "",
+              loading: false,
+              error: null,
+            })
+          }
+        }}
+      >
+        <DialogContent className="max-w-xl max-h-[92vh] flex flex-col gap-0 border-slate-600 bg-slate-900 text-slate-100 sm:rounded-xl">
+          <DialogHeader className="space-y-1 pb-2">
+            <DialogTitle className="text-lg">Send review request</DialogTitle>
+            <DialogDescription className="sr-only">
+              Check the customer email and preview, then send the review request from your Gmail account.
+            </DialogDescription>
+          </DialogHeader>
+          {reviewPreview.loading ? (
+            <div className="flex items-center justify-center py-16 text-slate-400 gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Loading preview…
+            </div>
+          ) : reviewPreview.error && !reviewPreview.html ? (
+            <p className="text-sm text-red-400 py-4">{reviewPreview.error}</p>
+          ) : (
+            <div className="flex flex-col gap-4 min-h-0 flex-1 overflow-hidden pb-1">
+              <div className="rounded-lg border border-slate-600/80 bg-slate-800/80 px-4 py-3 text-sm space-y-2">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Sending to</p>
+                  <p className="font-semibold text-slate-100 break-all">{reviewPreview.to || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Subject</p>
+                  <p className="text-slate-200 leading-snug">{reviewPreview.subject || "—"}</p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-500/40 bg-[#c8c8ce] p-3 sm:p-4 shadow-inner">
+                <p className="text-center text-xs font-medium text-slate-600 mb-2">What they&apos;ll see</p>
+                <div
+                  className="mx-auto overflow-hidden rounded-lg border border-slate-400/70 bg-[#f4f4f5] shadow-md"
+                  style={{ width: 312, height: 400 }}
+                >
+                  {reviewPreview.html ? (
+                    <iframe
+                      title="Email preview"
+                      srcDoc={reviewPreview.html}
+                      className="border-0 block bg-[#f4f4f5]"
+                      style={{
+                        width: 600,
+                        height: 1100,
+                        transform: "scale(0.52)",
+                        transformOrigin: "top left",
+                      }}
+                    />
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-1 border-t border-slate-700">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-slate-600 bg-transparent text-slate-200 hover:bg-slate-800"
+                  onClick={() =>
+                    setReviewPreview({
+                      open: false,
+                      leadId: null,
+                      to: "",
+                      subject: "",
+                      text: "",
+                      html: "",
+                      loading: false,
+                      error: null,
+                    })
+                  }
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  className="bg-amber-600 text-white hover:bg-amber-500 min-w-[120px]"
+                  disabled={
+                    !reviewPreview.leadId ||
+                    reviewPreview.loading ||
+                    !reviewPreview.to ||
+                    !reviewPreview.html
+                  }
+                  onClick={() => sendGoogleReviewFromPreview()}
+                >
+                  {sendingReviewLeadId === reviewPreview.leadId ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending…
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Send email
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={reviewSentConfirmEmail !== null}
+        onOpenChange={(open) => {
+          if (!open) setReviewSentConfirmEmail(null)
+        }}
+      >
+        <AlertDialogContent className="border-slate-700 bg-slate-950 text-slate-100 sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-emerald-400">
+              <CheckCircle2 className="h-5 w-5 shrink-0" />
+              Email sent successfully
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-300">
+              Your Google review request was sent to{" "}
+              <span className="font-medium text-slate-100">{reviewSentConfirmEmail}</span> from your Gmail
+              account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              className="bg-emerald-600 text-white hover:bg-emerald-500"
+              onClick={() => setReviewSentConfirmEmail(null)}
+            >
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {fileUploadModalOpen && (
         <Dialog open={fileUploadModalOpen} onOpenChange={setFileUploadModalOpen}>
           <DialogContent className="max-w-2xl">

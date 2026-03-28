@@ -21,6 +21,43 @@ export interface ParsedContactInfo {
   addresses: string[];
 }
 
+/** RFC 2047: Subject must not contain raw non-ASCII; avoids mojibake (e.g. em dash showing as Ã¢Â€Â"). */
+function encodeSubjectHeader(subject: string): string {
+  if (/^[\t\x20-\x7E]*$/.test(subject)) {
+    return subject;
+  }
+  const b64 = Buffer.from(subject, "utf8").toString("base64");
+  return `=?UTF-8?B?${b64}?=`;
+}
+
+/** Base64 body lines max 76 chars (RFC 2045). */
+function utf8ToBase64MimeBody(text: string): string {
+  const b64 = Buffer.from(text, "utf8").toString("base64");
+  const lines: string[] = [];
+  for (let i = 0; i < b64.length; i += 76) {
+    lines.push(b64.slice(i, i + 76));
+  }
+  return lines.join("\r\n");
+}
+
+function mimePartTextPlainUtf8(body: string): string {
+  return [
+    "Content-Type: text/plain; charset=UTF-8",
+    "Content-Transfer-Encoding: base64",
+    "",
+    utf8ToBase64MimeBody(body),
+  ].join("\r\n");
+}
+
+function mimePartTextHtmlUtf8(html: string): string {
+  return [
+    "Content-Type: text/html; charset=UTF-8",
+    "Content-Transfer-Encoding: base64",
+    "",
+    utf8ToBase64MimeBody(html),
+  ].join("\r\n");
+}
+
 export class GmailService {
   private credentials: GmailCredentials;
   private isRefreshingToken = false;
@@ -142,19 +179,49 @@ export class GmailService {
     return this.fetchWithAuth(`/messages/${id}?format=full`);
   }
 
-  // Send email
-  async sendEmail({ to, subject, body, cc }: { to: string; subject: string; body: string; cc?: string }): Promise<any> {
-    const emailLines = [
-      `To: ${to}`,
-      ...(cc ? [`Cc: ${cc}`] : []),
-      "Content-Type: text/plain; charset=UTF-8",
-      "MIME-Version: 1.0",
-      `Subject: ${subject}`,
-      "",
-      body,
-    ];
-
-    const email = emailLines.join("\n");
+  // Send email (optional HTML → multipart/alternative for clients that support it)
+  async sendEmail({
+    to,
+    subject,
+    body,
+    html,
+    cc,
+  }: {
+    to: string;
+    subject: string;
+    body: string;
+    html?: string;
+    cc?: string;
+  }): Promise<any> {
+    const nl = "\r\n";
+    let email: string;
+    const subj = encodeSubjectHeader(subject);
+    if (html && html.trim()) {
+      const boundary = `----=_CRM_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+      email = [
+        `To: ${to}`,
+        ...(cc ? [`Cc: ${cc}`] : []),
+        `Subject: ${subj}`,
+        "MIME-Version: 1.0",
+        `Content-Type: multipart/alternative; boundary="${boundary}"`,
+        "",
+        `--${boundary}`,
+        mimePartTextPlainUtf8(body),
+        `--${boundary}`,
+        mimePartTextHtmlUtf8(html),
+        `--${boundary}--`,
+        "",
+      ].join(nl);
+    } else {
+      email = [
+        `To: ${to}`,
+        ...(cc ? [`Cc: ${cc}`] : []),
+        `Subject: ${subj}`,
+        "MIME-Version: 1.0",
+        mimePartTextPlainUtf8(body),
+        "",
+      ].join(nl);
+    }
     const encodedMessage = Buffer.from(email)
       .toString("base64")
       .replace(/\+/g, "-")
