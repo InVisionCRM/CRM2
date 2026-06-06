@@ -24,7 +24,7 @@ updated at the end of every run. It exists so the routine never redoes a section
 | [ ] | Leads table (list view) | `leads-table` | — | — |
 | [ ] | Lead detail page | `lead-detail` | — | — |
 | [ ] | Calendar | `calendar` | — | — |
-| [~] | Files / Drive | `files-drive` | TBD | 2026-06-06 |
+| [~] | Files / Drive | `files-drive` | https://github.com/InVisionCRM/CRM2/pull/8 | 2026-06-06 |
 | [ ] | Roof estimator | `roof-estimator` | — | — |
 | [ ] | Auth / login | `auth-login` | — | — |
 | [ ] | Settings | `settings` | — | — |
@@ -34,4 +34,4 @@ updated at the end of every run. It exists so the routine never redoes a section
 
 ## Log
 <!-- Each run appends one line: YYYY-MM-DD · <slug> · <PR url> · one-line summary -->
-2026-06-06 · files-drive · TBD · Restyle Drive manager, lead Files page, file upload modals and primitive to forest/cream palette, replace neon `#59ff00` with lime `#A4D65E`.
+2026-06-06 · files-drive · https://github.com/InVisionCRM/CRM2/pull/8 · Restyle Drive manager, lead Files page, file upload modals and primitive to forest/cream palette, replace neon `#59ff00` with lime `#A4D65E`.
