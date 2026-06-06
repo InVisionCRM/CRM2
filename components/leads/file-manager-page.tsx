@@ -457,7 +457,7 @@ const PhotoDialog = ({ photo, isOpen, onClose, onDelete, onUpdate, canDelete = t
                 <Button 
                   onClick={handleCropComplete}
                   disabled={!completedCrop?.width || !completedCrop?.height || isSaving}
-                  className="bg-[#59ff00] text-black hover:bg-[#59ff00]/90"
+                  className="bg-[#A4D65E] text-[#0F1311] hover:bg-[#7FB23F] font-semibold"
                 >
                   {isSaving ? "Saving..." : "Apply Crop"}
                 </Button>
@@ -503,7 +503,7 @@ const PhotoDialog = ({ photo, isOpen, onClose, onDelete, onUpdate, canDelete = t
                 <Button 
                   onClick={handleSaveChanges}
                   disabled={isSaving}
-                  className="bg-[#59ff00] text-black hover:bg-[#59ff00]/90"
+                  className="bg-[#A4D65E] text-[#0F1311] hover:bg-[#7FB23F] font-semibold"
                 >
                   {isSaving ? "Saving..." : "Save Caption"}
                 </Button>
@@ -999,13 +999,13 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
     }
     
     return (
-      <Card 
-        key={file.id} 
-        className={`group cursor-pointer transition-all hover:shadow-md ${isSelected ? 'ring-2 ring-primary' : ''}`}
+      <Card
+        key={file.id}
+        className={`group cursor-pointer bg-[#161D18] border border-[rgba(236,234,224,0.08)] transition-all hover:border-[rgba(236,234,224,0.14)] hover:shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)] ${isSelected ? 'ring-2 ring-[#A4D65E]' : ''}`}
         onClick={handleFileClick}
       >
         <CardContent className="p-3">
-          <div className="aspect-square mb-2 bg-muted rounded-md overflow-hidden flex items-center justify-center">
+          <div className="aspect-square mb-2 bg-[#1B231D] rounded-lg overflow-hidden flex items-center justify-center border border-[rgba(236,234,224,0.08)]">
             {file.thumbnailUrl ? (
               <img 
                 src={file.thumbnailUrl} 
@@ -1020,14 +1020,14 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
           </div>
           
           <div className="space-y-1">
-            <p className="font-medium text-sm truncate" title={file.name}>
+            <p className="font-medium text-sm truncate text-[#ECEAE0]" title={file.name}>
               {file.name}
             </p>
-            <p className="text-xs text-muted-foreground">
-              {(file.size / 1024).toFixed(1)} KB • {new Date(file.uploadedAt).toLocaleDateString()}
+            <p className="text-xs text-[#6E776E]">
+              {(file.size / 1024).toFixed(1)} KB · {new Date(file.uploadedAt).toLocaleDateString()}
             </p>
             <div className="flex items-center gap-1">
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-xs bg-[#1B231D] border border-[rgba(236,234,224,0.08)] text-[#A7B0A6]">
                 {file.source === 'blob' ? 'Photo' : 'Drive'}
               </Badge>
             </div>
@@ -1071,7 +1071,7 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
                 e.stopPropagation()
                 handleDelete(file)
               }}
-              className="text-red-600 hover:text-red-700"
+              className="text-[#EF5E73] hover:text-[#EF5E73] hover:bg-[#EF5E73]/10"
             >
               <Trash2 className="h-3 w-3" />
             </Button>
@@ -1095,9 +1095,9 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
     }
 
     return (
-      <div 
-        key={file.id} 
-        className="flex items-center justify-between p-3 border-b hover:bg-muted/50 cursor-pointer"
+      <div
+        key={file.id}
+        className="flex items-center justify-between p-3 border-b border-[rgba(236,234,224,0.08)] hover:bg-[#1B231D]/60 cursor-pointer transition-colors"
         onClick={handleFileClick}
       >
         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -1105,10 +1105,10 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
             {file.type === 'photo' ? '📷' : '📄'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-medium truncate">{file.name}</p>
-            <p className="text-sm text-muted-foreground">
-              {(file.size / 1024).toFixed(1)} KB • {new Date(file.uploadedAt).toLocaleDateString()} • 
-              <Badge variant="secondary" className="ml-1 text-xs">
+            <p className="font-medium truncate text-[#ECEAE0]">{file.name}</p>
+            <p className="text-sm text-[#6E776E]">
+              {(file.size / 1024).toFixed(1)} KB · {new Date(file.uploadedAt).toLocaleDateString()} ·
+              <Badge variant="secondary" className="ml-1 text-xs bg-[#1B231D] border border-[rgba(236,234,224,0.08)] text-[#A7B0A6]">
                 {file.source === 'blob' ? 'Photo' : 'Drive'}
               </Badge>
             </p>
@@ -1178,16 +1178,16 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => router.push(`/leads/${lead.id}`)}>
+          <Button variant="ghost" onClick={() => router.push(`/leads/${lead.id}`)} className="text-[#A7B0A6] hover:text-[#ECEAE0] hover:bg-[#1B231D]">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Lead
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">
-              {lead.firstName} {lead.lastName} - Files & Photos
+            <h1 className="text-2xl font-bold text-[#ECEAE0] tracking-tight">
+              {lead.firstName} {lead.lastName} — Files & Photos
             </h1>
-            <p className="text-muted-foreground">
-              📁 Claim #{lead.claimNumber} • {lead.status} • {lead.email}
+            <p className="text-[#A7B0A6] text-sm mt-1">
+              Claim #{lead.claimNumber} · {lead.status} · {lead.email}
             </p>
           </div>
         </div>
@@ -1246,17 +1246,17 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
           {isLoadingFiles || isLoadingPhotos ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading files...</p>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#A4D65E] mx-auto mb-4"></div>
+                <p className="text-[#A7B0A6]">Loading files...</p>
               </div>
             </div>
           ) : filteredFiles.length === 0 ? (
             <div className="text-center py-12">
               <div className="mb-4">
-                <div className="text-6xl mb-4">
+                <div className="text-6xl mb-4 opacity-60">
                   {activeFilter === 'photos' ? '📷' : activeFilter === 'files' ? '📄' : '📁'}
                 </div>
-                <p className="text-muted-foreground mb-4">
+                <p className="text-[#A7B0A6] mb-4">
                   {activeFilter === 'photos' 
                     ? 'No photos found.' 
                     : activeFilter === 'files' 
@@ -1309,7 +1309,7 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
                   {filteredFiles.map(renderFileCard)}
                 </div>
               ) : (
-                <div className="border rounded-lg">
+                <div className="border border-[rgba(236,234,224,0.08)] rounded-xl bg-[#161D18] overflow-hidden">
                   {filteredFiles.map(renderListItem)}
                 </div>
               )}
@@ -1329,10 +1329,10 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
             {/* Drag and Drop Area */}
             {filesToUpload.length === 0 && (
               <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                  isDragOver 
-                    ? 'border-primary bg-primary/5' 
-                    : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+                className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+                  isDragOver
+                    ? 'border-[#A4D65E] bg-[#A4D65E]/5'
+                    : 'border-[rgba(236,234,224,0.14)] hover:border-[rgba(236,234,224,0.24)]'
                 }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -1378,8 +1378,8 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
                     
                     return (
                       <div key={index} className="space-y-2">
-                        <div className={`flex items-center justify-between p-2 rounded ${
-                          isValidFile ? 'bg-muted' : 'bg-red-50 border border-red-200'
+                        <div className={`flex items-center justify-between p-2 rounded-lg ${
+                          isValidFile ? 'bg-[#1B231D] border border-[rgba(236,234,224,0.08)]' : 'bg-[#EF5E73]/10 border border-[#EF5E73]/20'
                         }`}>
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             <div className="text-sm">
@@ -1394,32 +1394,32 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
                           </div>
                           <div className="flex items-center gap-2">
                             {!isValidFile ? (
-                              <span className="text-xs text-red-600">Invalid type</span>
+                              <span className="text-xs text-[#EF5E73]">Invalid type</span>
                             ) : isError ? (
-                              <span className="text-xs text-red-600">Failed</span>
+                              <span className="text-xs text-[#EF5E73]">Failed</span>
                             ) : isComplete ? (
-                              <span className="text-xs text-green-600">✓ Complete</span>
+                              <span className="text-xs text-[#A4D65E]">✓ Complete</span>
                             ) : isCurrentlyUploading ? (
-                              <span className="text-xs text-blue-600">Uploading...</span>
+                              <span className="text-xs text-[#5AD2F4]">Uploading…</span>
                             ) : (
-                              <span className="text-xs text-muted-foreground">Waiting</span>
+                              <span className="text-xs text-[#6E776E]">Waiting</span>
                             )}
                           </div>
                         </div>
                         
                         {/* Progress Bar */}
                         {isValidFile && (isUploading || isComplete || isError) && (
-                          <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div className="w-full bg-[#1B231D] border border-[rgba(236,234,224,0.08)] rounded-full h-2 overflow-hidden">
                             <div
-                              className={`h-2 rounded-full transition-all duration-300 ${
-                                isError 
-                                  ? 'bg-red-500' 
-                                  : isComplete 
-                                    ? 'bg-green-500' 
-                                    : 'bg-blue-500'
+                              className={`h-full rounded-full transition-all duration-300 ${
+                                isError
+                                  ? 'bg-[#EF5E73]'
+                                  : isComplete
+                                    ? 'bg-[#A4D65E]'
+                                    : 'bg-[#5AD2F4]'
                               }`}
-                              style={{ 
-                                width: `${isError ? 100 : Math.max(progress, 0)}%` 
+                              style={{
+                                width: `${isError ? 100 : Math.max(progress, 0)}%`
                               }}
                             />
                           </div>
@@ -1427,7 +1427,7 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
                         
                         {/* Progress Text */}
                         {isValidFile && (isUploading || isComplete || isError) && (
-                          <div className="text-xs text-center text-muted-foreground">
+                          <div className="text-xs text-center text-[#6E776E]">
                             {isError ? 'Upload failed' : `${Math.max(progress, 0)}%`}
                           </div>
                         )}
@@ -1452,7 +1452,7 @@ export function FileManagerPage({ lead }: FileManagerPageProps) {
             
             {/* Overall Status */}
             {isUploading && currentUploadingFile && (
-              <div className="text-sm text-center text-blue-600 font-medium">
+              <div className="text-sm text-center text-[#5AD2F4] font-medium">
                 Currently uploading: {currentUploadingFile}
               </div>
             )}

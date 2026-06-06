@@ -22,7 +22,7 @@ export default function DrivePage() {
 
   return (
     <div className="container mx-auto py-8 px-4 mt-10">
-      <h1 className="text-3xl font-bold mb-6 text-white"></h1>
+      <h1 className="text-3xl font-bold mb-6 text-[#ECEAE0] tracking-tight"></h1>
       <DriveFileManager />
       <Toaster />
       <motion.div 

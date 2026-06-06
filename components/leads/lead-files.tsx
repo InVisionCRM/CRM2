@@ -370,7 +370,7 @@ export function LeadFiles({ leadId }: LeadFilesProps) {
             <Eye className="h-4 w-4 mr-2" />
             View Files ({files.length})
           </Button>
-          <Button size="sm" onClick={openUploadModal} className="bg-[#59ff00] text-black hover:bg-[#59ff00]/90">
+          <Button size="sm" onClick={openUploadModal} className="bg-[#A4D65E] text-[#0F1311] hover:bg-[#7FB23F] font-semibold">
             <Plus className="h-4 w-4 mr-2" />
             Upload
           </Button>
