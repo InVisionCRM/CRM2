@@ -19,7 +19,7 @@ updated at the end of every run. It exists so the routine never redoes a section
 
 | Status | Section | Slug | PR | Date |
 |--------|---------|------|----|----|
-| [~] | Nav / sidebar / app shell | `nav-shell` | (pending) | 2026-06-06 |
+| [~] | Nav / sidebar / app shell | `nav-shell` | https://github.com/InVisionCRM/CRM2/pull/3 | 2026-06-06 |
 | [ ] | Dashboard / home | `dashboard` | — | — |
 | [ ] | Leads table (list view) | `leads-table` | — | — |
 | [ ] | Lead detail page | `lead-detail` | — | — |
@@ -34,4 +34,4 @@ updated at the end of every run. It exists so the routine never redoes a section
 
 ## Log
 <!-- Each run appends one line: YYYY-MM-DD · <slug> · <PR url> · one-line summary -->
-2026-06-06 · nav-shell · (pending) · Refined bottom nav + app shell to forest-charcoal palette, swapped harsh neon for lime #A4D65E, calmer borders/shadows.
+2026-06-06 · nav-shell · https://github.com/InVisionCRM/CRM2/pull/3 · Refined bottom nav + app shell to forest-charcoal palette, swapped harsh neon for lime #A4D65E, calmer borders/shadows.
