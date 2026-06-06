@@ -22,7 +22,7 @@ updated at the end of every run. It exists so the routine never redoes a section
 | [ ] | Nav / sidebar / app shell | `nav-shell` | — | — |
 | [ ] | Dashboard / home | `dashboard` | — | — |
 | [ ] | Leads table (list view) | `leads-table` | — | — |
-| [ ] | Lead detail page | `lead-detail` | — | — |
+| [~] | Lead detail page | `lead-detail` | _pending_ | 2026-06-06 |
 | [ ] | Calendar | `calendar` | — | — |
 | [ ] | Files / Drive | `files-drive` | — | — |
 | [ ] | Roof estimator | `roof-estimator` | — | — |
@@ -34,3 +34,4 @@ updated at the end of every run. It exists so the routine never redoes a section
 
 ## Log
 <!-- Each run appends one line: YYYY-MM-DD · <slug> · <PR url> · one-line summary -->
+- 2026-06-06 · lead-detail · _pending_ · Restyle lead detail page: refined lime accents, calmer quick-action surfaces, dark-forest overlays, hairline dividers, tracked-out section labels.
