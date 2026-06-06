@@ -23,7 +23,7 @@ updated at the end of every run. It exists so the routine never redoes a section
 | [ ] | Dashboard / home | `dashboard` | — | — |
 | [ ] | Leads table (list view) | `leads-table` | — | — |
 | [ ] | Lead detail page | `lead-detail` | — | — |
-| [~] | Calendar | `calendar` | _pending_ | 2026-06-06 |
+| [~] | Calendar | `calendar` | [#7](https://github.com/InVisionCRM/CRM2/pull/7) | 2026-06-06 |
 | [ ] | Files / Drive | `files-drive` | — | — |
 | [ ] | Roof estimator | `roof-estimator` | — | — |
 | [ ] | Auth / login | `auth-login` | — | — |
@@ -34,4 +34,4 @@ updated at the end of every run. It exists so the routine never redoes a section
 
 ## Log
 <!-- Each run appends one line: YYYY-MM-DD · <slug> · <PR url> · one-line summary -->
-- 2026-06-06 · calendar · _PR pending_ · Restyled calendar month grid, day-detail view, event chips, and tooltip to forest/cream tokens with refined lime accent.
+- 2026-06-06 · calendar · https://github.com/InVisionCRM/CRM2/pull/7 · Restyled calendar month grid, day-detail view, event chips, and tooltip to forest/cream tokens with refined lime accent.
