@@ -20,7 +20,7 @@ updated at the end of every run. It exists so the routine never redoes a section
 | Status | Section | Slug | PR | Date |
 |--------|---------|------|----|----|
 | [ ] | Nav / sidebar / app shell | `nav-shell` | — | — |
-| [~] | Dashboard / home | `dashboard` | #TBD | 2026-06-06 |
+| [~] | Dashboard / home | `dashboard` | [#4](https://github.com/InVisionCRM/CRM2/pull/4) | 2026-06-06 |
 | [ ] | Leads table (list view) | `leads-table` | — | — |
 | [ ] | Lead detail page | `lead-detail` | — | — |
 | [ ] | Calendar | `calendar` | — | — |
@@ -34,4 +34,4 @@ updated at the end of every run. It exists so the routine never redoes a section
 
 ## Log
 <!-- Each run appends one line: YYYY-MM-DD · <slug> · <PR url> · one-line summary -->
-- 2026-06-06 · dashboard · #TBD · Replaced neon `#59ff00` with refined lime `#A4D65E` across hero, dividers, my-leads, weather loader; restyled UpcomingEvents/RecentUploads/RecentActivities/RecentEmails cards to dark-forest palette with hairline borders and soft shadow.
+- 2026-06-06 · dashboard · [#4](https://github.com/InVisionCRM/CRM2/pull/4) · Replaced neon `#59ff00` with refined lime `#A4D65E` across hero, dividers, my-leads, weather loader; restyled UpcomingEvents/RecentUploads/RecentActivities/RecentEmails cards to dark-forest palette with hairline borders and soft shadow.
