@@ -21,7 +21,7 @@ updated at the end of every run. It exists so the routine never redoes a section
 |--------|---------|------|----|----|
 | [ ] | Nav / sidebar / app shell | `nav-shell` | — | — |
 | [ ] | Dashboard / home | `dashboard` | — | — |
-| [ ] | Leads table (list view) | `leads-table` | — | — |
+| [~] | Leads table (list view) | `leads-table` | PR pending | 2026-06-06 |
 | [ ] | Lead detail page | `lead-detail` | — | — |
 | [ ] | Calendar | `calendar` | — | — |
 | [ ] | Files / Drive | `files-drive` | — | — |
@@ -34,3 +34,4 @@ updated at the end of every run. It exists so the routine never redoes a section
 
 ## Log
 <!-- Each run appends one line: YYYY-MM-DD · <slug> · <PR url> · one-line summary -->
+2026-06-06 · leads-table · PR pending · Restyled spreadsheet view, view toggle, pagination, status pills, loading skeleton, and collapsed lead row to the forest/cream palette; replaced harsh neon with refined lime.
