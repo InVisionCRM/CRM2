@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Purlin — Lead Detail (Design Reference)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0F1311; --bg-2:#131815;
+    --panel:#161D18; --panel-2:#1B231D;
+    --line:rgba(236,234,224,.08); --line-strong:rgba(236,234,224,.14);
+    --lime:#A4D65E; --lime-deep:#7FB23F;
+    --cyan:#5AD2F4; --amber:#E8A33D; --violet:#9B8BD0; --rose:#EF5E73;
+    --text:#ECEAE0; --text-dim:#A7B0A6; --text-faint:#6E776E;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px -12px rgba(0,0,0,.55);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    background:
+      radial-gradient(1100px 560px at 100% -10%, rgba(164,214,94,.06), transparent 60%),
+      linear-gradient(160deg,var(--bg),var(--bg-2));
+    color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;letter-spacing:-.011em;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 28px 48px}
+
+  /* top bar */
+  .bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+  .bar .left{display:flex;align-items:center;gap:13px}
+  .bar .logo{width:34px;height:34px;border-radius:9px;box-shadow:0 0 0 1px var(--line-strong)}
+  .bar .back{color:var(--text-dim);font-size:13px;display:flex;align-items:center;gap:7px;cursor:pointer}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:13px;border:none;border-radius:10px;padding:9px 14px;cursor:pointer;transition:.15s}
+  .btn-ghost{background:rgba(236,234,224,.04);color:var(--text-dim);border:1px solid var(--line)}
+  .btn-ghost:hover{color:var(--text);background:rgba(236,234,224,.07)}
+
+  /* status stepper */
+  .stepper{display:flex;align-items:center;gap:0;background:linear-gradient(180deg,var(--panel),rgba(19,24,21,.5));border:1px solid var(--line);border-radius:16px;padding:18px 22px;margin-bottom:18px;box-shadow:var(--shadow);overflow-x:auto}
+  .step{display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;min-width:78px}
+  .step .node{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--line-strong);color:var(--text-faint);background:var(--panel-2)}
+  .step.done .node{background:rgba(164,214,94,.16);border-color:var(--lime);color:var(--lime)}
+  .step.current .node{background:linear-gradient(180deg,var(--lime),var(--lime-deep));border-color:var(--lime);color:#10160C;box-shadow:0 0 0 4px rgba(164,214,94,.16),0 6px 18px -6px rgba(164,214,94,.6)}
+  .step .lbl{font-size:11px;font-weight:600;color:var(--text-faint)}
+  .step.current .lbl,.step.done .lbl{color:var(--text)}
+  .conn{flex:1;height:2px;background:var(--line-strong);min-width:18px;margin:0 -2px;margin-bottom:26px}
+  .conn.done{background:var(--lime);box-shadow:0 0 8px rgba(164,214,94,.5)}
+
+  /* hero */
+  .hero{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);margin-bottom:18px;height:300px;
+    background:linear-gradient(180deg,rgba(15,19,17,.15),rgba(15,19,17,.85)),
+      linear-gradient(115deg,#2b3a30,#1c2a22 55%,#16201a);}
+  .hero .grid-overlay{position:absolute;inset:0;background-image:linear-gradient(rgba(236,234,224,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(236,234,224,.04) 1px,transparent 1px);background-size:42px 42px;opacity:.5}
+  .hero .addr{position:absolute;top:16px;left:18px;display:flex;align-items:center;gap:9px;background:rgba(15,19,17,.6);backdrop-filter:blur(8px);border:1px solid var(--line);padding:9px 13px;border-radius:11px;font-size:13px;font-weight:500}
+  .hero .estimator{position:absolute;top:16px;right:18px}
+  .hero .cards{position:absolute;top:64px;left:18px;display:flex;gap:10px}
+  .minicard{background:rgba(15,19,17,.62);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:13px;padding:11px 13px;width:118px}
+  .minicard .k{font-size:10.5px;color:var(--text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+  .minicard .v{font-size:14px;font-weight:700;margin-top:5px}
+  .minicard.accent{border-color:rgba(164,214,94,.3);box-shadow:0 0 0 1px rgba(164,214,94,.1)}
+  .minicard.accent .v{color:var(--lime)}
+
+  /* quick action bar */
+  .qa{position:absolute;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(6,1fr);background:rgba(15,19,17,.72);backdrop-filter:blur(12px);border-top:1px solid var(--line-strong)}
+  .qa .q{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:15px 6px;cursor:pointer;color:var(--text-dim);border-left:1px solid var(--line);font-size:12px;font-weight:600;transition:.15s}
+  .qa .q:first-child{border-left:none}
+  .qa .q:hover{background:rgba(236,234,224,.05);color:var(--text)}
+  .qa .q .ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+  .qa .q.primary .ic{background:linear-gradient(180deg,var(--lime),var(--lime-deep));color:#10160C}
+  .qa .q .ic.c1{background:rgba(239,94,115,.16);color:var(--rose)}
+  .qa .q .ic.c2{background:rgba(236,234,224,.08);color:var(--text)}
+  .qa .q .ic.c3{background:rgba(59,130,246,.16);color:#6CA8FF}
+  .qa .q .ic.c4{background:rgba(90,210,244,.16);color:var(--cyan)}
+  .qa .q .ic.c5{background:rgba(232,163,61,.16);color:var(--amber)}
+
+  /* name row */
+  .namerow{display:flex;align-items:center;justify-content:space-between;margin:4px 2px 18px}
+  .namerow h1{font-size:28px;font-weight:800;letter-spacing:-.03em}
+  .namerow .claim{text-align:right}
+  .namerow .claim .k{font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+  .namerow .claim .v{font-size:20px;font-weight:700;color:var(--lime);font-variant-numeric:tabular-nums}
+
+  /* main two-col */
+  .cols{display:grid;grid-template-columns:1.7fr 1fr;gap:18px}
+  .card{background:linear-gradient(180deg,var(--panel),rgba(19,24,21,.55));border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  .card-h{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+  .card-h h3{font-size:14.5px;font-weight:700}
+  .tabs{display:flex;gap:4px}
+  .tab{font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:9px;color:var(--text-faint);cursor:pointer}
+  .tab.active{background:rgba(164,214,94,.14);color:var(--lime)}
+  .card-b{padding:20px}
+
+  .field{display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--line)}
+  .field:last-child{border-bottom:none}
+  .field .k{font-size:12.5px;color:var(--text-dim);display:flex;align-items:center;gap:9px}
+  .field .k .fi{width:16px;height:16px;color:var(--text-faint)}
+  .field .v{font-size:13.5px;font-weight:600}
+  .field .v.link{color:var(--cyan)}
+
+  .sub{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);font-weight:700;margin:20px 0 4px}
+
+  /* activity feed */
+  .feed .item{display:flex;gap:13px;padding:14px 0;border-bottom:1px solid var(--line)}
+  .feed .item:last-child{border-bottom:none}
+  .feed .tl{display:flex;flex-direction:column;align-items:center}
+  .feed .tl .d{width:10px;height:10px;border-radius:50%;background:var(--lime);box-shadow:0 0 0 3px rgba(164,214,94,.15)}
+  .feed .tl .line{width:2px;flex:1;background:var(--line);margin-top:4px}
+  .feed .c .t1{font-size:13px;font-weight:600}
+  .feed .c .t2{font-size:12px;color:var(--text-dim);margin-top:2px;line-height:1.45}
+  .feed .c .time{font-size:11px;color:var(--text-faint);margin-top:5px}
+  .chatbox{display:flex;align-items:center;gap:10px;margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .chatbox .input{flex:1;font-size:13px;color:var(--text-faint)}
+  .send{width:34px;height:34px;border-radius:9px;background:linear-gradient(180deg,var(--lime),var(--lime-deep));display:flex;align-items:center;justify-content:center;color:#10160C}
+  svg{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <div class="left">
+      <img class="logo" src="purlin-logo.png" alt="Purlin" />
+      <div class="back"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> All Leads</div>
+    </div>
+    <button class="btn btn-ghost"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Delete</button>
+  </div>
+
+  <!-- Status stepper -->
+  <div class="stepper">
+    <div class="step done"><div class="node"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg></div><div class="lbl">Follow Up</div></div>
+    <div class="conn done"></div>
+    <div class="step current"><div class="node"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div><div class="lbl">Signed</div></div>
+    <div class="conn"></div>
+    <div class="step"><div class="node"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div><div class="lbl">Scheduled</div></div>
+    <div class="conn"></div>
+    <div class="step"><div class="node"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 22a10 10 0 1 1 0-20"/></svg></div><div class="lbl">Colors</div></div>
+    <div class="conn"></div>
+    <div class="step"><div class="node"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="lbl">ACV</div></div>
+    <div class="conn"></div>
+    <div class="step"><div class="node"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m2 12 3-3 3 3 4-6 4 4 4-3"/></svg></div><div class="lbl">Job</div></div>
+    <div class="conn"></div>
+    <div class="step"><div class="node"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg></div><div class="lbl">Done</div></div>
+  </div>
+
+  <!-- Hero / street view -->
+  <div class="hero">
+    <div class="grid-overlay"></div>
+    <div class="addr"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> 4821 Oakridge Drive, Plano, TX 75024</div>
+    <button class="btn btn-ghost estimator"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> Roof Estimator</button>
+    <div class="cards">
+      <div class="minicard"><div class="k">Created</div><div class="v">Apr 18, 2026</div></div>
+      <div class="minicard accent"><div class="k">Job Completion</div><div class="v">Jun 02, 2026</div></div>
+      <div class="minicard"><div class="k">Photos</div><div class="v">24 assigned</div></div>
+    </div>
+
+    <div class="qa">
+      <div class="q"><div class="ic c1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.5-3.5L9 20"/></svg></div>Photos</div>
+      <div class="q"><div class="ic c2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>Add Note</div>
+      <div class="q"><div class="ic c3"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg></div>Email</div>
+      <div class="q"><div class="ic c4"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg></div>Documents</div>
+      <div class="q"><div class="ic c5"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>Dates</div>
+      <div class="q primary"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg></div>Contracts</div>
+    </div>
+  </div>
+
+  <!-- Name row -->
+  <div class="namerow">
+    <h1>Marcus Reyes</h1>
+    <div class="claim"><div class="k">Claim #</div><div class="v">SF-2026-04821</div></div>
+  </div>
+
+  <!-- Two columns -->
+  <div class="cols">
+    <div class="card">
+      <div class="card-h">
+        <div class="tabs">
+          <div class="tab active">Overview</div>
+          <div class="tab">Insurance</div>
+          <div class="tab">Adjuster</div>
+          <div class="tab">Files</div>
+        </div>
+      </div>
+      <div class="card-b">
+        <div class="sub">Contact</div>
+        <div class="field"><div class="k"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Phone</div><div class="v link">(972) 555-0148</div></div>
+        <div class="field"><div class="k"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg> Email</div><div class="v link">m.reyes@example.com</div></div>
+        <div class="field"><div class="k"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Address</div><div class="v">4821 Oakridge Dr, Plano TX</div></div>
+
+        <div class="sub">Insurance</div>
+        <div class="field"><div class="k"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Carrier</div><div class="v">State Farm</div></div>
+        <div class="field"><div class="k"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg> Adjuster</div><div class="v">Helen Park</div></div>
+        <div class="field"><div class="k"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Approved (RCV)</div><div class="v" style="color:var(--lime)">$38,420.00</div></div>
+        <div class="field"><div class="k"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> Damage Type</div><div class="v">Hail / Wind</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h3>Activity</h3><span style="font-size:11px;color:var(--lime);font-weight:600;display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime)"></span>Live</span></div>
+      <div class="card-b">
+        <div class="feed">
+          <div class="item"><div class="tl"><div class="d"></div><div class="line"></div></div><div class="c"><div class="t1">Contract sent via DocuSeal</div><div class="t2">Sent to m.reyes@example.com</div><div class="time">Today · 9:42 AM</div></div></div>
+          <div class="item"><div class="tl"><div class="d" style="background:var(--cyan);box-shadow:0 0 0 3px rgba(90,210,244,.15)"></div><div class="line"></div></div><div class="c"><div class="t1">Status → Signed Contract</div><div class="t2">Updated by Kyle M.</div><div class="time">Today · 9:38 AM</div></div></div>
+          <div class="item"><div class="tl"><div class="d" style="background:var(--amber);box-shadow:0 0 0 3px rgba(232,163,61,.15)"></div><div class="line"></div></div><div class="c"><div class="t1">12 photos uploaded</div><div class="t2">Roof — north & east elevations</div><div class="time">Yesterday · 4:15 PM</div></div></div>
+          <div class="item"><div class="tl"><div class="d" style="background:var(--text-faint);box-shadow:none"></div></div><div class="c"><div class="t1">Note added</div><div class="t2">"Adjuster confirmed full roof approval."</div><div class="time">Apr 28 · 11:02 AM</div></div></div>
+        </div>
+        <div class="chatbox">
+          <span class="input">Message the team…</span>
+          <div class="send"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
