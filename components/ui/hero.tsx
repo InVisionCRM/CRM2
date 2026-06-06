@@ -191,7 +191,7 @@ export const Hero = () => {
             <DropdownMenuTrigger asChild>
               <div className="cursor-pointer ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                 <div className="flex flex-col items-center">
-                  <Avatar className="h-10 w-10 bg-black/50 backdrop-blur-sm ring-2 ring-[#59ff00] ring-offset-2 ring-offset-black/50">
+                  <Avatar className="h-10 w-10 bg-black/50 backdrop-blur-sm ring-2 ring-[#A4D65E] ring-offset-2 ring-offset-black/50">
                     {session?.user?.image ? (
                       <AvatarImage src={session.user.image} alt={session.user.name || "User"} />
                     ) : (
@@ -268,7 +268,7 @@ export const Hero = () => {
                     )}
                   </Avatar>
                   <div 
-                    className="absolute bottom-0 right-0 bg-[#59ff00] rounded-full p-1.5 cursor-pointer"
+                    className="absolute bottom-0 right-0 bg-[#A4D65E] rounded-full p-1.5 cursor-pointer"
                     onClick={triggerFileInput}
                   >
                     <Camera className="h-4 w-4 text-black" />
@@ -292,7 +292,7 @@ export const Hero = () => {
                       id="name"
                       value={userName}
                       onChange={(e) => setUserName(e.target.value)}
-                      className="w-full bg-black/50 border-white/20 text-white placeholder-white/50 focus:border-[#59ff00]/50"
+                      className="w-full bg-black/50 border-white/20 text-white placeholder-white/50 focus:border-[#A4D65E]/50"
                       placeholder="Enter your display name"
                     />
                   </div>
@@ -316,7 +316,7 @@ export const Hero = () => {
                 <Button
                   onClick={handleProfileUpdate}
                   disabled={isUpdating}
-                  className="bg-[#59ff00] text-black hover:bg-[#59ff00]/80 font-medium"
+                  className="bg-[#A4D65E] text-[#10160C] hover:bg-[#A4D65E]/90 font-medium"
                 >
                   {isUpdating ? "Saving..." : "Save Changes"}
                 </Button>
@@ -335,24 +335,24 @@ export const Hero = () => {
             transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
             className="absolute top-4 left-8 z-20"
           >
-            <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold text-left relative">
-              <span className="text-white">PURL</span>
-              <span style={{ color: "#59ff00" }} className="drop-shadow-[0_0_8px_rgba(89,255,0,0.8)]">
+            <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold text-left relative tracking-tight">
+              <span className="text-[#ECEAE0]">PURL</span>
+              <span style={{ color: "#A4D65E" }} className="drop-shadow-[0_0_10px_rgba(164,214,94,0.45)]">
                 IN
               </span>
-              {/* Neon line under PURLIN */}
+              {/* Hairline accent under PURLIN */}
               <div className="absolute -bottom-2 left-0 w-[12rem]">
-                <motion.div 
+                <motion.div
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
                   transition={{ duration: 1.2, ease: "easeOut" }}
-                  className="h-[2px] w-full bg-gradient-to-r from-[#59ff00] to-transparent blur-[1px]"
+                  className="h-[2px] w-full bg-gradient-to-r from-[#A4D65E] to-transparent blur-[1px]"
                 />
-                <motion.div 
+                <motion.div
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
                   transition={{ duration: 1.2, ease: "easeOut" }}
-                  className="h-px w-full bg-gradient-to-r from-[#59ff00] to-transparent -mt-[1px]"
+                  className="h-px w-full bg-gradient-to-r from-[#A4D65E] to-transparent -mt-[1px]"
                 />
               </div>
             </h1>
