@@ -70,17 +70,17 @@ export const FileUpload = ({
           <GridPattern />
         </div>
         <div className="flex flex-col items-center justify-center">
-          <p className="relative z-20 font-sans font-bold text-black text-base">
+          <p className="relative z-20 font-sans font-bold text-[#ECEAE0] text-base">
             Upload file
           </p>
-          <p className="relative z-20 font-sans font-normal text-gray-600 text-base mt-2">
+          <p className="relative z-20 font-sans font-normal text-[#A7B0A6] text-base mt-2">
             Drag or drop your files here or click to upload
           </p>
-          <a 
-            href="https://www.adobe.com/acrobat/online/compress-pdf.html" 
-            target="_blank" 
+          <a
+            href="https://www.adobe.com/acrobat/online/compress-pdf.html"
+            target="_blank"
             rel="noopener noreferrer"
-            className="relative z-20 text-blue-600 hover:text-blue-800 underline mt-2"
+            className="relative z-20 text-[#5AD2F4] hover:text-[#5AD2F4]/80 underline mt-2"
           >
             Compress Here
           </a>
@@ -91,8 +91,8 @@ export const FileUpload = ({
                   key={"file" + idx}
                   layoutId={idx === 0 ? "file-upload" : "file-upload-" + idx}
                   className={cn(
-                    "relative overflow-hidden z-40 bg-white border border-gray-200 flex flex-col items-start justify-start md:h-24 p-4 mt-4 w-full mx-auto rounded-md",
-                    "shadow-sm"
+                    "relative overflow-hidden z-40 bg-[#1B231D] border border-[rgba(236,234,224,0.08)] flex flex-col items-start justify-start md:h-24 p-4 mt-4 w-full mx-auto rounded-xl",
+                    "shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)]"
                   )}
                 >
                   <div className="flex justify-between w-full items-center gap-4">
@@ -100,7 +100,7 @@ export const FileUpload = ({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       layout
-                      className="text-base text-black truncate max-w-xs"
+                      className="text-base text-[#ECEAE0] truncate max-w-xs"
                     >
                       {file.name}
                     </motion.p>
@@ -108,18 +108,18 @@ export const FileUpload = ({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       layout
-                      className="rounded-lg px-2 py-1 w-fit shrink-0 text-sm text-gray-600 bg-gray-100"
+                      className="rounded-md px-2 py-1 w-fit shrink-0 text-sm text-[#A7B0A6] bg-[#161D18] border border-[rgba(236,234,224,0.08)]"
                     >
                       {(file.size / (1024 * 1024)).toFixed(2)} MB
                     </motion.p>
                   </div>
 
-                  <div className="flex text-sm md:flex-row flex-col items-start md:items-center w-full mt-2 justify-between text-gray-600">
+                  <div className="flex text-sm md:flex-row flex-col items-start md:items-center w-full mt-2 justify-between text-[#A7B0A6]">
                     <motion.p
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       layout
-                      className="px-1 py-0.5 rounded-md bg-gray-100"
+                      className="px-1 py-0.5 rounded-md bg-[#161D18] border border-[rgba(236,234,224,0.08)]"
                     >
                       {file.type}
                     </motion.p>
@@ -145,21 +145,21 @@ export const FileUpload = ({
                   damping: 20,
                 }}
                 className={cn(
-                  "relative group-hover/file:shadow-2xl z-40 bg-white border border-gray-200 flex items-center justify-center h-32 mt-4 w-full max-w-[8rem] mx-auto rounded-md",
-                  "shadow-[0px_10px_50px_rgba(0,0,0,0.1)]"
+                  "relative group-hover/file:shadow-2xl z-40 bg-[#1B231D] border border-[rgba(236,234,224,0.08)] flex items-center justify-center h-32 mt-4 w-full max-w-[8rem] mx-auto rounded-xl",
+                  "shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)]"
                 )}
               >
                 {isDragActive ? (
                   <motion.p
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="text-gray-600 flex flex-col items-center"
+                    className="text-[#A7B0A6] flex flex-col items-center"
                   >
                     Drop it
-                    <IconUpload className="h-4 w-4 text-gray-600" />
+                    <IconUpload className="h-4 w-4 text-[#A4D65E]" />
                   </motion.p>
                 ) : (
-                  <IconUpload className="h-4 w-4 text-gray-600" />
+                  <IconUpload className="h-4 w-4 text-[#A7B0A6]" />
                 )}
               </motion.div>
             )}
@@ -167,7 +167,7 @@ export const FileUpload = ({
             {!files.length && (
               <motion.div
                 variants={secondaryVariant}
-                className="absolute opacity-0 border border-dashed border-sky-400 inset-0 z-30 bg-transparent flex items-center justify-center h-32 mt-4 w-full max-w-[8rem] mx-auto rounded-md"
+                className="absolute opacity-0 border border-dashed border-[#A4D65E] inset-0 z-30 bg-transparent flex items-center justify-center h-32 mt-4 w-full max-w-[8rem] mx-auto rounded-xl"
               ></motion.div>
             )}
           </div>
@@ -181,7 +181,7 @@ export function GridPattern() {
   const columns = 41;
   const rows = 11;
   return (
-    <div className="flex bg-gray-100 shrink-0 flex-wrap justify-center items-center gap-x-px gap-y-px scale-105">
+    <div className="flex bg-[#0F1311] shrink-0 flex-wrap justify-center items-center gap-x-px gap-y-px scale-105">
       {Array.from({ length: rows }).map((_, row) =>
         Array.from({ length: columns }).map((_, col) => {
           const index = row * columns + col;
@@ -190,8 +190,8 @@ export function GridPattern() {
               key={`${col}-${row}`}
               className={`w-10 h-10 flex shrink-0 rounded-[2px] ${
                 index % 2 === 0
-                  ? "bg-gray-50"
-                  : "bg-gray-50 shadow-[0px_0px_1px_3px_rgba(255,255,255,1)_inset]"
+                  ? "bg-[#161D18]"
+                  : "bg-[#161D18] shadow-[0px_0px_1px_3px_rgba(236,234,224,0.04)_inset]"
               }`}
             />
           );

@@ -101,14 +101,14 @@ export function SimpleFileViewer({
   };
 
   const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return <ImageIcon className="h-8 w-8 text-blue-500" />;
-    if (mimeType.includes('pdf')) return <FileText className="h-8 w-8 text-red-500" />;
-    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return <FileSpreadsheet className="h-8 w-8 text-green-500" />;
-    if (mimeType.startsWith('video/')) return <FileVideo className="h-8 w-8 text-purple-500" />;
-    if (mimeType.startsWith('audio/')) return <FileAudio className="h-8 w-8 text-orange-500" />;
-    if (mimeType.includes('zip') || mimeType.includes('rar')) return <Archive className="h-8 w-8 text-yellow-500" />;
-    if (mimeType.includes('code') || mimeType.includes('script')) return <Code className="h-8 w-8 text-gray-500" />;
-    return <File className="h-8 w-8 text-gray-400" />;
+    if (mimeType.startsWith('image/')) return <ImageIcon className="h-8 w-8 text-[#5AD2F4]" strokeWidth={1.75} />;
+    if (mimeType.includes('pdf')) return <FileText className="h-8 w-8 text-[#EF5E73]" strokeWidth={1.75} />;
+    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return <FileSpreadsheet className="h-8 w-8 text-[#A4D65E]" strokeWidth={1.75} />;
+    if (mimeType.startsWith('video/')) return <FileVideo className="h-8 w-8 text-[#9B8BD0]" strokeWidth={1.75} />;
+    if (mimeType.startsWith('audio/')) return <FileAudio className="h-8 w-8 text-[#E8A33D]" strokeWidth={1.75} />;
+    if (mimeType.includes('zip') || mimeType.includes('rar')) return <Archive className="h-8 w-8 text-[#E8A33D]" strokeWidth={1.75} />;
+    if (mimeType.includes('code') || mimeType.includes('script')) return <Code className="h-8 w-8 text-[#A7B0A6]" strokeWidth={1.75} />;
+    return <File className="h-8 w-8 text-[#6E776E]" strokeWidth={1.75} />;
   };
 
   const getThumbnailUrl = (file: FileData) => {
@@ -143,12 +143,12 @@ export function SimpleFileViewer({
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl">Lead Files</DialogTitle>
+            <DialogTitle className="text-xl text-[#ECEAE0] tracking-tight">Lead Files</DialogTitle>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => onOpenChange(false)}
-              className="h-6 w-6 text-black"
+              className="h-6 w-6 text-[#A7B0A6] hover:text-[#ECEAE0] hover:bg-[#1B231D]"
             >
               <X className="h-4 w-4" />
             </Button>
@@ -158,13 +158,13 @@ export function SimpleFileViewer({
         <div className="mt-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-2 text-gray-700">Loading files...</span>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#A4D65E]"></div>
+              <span className="ml-2 text-[#A7B0A6]">Loading files...</span>
             </div>
           ) : files.length === 0 ? (
             <div className="text-center py-12">
-              <File className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-700">No files found for this lead</p>
+              <File className="h-16 w-16 text-[#6E776E] mx-auto mb-4" strokeWidth={1.5} />
+              <p className="text-[#A7B0A6]">No files found for this lead</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -176,17 +176,17 @@ export function SimpleFileViewer({
                     key={file.id}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="group bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+                    className="group bg-[#161D18] border border-[rgba(236,234,224,0.08)] rounded-xl p-4 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)] hover:border-[rgba(236,234,224,0.14)] transition-colors"
                   >
                     {/* Thumbnail/Icon */}
-                    <div className="flex justify-center mb-3 h-24 rounded-md items-center bg-gray-50">
+                    <div className="flex justify-center mb-3 h-24 rounded-lg items-center bg-[#1B231D] border border-[rgba(236,234,224,0.08)]">
                       {thumbnailUrl ? (
                         <Image
                           src={thumbnailUrl}
                           alt={file.name}
                           width={150}
                           height={150}
-                          className="max-h-24 max-w-24 object-cover rounded-md border border-gray-200"
+                          className="max-h-24 max-w-24 object-cover rounded-md border border-[rgba(236,234,224,0.08)]"
                           onError={(e) => {
                             // Fallback to icon if thumbnail fails to load
                             const target = e.target as HTMLImageElement;
@@ -202,11 +202,11 @@ export function SimpleFileViewer({
 
                     {/* File Info */}
                     <div className="text-center">
-                      <h3 className="text-black mb-2 text-sm font-medium truncate" title={file.name}>
+                      <h3 className="text-[#ECEAE0] mb-2 text-sm font-medium truncate" title={file.name}>
                         {file.name}
                       </h3>
-                      <p className="text-xs text-gray-600 mb-1">{formatFileSize(file.size)}</p>
-                      <p className="text-xs text-gray-600 mb-3">{new Date(file.uploadedAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-[#A7B0A6] mb-1">{formatFileSize(file.size)}</p>
+                      <p className="text-xs text-[#6E776E] mb-3">{new Date(file.uploadedAt).toLocaleDateString()}</p>
                     </div>
 
                     {/* Action Buttons */}
@@ -214,7 +214,7 @@ export function SimpleFileViewer({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1 text-xs bg-white text-black border-gray-300"
+                        className="flex-1 text-xs bg-transparent text-[#ECEAE0] border-[rgba(236,234,224,0.14)] hover:bg-[#1B231D]"
                         onClick={() => window.open(file.url, '_blank')}
                       >
                         <ExternalLink className="h-3 w-3 mr-1" />
@@ -223,7 +223,7 @@ export function SimpleFileViewer({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1 text-xs bg-white text-black border-gray-300"
+                        className="flex-1 text-xs bg-transparent text-[#ECEAE0] border-[rgba(236,234,224,0.14)] hover:bg-[#1B231D]"
                         onClick={() => {
                           const link = document.createElement('a');
                           link.href = file.blobUrl || file.url;
@@ -237,12 +237,12 @@ export function SimpleFileViewer({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="px-2 bg-white text-red-600 border-red-200 hover:bg-red-50"
+                        className="px-2 bg-transparent text-[#EF5E73] border-[#EF5E73]/30 hover:bg-[#EF5E73]/10 hover:text-[#EF5E73]"
                         onClick={() => handleDelete(file.id, file.name)}
                         disabled={deletingFileId === file.id}
                       >
                         {deletingFileId === file.id ? (
-                          <div className="animate-spin rounded-full h-3 w-3 border-b border-red-600"></div>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b border-[#EF5E73]"></div>
                         ) : (
                           <Trash2 className="h-3 w-3" />
                         )}
@@ -256,14 +256,15 @@ export function SimpleFileViewer({
         </div>
 
         {files.length > 0 && (
-          <div className="mt-6 pt-4 border-t border-gray-200">
-            <div className="flex justify-between items-center text-sm text-gray-700">
+          <div className="mt-6 pt-4 border-t border-[rgba(236,234,224,0.08)]">
+            <div className="flex justify-between items-center text-sm text-[#A7B0A6]">
               <span>{files.length} file{files.length !== 1 ? 's' : ''} total</span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={fetchFiles}
                 disabled={loading}
+                className="bg-transparent text-[#ECEAE0] border-[rgba(236,234,224,0.14)] hover:bg-[#1B231D]"
               >
                 Refresh
               </Button>

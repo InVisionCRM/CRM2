@@ -289,7 +289,7 @@ export function FileUploadModal({
         <div className="space-y-6">
           {/* File Upload Component */}
           {uploadResults.length === 0 && (
-            <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
+            <div className="border-2 border-dashed border-[rgba(236,234,224,0.14)] rounded-xl">
               <FileUpload onChange={handleFileChange} />
             </div>
           )}
@@ -302,11 +302,11 @@ export function FileUploadModal({
                   Selected Files ({filesWithNames.length})
                 </Label>
                 <Button
-                  variant="outline" 
+                  variant="outline"
                   size="sm"
                   onClick={() => setFilesWithNames([])}
                   disabled={isUploading}
-                  className="text-white border-gray-300 hover:bg-gray-50"
+                  className="bg-transparent text-[#ECEAE0] border-[rgba(236,234,224,0.14)] hover:bg-[#1B231D] hover:text-[#ECEAE0]"
                 >
                   Clear All
                 </Button>
@@ -314,13 +314,13 @@ export function FileUploadModal({
               
               <div className="max-h-64 overflow-y-auto space-y-3">
                 {filesWithNames.map((fileWithName) => (
-                  <div key={fileWithName.id} className="border rounded-lg p-3 space-y-2">
+                  <div key={fileWithName.id} className="border border-[rgba(236,234,224,0.08)] bg-[#1B231D] rounded-xl p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <p className="text-sm font-medium truncate">
+                        <p className="text-sm font-medium truncate text-[#ECEAE0]">
                           {fileWithName.file.name}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-[#6E776E]">
                           {(fileWithName.file.size / (1024 * 1024)).toFixed(2)} MB
                         </p>
                       </div>
@@ -329,14 +329,14 @@ export function FileUploadModal({
                         size="icon"
                         onClick={() => removeFile(fileWithName.id)}
                         disabled={isUploading}
-                        className="h-8 w-8 text-gray-400 hover:text-red-500"
+                        className="h-8 w-8 text-[#6E776E] hover:text-[#EF5E73] hover:bg-[#EF5E73]/10"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <Label htmlFor={`filename-${fileWithName.id}`} className="text-xs font-medium">
+                      <Label htmlFor={`filename-${fileWithName.id}`} className="text-xs font-medium text-[#A7B0A6]">
                         Custom Filename
                       </Label>
                       <div className="flex items-center gap-2">
@@ -346,16 +346,16 @@ export function FileUploadModal({
                             value={fileWithName.customName}
                             onChange={(e) => updateCustomName(fileWithName.id, e.target.value)}
                             placeholder="Enter custom filename"
-                            className="pr-16 text-sm bg-white border-gray-300 text-black placeholder-gray-500"
+                            className="pr-16 text-sm bg-[#161D18] border-[rgba(236,234,224,0.08)] text-[#ECEAE0] placeholder:text-[#6E776E] focus:border-[#A4D65E]/40 focus:ring-1 focus:ring-[#A4D65E]/30"
                             disabled={isUploading}
                           />
-                          <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[#6E776E]">
                             {getFileExtension(fileWithName.file.name)}
                           </div>
                         </div>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        Final: <span className="font-medium">{getFinalFileName(fileWithName)}</span>
+                      <div className="text-xs text-[#6E776E]">
+                        Final: <span className="font-medium text-[#A7B0A6]">{getFinalFileName(fileWithName)}</span>
                       </div>
                     </div>
                   </div>
@@ -366,19 +366,19 @@ export function FileUploadModal({
 
           {/* Animated Circular Progress Section */}
           {(isUploading || uploadProgress.stage !== 'idle') && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="relative bg-white border border-gray-200 rounded-xl p-6"
+              className="relative bg-[#1B231D] border border-[rgba(236,234,224,0.08)] rounded-xl p-6"
             >
               <div className="flex flex-col items-center space-y-4">
                 {/* Current File Info */}
                 {uploadProgress.currentFile && (
                   <div className="text-center">
-                    <p className="text-sm font-medium text-black truncate">
+                    <p className="text-sm font-medium text-[#ECEAE0] truncate">
                       {uploadProgress.currentFile}
                     </p>
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-xs text-[#A7B0A6] mt-1">
                       File {currentUploadIndex + 1} of {filesWithNames.length}
                     </p>
                   </div>
@@ -390,15 +390,15 @@ export function FileUploadModal({
                     value={uploadProgress.progress}
                     max={100}
                     min={0}
-                    gaugePrimaryColor="#10b981" // green-500
-                    gaugeSecondaryColor="#e5e7eb" // gray-200
-                    className="text-black"
+                    gaugePrimaryColor="#A4D65E"
+                    gaugeSecondaryColor="rgba(236,234,224,0.08)"
+                    className="text-[#ECEAE0]"
                   />
                 </div>
 
                 {/* Status */}
                 <div className="text-center">
-                  <span className={`text-sm ${uploadProgress.stage === 'error' ? 'text-red-600' : 'text-black'}`}>
+                  <span className={`text-sm ${uploadProgress.stage === 'error' ? 'text-[#EF5E73]' : 'text-[#ECEAE0]'}`}>
                     {uploadProgress.message}
                   </span>
                 </div>
@@ -408,16 +408,16 @@ export function FileUploadModal({
                   {['blob', 'drive', 'database', 'complete'].map((stage, index) => {
                     const isActive = uploadProgress.stage === stage;
                     const isComplete = index <= ['blob', 'drive', 'database', 'complete'].indexOf(uploadProgress.stage);
-                    
+
                     return (
                       <motion.div
                         key={stage}
                         className={`w-2 h-2 rounded-full transition-all duration-300 ${
                           isComplete
-                            ? 'bg-green-500 scale-110'
+                            ? 'bg-[#A4D65E] scale-110'
                             : isActive
-                            ? 'bg-green-300 scale-125'
-                            : 'bg-gray-200'
+                            ? 'bg-[#A4D65E]/60 scale-125'
+                            : 'bg-[rgba(236,234,224,0.14)]'
                         }`}
                         animate={isActive ? { 
                           scale: [1, 1.2, 1],
@@ -441,37 +441,37 @@ export function FileUploadModal({
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-gray-500/40 border border-green-200 rounded-lg p-4"
+              className="bg-[#A4D65E]/8 border border-[#A4D65E]/20 rounded-xl p-4"
             >
               <div className="flex items-center gap-2 mb-3">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <h3 className="font-medium text-green-800">Upload Successful!</h3>
+                <CheckCircle className="h-5 w-5 text-[#A4D65E]" />
+                <h3 className="font-medium text-[#ECEAE0]">Upload Successful</h3>
               </div>
-              
-              <div className="space-y-3 text-sm text-green-700">
+
+              <div className="space-y-3 text-sm text-[#A7B0A6]">
                 <div>
-                  <strong>Files Uploaded:</strong> {uploadResults.length}
+                  <strong className="text-[#ECEAE0]">Files Uploaded:</strong> {uploadResults.length}
                 </div>
                 <div>
-                  <strong>Storage:</strong> Vercel Blob (primary) + Google Drive (backup)
+                  <strong className="text-[#ECEAE0]">Storage:</strong> Vercel Blob (primary) + Google Drive (backup)
                 </div>
-                
+
                 <div className="max-h-32 overflow-y-auto space-y-2">
                   {uploadResults.map((result, index) => (
-                    <div key={index} className="bg-green-100 rounded p-2">
-                      <div className="font-medium">
+                    <div key={index} className="bg-[#1B231D] border border-[rgba(236,234,224,0.08)] rounded-lg p-2">
+                      <div className="font-medium text-[#ECEAE0]">
                         {result.data?.name || `File ${index + 1}`}
                       </div>
-                      <div className="text-xs">
+                      <div className="text-xs text-[#6E776E]">
                         Size: {((result.data?.size || 0) / 1024).toFixed(1)} KB
                         {result.data?.blobUrl && (
                           <>
-                            {' • '}
-                            <a 
-                              href={result.data.blobUrl} 
-                              target="_blank" 
+                            {' · '}
+                            <a
+                              href={result.data.blobUrl}
+                              target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline"
+                              className="text-[#5AD2F4] hover:underline"
                             >
                               View
                             </a>
@@ -493,25 +493,25 @@ export function FileUploadModal({
                   variant="outline"
                   onClick={handleClose}
                   disabled={isUploading}
-                  className="text-black hover:bg-gray-50 bg-white border-gray-300"
+                  className="bg-transparent text-[#ECEAE0] hover:bg-[#1B231D] border-[rgba(236,234,224,0.14)]"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleUpload}
                   disabled={filesWithNames.length === 0 || isUploading}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-[#A4D65E] hover:bg-[#7FB23F] text-[#0F1311] font-semibold"
                 >
-                  {isUploading 
-                    ? `Uploading ${currentUploadIndex + 1}/${filesWithNames.length}...` 
+                  {isUploading
+                    ? `Uploading ${currentUploadIndex + 1}/${filesWithNames.length}…`
                     : `Upload ${filesWithNames.length} File${filesWithNames.length !== 1 ? 's' : ''}`
                   }
                 </Button>
               </>
             )}
-            
+
             {uploadResults.length > 0 && (
-              <Button onClick={handleClose} className="bg-green-600 hover:bg-green-700">
+              <Button onClick={handleClose} className="bg-[#A4D65E] hover:bg-[#7FB23F] text-[#0F1311] font-semibold">
                 Done
               </Button>
             )}
