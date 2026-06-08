@@ -47,7 +47,7 @@ export default async function CalendarPage({
       <WelcomeAnimationWrapper />
       <div className="relative min-h-screen">
         <div className="relative z-10 container mx-auto px-4 py-8">
-          <h1 className="text-2xl font-bold mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-[#ECEAE0] mb-6">
             {leadName ? `Schedule Appointment for ${leadName}` : 'Your Calendar'}
           </h1>
           <DateDebug />
