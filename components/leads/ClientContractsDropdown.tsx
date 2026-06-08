@@ -35,7 +35,10 @@ export const ClientContractsDropdown: React.FC<ClientContractsDropdownProps> = (
 
   return (
     <>
-      <DropdownMenu>
+      {/* modal={false} prevents Radix from locking body pointer-events.
+          Without it, opening a Dialog from a menu item leaves the whole
+          page unclickable until refresh. */}
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <button
             className={cn(

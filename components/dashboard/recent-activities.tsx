@@ -189,7 +189,7 @@ export function RecentActivities() {
                   <div
                     key={activity.id}
                     className={cn(
-                      "w-[350px] shrink-0 border border-border/40 rounded-lg p-4",
+                      "w-[350px] shrink-0 border border-[rgba(236,234,224,0.08)] rounded-xl p-5 bg-gradient-to-b from-[#161D18] to-[#131815]/60 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)] transition-colors hover:border-[rgba(236,234,224,0.14)]",
                       getActivityColorClasses(activity.type)
                     )}
                   >

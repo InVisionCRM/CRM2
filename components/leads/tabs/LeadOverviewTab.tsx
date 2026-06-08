@@ -95,22 +95,22 @@ const ContactItem = ({ label, value, type, className }: ContactItemProps) => {
   };
 
   const icon = {
-    phone: <Phone className="h-3 w-3 text-lime-500" />,
-    email: <Mail className="h-3 w-3 text-lime-500" />,
-    address: <MapPin className="h-3 w-3 text-lime-500" />,
+    phone: <Phone className="h-3 w-3" />,
+    email: <Mail className="h-3 w-3" />,
+    address: <MapPin className="h-3 w-3" />,
     date: null
   }[type];
 
   return (
     <div className={cn("space-y-0.5", className)}>
-      <p className="text-xs sm:text-sm font-medium text-muted-foreground">{label}</p>
+      <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-[0.08em] text-[#6E776E]">{label}</p>
       <div className="flex items-center gap-1.5">
-        <p className="text-xs sm:text-sm">{value}</p>
+        <p className="text-xs sm:text-sm text-[#ECEAE0]">{value}</p>
         {icon && (
           <Button
             variant="ghost"
             size="icon"
-            className="h-5 w-5 rounded-full hover:bg-lime-500/10 text-lime-500 hover:text-lime-600"
+            className="h-5 w-5 rounded-full hover:bg-[#A4D65E]/10 text-[#A4D65E] hover:text-[#A4D65E]"
             onClick={handleClick}
           >
             {icon}
@@ -769,7 +769,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
         {/* Lead Summary Section */}
         <div className="space-y-2 pb-4">
           <div className="flex items-center gap-1">
-            <h3 className="text-lg font-medium text-white">Lead Summary</h3>
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#6E776E]">Lead Summary</h3>
             {onEditRequest && (
               <Button
                 variant="ghost"
@@ -787,7 +787,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
             {/* Column 1 – Contact information (moved left) */}
             <div className="space-y-3 order-1">
               <div className="flex justify-between items-center">
-                <p className="text-sm font-medium text-blue-400">Contact</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#6E776E]">Contact</p>
               </div>
               <div>
                 <p className="font-medium text-base">{fullName}</p>
@@ -810,7 +810,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                   <ContactItem label="Address" value={addressDisplay !== "No address provided" ? addressDisplay : null} type="address" />
               {/* How did you hear about us? */}
               <div className="space-y-0.5">
-                <p className="text-sm font-medium text-muted-foreground">How did you hear about us?</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6E776E]">How did you hear about us?</p>
                 <Select
                   value={howHeard ?? undefined}
                   onValueChange={async (val) => {
@@ -853,7 +853,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
             {/* Column 2 – Existing details (shifted right 25%) */}
             <div className="space-y-3 order-2 ml-0 md:ml-[25%]">
               <div className="space-y-0.5">
-                <p className="text-sm font-medium text-blue-400">Created</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#6E776E]">Created</p>
                 {createdDate && isValid(createdDate) ? (
                   <>
                     <p className="text-sm" title={createdDate.toISOString()}>{format(createdDate, "MMM d, yyyy")}</p>
@@ -864,7 +864,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
                 ) : <p className="text-sm text-muted-foreground">Invalid date</p>}
               </div>
               <div className="space-y-0.5">
-                <p className="text-sm font-medium text-blue-400">SalesPerson</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#6E776E]">SalesPerson</p>
                 <div className="relative flex items-center gap-2">
                   <Select
                     value={selectedAssignee}
@@ -920,7 +920,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
               {/* Contract Status */}
               {(contractStatus || isLoadingContract || uploadedContract || databaseContracts.length > 0) && (
                 <div className="space-y-0.5" id="contracts-info">
-                  <p className="text-sm font-medium text-blue-400">Contract</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#6E776E]">Contract</p>
                   {isLoadingContract ? (
                     <div className="flex items-center gap-2">
                       <Loader2 className="h-3 w-3 animate-spin" />
@@ -989,7 +989,7 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
               {/* Upload Contract Button - Show only when no contract exists */}
               {!contractStatus && !uploadedContract && !isLoadingContract && databaseContracts.length === 0 && (
                 <div className="space-y-0.5">
-                  <p className="text-sm font-medium text-blue-400">Contract</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#6E776E]">Contract</p>
                   <Button
                     variant="outline"
                     size="sm"
@@ -1024,12 +1024,12 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
         </div>
       
         {/* Divider between combined Summary/Contact section and Insurance */}
-        <div className="h-px bg-gradient-to-r from-black via-lime-400 to-black my-6"></div>
+        <div className="h-px bg-[rgba(236,234,224,0.08)] my-6"></div>
         
         {/* Insurance Information Section */}
         <div className="space-y-4 pb-4" id="insurance-info">
           <div className="flex items-center gap-1 mt-4">
-            <h3 className="text-lg font-medium text-white">Insurance Information</h3>
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#6E776E]">Insurance Information</h3>
             {onEditRequest && (
               <Button variant="ghost" size="icon" className="h-6 w-6 p-0" onClick={() => onEditRequest('insurance')}>
                 <Pencil className="h-4 w-4" />
@@ -1039,43 +1039,43 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
           </div>
           <div className="grid grid-cols-2 gap-1 sm:gap-2">
             <div className="space-y-0.5">
-              <p className="text-sm font-medium text-muted-foreground">Company</p>
-              <p className="text-sm">{lead.insuranceCompany || "N/A"}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6E776E]">Company</p>
+              <p className="text-sm text-[#ECEAE0]">{lead.insuranceCompany || "N/A"}</p>
             </div>
             <ContactItem label="Ins. Phone" value={lead.insurancePhone} type="phone" />
             {lead.insuranceSecondaryPhone && (
               <ContactItem label="Secondary Phone" value={lead.insuranceSecondaryPhone} type="phone" />
             )}
             <div className="space-y-0.5">
-              <p className="text-sm font-medium text-muted-foreground">Damage Type</p>
-              <p className="text-sm">{lead.damageType || "N/A"}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6E776E]">Damage Type</p>
+              <p className="text-sm text-[#ECEAE0]">{lead.damageType || "N/A"}</p>
             </div>
             <div className="space-y-0.5">
-              <p className="text-sm font-medium text-muted-foreground">Claim Number</p>
-              <p className="text-sm">{lead.claimNumber || "N/A"}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6E776E]">Claim Number</p>
+              <p className="text-sm text-[#ECEAE0] tabular-nums">{lead.claimNumber || "N/A"}</p>
             </div>
             <div className="space-y-0.5">
-              <p className="text-sm font-medium text-muted-foreground">Policy Number</p>
-              <p className="text-sm">{lead.insurancePolicyNumber || "N/A"}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6E776E]">Policy Number</p>
+              <p className="text-sm text-[#ECEAE0] tabular-nums">{lead.insurancePolicyNumber || "N/A"}</p>
             </div>
             <div className="space-y-0.5">
-              <p className="text-sm font-medium text-muted-foreground">Deductible</p>
-              <p className="text-sm">{lead.insuranceDeductible || "N/A"}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6E776E]">Deductible</p>
+              <p className="text-sm text-[#ECEAE0] tabular-nums">{lead.insuranceDeductible || "N/A"}</p>
             </div>
             <div className="space-y-0.5">
-              <p className="text-sm font-medium text-muted-foreground">Date of Loss</p>
-              <p className="text-sm">{lead.dateOfLoss ? format(parseISO(lead.dateOfLoss), 'MM/dd/yyyy') : "N/A"}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6E776E]">Date of Loss</p>
+              <p className="text-sm text-[#ECEAE0] tabular-nums">{lead.dateOfLoss ? format(parseISO(lead.dateOfLoss), 'MM/dd/yyyy') : "N/A"}</p>
             </div>
           </div>
         </div>
 
         {/* Custom gradient divider */}
-        <div className="h-px bg-gradient-to-r from-black via-lime-400 to-black my-6"></div>
+        <div className="h-px bg-[rgba(236,234,224,0.08)] my-6"></div>
 
         {/* Adjuster Information Section */}
         <div className="space-y-4 pb-4" id="adjuster-info">
           <div className="flex items-center gap-1 mt-4">
-            <h3 className="text-lg font-medium text-white">Adjuster Information</h3>
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#6E776E]">Adjuster Information</h3>
             {onEditRequest && (
               <Button variant="ghost" size="icon" className="h-6 w-6 p-0" onClick={() => onEditRequest('adjuster')}>
                 <Pencil className="h-4 w-4" />
@@ -1085,8 +1085,8 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div className="space-y-0.5">
-              <p className="text-sm font-medium text-muted-foreground">Adjuster Name</p>
-              <p className="text-sm">{lead.insuranceAdjusterName || "N/A"}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#6E776E]">Adjuster Name</p>
+              <p className="text-sm text-[#ECEAE0]">{lead.insuranceAdjusterName || "N/A"}</p>
             </div>
             <ContactItem label="Adjuster Phone" value={lead.insuranceAdjusterPhone} type="phone" />
             <ContactItem label="Adjuster Email" value={lead.insuranceAdjusterEmail} type="email" className="sm:col-span-2" />

@@ -22,102 +22,89 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { AddNote } from "@/components/leads/AddNote"
 
 function LeadsLoading() {
+  const skeletonBase = "bg-[rgba(236,234,224,0.06)]"
+  const skeletonStrong = "bg-[rgba(236,234,224,0.08)]"
   return (
     <div className="space-y-2">
       {[...Array(5)].map((_, i) => (
-        <div key={i} className="overflow-hidden border border-lime-700 bg-transparent bg-black/50 rounded-lg shadow-sm">
+        <div key={i} className="overflow-hidden border border-[rgba(236,234,224,0.08)] bg-[#161D18] rounded-xl shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)]">
           {/* Compact Row Skeleton */}
-          <div className="flex items-center justify-between p-4 bg-black/50">
+          <div className="flex items-center justify-between p-4">
             <div className="flex items-center space-x-3 flex-1 min-w-0">
-              {/* Salesperson Avatar Skeleton */}
               <div className="flex-shrink-0">
-                <Skeleton className="w-8 h-8 rounded-full bg-gray-600" />
+                <Skeleton className={`w-8 h-8 rounded-full ${skeletonStrong}`} />
               </div>
 
-              {/* Lead Name Skeleton */}
               <div className="flex-1 min-w-0">
-                <Skeleton className="h-5 w-32 sm:w-48 bg-gray-600" />
+                <Skeleton className={`h-5 w-32 sm:w-48 ${skeletonStrong}`} />
               </div>
 
-              {/* Status Badge Skeleton */}
               <div className="flex-shrink-0">
-                <Skeleton className="h-6 w-20 rounded-full bg-gray-600" />
+                <Skeleton className={`h-6 w-20 rounded-full ${skeletonStrong}`} />
               </div>
             </div>
 
-            {/* Expand Button Skeleton */}
             <div className="flex items-center space-x-1 flex-shrink-0 ml-3">
-              <Skeleton className="h-8 w-8 rounded bg-gray-600" />
+              <Skeleton className={`h-8 w-8 rounded ${skeletonStrong}`} />
             </div>
           </div>
 
           {/* Randomly show some expanded skeletons */}
           {i % 3 === 0 && (
-            <div className="border-t border-gray-700 bg-gradient-to-b from-green-900/20 via-blue-900/20 to-gray-900 p-4 space-y-4">
-              {/* Street View and Quick Note Row */}
+            <div className="border-t border-[rgba(236,234,224,0.08)] bg-[#1B231D]/40 p-4 space-y-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Street View Skeleton */}
                 <div className="space-y-2">
-                  <Skeleton className="h-48 w-full rounded-lg bg-gray-700" />
+                  <Skeleton className={`h-48 w-full rounded-lg ${skeletonBase}`} />
                 </div>
 
-                {/* Quick Note Skeleton */}
                 <div className="space-y-2 justify-center flex flex-col w-full">
-                  <Skeleton className="h-20 w-full rounded bg-gray-700" />
-                  <Skeleton className="h-8 w-24 rounded bg-gray-700" />
+                  <Skeleton className={`h-20 w-full rounded ${skeletonBase}`} />
+                  <Skeleton className={`h-8 w-24 rounded ${skeletonBase}`} />
                 </div>
               </div>
 
-              {/* Divider */}
-              <div className="border-t border-lime-600"></div>
+              <div className="border-t border-[rgba(236,234,224,0.08)]"></div>
 
-              {/* Contract Upload Skeleton */}
               <div className="space-y-1">
-                <Skeleton className="h-20 w-full rounded-lg bg-gray-700" />
+                <Skeleton className={`h-20 w-full rounded-lg ${skeletonBase}`} />
               </div>
 
-              {/* Documents Dropdown Skeleton */}
               <div className="space-y-3">
-                <Skeleton className="h-20 w-full rounded-lg bg-gray-700" />
+                <Skeleton className={`h-20 w-full rounded-lg ${skeletonBase}`} />
               </div>
 
-              {/* Lead Information Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-lime-500/90">
-                {/* Insurance Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-[rgba(236,234,224,0.08)]">
                 <div className="space-y-3">
-                  <Skeleton className="h-6 w-20 bg-gray-600" />
+                  <Skeleton className={`h-6 w-20 ${skeletonStrong}`} />
                   <div className="space-y-2">
-                    <Skeleton className="h-4 w-full bg-gray-700" />
-                    <Skeleton className="h-4 w-3/4 bg-gray-700" />
+                    <Skeleton className={`h-4 w-full ${skeletonBase}`} />
+                    <Skeleton className={`h-4 w-3/4 ${skeletonBase}`} />
                   </div>
                 </div>
 
-                {/* Dates Information */}
                 <div className="space-y-3">
-                  <Skeleton className="h-6 w-24 bg-gray-600" />
+                  <Skeleton className={`h-6 w-24 ${skeletonStrong}`} />
                   <div className="space-y-2">
-                    <Skeleton className="h-4 w-full bg-gray-700" />
-                    <Skeleton className="h-4 w-2/3 bg-gray-700" />
+                    <Skeleton className={`h-4 w-full ${skeletonBase}`} />
+                    <Skeleton className={`h-4 w-2/3 ${skeletonBase}`} />
                   </div>
                 </div>
               </div>
 
-              {/* Quick Action Tabs Skeleton */}
-              <div className="border-t border-lime-500/90 pt-4">
-                <Skeleton className="h-6 w-24 mx-auto mb-3 bg-gray-600" />
-                <div className="flex w-full border-t border-b-[2px] border-lime-500 rounded-lg overflow-hidden">
+              <div className="border-t border-[rgba(236,234,224,0.08)] pt-4">
+                <Skeleton className={`h-6 w-24 mx-auto mb-3 ${skeletonStrong}`} />
+                <div className="flex w-full rounded-lg overflow-hidden gap-1">
                   {[...Array(5)].map((_, j) => (
-                    <Skeleton key={j} className="h-16 flex-1 bg-gray-700" />
+                    <Skeleton key={j} className={`h-16 flex-1 ${skeletonBase}`} />
                   ))}
                 </div>
               </div>
 
-              {/* Event Creation Buttons Skeleton */}
-              <div className="border-t border-lime-500/90 pt-4">
-                <Skeleton className="h-6 w-28 mx-auto mb-3 bg-gray-600" />
+              <div className="border-t border-[rgba(236,234,224,0.08)] pt-4">
+                <Skeleton className={`h-6 w-28 mx-auto mb-3 ${skeletonStrong}`} />
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[...Array(4)].map((_, j) => (
-                    <Skeleton key={j} className="h-16 rounded bg-gray-700" />
+                    <Skeleton key={j} className={`h-16 rounded ${skeletonBase}`} />
                   ))}
                 </div>
               </div>
@@ -127,17 +114,17 @@ function LeadsLoading() {
       ))}
 
       {/* Pagination Skeleton */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-lg mt-4">
+      <div className="flex items-center justify-between px-4 py-3 bg-[#161D18] border border-[rgba(236,234,224,0.08)] rounded-xl mt-4">
         <div className="flex items-center space-x-2">
-          <Skeleton className="h-4 w-8 bg-gray-300" />
-          <Skeleton className="h-8 w-16 bg-gray-300" />
-          <Skeleton className="h-4 w-16 bg-gray-300" />
+          <Skeleton className={`h-4 w-8 ${skeletonBase}`} />
+          <Skeleton className={`h-8 w-16 ${skeletonBase}`} />
+          <Skeleton className={`h-4 w-16 ${skeletonBase}`} />
         </div>
         <div className="flex items-center space-x-2">
-          <Skeleton className="h-4 w-20 bg-gray-300" />
+          <Skeleton className={`h-4 w-20 ${skeletonBase}`} />
           <div className="flex items-center space-x-1">
             {[...Array(4)].map((_, j) => (
-              <Skeleton key={j} className="h-8 w-8 bg-gray-300" />
+              <Skeleton key={j} className={`h-8 w-8 ${skeletonBase}`} />
             ))}
           </div>
         </div>
@@ -335,10 +322,10 @@ export default function LeadsClient({
         {isLoading ? (
           <LeadsLoading />
         ) : leads.length === 0 ? (
-          <div className="text-center py-10 border rounded-lg bg-white shadow-sm">
-            <p className="text-muted-foreground">No leads found matching your criteria.</p>
+          <div className="text-center py-12 border border-[rgba(236,234,224,0.08)] rounded-2xl bg-[#161D18] shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)]">
+            <p className="text-[#A7B0A6]">No leads found matching your criteria.</p>
             {(searchQuery || selectedStatus || selectedUser) && (
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-sm text-[#6E776E] mt-1">
                 Try adjusting your search terms or filters.
               </p>
             )}

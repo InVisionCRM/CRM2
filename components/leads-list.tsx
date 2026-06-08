@@ -271,19 +271,19 @@ const parseAddressStreetAndCity = (fullAddress: string | null | undefined): stri
   return fullAddress;
 };
 
-// Updated status colors for neon theme
+// Status pill colors mapped to the Purlin palette (lime / cyan / amber / violet / rose)
 const getStatusColor = (status: string) => {
   switch (status) {
-    case "scheduled": return "bg-blue-500/20 text-blue-400 border-blue-500/30"
-    case "signed_contract": return "bg-green-500/20 text-green-400 border-green-500/30"
-    case "completed_jobs": return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-    case "follow_ups": return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-    case "acv": return "bg-purple-500/20 text-purple-400 border-purple-500/30"
-    case "job": return "bg-orange-500/20 text-orange-400 border-orange-500/30"
-    case "colors": return "bg-indigo-500/20 text-indigo-400 border-indigo-500/30"
-    case "zero_balance": return "bg-green-600/20 text-green-300 border-green-600/30"
-    case "denied": return "bg-red-500/20 text-red-400 border-red-500/30"
-    default: return "bg-gray-500/20 text-gray-400 border-gray-500/30"
+    case "scheduled": return "bg-[rgba(90,210,244,0.14)] text-[#5AD2F4] border-[rgba(90,210,244,0.3)]"
+    case "signed_contract": return "bg-[rgba(155,139,208,0.14)] text-[#9B8BD0] border-[rgba(155,139,208,0.3)]"
+    case "completed_jobs": return "bg-[rgba(164,214,94,0.14)] text-[#A4D65E] border-[rgba(164,214,94,0.3)]"
+    case "follow_ups": return "bg-[rgba(232,163,61,0.14)] text-[#E8A33D] border-[rgba(232,163,61,0.3)]"
+    case "acv": return "bg-[rgba(155,139,208,0.14)] text-[#9B8BD0] border-[rgba(155,139,208,0.3)]"
+    case "job": return "bg-[rgba(232,163,61,0.14)] text-[#E8A33D] border-[rgba(232,163,61,0.3)]"
+    case "colors": return "bg-[rgba(90,210,244,0.14)] text-[#5AD2F4] border-[rgba(90,210,244,0.3)]"
+    case "zero_balance": return "bg-[rgba(164,214,94,0.14)] text-[#A4D65E] border-[rgba(164,214,94,0.3)]"
+    case "denied": return "bg-[rgba(239,94,115,0.14)] text-[#EF5E73] border-[rgba(239,94,115,0.3)]"
+    default: return "bg-[rgba(236,234,224,0.06)] text-[#A7B0A6] border-[rgba(236,234,224,0.14)]"
   }
 }
 
@@ -334,16 +334,16 @@ const getDropdownItemColor = (status: string) => {
 
 const getStatusTextColor = (status: string) => {
   switch (status) {
-    case "scheduled": return "text-blue-400"
-    case "signed_contract": return "text-green-400"
-    case "completed_jobs": return "text-emerald-400"
-    case "follow_ups": return "text-yellow-400"
-    case "acv": return "text-purple-400"
-    case "job": return "text-orange-400"
-    case "colors": return "text-indigo-400"
-    case "zero_balance": return "text-green-300"
-    case "denied": return "text-red-400"
-    default: return "text-gray-400"
+    case "scheduled": return "text-[#5AD2F4]"
+    case "signed_contract": return "text-[#9B8BD0]"
+    case "completed_jobs": return "text-[#A4D65E]"
+    case "follow_ups": return "text-[#E8A33D]"
+    case "acv": return "text-[#9B8BD0]"
+    case "job": return "text-[#E8A33D]"
+    case "colors": return "text-[#5AD2F4]"
+    case "zero_balance": return "text-[#A4D65E]"
+    case "denied": return "text-[#EF5E73]"
+    default: return "text-[#A7B0A6]"
   }
 }
 
@@ -751,30 +751,17 @@ function NeonLeadCard({
     <div className="w-full space-y-2">
       {/* Compact Row - Only Visible When Collapsed */}
       {!isExpanded && (
-        <div 
-          className="flex items-center justify-between p-3 sm:p-4 cursor-pointer transition-all duration-300 rounded-lg border backdrop-blur-sm"
+        <div
+          className="flex items-center justify-between p-3 sm:p-4 cursor-pointer transition-colors rounded-xl border border-[rgba(236,234,224,0.08)] hover:border-[rgba(236,234,224,0.14)] bg-[#161D18] hover:bg-[#1B231D] shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)]"
           onClick={() => setIsExpanded(!isExpanded)}
-          style={{
-            borderColor: `rgba(${colors.border}, 0.3)`,
-            boxShadow: `0 0 10px rgba(${colors.shadow}, 0.1)`,
-            background: `linear-gradient(135deg, 
-              rgba(${colors.shadow}, 0.05) 0%, 
-              rgba(15, 23, 42, 0.8) 30%, 
-              rgba(15, 23, 42, 0.9) 70%, 
-              rgba(${colors.shadow}, 0.05) 100%)`,
-          }}
         >
         <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
                 {/* Salesperson Avatar */}
                 <div className="flex-shrink-0">
-            <Avatar 
-              className="h-8 w-8 sm:h-10 sm:w-10 bg-slate-700 border-2 transition-all duration-300"
-              style={{
-                borderColor: `rgba(${colors.border}, 0.5)`,
-                boxShadow: `0 0 5px rgba(${colors.shadow}, 0.2)`,
-              }}
+            <Avatar
+              className="h-8 w-8 sm:h-10 sm:w-10 bg-[#1B231D] border border-[rgba(236,234,224,0.14)]"
             >
-              <AvatarFallback className="text-slate-300 bg-slate-700 text-xs sm:text-sm">
+              <AvatarFallback className="text-[#A7B0A6] bg-[#1B231D] text-xs sm:text-sm">
                       {getSalespersonInitials(lead.assignedTo)}
               </AvatarFallback>
             </Avatar>
@@ -782,14 +769,14 @@ function NeonLeadCard({
 
           {/* Lead Name and Address */}
                 <div className="flex-1 min-w-0">
-                  <Link 
+                  <Link
                     href={`/leads/${lead.id}`}
                     onClick={(e) => e.stopPropagation()}
-              className="font-semibold text-slate-200 hover:text-slate-100 transition-colors block truncate text-sm sm:text-base"
+              className="font-semibold text-[#ECEAE0] hover:text-[#A4D65E] transition-colors block truncate text-sm sm:text-base tracking-tight"
                   >
                     {lead.name || "N/A"}
                   </Link>
-            <p className="text-xs sm:text-sm text-slate-400 flex items-center gap-1 truncate">
+            <p className="text-xs sm:text-sm text-[#6E776E] flex items-center gap-1 truncate">
               <MapPin className="h-3 w-3 flex-shrink-0" />
               <span className="truncate">{parseAddressStreetAndCity(lead.address)}</span>
             </p>
@@ -797,7 +784,7 @@ function NeonLeadCard({
 
                 {/* Status Badge */}
                 <div className="flex-shrink-0">
-                  <Badge className={`${getStatusColor(currentStatus)} border`}>
+                  <Badge className={`${getStatusColor(currentStatus)} border rounded-full px-2.5 py-0.5 font-medium`}>
                     {formatStatusLabel(currentStatus)}
                   </Badge>
                 </div>
@@ -808,7 +795,7 @@ function NeonLeadCard({
                 <Button
                   variant="ghost"
                   size="sm"
-            className="h-8 w-8 p-0 text-slate-400 hover:text-slate-200"
+            className="h-8 w-8 p-0 text-[#6E776E] hover:text-[#ECEAE0] hover:bg-[rgba(236,234,224,0.04)]"
             onClick={(e) => {
               e.stopPropagation()
               setIsExpanded(!isExpanded)
@@ -1870,36 +1857,36 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
   }
 
   const SpreadsheetView = () => (
-    <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+    <div className="bg-[#161D18] rounded-2xl border border-[rgba(236,234,224,0.08)] shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)] overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1400px]">
-          <thead className="bg-gray-50 border-b">
+          <thead className="bg-[#1B231D] border-b border-[rgba(236,234,224,0.08)]">
             <tr>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px] max-w-[150px]">Name</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Created</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[220px]">Actions</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Status</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Assigned To</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">Email</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Address</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Phone</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Insurance Co.</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Ins. Phone</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Claim Number</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">DOL</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Damage Type</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Adjuster Name</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Adj. Phone</th>
+              <th className="px-3 py-3 text-left text-[11px] font-semibold text-[#6E776E] uppercase tracking-wider min-w-[100px] max-w-[150px]">Name</th>
+              <th className="px-3 py-3 text-left text-[11px] font-semibold text-[#6E776E] uppercase tracking-wider min-w-[100px]">Created</th>
+              <th className="px-3 py-3 text-left text-[11px] font-semibold text-[#6E776E] uppercase tracking-wider min-w-[220px]">Actions</th>
+              <th className="px-3 py-3 text-left text-[11px] font-semibold text-[#6E776E] uppercase tracking-wider min-w-[100px]">Status</th>
+              <th className="px-3 py-3 text-left text-[11px] font-semibold text-[#6E776E] uppercase tracking-wider min-w-[100px]">Assigned To</th>
+              <th className="px-3 py-3 text-left text-[11px] font-semibold text-[#6E776E] uppercase tracking-wider min-w-[150px]">Email</th>
+              <th className="px-3 py-3 text-left text-[11px] font-semibold text-[#6E776E] uppercase tracking-wider min-w-[200px]">Address</th>
+              <th className="px-3 py-3 text-left text-[11px] font-semibold text-[#6E776E] uppercase tracking-wider min-w-[100px]">Phone</th>
+              <th className="px-3 py-3 text-left text-[11px] font-semibold text-[#6E776E] uppercase tracking-wider min-w-[120px]">Insurance Co.</th>
+              <th className="px-3 py-3 text-left text-[11px] font-semibold text-[#6E776E] uppercase tracking-wider min-w-[100px]">Ins. Phone</th>
+              <th className="px-3 py-3 text-left text-[11px] font-semibold text-[#6E776E] uppercase tracking-wider min-w-[120px]">Claim Number</th>
+              <th className="px-3 py-3 text-left text-[11px] font-semibold text-[#6E776E] uppercase tracking-wider min-w-[100px]">DOL</th>
+              <th className="px-3 py-3 text-left text-[11px] font-semibold text-[#6E776E] uppercase tracking-wider min-w-[100px]">Damage Type</th>
+              <th className="px-3 py-3 text-left text-[11px] font-semibold text-[#6E776E] uppercase tracking-wider min-w-[120px]">Adjuster Name</th>
+              <th className="px-3 py-3 text-left text-[11px] font-semibold text-[#6E776E] uppercase tracking-wider min-w-[100px]">Adj. Phone</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-[#161D18] divide-y divide-[rgba(236,234,224,0.06)]">
             {currentLeads.map((lead) => (
-              <tr key={lead.id} className="hover:bg-gray-50">
+              <tr key={lead.id} className="hover:bg-[#1B231D]/60 transition-colors">
                 {/* Name */}
-                <td className="px-3 py-2 whitespace-nowrap max-w-[150px]">
+                <td className="px-3 py-3 whitespace-nowrap max-w-[150px]">
                   <Link
                     href={`/leads/${lead.id}`}
-                    className="text-sm font-medium text-black hover:text-blue-600 transition-colors cursor-pointer block truncate"
+                    className="text-sm font-semibold text-[#ECEAE0] hover:text-[#A4D65E] transition-colors cursor-pointer block truncate tracking-tight"
                     title={lead.name || 'Click to view lead'}
                   >
                     {lead.name || 'Click to view lead'}
@@ -1907,8 +1894,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                 </td>
 
                 {/* Created Date */}
-                <td className="px-3 py-2 whitespace-nowrap">
-                  <span className="text-sm text-gray-900">
+                <td className="px-3 py-3 whitespace-nowrap">
+                  <span className="text-sm text-[#A7B0A6]">
                     {lead.createdAt ? format(new Date(lead.createdAt), 'MM/dd/yy') : 'N/A'}
                   </span>
                 </td>
@@ -1922,7 +1909,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-7 w-7 p-0 bg-black text-white hover:bg-green-500 hover:text-white"
+                            className="h-7 w-7 p-0 bg-[#1B231D] text-[#A7B0A6] border border-[rgba(236,234,224,0.08)] hover:bg-[rgba(164,214,94,0.12)] hover:text-[#A4D65E] hover:border-[rgba(164,214,94,0.3)] transition-colors"
                             asChild
                           >
                             <Link href={`/leads/${lead.id}`}>
@@ -1940,7 +1927,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-7 w-7 p-0 bg-black text-white hover:bg-green-500 hover:text-white"
+                            className="h-7 w-7 p-0 bg-[#1B231D] text-[#A7B0A6] border border-[rgba(236,234,224,0.08)] hover:bg-[rgba(164,214,94,0.12)] hover:text-[#A4D65E] hover:border-[rgba(164,214,94,0.3)] transition-colors"
                             onClick={() => {
                               setSelectedLeadForFileViewer(lead.id);
                               setFileViewerOpen(true);
@@ -1959,7 +1946,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-7 w-7 p-0 bg-black text-white hover:bg-green-500 hover:text-white"
+                            className="h-7 w-7 p-0 bg-[#1B231D] text-[#A7B0A6] border border-[rgba(236,234,224,0.08)] hover:bg-[rgba(164,214,94,0.12)] hover:text-[#A4D65E] hover:border-[rgba(164,214,94,0.3)] transition-colors"
                             onClick={() => handleFileUpload(lead.id)}
                           >
                             <Upload className="h-3 w-3" />
@@ -1976,7 +1963,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-7 w-7 p-0 bg-black text-white hover:bg-purple-500 hover:text-white"
+                            className="h-7 w-7 p-0 bg-[#1B231D] text-[#A7B0A6] border border-[rgba(236,234,224,0.08)] hover:bg-[rgba(155,139,208,0.12)] hover:text-[#9B8BD0] hover:border-[rgba(155,139,208,0.3)] transition-colors"
                             onClick={() => handleTakePhotos(lead.id)}
                           >
                             <Camera className="h-3 w-3" />
@@ -1990,7 +1977,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-7 min-w-[92px] px-2 gap-1.5 bg-black text-white hover:bg-amber-500 hover:text-white disabled:opacity-40 text-xs font-medium"
+                        className="h-7 min-w-[92px] px-2 gap-1.5 bg-[#1B231D] text-[#A7B0A6] border border-[rgba(236,234,224,0.08)] hover:bg-[rgba(232,163,61,0.12)] hover:text-[#E8A33D] hover:border-[rgba(232,163,61,0.3)] disabled:opacity-40 text-xs font-medium transition-colors"
                         disabled={!lead.email || sendingReviewLeadId === lead.id}
                         onClick={() => openReviewPreview(lead.id)}
                         aria-label="Preview and send Google review request"
@@ -2009,7 +1996,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                 {/* Status */}
                 <td className="px-3 py-2 whitespace-nowrap">
                   <Select value={lead.status} onValueChange={(value: LeadStatus) => handleStatusUpdate(lead.id, value)}>
-                    <SelectTrigger className={`h-7 text-xs border-gray-300 ${getStatusTextColor(lead.status)}`}>
+                    <SelectTrigger className={`h-7 text-xs bg-[#1B231D] border-[rgba(236,234,224,0.08)] ${getStatusTextColor(lead.status)}`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -2028,7 +2015,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
 
                 {/* Assigned To */}
                 <td className="px-3 py-2 whitespace-nowrap">
-                  <span className="text-sm text-gray-900">
+                  <span className="text-sm text-[#A7B0A6]">
                     {lead.assignedTo || "Unassigned"}
                   </span>
                 </td>
@@ -2048,7 +2035,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                         }}
                         autoFocus
                       />
-                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'email')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-[rgba(164,214,94,0.12)] text-[#A4D65E] border border-[rgba(164,214,94,0.3)] hover:bg-[rgba(164,214,94,0.2)]" onClick={() => handleEditSave(lead.id, 'email')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -2057,8 +2044,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded truncate max-w-[150px] block ${
-                        lead.email ? 'text-black' : 'text-blue-400'
+                      className={`text-sm cursor-pointer hover:bg-[rgba(236,234,224,0.04)] px-1 py-0.5 rounded truncate max-w-[150px] block ${
+                        lead.email ? 'text-[#ECEAE0]' : 'text-[#5AD2F4]/80'
                       }`}
                       onClick={() => handleEditStart(lead.id, 'email', lead.email || '')}
                       title={lead.email || 'Add'}
@@ -2079,7 +2066,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                             setEditValue(e.target.value)
                             fetchAddressSuggestions(e.target.value)
                           }}
-                          className="h-7 text-xs bg-white text-black border-gray-300"
+                          className="h-7 text-xs bg-[#1B231D] text-[#ECEAE0] border-[rgba(236,234,224,0.14)]"
                           placeholder="Enter address..."
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleEditSave(lead.id, 'address')
@@ -2096,26 +2083,26 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                           autoFocus
                         />
                         {showAddressSuggestions && addressSuggestions.length > 0 && (
-                          <div className="absolute top-8 left-0 right-0 z-50 bg-black border border-gray-700 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                          <div className="absolute top-8 left-0 right-0 z-50 bg-[#161D18] border border-[rgba(236,234,224,0.14)] rounded-lg shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)] max-h-60 overflow-y-auto">
                             {addressSuggestions.map((suggestion, index) => (
                               <div
                                 key={suggestion.place_id || index}
-                                className="px-3 py-2 hover:bg-gray-800 cursor-pointer text-sm text-white border-b border-gray-700 last:border-b-0"
+                                className="px-3 py-2 hover:bg-[#1B231D] cursor-pointer text-sm text-[#ECEAE0] border-b border-[rgba(236,234,224,0.06)] last:border-b-0"
                                 onClick={() => handleAddressSuggestionSelect(suggestion)}
                               >
                                 <div className="font-medium">{suggestion.structured_formatting?.main_text || suggestion.description}</div>
                                 {suggestion.structured_formatting?.secondary_text && (
-                                  <div className="text-gray-400 text-xs">{suggestion.structured_formatting.secondary_text}</div>
+                                  <div className="text-[#6E776E] text-xs">{suggestion.structured_formatting.secondary_text}</div>
                                 )}
                               </div>
                             ))}
                           </div>
                         )}
                       </div>
-                      <Button size="sm" className="h-7 w-7 p-0 bg-gray-800 text-white hover:bg-gray-700" onClick={() => handleEditSave(lead.id, 'address')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-[rgba(164,214,94,0.12)] text-[#A4D65E] border border-[rgba(164,214,94,0.3)] hover:bg-[rgba(164,214,94,0.2)]" onClick={() => handleEditSave(lead.id, 'address')}>
                         <Save className="h-3 w-3" />
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-white hover:bg-gray-800" onClick={() => {
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-[#A7B0A6] hover:bg-[rgba(236,234,224,0.04)] hover:text-[#ECEAE0]" onClick={() => {
                         handleEditCancel()
                         setShowAddressSuggestions(false)
                       }}>
@@ -2124,8 +2111,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded truncate max-w-[200px] block ${
-                        lead.address ? 'text-gray-900' : 'text-blue-400'
+                      className={`text-sm cursor-pointer hover:bg-[rgba(236,234,224,0.04)] px-1 py-0.5 rounded truncate max-w-[200px] block ${
+                        lead.address ? 'text-[#ECEAE0]' : 'text-[#5AD2F4]/80'
                       }`}
                       onClick={() => handleEditStart(lead.id, 'address', lead.address || '')}
                       title={lead.address || 'Add'}
@@ -2149,7 +2136,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                         }}
                         autoFocus
                       />
-                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'phone')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-[rgba(164,214,94,0.12)] text-[#A4D65E] border border-[rgba(164,214,94,0.3)] hover:bg-[rgba(164,214,94,0.2)]" onClick={() => handleEditSave(lead.id, 'phone')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -2158,8 +2145,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span
-                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded ${
-                        lead.phone ? 'text-black' : 'text-blue-400'
+                      className={`text-sm cursor-pointer hover:bg-[rgba(236,234,224,0.04)] px-1 py-0.5 rounded ${
+                        lead.phone ? 'text-[#ECEAE0]' : 'text-[#5AD2F4]/80'
                       }`}
                       onClick={() => handleEditStart(lead.id, 'phone', lead.phone || '')}
                     >
@@ -2182,7 +2169,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                         }}
                         autoFocus
                       />
-                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'insuranceCompany')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-[rgba(164,214,94,0.12)] text-[#A4D65E] border border-[rgba(164,214,94,0.3)] hover:bg-[rgba(164,214,94,0.2)]" onClick={() => handleEditSave(lead.id, 'insuranceCompany')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -2191,8 +2178,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded truncate max-w-[120px] block ${
-                        lead.insuranceCompany ? 'text-gray-900' : 'text-blue-400'
+                      className={`text-sm cursor-pointer hover:bg-[rgba(236,234,224,0.04)] px-1 py-0.5 rounded truncate max-w-[120px] block ${
+                        lead.insuranceCompany ? 'text-[#ECEAE0]' : 'text-[#5AD2F4]/80'
                       }`}
                       onClick={() => handleEditStart(lead.id, 'insuranceCompany', lead.insuranceCompany || '')}
                       title={lead.insuranceCompany || 'Add'}
@@ -2216,7 +2203,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                         }}
                         autoFocus
                       />
-                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'insurancePhone')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-[rgba(164,214,94,0.12)] text-[#A4D65E] border border-[rgba(164,214,94,0.3)] hover:bg-[rgba(164,214,94,0.2)]" onClick={() => handleEditSave(lead.id, 'insurancePhone')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -2225,8 +2212,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded ${
-                        lead.insurancePhone ? 'text-gray-900' : 'text-blue-400'
+                      className={`text-sm cursor-pointer hover:bg-[rgba(236,234,224,0.04)] px-1 py-0.5 rounded ${
+                        lead.insurancePhone ? 'text-[#ECEAE0]' : 'text-[#5AD2F4]/80'
                       }`}
                       onClick={() => handleEditStart(lead.id, 'insurancePhone', lead.insurancePhone || '')}
                     >
@@ -2249,7 +2236,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                         }}
                         autoFocus
                       />
-                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'claimNumber')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-[rgba(164,214,94,0.12)] text-[#A4D65E] border border-[rgba(164,214,94,0.3)] hover:bg-[rgba(164,214,94,0.2)]" onClick={() => handleEditSave(lead.id, 'claimNumber')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -2258,8 +2245,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded ${
-                        lead.claimNumber ? 'text-gray-900' : 'text-blue-400'
+                      className={`text-sm cursor-pointer hover:bg-[rgba(236,234,224,0.04)] px-1 py-0.5 rounded ${
+                        lead.claimNumber ? 'text-[#ECEAE0]' : 'text-[#5AD2F4]/80'
                       }`}
                       onClick={() => handleEditStart(lead.id, 'claimNumber', lead.claimNumber || '')}
                     >
@@ -2283,7 +2270,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                         }}
                         autoFocus
                       />
-                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'dateOfLoss')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-[rgba(164,214,94,0.12)] text-[#A4D65E] border border-[rgba(164,214,94,0.3)] hover:bg-[rgba(164,214,94,0.2)]" onClick={() => handleEditSave(lead.id, 'dateOfLoss')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -2292,8 +2279,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded ${
-                        lead.dateOfLoss ? 'text-gray-900' : 'text-blue-400'
+                      className={`text-sm cursor-pointer hover:bg-[rgba(236,234,224,0.04)] px-1 py-0.5 rounded ${
+                        lead.dateOfLoss ? 'text-[#ECEAE0]' : 'text-[#5AD2F4]/80'
                       }`}
                       onClick={() => handleEditStart(lead.id, 'dateOfLoss', lead.dateOfLoss ? format(new Date(lead.dateOfLoss), 'MM/dd/yy') : '')}
                     >
@@ -2316,7 +2303,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                           ))}
                         </SelectContent>
                       </Select>
-                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'damageType')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-[rgba(164,214,94,0.12)] text-[#A4D65E] border border-[rgba(164,214,94,0.3)] hover:bg-[rgba(164,214,94,0.2)]" onClick={() => handleEditSave(lead.id, 'damageType')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -2325,8 +2312,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded ${
-                        lead.damageType ? 'text-gray-900' : 'text-blue-400'
+                      className={`text-sm cursor-pointer hover:bg-[rgba(236,234,224,0.04)] px-1 py-0.5 rounded ${
+                        lead.damageType ? 'text-[#ECEAE0]' : 'text-[#5AD2F4]/80'
                       }`}
                       onClick={() => handleEditStart(lead.id, 'damageType', lead.damageType || '')}
                     >
@@ -2349,7 +2336,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                         }}
                         autoFocus
                       />
-                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'insuranceAdjusterName')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-[rgba(164,214,94,0.12)] text-[#A4D65E] border border-[rgba(164,214,94,0.3)] hover:bg-[rgba(164,214,94,0.2)]" onClick={() => handleEditSave(lead.id, 'insuranceAdjusterName')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -2358,8 +2345,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded truncate max-w-[120px] block ${
-                        lead.insuranceAdjusterName ? 'text-gray-900' : 'text-blue-400'
+                      className={`text-sm cursor-pointer hover:bg-[rgba(236,234,224,0.04)] px-1 py-0.5 rounded truncate max-w-[120px] block ${
+                        lead.insuranceAdjusterName ? 'text-[#ECEAE0]' : 'text-[#5AD2F4]/80'
                       }`}
                       onClick={() => handleEditStart(lead.id, 'insuranceAdjusterName', lead.insuranceAdjusterName || '')}
                       title={lead.insuranceAdjusterName || 'Add'}
@@ -2383,7 +2370,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                         }}
                         autoFocus
                       />
-                      <Button size="sm" className="h-7 w-7 p-0 bg-black text-white hover:bg-gray-800" onClick={() => handleEditSave(lead.id, 'insuranceAdjusterPhone')}>
+                      <Button size="sm" className="h-7 w-7 p-0 bg-[rgba(164,214,94,0.12)] text-[#A4D65E] border border-[rgba(164,214,94,0.3)] hover:bg-[rgba(164,214,94,0.2)]" onClick={() => handleEditSave(lead.id, 'insuranceAdjusterPhone')}>
                         <Save className="h-3 w-3" />
                       </Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={handleEditCancel}>
@@ -2392,8 +2379,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                     </div>
                   ) : (
                     <span 
-                      className={`text-sm cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded ${
-                        lead.insuranceAdjusterPhone ? 'text-gray-900' : 'text-blue-400'
+                      className={`text-sm cursor-pointer hover:bg-[rgba(236,234,224,0.04)] px-1 py-0.5 rounded ${
+                        lead.insuranceAdjusterPhone ? 'text-[#ECEAE0]' : 'text-[#5AD2F4]/80'
                       }`}
                       onClick={() => handleEditStart(lead.id, 'insuranceAdjusterPhone', lead.insuranceAdjusterPhone || '')}
                     >
@@ -2423,8 +2410,8 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
 
   if (leads.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-slate-400">No leads found.</p>
+      <div className="text-center py-12 rounded-2xl bg-[#161D18] border border-[rgba(236,234,224,0.08)]">
+        <p className="text-[#A7B0A6]">No leads found.</p>
                     </div>
     )
   }
@@ -2433,28 +2420,36 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
     <div className="space-y-4">
       {/* View Toggle */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button
-            variant={viewMode === 'cards' ? 'default' : 'outline'}
-            size="sm"
+        <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-[#161D18] border border-[rgba(236,234,224,0.08)]">
+          <button
+            type="button"
             onClick={() => setViewMode('cards')}
-            className="flex items-center gap-2"
+            className={cn(
+              "flex items-center gap-2 h-8 px-3 rounded-lg text-sm font-medium transition-colors",
+              viewMode === 'cards'
+                ? "bg-[rgba(164,214,94,0.12)] text-[#A4D65E]"
+                : "text-[#A7B0A6] hover:text-[#ECEAE0] hover:bg-[rgba(236,234,224,0.04)]"
+            )}
           >
             <Grid3X3 className="h-4 w-4" />
             Cards
-          </Button>
-          <Button
-            variant={viewMode === 'spreadsheet' ? 'default' : 'outline'}
-            size="sm"
+          </button>
+          <button
+            type="button"
             onClick={() => setViewMode('spreadsheet')}
-            className="flex items-center gap-2"
+            className={cn(
+              "flex items-center gap-2 h-8 px-3 rounded-lg text-sm font-medium transition-colors",
+              viewMode === 'spreadsheet'
+                ? "bg-[rgba(164,214,94,0.12)] text-[#A4D65E]"
+                : "text-[#A7B0A6] hover:text-[#ECEAE0] hover:bg-[rgba(236,234,224,0.04)]"
+            )}
           >
             <Table className="h-4 w-4" />
             Spreadsheet
-          </Button>
+          </button>
         </div>
-        <div className="text-sm text-slate-400">
-          {leads.length} leads total
+        <div className="text-sm text-[#6E776E]">
+          <span className="text-[#ECEAE0] font-semibold tabular-nums">{leads.length}</span> leads total
         </div>
       </div>
 
@@ -2642,9 +2637,9 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
       {totalPages > 1 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-slate-400">Show</span>
+            <span className="text-sm text-[#6E776E]">Show</span>
             <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
-              <SelectTrigger className="w-20 bg-slate-800/50 border-slate-700/50 text-slate-200">
+              <SelectTrigger className="w-20 bg-[#1B231D] border-[rgba(236,234,224,0.08)] text-[#ECEAE0]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -2654,16 +2649,16 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                 <SelectItem value="50">50</SelectItem>
               </SelectContent>
             </Select>
-            <span className="text-sm text-slate-400">per page</span>
+            <span className="text-sm text-[#6E776E]">per page</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => goToPage(1)}
                 disabled={currentPage === 1}
-              className="bg-slate-800/50 border-slate-700/50 text-slate-200 hover:bg-slate-700/50"
+              className="h-8 w-8 p-0 bg-[#1B231D] border-[rgba(236,234,224,0.08)] text-[#A7B0A6] hover:bg-[rgba(236,234,224,0.04)] hover:text-[#ECEAE0] disabled:opacity-40"
               >
                 <ChevronsLeft className="h-4 w-4" />
               </Button>
@@ -2672,21 +2667,21 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                 size="sm"
                 onClick={() => goToPage(currentPage - 1)}
                 disabled={currentPage === 1}
-              className="bg-slate-800/50 border-slate-700/50 text-slate-200 hover:bg-slate-700/50"
+              className="h-8 w-8 p-0 bg-[#1B231D] border-[rgba(236,234,224,0.08)] text-[#A7B0A6] hover:bg-[rgba(236,234,224,0.04)] hover:text-[#ECEAE0] disabled:opacity-40"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-            
-            <span className="text-sm text-slate-400 px-3">
-              Page {currentPage} of {totalPages}
+
+            <span className="text-sm text-[#A7B0A6] px-3 tabular-nums">
+              Page <span className="text-[#ECEAE0] font-semibold">{currentPage}</span> of {totalPages}
             </span>
-            
+
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => goToPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
-              className="bg-slate-800/50 border-slate-700/50 text-slate-200 hover:bg-slate-700/50"
+              className="h-8 w-8 p-0 bg-[#1B231D] border-[rgba(236,234,224,0.08)] text-[#A7B0A6] hover:bg-[rgba(236,234,224,0.04)] hover:text-[#ECEAE0] disabled:opacity-40"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -2695,7 +2690,7 @@ export function LeadsList({ leads, isLoading = false, assignedTo: _assignedTo, o
                 size="sm"
                 onClick={() => goToPage(totalPages)}
                 disabled={currentPage === totalPages}
-              className="bg-slate-800/50 border-slate-700/50 text-slate-200 hover:bg-slate-700/50"
+              className="h-8 w-8 p-0 bg-[#1B231D] border-[rgba(236,234,224,0.08)] text-[#A7B0A6] hover:bg-[rgba(236,234,224,0.04)] hover:text-[#ECEAE0] disabled:opacity-40"
               >
                 <ChevronsRight className="h-4 w-4" />
               </Button>

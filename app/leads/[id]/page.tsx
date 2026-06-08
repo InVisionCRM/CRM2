@@ -222,29 +222,28 @@ const AddNoteButton: React.FC<AddNoteButtonProps> = ({ leadId, onNoteAdded }) =>
       <button
         type="button"
         className={cn(
-          "relative flex h-full w-full items-center justify-center backdrop-blur-lg p-1 text-sm font-bold text-white",
-          "first:border-l-0 transition-all duration-300",
-          "bg-gradient-to-br from-[#14110F]/90 via-[#14110F]/80 to-[#14110F]/90 border-l border-[#14110F]/50 hover:from-[#14110F]/80 hover:via-[#14110F]/70 hover:to-[#14110F]/80 hover:border-[#14110F]/60 hover:shadow-lg hover:shadow-[#14110F]/20",
-          "hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+          "relative flex h-full w-full items-center justify-center backdrop-blur-lg p-1 text-sm font-semibold text-[#ECEAE0]",
+          "first:border-l-0 transition-colors duration-150",
+          "bg-[#161D18]/70 border-l border-[rgba(236,234,224,0.08)] hover:bg-[#1B231D]/80 cursor-pointer"
         )}
         onClick={() => setIsOpen((v) => !v)}
         aria-haspopup="menu"
       >
         <div className="flex flex-col items-center justify-center gap-1">
-          <div className="p-1 bg-white/10 rounded-md hidden sm:block">
-            <NotebookPen className="h-4 w-4 text-[#e0e0e0]" />
+          <div className="p-1 bg-[rgba(236,234,224,0.08)] rounded-md hidden sm:block">
+            <NotebookPen className="h-4 w-4 text-[#ECEAE0]" />
           </div>
-          <span className="text-xs leading-tight font-semibold text-[#e0e0e0]">Add Note</span>
+          <span className="text-xs leading-tight font-semibold text-[#ECEAE0]">Add Note</span>
         </div>
       </button>
       {isOpen && (
         <div
-          className="absolute bottom-full left-0 right-0 mb-2 z-50 w-80 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 border border-slate-600/50 backdrop-blur-xl shadow-2xl shadow-black/50 rounded-xl overflow-hidden p-4"
+          className="absolute bottom-full left-0 right-0 mb-2 z-50 w-80 bg-[#161D18] border border-[rgba(236,234,224,0.08)] backdrop-blur-xl shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)] rounded-2xl overflow-hidden p-4"
         >
           <div className="flex items-center gap-2 mb-3">
-            <h3 className="text-sm font-semibold text-gray-100">Quick Note</h3>
-            <AtSign className="h-4 w-4 text-gray-400" />
-            <span className="text-xs text-gray-400">Use @name to mention team members</span>
+            <h3 className="text-sm font-semibold text-[#ECEAE0]">Quick Note</h3>
+            <AtSign className="h-4 w-4 text-[#6E776E]" />
+            <span className="text-xs text-[#A7B0A6]">Use @name to mention team members</span>
           </div>
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="relative">
@@ -253,7 +252,7 @@ const AddNoteButton: React.FC<AddNoteButtonProps> = ({ leadId, onNoteAdded }) =>
                 placeholder="Enter your note here... Use @name to mention team members"
                 value={note}
                 onChange={(e) => handleTextareaChange(e.target.value)}
-                className="min-h-[100px] resize-none text-sm bg-slate-900 text-white border-slate-700 focus:border-[#14110F] focus:ring-[#14110F]"
+                className="min-h-[100px] resize-none text-sm bg-[#1B231D] text-[#ECEAE0] border-[rgba(236,234,224,0.08)] focus:border-[#A4D65E]/40 focus:ring-[#A4D65E]/20"
                 disabled={isSubmitting}
                 autoFocus
                 onKeyDown={(e) => {
@@ -266,19 +265,19 @@ const AddNoteButton: React.FC<AddNoteButtonProps> = ({ leadId, onNoteAdded }) =>
               
               {/* @Mention Dropdown */}
               {showMentionDropdown && filteredUsers.length > 0 && (
-                <div className="absolute z-30 w-full mt-1 bg-slate-800 border border-slate-600 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute z-30 w-full mt-1 bg-[#1B231D] border border-[rgba(236,234,224,0.08)] rounded-lg shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)] max-h-48 overflow-y-auto">
                   {filteredUsers.slice(0, 5).map((user) => (
                     <button
                       key={user.id}
                       type="button"
                       onClick={() => insertMention(user)}
-                      className="w-full text-left px-3 py-2 hover:bg-slate-700 flex items-center gap-2 text-white"
+                      className="w-full text-left px-3 py-2 hover:bg-[rgba(236,234,224,0.06)] flex items-center gap-2 text-[#ECEAE0]"
                     >
-                      <AtSign className="h-4 w-4 text-gray-400" />
+                      <AtSign className="h-4 w-4 text-[#6E776E]" />
                       <div>
                         <div className="font-medium">{user.name || user.email}</div>
                         {user.name && (
-                          <div className="text-xs text-gray-400">{user.email}</div>
+                          <div className="text-xs text-[#A7B0A6]">{user.email}</div>
                         )}
                       </div>
                     </button>
@@ -288,7 +287,7 @@ const AddNoteButton: React.FC<AddNoteButtonProps> = ({ leadId, onNoteAdded }) =>
             </div>
             
             <div className="flex justify-between items-center">
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-[#A7B0A6]">
                 {users.length > 0 ? (
                   `${users.length} team members available`
                 ) : isLoadingUsers ? (
@@ -309,7 +308,7 @@ const AddNoteButton: React.FC<AddNoteButtonProps> = ({ leadId, onNoteAdded }) =>
                     setMentionQuery("");
                   }}
                   disabled={isSubmitting}
-                  className="border-slate-700 text-white hover:bg-slate-800"
+                  className="border-[rgba(236,234,224,0.08)] bg-transparent text-[#ECEAE0] hover:bg-[rgba(236,234,224,0.06)]"
                 >
                   Cancel
                 </Button>
@@ -317,7 +316,7 @@ const AddNoteButton: React.FC<AddNoteButtonProps> = ({ leadId, onNoteAdded }) =>
                   type="submit"
                   size="sm"
                   disabled={isSubmitting || !note.trim()}
-                  className="bg-[#14110F] hover:bg-[#14110F]/90 text-white"
+                  className="bg-gradient-to-b from-[#A4D65E] to-[#7FB23F] hover:from-[#A4D65E] hover:to-[#A4D65E] text-[#10160C] font-semibold"
                 >
                   {isSubmitting ? (
                     <>
@@ -355,53 +354,53 @@ const UploadDropdown: React.FC<UploadDropdownProps> = ({ leadId, setFileUploadMo
 
   return (
     <div className="relative h-full">
-      <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+      {/* modal={false} prevents Radix from locking body pointer-events when
+          a menu item opens a Dialog (otherwise the page freezes until refresh). */}
+      <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen} modal={false}>
         <DropdownMenuTrigger asChild>
           <button
             className={cn(
-              "relative flex h-full w-full items-center justify-center backdrop-blur-lg p-1 text-sm font-bold text-white",
-              "first:border-l-0 transition-all duration-300",
-              "bg-gradient-to-br from-teal-700/90 via-teal-600/90 to-teal-700/90 border-l border-teal-500/50 hover:from-teal-600/90 hover:via-teal-500/90 hover:to-teal-600/90 hover:border-teal-400/60 hover:shadow-lg hover:shadow-teal-500/20",
-              "hover:scale-[1.02] active:scale-[0.98]",
-              "cursor-pointer"
+              "relative flex h-full w-full items-center justify-center backdrop-blur-lg p-1 text-sm font-semibold text-[#ECEAE0]",
+              "first:border-l-0 transition-colors duration-150",
+              "bg-[#161D18]/70 border-l border-[rgba(236,234,224,0.08)] hover:bg-[#1B231D]/80 cursor-pointer"
             )}
           >
             <div className="flex flex-col items-center justify-center gap-1">
-              <div className="p-1 bg-white/10 rounded-md hidden sm:block">
-                <Upload className="h-4 w-4 text-teal-200" />
+              <div className="p-1 bg-[#5AD2F4]/16 rounded-md hidden sm:block">
+                <Upload className="h-4 w-4 text-[#5AD2F4]" />
               </div>
               <div className="flex flex-col items-center gap-1">
-                <span className="text-xs leading-tight font-semibold text-teal-100">
+                <span className="text-xs leading-tight font-semibold text-[#ECEAE0]">
                   <span className="sm:hidden">Docs</span>
                   <span className="hidden sm:inline">Documents</span>
                 </span>
                 <ChevronDown className={cn(
-                  "h-3 w-3 text-teal-200 transition-transform duration-200",
+                  "h-3 w-3 text-[#A7B0A6] transition-transform duration-150",
                   isDropdownOpen && "rotate-180"
                 )} />
               </div>
             </div>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent 
-          className="w-72 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 border border-slate-600/50 backdrop-blur-xl shadow-2xl shadow-black/50 rounded-xl overflow-hidden p-2"
+        <DropdownMenuContent
+          className="w-72 bg-[#161D18] border border-[rgba(236,234,224,0.08)] backdrop-blur-xl shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)] rounded-xl overflow-hidden p-2"
           side="bottom"
           align="center"
           sideOffset={8}
         >
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
             <DropdownMenuItem
               onClick={handleViewDocuments}
-              className="flex items-center gap-2 text-white hover:bg-gradient-to-r hover:from-cyan-600/20 hover:to-cyan-500/20 focus:bg-gradient-to-r focus:from-cyan-600/20 focus:to-cyan-500/20 cursor-pointer p-2 rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-lg border border-transparent hover:border-cyan-500/30"
+              className="flex items-center gap-2 text-[#ECEAE0] hover:bg-[rgba(236,234,224,0.06)] focus:bg-[rgba(236,234,224,0.06)] cursor-pointer p-2 rounded-md transition-colors duration-150"
             >
-              <Eye className="h-4 w-4 text-cyan-300" />
+              <Eye className="h-4 w-4 text-[#5AD2F4]" />
               <span className="text-sm font-semibold">View Documents</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={handleUploadDocuments}
-              className="flex items-center gap-2 text-white hover:bg-gradient-to-r hover:from-teal-600/20 hover:to-teal-500/20 focus:bg-gradient-to-r focus:from-teal-600/20 focus:to-teal-500/20 cursor-pointer p-2 rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-lg border border-transparent hover:border-teal-500/30"
+              className="flex items-center gap-2 text-[#ECEAE0] hover:bg-[rgba(236,234,224,0.06)] focus:bg-[rgba(236,234,224,0.06)] cursor-pointer p-2 rounded-md transition-colors duration-150"
             >
-              <Upload className="h-4 w-4 text-teal-300" />
+              <Upload className="h-4 w-4 text-[#A4D65E]" />
               <span className="text-sm font-semibold">Upload Documents</span>
             </DropdownMenuItem>
           </div>
@@ -413,47 +412,47 @@ const UploadDropdown: React.FC<UploadDropdownProps> = ({ leadId, setFileUploadMo
 
 const QuickActionButton: React.FC<QuickActionButtonProps> = ({ onClick, href, label, disabled, variant = 'default' }) => {
   const getVariantStyles = () => {
+    // Calm dark-forest surface for every quick action; the small inline icon
+    // colors below carry the variant accent — no full-saturation chips.
+    const base =
+      "bg-[#161D18]/70 border-l border-[rgba(236,234,224,0.08)] text-[#ECEAE0] hover:bg-[#1B231D]/80 transition-colors";
     switch (variant) {
       case 'contract':
-        return "bg-[#635380] border-l border-[#635380] hover:bg-white/10";
       case 'sign':
-        return "bg-[#E8871E] border-l border-[#E8871E] hover:bg-white/10";
       case 'filemanager':
-        return "bg-[#276FBF] border-l border-[#276FBF] hover:bg-white/10";
       case 'photos':
-        return "bg-[#D64933] border-l border-[#D64933] hover:bg-white/10";
       case 'addnote':
-        return "bg-[#14110F] border-l border-[#14110F] hover:bg-white/10";
       case 'email':
-        return "bg-gradient-to-b from-blue-600 via-blue-500 to-blue-700 border-l border-blue-600 hover:from-blue-700 hover:via-blue-600 hover:to-blue-800";
       case 'scopeofwork':
-        return "bg-[#059669] border-l border-[#059669] hover:bg-white/10";
       default:
-        return "bg-gradient-to-b from-black/40 via-black/30 via-black/20 to-white border-1 hover:from-slate-800/30 hover:via-slate-800/20 hover:to-white";
+        return base;
     }
   };
 
   const getIcon = () => {
+    const wrap = (node: React.ReactNode, tone: string) => (
+      <div className={cn("p-1 rounded-md mr-1", tone)}>{node}</div>
+    );
     if (label.includes('Send Contract') || label.includes('Sending')) {
-      return <FileSignature className="h-4 w-4 mr-1" />;
+      return wrap(<FileSignature className="h-4 w-4" />, "bg-[#9B8BD0]/16 text-[#9B8BD0]");
     }
     if (label.includes('Sign in Person') || label.includes('Creating')) {
-      return <PenTool className="h-4 w-4 mr-1" />;
+      return wrap(<PenTool className="h-4 w-4" />, "bg-[#E8A33D]/16 text-[#E8A33D]");
     }
     if (label.includes('Add Note')) {
-      return <NotebookPen className="h-4 w-4 mr-1" />;
+      return wrap(<NotebookPen className="h-4 w-4" />, "bg-[rgba(236,234,224,0.08)] text-[#ECEAE0]");
     }
     if (label.includes('Photos')) {
-      return <Image className="h-4 w-4 mr-1" />;
+      return wrap(<Image className="h-4 w-4" />, "bg-[#EF5E73]/16 text-[#EF5E73]");
     }
     if (label.includes('File Manager')) {
-      return <FileText className="h-4 w-4 mr-1" />;
+      return wrap(<FileText className="h-4 w-4" />, "bg-[#5AD2F4]/16 text-[#5AD2F4]");
     }
-    if (label.includes('Send Email')) {
-      return <Mail className="h-4 w-4 mr-1" />;
+    if (label.includes('Send Email') || label === 'E-mail' || label === 'Email') {
+      return wrap(<Mail className="h-4 w-4" />, "bg-[#5AD2F4]/16 text-[#5AD2F4]");
     }
     if (label.includes('Scope of Work')) {
-      return <ClipboardList className="h-4 w-4 mr-1" />;
+      return wrap(<ClipboardList className="h-4 w-4" />, "bg-[#A4D65E]/16 text-[#A4D65E]");
     }
     return null;
   };
@@ -507,31 +506,33 @@ const DateCard: React.FC<DateCardProps> = ({ title, date, icon, className, color
   const dateObj = typeof date === 'string' ? parseISO(date as string) : date;
   const isPastDate = dateObj && dateObj < new Date();
   
-  // Determine border color based on date status
-  let borderClass = "border-gray-700";
+  // Determine border tone based on date status (refined hairlines, no glow)
+  let borderClass = "border-[rgba(236,234,224,0.08)]";
   if (formattedDate) {
-    borderClass = isPastDate ? "border-gray-500 border-2" : "border-lime-500 border-2";
+    borderClass = isPastDate
+      ? "border-[rgba(236,234,224,0.14)]"
+      : "border-[#A4D65E]/40";
   }
 
   return (
     <div className={cn(
-      "h-16 p-2 flex flex-col items-center justify-center gap-0.5 rounded-lg border bg-black/60 transition-all duration-200",
+      "h-16 p-2 flex flex-col items-center justify-center gap-0.5 rounded-xl border bg-[#0F1311]/70 backdrop-blur-md transition-colors duration-150",
       borderClass,
       className
     )}>
       <div className="flex-shrink-0" style={{ color: accentColor }}>
         {icon}
       </div>
-      <span className="text-xs font-semibold text-center leading-tight" style={{ color: accentColor }}>
+      <span className="text-[10px] font-semibold text-center leading-tight uppercase tracking-wider" style={{ color: '#6E776E' }}>
         {title}
       </span>
       {formattedDate && (
-        <span className="text-xs text-white text-center leading-tight font-semibold">
+        <span className="text-xs text-[#ECEAE0] text-center leading-tight font-semibold">
           {formattedDate}
         </span>
       )}
       {!formattedDate && (
-        <span className="text-xs text-gray-400 text-center leading-tight mt-0.5">
+        <span className="text-xs text-[#6E776E] text-center leading-tight mt-0.5">
           Not set
         </span>
       )}
@@ -651,7 +652,7 @@ const StatusProgression: React.FC<StatusProgressionProps> = ({
               {index < statusOrder.length - 1 && (
                 <div
                   className="h-0.5 w-4 sm:w-6 rounded-full"
-                  style={{ backgroundColor: isPast ? '#00ff7f' : '#4B5563', boxShadow: isPast ? '0 0 6px rgba(0,255,128,0.6)' : undefined }}
+                  style={{ backgroundColor: isPast ? '#A4D65E' : 'rgba(236,234,224,0.14)', boxShadow: isPast ? '0 0 8px rgba(164,214,94,0.45)' : undefined }}
                 />
               )}
             </div>
@@ -1174,7 +1175,7 @@ export default function LeadDetailPage() {
         <div className="w-full flex justify-between items-center mb-4">
           {/* Lead Name - Left */}
           <div className="flex items-center gap-3">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#ECEAE0] tracking-[-0.03em]">
               {lead.firstName && lead.lastName ? `${lead.firstName} ${lead.lastName}` : lead.email || lead.phone || "Lead Details"}
             </h1>
             {canDeleteLead() && (
@@ -1182,19 +1183,19 @@ export default function LeadDetailPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsDeleteDialogOpen(true)}
-                className="text-red-600 border-red-600 hover:bg-red-50 dark:hover:bg-red-950"
+                className="text-[#EF5E73] border-[#EF5E73]/40 bg-transparent hover:bg-[#EF5E73]/10 hover:text-[#EF5E73]"
               >
                 <Trash2 className="h-4 w-4 mr-1" />
                 Delete
               </Button>
             )}
           </div>
-          
+
           {/* Claim Number - Right, above streetview */}
           {lead.claimNumber && (
             <div className="flex flex-col items-end">
-              <span className="text-gray-500 text-[8px] sm:text-[10px]">Claim #</span>
-              <span className="text-green-500 text-lg sm:text-xl font-medium">{lead.claimNumber}</span>
+              <span className="text-[10px] uppercase tracking-[0.1em] font-semibold text-[#6E776E]">Claim #</span>
+              <span className="text-lg sm:text-xl font-bold text-[#A4D65E] tabular-nums">{lead.claimNumber}</span>
             </div>
           )}
         </div>
@@ -1203,29 +1204,29 @@ export default function LeadDetailPage() {
           {/* Street View Section */}
           {lead?.address && (
             <div className="w-full">
-              <Card className="w-full overflow-hidden">
+              <Card className="w-full overflow-hidden rounded-2xl border border-[rgba(236,234,224,0.08)] bg-[#161D18] shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)]">
                 <CardContent className="p-0">
                   {streetViewUrl && (
                     <div className="relative w-full h-[400px]">
                       {/* Address Overlay */}
-                      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between bg-slate-900/70 p-2 backdrop-blur-sm">
-                        <div className="flex items-center space-x-2 overflow-hidden">
-                          <MapPin className="h-4 w-4 flex-shrink-0 text-gray-300" />
-                          <span className="truncate text-sm font-medium text-gray-100">{lead.address}</span>
+                      <div className="absolute top-3 left-3 right-3 z-10 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 overflow-hidden bg-[#0F1311]/65 backdrop-blur-md border border-[rgba(236,234,224,0.08)] rounded-xl px-3 py-2">
+                          <MapPin className="h-4 w-4 flex-shrink-0 text-[#A7B0A6]" />
+                          <span className="truncate text-sm font-medium text-[#ECEAE0]">{lead.address}</span>
                         </div>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={handleOpenEstimator}
                           disabled={isGeocoding}
-                          className="flex-shrink-0 text-blue-400 hover:text-blue-300"
+                          className="flex-shrink-0 bg-[#0F1311]/65 backdrop-blur-md border border-[rgba(236,234,224,0.08)] rounded-xl text-[#ECEAE0] hover:bg-[#1B231D]/80 hover:text-[#ECEAE0]"
                         >
                           {isGeocoding ? "Loading..." : "Estimator"}
                         </Button>
                       </div>
                       
                       {/* Date Cards Overlay */}
-                      <div className="absolute top-14 left-2 z-10 flex gap-2">
+                      <div className="absolute top-[68px] left-3 z-10 flex gap-2">
                         <DateCard
                           title="Created"
                           date={lead.createdAt}
@@ -1261,7 +1262,7 @@ export default function LeadDetailPage() {
                           <p>{streetViewError}</p>
                         </div>
                       )}
-                                            <div className="absolute bottom-0 left-0 right-0 grid grid-cols-6 sm:flex w-full text-center border-t-2 border-white rounded-t-xl shadow-inner shadow-black/40 bg-black/60 backdrop-blur">
+                      <div className="absolute bottom-0 left-0 right-0 grid grid-cols-6 sm:flex w-full text-center border-t border-[rgba(236,234,224,0.14)] bg-[#0F1311]/72 backdrop-blur-md">
                         <div className="col-span-1 sm:flex-1">
                           <QuickActionButton
                             onClick={handleOpenPhotosDialog}
@@ -1314,24 +1315,19 @@ export default function LeadDetailPage() {
           )}
         </div>
         
-        {/* Divider */}
-        <div className="w-full h-px bg-gradient-to-r from-transparent via-lime-500/50 to-transparent my-2 sm:my-3" />
-              
-        {/* Divider under quick action tabs */}
-        <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500/50 to-transparent" />
+        {/* Hairline divider — calmer than gradient */}
+        <div className="w-full h-px bg-[rgba(236,234,224,0.08)] my-2 sm:my-3" />
         
         {/* Main content area - Two column layout on desktop */}
         <div className="grid grid-cols-1 md:grid-cols-[2fr,1fr] gap-6">
           {/* Left column - Lead Detail Tabs and Add Note */}
           <div className="flex flex-col gap-6">
             <div className="space-y-4" ref={summaryRef} id="summary-info">
-              <LeadDetailTabs 
+              <LeadDetailTabs
                 lead={lead}
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
               />
-              {/* Divider under lead overview tab */}
-              <div className="w-full h-px bg-gradient-to-r from-transparent via-gray-500/50 to-transparent" />
             </div>
           </div>
 
