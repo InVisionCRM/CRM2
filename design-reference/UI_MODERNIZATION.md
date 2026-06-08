@@ -19,12 +19,12 @@ updated at the end of every run. It exists so the routine never redoes a section
 
 | Status | Section | Slug | PR | Date |
 |--------|---------|------|----|----|
-| [ ] | Nav / sidebar / app shell | `nav-shell` | — | — |
-| [ ] | Dashboard / home | `dashboard` | — | — |
-| [ ] | Leads table (list view) | `leads-table` | — | — |
-| [ ] | Lead detail page | `lead-detail` | — | — |
-| [ ] | Calendar | `calendar` | — | — |
-| [~] | Files / Drive | `files-drive` | https://github.com/InVisionCRM/CRM2/pull/8 | 2026-06-06 |
+| [~] | Nav / sidebar / app shell | `nav-shell` | https://github.com/InVisionCRM/CRM2/pull/3 | 2026-06-06 |
+| [~] | Dashboard / home | `dashboard` | [#4](https://github.com/InVisionCRM/CRM2/pull/4) | 2026-06-06 |
+| [~] | Leads table (list view) | `leads-table` | [#5](https://github.com/InVisionCRM/CRM2/pull/5) | 2026-06-06 |
+| [~] | Lead detail page | `lead-detail` | [#6](https://github.com/InVisionCRM/CRM2/pull/6) | 2026-06-06 |
+| [~] | Calendar | `calendar` | [#7](https://github.com/InVisionCRM/CRM2/pull/7) | 2026-06-06 |
+| [~] | Files / Drive | `files-drive` | [#8](https://github.com/InVisionCRM/CRM2/pull/8) | 2026-06-06 |
 | [ ] | Roof estimator | `roof-estimator` | — | — |
 | [ ] | Auth / login | `auth-login` | — | — |
 | [ ] | Settings | `settings` | — | — |
@@ -34,4 +34,9 @@ updated at the end of every run. It exists so the routine never redoes a section
 
 ## Log
 <!-- Each run appends one line: YYYY-MM-DD · <slug> · <PR url> · one-line summary -->
-2026-06-06 · files-drive · https://github.com/InVisionCRM/CRM2/pull/8 · Restyle Drive manager, lead Files page, file upload modals and primitive to forest/cream palette, replace neon `#59ff00` with lime `#A4D65E`.
+- 2026-06-06 · nav-shell · https://github.com/InVisionCRM/CRM2/pull/3 · Refined bottom nav + app shell to forest-charcoal palette, swapped harsh neon for lime #A4D65E, calmer borders/shadows.
+- 2026-06-06 · dashboard · [#4](https://github.com/InVisionCRM/CRM2/pull/4) · Replaced neon `#59ff00` with refined lime `#A4D65E` across hero, dividers, my-leads, weather loader; restyled UpcomingEvents/RecentUploads/RecentActivities/RecentEmails cards to dark-forest palette with hairline borders and soft shadow.
+- 2026-06-06 · leads-table · https://github.com/InVisionCRM/CRM2/pull/5 · Restyled spreadsheet view, view toggle, pagination, status pills, loading skeleton, and collapsed lead row to the forest/cream palette; replaced harsh neon with refined lime.
+- 2026-06-06 · lead-detail · https://github.com/InVisionCRM/CRM2/pull/6 · Restyle lead detail page: refined lime accents, calmer quick-action surfaces, dark-forest overlays, hairline dividers, tracked-out section labels.
+- 2026-06-06 · calendar · https://github.com/InVisionCRM/CRM2/pull/7 · Restyled calendar month grid, day-detail view, event chips, and tooltip to forest/cream tokens with refined lime accent.
+- 2026-06-06 · files-drive · https://github.com/InVisionCRM/CRM2/pull/8 · Restyle Drive manager, lead Files page, file upload modals and primitive to forest/cream palette, replace neon `#59ff00` with lime `#A4D65E`.

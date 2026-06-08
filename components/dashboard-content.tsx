@@ -52,40 +52,40 @@ export function DashboardContent() {
       <div className="container mx-auto px-4 py-3">
         <UpcomingEvents />
       </div>
-      
-      {/* Gradient Divider */}
+
+      {/* Hairline Divider */}
       <div className="container mx-auto px-4">
-        <div className="h-px bg-gradient-to-r from-transparent via-[#59ff00]/50 to-transparent" />
+        <div className="h-px bg-gradient-to-r from-transparent via-[#A4D65E]/20 to-transparent" />
       </div>
-      
+
       {/* My Leads */}
       <div className="container mx-auto px-4 py-3">
         <MyLeads />
       </div>
-      
-      {/* Gradient Divider */}
+
+      {/* Hairline Divider */}
       <div className="container mx-auto px-4">
-        <div className="h-px bg-gradient-to-r from-transparent via-[#59ff00]/50 to-transparent" />
+        <div className="h-px bg-gradient-to-r from-transparent via-[#A4D65E]/20 to-transparent" />
       </div>
-      
+
       {/* Recent Activities */}
       <div className="container mx-auto px-4 py-3">
         <RecentActivities />
       </div>
-      
-      {/* Gradient Divider */}
+
+      {/* Hairline Divider */}
       <div className="container mx-auto px-4">
-        <div className="h-px bg-gradient-to-r from-transparent via-[#59ff00]/50 to-transparent" />
+        <div className="h-px bg-gradient-to-r from-transparent via-[#A4D65E]/20 to-transparent" />
       </div>
-      
+
       {/* Recent Uploads */}
       <div className="container mx-auto px-4 py-3">
         <RecentUploads />
       </div>
 
-      {/* Gradient Divider */}
+      {/* Hairline Divider */}
       <div className="container mx-auto px-4">
-        <div className="h-px bg-gradient-to-r from-transparent via-[#59ff00]/50 to-transparent" />
+        <div className="h-px bg-gradient-to-r from-transparent via-[#A4D65E]/20 to-transparent" />
       </div>
       
       {/* Recent Emails */}
