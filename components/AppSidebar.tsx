@@ -131,14 +131,14 @@ function NavLink({
     <Link
       href={href}
       className={cn(
-        "flex flex-col items-center justify-center gap-1 h-full transition-colors",
+        "flex flex-col items-center justify-center gap-1 h-full transition-colors duration-150",
         isActive
-          ? "text-primary"
-          : "text-white/80 hover:text-foreground"
+          ? "text-[#A4D65E]"
+          : "text-[#A7B0A6] hover:text-[#ECEAE0]"
       )}
     >
-      <Icon className="h-6 w-6" />
-      <span className="text-sm font-medium">{label}</span>
+      <Icon className="h-[22px] w-[22px]" strokeWidth={2} />
+      <span className="text-[11px] font-medium tracking-tight">{label}</span>
     </Link>
   )
 }
@@ -168,50 +168,59 @@ function MoreMenu() {
       <SheetTrigger asChild>
         <button
           className={cn(
-            "flex flex-col items-center justify-center gap-1 h-full transition-colors text-muted-foreground hover:text-foreground"
+            "flex flex-col items-center justify-center gap-1 h-full transition-colors duration-150 text-[#A7B0A6] hover:text-[#ECEAE0]"
           )}
         >
-          <MoreHorizontal className="h-6 w-6 text-white" />
-          <span className="text-sm font-medium text-white/80">More</span>
+          <MoreHorizontal className="h-[22px] w-[22px]" strokeWidth={2} />
+          <span className="text-[11px] font-medium tracking-tight">More</span>
         </button>
       </SheetTrigger>
-      <SheetContent side="bottom" className="h-auto bg-transparent">
+      <SheetContent
+        side="bottom"
+        className="h-auto border-t border-[rgba(236,234,224,0.08)] bg-[#161D18]/95 backdrop-blur-xl text-[#ECEAE0]"
+      >
         <SheetHeader>
-          <SheetTitle>More Options</SheetTitle>
+          <SheetTitle className="text-[#ECEAE0] tracking-tight">More Options</SheetTitle>
         </SheetHeader>
-        <div className="grid grid-cols-3 gap-4 py-4">
+        <div className="grid grid-cols-3 gap-3 py-5">
           {moreNavLinks.map((link) => {
             const isActive = pathname === link.href
-            
+
             // Skip admin-only links for non-admin users
             if (link.adminOnly && session?.user?.role !== 'ADMIN') {
               return null
             }
-            
+
             return (
               <Link
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-2 rounded-lg p-3 transition-colors",
+                  "flex flex-col items-center justify-center gap-2 rounded-xl p-3 transition-colors duration-150 border",
                   isActive
-                    ? "bg-accent text-white/80"
-                    : "hover:bg-accent/50"
+                    ? "bg-[rgba(164,214,94,0.10)] border-[rgba(164,214,94,0.25)] text-[#ECEAE0]"
+                    : "bg-[#1B231D] border-[rgba(236,234,224,0.08)] text-[#A7B0A6] hover:text-[#ECEAE0] hover:border-[rgba(236,234,224,0.14)]"
                 )}
               >
-                <link.icon className="h-6 w-6" />
-                <span className="text-sm font-medium">{link.label}</span>
+                <link.icon
+                  className={cn(
+                    "h-5 w-5",
+                    isActive ? "text-[#A4D65E]" : ""
+                  )}
+                  strokeWidth={2}
+                />
+                <span className="text-[12px] font-medium tracking-tight">{link.label}</span>
               </Link>
             )
           })}
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 pt-2 border-t border-[rgba(236,234,224,0.08)]">
           <Switch
             id="theme"
             checked={isDarkMode}
             onCheckedChange={toggleTheme}
           />
-          <Label htmlFor="theme">
+          <Label htmlFor="theme" className="text-[#A7B0A6]">
             {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           </Label>
         </div>
@@ -232,34 +241,36 @@ export default function AppSidebar() {
 
   return (
     <>
-      <div className="fixed bottom-0 left-0 right-0 z-40 h-20 transform-gpu border-t/2 bg-opacity-70 border-t-primary/20 border-2 backdrop-blur-md bg-black/40 supports-[backdrop-filter]:bg-black/40 bg-transparent border-t-primary pb-[calc(env(safe-area-inset-bottom)+20px)] before:absolute before:inset-0 before:bg-gradient-to-t before:from-white/10 before:to-transparent before:pointer-events-none">
+      <div
+        className="fixed bottom-0 left-0 right-0 z-40 h-20 transform-gpu border-t border-[rgba(236,234,224,0.08)] bg-[#0F1311]/85 backdrop-blur-xl supports-[backdrop-filter]:bg-[#0F1311]/75 pb-[calc(env(safe-area-inset-bottom)+20px)] shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.6)]"
+      >
         <div className="mx-auto grid h-full max-w-lg grid-cols-7 items-center relative">
           <NavLink href={mainNavLinks[0].href} icon={mainNavLinks[0].icon} label={mainNavLinks[0].label} />
           <NavLink href={mainNavLinks[1].href} icon={mainNavLinks[1].icon} label={mainNavLinks[1].label} />
           <NavLink href="/submissions" icon={FileSignature} label="Subs" />
           <div className="flex justify-center">
             <div className="relative">
-              {/* Glowing background */}
-              <div className="absolute inset-0 bg-primary bg-opacity-50 blur-sm rounded-full animate-glow scale-100 -translate-y-4 hover:bg-white/5 transition-all"></div>
+              {/* Soft lime halo */}
+              <div className="absolute inset-0 -translate-y-4 rounded-full bg-[#A4D65E]/20 blur-md scale-110 pointer-events-none"></div>
               {/* Button */}
               <Button
                 size="sm"
-                className="relative h-16 w-16 rounded-full bg-opacity-5 border border-primary/50 border-2 transform-gpu backdrop-blur-lg shadow-lg shadow-black shadow-bottom-[10px] -translate-y-4 hover:bg-white/10 transition-all duration-300"
+                className="relative h-16 w-16 rounded-full -translate-y-4 bg-gradient-to-b from-[#A4D65E] to-[#7FB23F] hover:from-[#B1DE6F] hover:to-[#88BD46] border-0 text-[#10160C] shadow-[0_8px_22px_-8px_rgba(164,214,94,0.55)] transition-all duration-150"
                 onClick={() => setIsCreateLeadOpen(true)}
               >
-                <span className="text-xs font-semibold text-white">Add Lead</span>
+                <span className="text-[11px] font-semibold tracking-tight">Add Lead</span>
               </Button>
             </div>
           </div>
           <NavLink href={mainNavLinks[2].href} icon={mainNavLinks[2].icon} label={mainNavLinks[2].label} />
           <button
-            className="flex flex-col items-center justify-center gap-1 h-full transition-colors text-white/80 hover:text-foreground relative"
+            className="flex flex-col items-center justify-center gap-1 h-full transition-colors duration-150 text-[#A7B0A6] hover:text-[#ECEAE0] relative"
             onClick={() => setIsBulletinBoardOpen(true)}
           >
-            <Rss className="h-6 w-6" />
-            <span className="text-sm font-medium">Chat</span>
+            <Rss className="h-[22px] w-[22px]" strokeWidth={2} />
+            <span className="text-[11px] font-medium tracking-tight">Chat</span>
             {unreadCount > 0 && (
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center p-0 min-w-0">
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-[#EF5E73] text-[#ECEAE0] text-[10px] font-bold flex items-center justify-center p-0 min-w-0 border border-[#0F1311]">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </Badge>
             )}
