@@ -107,7 +107,7 @@ export function WeatherForecast() {
   if (isLoading) {
     return (
       <div className="w-full max-w-4xl mx-auto p-3 flex justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#59ff00]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#A4D65E]" />
       </div>
     )
   }

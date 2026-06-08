@@ -119,8 +119,8 @@ export function MyLeads() {
                   <div
                     key={lead.id}
                     className={cn(
-                      "w-[300px] h-[200px] shrink-0 border border-border/40 rounded-lg overflow-hidden relative group",
-                      "border-l-4 border-l-blue-200 hover:shadow-lg transition-all duration-200"
+                      "w-[300px] h-[200px] shrink-0 border border-[rgba(236,234,224,0.08)] rounded-xl overflow-hidden relative group",
+                      "border-l-4 border-l-[#A4D65E]/70 hover:border-l-[#A4D65E] hover:shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)] transition-all duration-200"
                     )}
                   >
                     {/* Street View Background */}
@@ -162,8 +162,8 @@ export function MyLeads() {
                           >
                         {formatStatusLabel(lead.status)}
                       </Badge>
-                          <div className="rounded-full p-2 bg-blue-500/10">
-                            <ArrowUpRight className="h-5 w-5 text-blue-400" />
+                          <div className="rounded-full p-2 bg-[#A4D65E]/15 border border-[#A4D65E]/20">
+                            <ArrowUpRight className="h-5 w-5 text-[#A4D65E]" />
                           </div>
                         </div>
                       </div>
