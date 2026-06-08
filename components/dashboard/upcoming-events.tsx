@@ -179,14 +179,14 @@ export function UpcomingEvents() {
     if (loading) {
       return (
         <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400"></div>
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#5AD2F4]"></div>
         </div>
       )
     }
 
     if (error) {
       return (
-        <div className="text-red-400 text-sm text-center py-4">
+        <div className="text-[#EF5E73] text-sm text-center py-4">
           {error}
         </div>
       )
@@ -194,49 +194,49 @@ export function UpcomingEvents() {
 
     if (filteredEvents.length === 0) {
       return (
-        <div className="text-gray-400 text-sm text-center py-8">
+        <div className="text-[#A7B0A6] text-sm text-center py-8">
           No events found for this period
         </div>
       )
     }
 
     return (
-      <div className="space-y-3 max-h-80 sm:max-h-96 overflow-y-auto">
+      <div className="space-y-3 max-h-80 sm:max-h-96 overflow-y-auto pr-1">
         {filteredEvents.slice(0, 10).map((event) => (
           <div
             key={event.id}
-            className="p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+            className="p-4 rounded-xl bg-[#1B231D]/70 border border-[rgba(236,234,224,0.08)] hover:border-[rgba(236,234,224,0.14)] hover:bg-[#1B231D] transition-colors"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <h4 className="text-white font-medium truncate text-sm">
+                <h4 className="text-[#ECEAE0] font-semibold truncate text-sm tracking-tight">
                   {event.title}
                 </h4>
                 {event.description && (
-                  <p className="text-gray-400 text-xs mt-1 line-clamp-2">
+                  <p className="text-[#A7B0A6] text-xs mt-1 line-clamp-2">
                     {event.description}
                   </p>
                 )}
-                <div className="flex items-center gap-4 mt-2 text-xs text-gray-300">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
+                <div className="flex items-center gap-4 mt-3 text-xs text-[#A7B0A6]">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-3 h-3 text-[#5AD2F4]" />
                     {formatEventDate(event.startTime)}
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-3 h-3 text-[#A7B0A6]" />
                     {formatEventTime(event.startTime, event.endTime, event.allDay)}
                   </div>
                   {event.location && (
                     <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        <span className="text-gray-300 text-xs">{event.location}</span>
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="w-3 h-3 text-[#A7B0A6]" />
+                        <span className="text-[#A7B0A6] text-xs">{event.location}</span>
                       </div>
                       <a
                         href={`https://maps.google.com/maps?q=${encodeURIComponent(event.location)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-400 hover:text-blue-300 text-xs underline ml-4 transition-colors"
+                        className="text-[#5AD2F4] hover:text-[#5AD2F4]/80 text-xs underline ml-4 transition-colors"
                         onClick={(e) => e.stopPropagation()}
                       >
                         Get Directions
@@ -264,14 +264,14 @@ export function UpcomingEvents() {
   }
 
   return (
-    <Card className="bg-black/40 border-white/20 backdrop-blur-md">
-      <CardHeader className="pb-3">
+    <Card className="bg-gradient-to-b from-[#161D18] to-[#131815]/60 border-[rgba(236,234,224,0.08)] rounded-2xl shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)] backdrop-blur-md">
+      <CardHeader className="pb-3 border-b border-[rgba(236,234,224,0.08)]">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-white flex items-center gap-2 text-lg">
-            <Calendar className="w-5 h-5 text-blue-400" />
+          <CardTitle className="text-[#ECEAE0] flex items-center gap-2 text-base font-bold tracking-tight">
+            <Calendar className="w-5 h-5 text-[#5AD2F4]" />
             {currentCardData?.title}
             {currentCard !== 'calendar' && (
-              <span className="text-sm text-gray-400 font-normal">
+              <span className="text-xs text-[#6E776E] font-medium">
                 ({filteredEvents.length})
               </span>
             )}
@@ -279,27 +279,27 @@ export function UpcomingEvents() {
           <div className="flex items-center gap-2">
             <button
               onClick={prevCard}
-              className="p-1 text-gray-400 hover:text-white transition-colors"
+              className="p-1 text-[#A7B0A6] hover:text-[#ECEAE0] transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <div className="flex gap-1">
+            <div className="flex gap-1.5">
               {cards.map((card, index) => (
                 <div key={card.id} className="relative group">
                   <button
                     onClick={() => setCurrentCard(card.id)}
-                    className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                      currentCard === card.id 
-                        ? 'bg-blue-400 ring-2 ring-blue-400/30' 
-                        : 'bg-gray-600 hover:bg-gray-500'
+                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                      currentCard === card.id
+                        ? 'bg-[#A4D65E] ring-2 ring-[#A4D65E]/25 scale-110'
+                        : 'bg-[#6E776E]/60 hover:bg-[#A7B0A6]'
                     }`}
                     title={card.title}
                   />
                   {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black/90 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-10 border border-white/20">
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-[#0F1311] text-[#ECEAE0] text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-10 border border-[rgba(236,234,224,0.14)]">
                     {card.title}
                     {card.id !== 'calendar' && (
-                      <span className="ml-1 text-blue-300">
+                      <span className="ml-1 text-[#5AD2F4]">
                         ({getEventCount(card.id)})
                       </span>
                     )}
@@ -309,21 +309,21 @@ export function UpcomingEvents() {
             </div>
             <button
               onClick={nextCard}
-              className="p-1 text-gray-400 hover:text-white transition-colors"
+              className="p-1 text-[#A7B0A6] hover:text-[#ECEAE0] transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
-        <p className="text-gray-400 text-sm">{currentCardData?.description}</p>
+        <p className="text-[#6E776E] text-xs mt-1">{currentCardData?.description}</p>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 pt-5">
         {currentCard === 'calendar' ? renderCalendarView() : renderEventsList(filteredEvents)}
 
         {currentCard !== 'calendar' && !loading && !error && events.length > 0 && (
           <button
             onClick={fetchUpcomingEvents}
-            className="w-full text-xs text-blue-400 hover:text-blue-300 py-2 transition-colors"
+            className="w-full text-xs font-medium text-[#5AD2F4] hover:text-[#5AD2F4]/80 py-2 transition-colors"
           >
             Refresh Events
           </button>

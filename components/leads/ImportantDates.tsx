@@ -523,7 +523,9 @@ export function ImportantDates({ lead }: ImportantDatesProps) {
 
   return (
     <>
-      <DropdownMenu>
+      {/* modal={false} prevents Radix from locking body pointer-events when
+          a menu item opens a Dialog/Drawer (otherwise the page freezes until refresh). */}
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <button
             className={cn(

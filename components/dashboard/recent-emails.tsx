@@ -132,7 +132,7 @@ export function RecentEmails() {
                 {emails.map((email) => (
                   <div
                     key={email.id}
-                    className="w-[350px] shrink-0 border border-border/40 rounded-lg p-4 cursor-pointer"
+                    className="w-[350px] shrink-0 border border-[rgba(236,234,224,0.08)] hover:border-[rgba(236,234,224,0.14)] rounded-xl p-5 cursor-pointer bg-gradient-to-b from-[#161D18] to-[#131815]/60 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)] transition-colors"
                     onClick={() => toggleExpand(email.id)}
                   >
                     <div className="flex items-center justify-between">

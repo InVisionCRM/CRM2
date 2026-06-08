@@ -354,7 +354,9 @@ const UploadDropdown: React.FC<UploadDropdownProps> = ({ leadId, setFileUploadMo
 
   return (
     <div className="relative h-full">
-      <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+      {/* modal={false} prevents Radix from locking body pointer-events when
+          a menu item opens a Dialog (otherwise the page freezes until refresh). */}
+      <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen} modal={false}>
         <DropdownMenuTrigger asChild>
           <button
             className={cn(
