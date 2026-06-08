@@ -19,8 +19,8 @@ updated at the end of every run. It exists so the routine never redoes a section
 
 | Status | Section | Slug | PR | Date |
 |--------|---------|------|----|----|
-| [ ] | Nav / sidebar / app shell | `nav-shell` | — | — |
-| [ ] | Dashboard / home | `dashboard` | — | — |
+| [~] | Nav / sidebar / app shell | `nav-shell` | https://github.com/InVisionCRM/CRM2/pull/3 | 2026-06-06 |
+| [~] | Dashboard / home | `dashboard` | [#4](https://github.com/InVisionCRM/CRM2/pull/4) | 2026-06-06 |
 | [~] | Leads table (list view) | `leads-table` | [#5](https://github.com/InVisionCRM/CRM2/pull/5) | 2026-06-06 |
 | [ ] | Lead detail page | `lead-detail` | — | — |
 | [ ] | Calendar | `calendar` | — | — |
@@ -34,4 +34,6 @@ updated at the end of every run. It exists so the routine never redoes a section
 
 ## Log
 <!-- Each run appends one line: YYYY-MM-DD · <slug> · <PR url> · one-line summary -->
-2026-06-06 · leads-table · https://github.com/InVisionCRM/CRM2/pull/5 · Restyled spreadsheet view, view toggle, pagination, status pills, loading skeleton, and collapsed lead row to the forest/cream palette; replaced harsh neon with refined lime.
+- 2026-06-06 · nav-shell · https://github.com/InVisionCRM/CRM2/pull/3 · Refined bottom nav + app shell to forest-charcoal palette, swapped harsh neon for lime #A4D65E, calmer borders/shadows.
+- 2026-06-06 · dashboard · [#4](https://github.com/InVisionCRM/CRM2/pull/4) · Replaced neon `#59ff00` with refined lime `#A4D65E` across hero, dividers, my-leads, weather loader; restyled UpcomingEvents/RecentUploads/RecentActivities/RecentEmails cards to dark-forest palette with hairline borders and soft shadow.
+- 2026-06-06 · leads-table · https://github.com/InVisionCRM/CRM2/pull/5 · Restyled spreadsheet view, view toggle, pagination, status pills, loading skeleton, and collapsed lead row to the forest/cream palette; replaced harsh neon with refined lime.

@@ -8,21 +8,16 @@ import { FileText, Download, User2 } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
-// Array of Tailwind border colors
-const borderColors = [
-  "border-blue-200",
-  "border-green-200",
-  "border-purple-200",
-  "border-orange-200",
-  "border-pink-200",
-  "border-teal-200",
-  "border-indigo-200",
-  "border-rose-200"
+// Subtle palette-aligned card accents (forest/cream + brand cyan/lime/amber)
+const cardAccents = [
+  { border: "border-[rgba(90,210,244,0.25)]",  type: "text-[#5AD2F4]" },  // cyan
+  { border: "border-[rgba(164,214,94,0.25)]",  type: "text-[#A4D65E]" },  // lime
+  { border: "border-[rgba(232,163,61,0.25)]",  type: "text-[#E8A33D]" },  // amber
+  { border: "border-[rgba(155,139,208,0.25)]", type: "text-[#9B8BD0]" },  // violet
 ]
 
-// Function to get a random border color
-function getRandomColor(): string {
-  return borderColors[Math.floor(Math.random() * borderColors.length)]
+function getRandomAccent() {
+  return cardAccents[Math.floor(Math.random() * cardAccents.length)]
 }
 
 interface UploadItem {
@@ -132,19 +127,21 @@ export function RecentUploads() {
           <div className="relative">
             <div className="overflow-x-auto pb-4 -mx-6">
               <div className="flex gap-4 px-6 min-w-full w-max">
-                {uploads.map((file) => (
+                {uploads.map((file) => {
+                  const accent = getRandomAccent()
+                  return (
                   <div
                     key={file.id}
                     className={cn(
-                      "w-[300px] shrink-0 border border-border/40 rounded-lg p-4 overflow-hidden",
-                      getRandomColor()
+                      "w-[300px] shrink-0 border rounded-xl p-4 overflow-hidden bg-gradient-to-b from-[#161D18] to-[#131815]/60 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.55)] transition-colors",
+                      accent.border
                     )}
                   >
                     <div className="space-y-3">
                       <div>
                         <span className={cn(
-                          "font-medium text-sm px-2 py-0.5 rounded mb-2 inline-block truncate max-w-full",
-                          getRandomColor().replace('border-', 'text-').replace('-200', '-600')
+                          "font-semibold text-[11px] uppercase tracking-wider px-2 py-0.5 rounded-full mb-2 inline-block truncate max-w-full bg-[rgba(236,234,224,0.04)] border border-[rgba(236,234,224,0.08)]",
+                          accent.type
                         )}>
                           {formatFileName(file.name).docType}
                         </span>
@@ -202,7 +199,8 @@ export function RecentUploads() {
                       </div>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </div>
