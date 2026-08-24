@@ -121,14 +121,25 @@ export async function confirmSubmission(
     throw new Error('DocuSeal returned no submission id')
   }
 
-  const res = await docusealFetch(`/submissions/${submissionId}`)
-  if (!res.ok) {
-    throw new Error(`Could not confirm submission ${submissionId}: ${res.status}`)
-  }
-  const submission = await res.json()
-  const submitter = submission.submitters?.[0]
-  if (!submitter) {
-    throw new Error(`Submission ${submissionId} came back with no submitters`)
+  // DocuSeal sets `sent_at` a beat after it accepts the send - measured at
+  // 0.5-1.2s. Reading once immediately always saw null and reported a
+  // successful send as "Queued", so wait for it rather than guess.
+  const deadline = Date.now() + 8000
+  let submission: any
+  let submitter: any
+
+  for (;;) {
+    const res = await docusealFetch(`/submissions/${submissionId}`)
+    if (!res.ok) {
+      throw new Error(`Could not confirm submission ${submissionId}: ${res.status}`)
+    }
+    submission = await res.json()
+    submitter = submission.submitters?.[0]
+    if (!submitter) {
+      throw new Error(`Submission ${submissionId} came back with no submitters`)
+    }
+    if (submitter.sent_at || Date.now() >= deadline) break
+    await new Promise((r) => setTimeout(r, 500))
   }
 
   return {

@@ -2,6 +2,7 @@
 
 import { formatDistanceToNow, format, isValid, parseISO } from "date-fns"
 import { ScopeOfWorkCard } from "@/components/scope-of-work/ScopeOfWorkCard"
+import { LeadProgressRail } from "@/components/leads/LeadProgressRail"
 import { useState, useEffect, useRef } from "react"
 import type { Lead } from "@prisma/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -767,6 +768,13 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
     <>
     <Card className="shadow-lg w-full border-0">
       <CardContent className="space-y-1 p-1">
+        {/* Where the job stands - green once the client has signed */}
+        {lead?.id && (
+          <div className="pb-3">
+            <LeadProgressRail leadId={lead.id} />
+          </div>
+        )}
+
         {/* Scope of work at a glance - roof spec, colours, key flags */}
         {lead?.id && (
           <div className="pb-3">

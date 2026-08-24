@@ -133,7 +133,7 @@ export function ScopeOfWorkDialog({ lead, open, onOpenChange }: ScopeOfWorkDialo
                     Preparing preview...
                   </>
                 ) : (
-                  'Review & send'
+                  'Review contract'
                 )}
               </Button>
             </div>

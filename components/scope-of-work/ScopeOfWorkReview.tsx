@@ -76,7 +76,8 @@ export function ScopeOfWorkReview({ draft, onSent, onDiscarded }: Props) {
             Review before sending
           </DialogTitle>
           <p className="mt-0.5 text-xs text-zinc-500">
-            This is exactly what {draft.client.name} will receive. Nothing has been sent yet.
+            Nothing has been sent yet. This is exactly what {draft.client.name} will receive
+            once you tap Send below.
           </p>
         </div>
 

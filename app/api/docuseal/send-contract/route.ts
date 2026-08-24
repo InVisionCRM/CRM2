@@ -82,6 +82,8 @@ export async function POST(req: Request) {
           role: 'First Party',
           email: lead.email,
           name: `${lead.firstName} ${lead.lastName}`.trim(),
+          // Lets the lead page find this contract without a schema change.
+          external_id: leadId,
           values,
         },
       ],
