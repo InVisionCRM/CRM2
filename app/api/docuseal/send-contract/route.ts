@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { docusealFetch, signatureRequestMessage, signingUrl, templateId, type TemplateKind } from '@/lib/docuseal'
+import { confirmSubmission, docusealFetch, signatureRequestMessage, templateId, type TemplateKind } from '@/lib/docuseal'
 
 interface SendContractRequest {
   leadId: string
@@ -114,43 +114,16 @@ export async function POST(req: Request) {
     }
 
     const created = await dsRes.json()
-    const submissionId = Array.isArray(created)
-      ? created[0]?.submission_id
-      : created.id
-    if (!submissionId) {
-      throw new Error('DocuSeal returned no submission id')
-    }
-
-    // Read the submission back so the confirmation reports what DocuSeal
-    // actually did, not merely that our request was accepted. `sent_at` is
-    // populated only once the signature-request email has gone out.
-    const checkRes = await docusealFetch(`/submissions/${submissionId}`)
-    if (!checkRes.ok) {
-      throw new Error(`Could not confirm submission ${submissionId}: ${checkRes.status}`)
-    }
-    const submission = await checkRes.json()
-    const submitter = submission.submitters?.[0]
-    if (!submitter) {
-      throw new Error(`Submission ${submissionId} came back with no submitters`)
-    }
+    const confirmation = await confirmSubmission(created, lead.phone ?? null)
+    if (!confirmation.client.name) confirmation.client.name = `${lead.firstName} ${lead.lastName}`.trim()
+    if (!confirmation.client.email) confirmation.client.email = lead.email
 
     console.log('✅ DocuSeal submission created', {
-      id: submissionId,
-      sentAt: submitter.sent_at,
+      id: confirmation.submissionId,
+      sentAt: confirmation.sentAt,
     })
 
-    return NextResponse.json({
-      sent: Boolean(submitter.sent_at),
-      sentAt: submitter.sent_at ?? null,
-      submissionId,
-      templateName: submission.template?.name ?? 'Contract',
-      signingUrl: signingUrl(submitter.slug),
-      client: {
-        name: submitter.name ?? `${lead.firstName} ${lead.lastName}`.trim(),
-        email: submitter.email ?? lead.email,
-        phone: lead.phone ?? null,
-      },
-    })
+    return NextResponse.json(confirmation)
   } catch (err) {
     console.error('💥 Unexpected error in /api/docuseal/send-contract', err)
     return NextResponse.json(

@@ -24,15 +24,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'firstName and lastName are required' }, { status: 400 })
     }
 
-    // 2. Get lead email if leadId is provided
-    let leadEmail = ''
-    if (formData.leadId) {
-      const lead = await prisma.lead.findUnique({
-        where: { id: formData.leadId },
-        select: { email: true },
-      })
-      leadEmail = lead?.email || ''
+    // 2. Resolve the signer. DocuSeal accepts an empty email and silently creates
+    //    a submission nobody can sign, so refuse rather than pretend it worked.
+    if (!formData.leadId) {
+      return NextResponse.json({ error: 'leadId is required' }, { status: 400 })
     }
+    const lead = await prisma.lead.findUnique({
+      where: { id: String(formData.leadId) },
+      select: { email: true, phone: true },
+    })
+    if (!lead?.email) {
+      return NextResponse.json(
+        {
+          error: 'This lead has no email address',
+          details: 'Add an email to the lead before sending the scope of work.',
+        },
+        { status: 400 },
+      )
+    }
+    const leadEmail = lead.email
 
     // 3. Build DocuSeal request body
     const today = new Date().toLocaleDateString('en-US', {
@@ -47,21 +57,25 @@ export async function POST(req: Request) {
       current_date: today,
     }
 
+    // Created UNSENT. The rep reviews the real rendered PDF and approves before
+    // anything reaches the client; POST .../send is what actually mails it.
     const docusealBody = {
       template_id: templateId('scopeOfWork'),
-      send_email: true, // Send email automatically
+      send_email: false,
       message: signatureRequestMessage(),
       submitters: [
         {
           role: 'First Party',
           email: leadEmail,
           name: `${formData.firstName} ${formData.lastName}`.trim(),
+          // Lets the lead page find this submission later without a schema change.
+          external_id: String(formData.leadId),
           values,
         },
       ],
     }
 
-    console.log('📤 Sending scope of work to DocuSeal', {
+    console.log('📤 Creating scope of work draft', {
       templateId: docusealBody.template_id,
       customerName: `${formData.firstName} ${formData.lastName}`,
       customerEmail: leadEmail,
@@ -87,10 +101,37 @@ export async function POST(req: Request) {
       )
     }
 
-    const submission = await dsRes.json()
-    console.log('✅ DocuSeal scope of work submission created', { id: submission.id })
+    const created = await dsRes.json()
+    const submitter = Array.isArray(created) ? created[0] : created.submitters?.[0]
+    const submissionId = submitter?.submission_id ?? created.id
+    if (!submissionId || !submitter?.id) {
+      throw new Error('DocuSeal returned no draft submission')
+    }
 
-    return NextResponse.json(submission)
+    // The rendered PDF exists before signing - this is the document the client
+    // will actually receive, not a mock-up of it.
+    const docsRes = await docusealFetch(`/submissions/${submissionId}/documents`)
+    if (!docsRes.ok) {
+      throw new Error(`Draft ${submissionId} has no preview document`)
+    }
+    const docsBody = await docsRes.json()
+    const documents = Array.isArray(docsBody) ? docsBody : (docsBody.documents ?? [])
+    if (documents.length === 0) {
+      throw new Error(`Draft ${submissionId} returned an empty document list`)
+    }
+
+    console.log('📝 Scope of work draft ready for review', { submissionId })
+
+    return NextResponse.json({
+      submissionId,
+      submitterId: submitter.id,
+      previewUrl: documents[0].url,
+      client: {
+        name: `${formData.firstName} ${formData.lastName}`.trim(),
+        email: leadEmail,
+        phone: lead.phone ?? null,
+      },
+    })
   } catch (err) {
     console.error('💥 Unexpected error in /api/docuseal/scope-of-work', err)
     return NextResponse.json(

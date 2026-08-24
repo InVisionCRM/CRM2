@@ -92,3 +92,55 @@ export function signatureRequestMessage(): { subject: string; body: string } {
     ].join('\n'),
   }
 }
+
+/** What the UI needs to confirm a contract really went out. */
+export interface SentConfirmation {
+  sent: boolean
+  sentAt: string | null
+  submissionId: number
+  templateName: string
+  signingUrl: string
+  client: { name: string; email: string; phone: string | null }
+}
+
+/**
+ * Turn a freshly created submission into a confirmation the UI can trust.
+ *
+ * The POST response only proves DocuSeal accepted the request. Reading the
+ * submission back gives `sent_at`, which is set once the signature-request
+ * email has actually gone out - that is what `sent` reports.
+ */
+export async function confirmSubmission(
+  created: unknown,
+  phone: string | null,
+): Promise<SentConfirmation> {
+  const submissionId = Array.isArray(created)
+    ? (created[0] as { submission_id?: number })?.submission_id
+    : (created as { id?: number })?.id
+  if (!submissionId) {
+    throw new Error('DocuSeal returned no submission id')
+  }
+
+  const res = await docusealFetch(`/submissions/${submissionId}`)
+  if (!res.ok) {
+    throw new Error(`Could not confirm submission ${submissionId}: ${res.status}`)
+  }
+  const submission = await res.json()
+  const submitter = submission.submitters?.[0]
+  if (!submitter) {
+    throw new Error(`Submission ${submissionId} came back with no submitters`)
+  }
+
+  return {
+    sent: Boolean(submitter.sent_at),
+    sentAt: submitter.sent_at ?? null,
+    submissionId,
+    templateName: submission.template?.name ?? 'Contract',
+    signingUrl: signingUrl(submitter.slug),
+    client: {
+      name: submitter.name ?? '',
+      email: submitter.email ?? '',
+      phone,
+    },
+  }
+}

@@ -75,5 +75,11 @@ export function buildScopeOfWorkPayload(
 
   if (leadId) data.leadId = leadId
 
+  // The rep's signature is a hidden input, and browsers ignore `required` on
+  // hidden fields - so nothing stopped an unsigned scope going out. Enforce it.
+  if (typeof data.invisionSignature !== 'string' || data.invisionSignature.trim() === '') {
+    throw new Error('Sign as In-Vision before sending - open the Sender Signature section.')
+  }
+
   return data
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import { formatDistanceToNow, format, isValid, parseISO } from "date-fns"
+import { ScopeOfWorkCard } from "@/components/scope-of-work/ScopeOfWorkCard"
 import { useState, useEffect, useRef } from "react"
 import type { Lead } from "@prisma/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -766,6 +767,13 @@ export const LeadOverviewTab = ({ lead, onEditRequest }: LeadOverviewTabProps) =
     <>
     <Card className="shadow-lg w-full border-0">
       <CardContent className="space-y-1 p-1">
+        {/* Scope of work at a glance - roof spec, colours, key flags */}
+        {lead?.id && (
+          <div className="pb-3">
+            <ScopeOfWorkCard leadId={lead.id} />
+          </div>
+        )}
+
         {/* Lead Summary Section */}
         <div className="space-y-2 pb-4">
           <div className="flex items-center gap-1">

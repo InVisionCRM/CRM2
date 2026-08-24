@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { buildScopeOfWorkPayload } from '@/lib/scope-of-work-form'
+import { ContractSentDialog, type ContractSentResult } from '@/components/contracts/ContractSentDialog'
+import { ScopeOfWorkReview, type ScopeOfWorkDraft } from '@/components/scope-of-work/ScopeOfWorkReview'
 import type { Lead } from '@prisma/client'
 
 interface ScopeOfWorkDialogProps {
@@ -18,6 +20,8 @@ interface ScopeOfWorkDialogProps {
 
 export function ScopeOfWorkDialog({ lead, open, onOpenChange }: ScopeOfWorkDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [sent, setSent] = useState<ContractSentResult | null>(null)
+  const [draft, setDraft] = useState<ScopeOfWorkDraft | null>(null)
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [formData, setFormData] = useState<Record<string, any> | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
@@ -51,27 +55,14 @@ export function ScopeOfWorkDialog({ lead, open, onOpenChange }: ScopeOfWorkDialo
         throw new Error(errorData.error || 'Failed to submit scope of work')
       }
 
-      const result = await response.json()
-      console.log('✅ Scope of work submitted successfully:', result)
-      
-      // Show success toast with clear message
-      toast({
-        title: "🎉 Document Successfully Sent!",
-        description: `The Scope of Work document has been sent to your client at ${result.email || lead?.email}. They will receive an email with the contract for review and signature.`,
-        duration: 5000,
-      })
-      
-      // Reset form using the ref
-      if (formRef.current) {
-        formRef.current.reset()
-      }
-      
-      // Close dialog after successful submission
-      setTimeout(() => {
-        onOpenChange(false)
-        setFormData(null)
-      }, 2000)
-      
+      const draft: ScopeOfWorkDraft = await response.json()
+
+      // Close the form and hand the rep the real document to approve.
+      onOpenChange(false)
+      setFormData(null)
+      formRef.current?.reset()
+      setDraft(draft)
+
     } catch (error) {
       console.error('❌ Error submitting scope of work:', error)
       toast({
@@ -97,37 +88,52 @@ export function ScopeOfWorkDialog({ lead, open, onOpenChange }: ScopeOfWorkDialo
 
   return (
     <>
+      <ContractSentDialog result={sent} onClose={() => setSent(null)} />
+
+      <ScopeOfWorkReview
+        draft={draft}
+        onSent={(result) => { setDraft(null); setSent(result) }}
+        onDiscarded={() => setDraft(null)}
+      />
+
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Scope of Work</DialogTitle>
+        <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-screen max-w-none flex-col gap-0 overflow-hidden rounded-none border-0 p-0 sm:h-auto sm:max-h-[90vh] sm:w-auto sm:max-w-4xl sm:rounded-lg sm:border">
+          <DialogHeader className="shrink-0 border-b px-4 py-3 text-left sm:px-6">
+            <DialogTitle className="text-[17px]">Scope of Work</DialogTitle>
           </DialogHeader>
-          
-          <form ref={formRef} onSubmit={handleFormSubmit} className="space-y-6">
-            <ScopeOfWorkForm prefilledData={prefilledData} />
-            
-            <div className="flex justify-end gap-3">
-              <Button 
-                type="button" 
-                className="bg-red-500 text-white hover:bg-white hover:text-red-500"
-                variant="outline" 
+
+          <form
+            ref={formRef}
+            onSubmit={handleFormSubmit}
+            className="flex min-h-0 flex-1 flex-col"
+          >
+            {/* the form scrolls; the actions stay reachable */}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+              <ScopeOfWorkForm prefilledData={prefilledData} />
+            </div>
+
+            <div className="shrink-0 gap-2 border-t bg-background px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 sm:px-6 flex">
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={isSubmitting}
+                className="min-h-[48px] px-4"
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isSubmitting}
-                className="bg-green-600 text-white hover:bg-green-800"
+                className="min-h-[48px] flex-1 bg-green-600 text-white hover:bg-green-800"
               >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Submitting...
+                    Preparing preview...
                   </>
                 ) : (
-                  'Submit Scope of Work'
+                  'Review & send'
                 )}
               </Button>
             </div>
