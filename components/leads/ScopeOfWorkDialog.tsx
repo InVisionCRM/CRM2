@@ -7,6 +7,7 @@ import ScopeOfWorkForm from '@/components/forms/ScopeOfWorkForm'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
+import { buildScopeOfWorkPayload } from '@/lib/scope-of-work-form'
 import type { Lead } from '@prisma/client'
 
 interface ScopeOfWorkDialogProps {
@@ -24,49 +25,7 @@ export function ScopeOfWorkDialog({ lead, open, onOpenChange }: ScopeOfWorkDialo
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     
-    // Collect form data
-    const formDataObj = new FormData(event.currentTarget)
-    const data: Record<string, any> = {}
-
-    // Convert FormData to object, handling checkboxes properly
-    for (const [key, value] of formDataObj.entries()) {
-      if (data[key] !== undefined) {
-        if (Array.isArray(data[key])) {
-          data[key].push(value)
-        } else {
-          data[key] = [data[key], value]
-        }
-      } else {
-        data[key] = value
-      }
-    }
-
-    // List of all checkbox field names (update as needed)
-    const checkboxFields = [
-      'ventilation_existing', 'addingYes', 'guttersDownspouts', 'guttersNone',
-      'gutterSizeStandard', 'gutterSizeOverSized', 'gutterGuardsYes', 'gutterGuardsNo',
-      'warrantyYes', 'warrantyNo', 'shutterReset', 'shutterReplace', 'shutterRemove', 'shutterNA',
-      'facia', 'soffit', 'wraps', 'sidingNo', 'solarOwned', 'solarLeased',
-      'critterYes', 'critterNo', 'critterUnknown', 'dishKeep', 'dishDispose', 'dishNone',
-      'detachedYes', 'detachedNo', 'detachedWorkYes', 'detachedWorkNo', 'detachedWorkTBD',
-      'drivewayDamage', 'miscDescription'
-    ]
-
-    // Transform checkboxes: checked = '✓', unchecked = ''
-    checkboxFields.forEach(field => {
-      // If checkbox exists in FormData, it was checked
-      data[field] = formDataObj.has(field) ? '✓' : ''
-    })
-
-    // Convert number fields
-    if (data.numberPanels) {
-      data.numberPanels = parseInt(data.numberPanels as string, 10)
-    }
-
-    // Add leadId to the data
-    if (lead?.id) {
-      data.leadId = lead.id
-    }
+    const data = buildScopeOfWorkPayload(event.currentTarget, lead?.id)
 
     setFormData(data)
     setShowConfirmation(true)

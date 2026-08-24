@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
+import { docusealFetch, signingUrl as buildSigningUrl, templateId } from '@/lib/docuseal';
 
 export async function POST(req: Request) {
   console.log('🔵 Sign in person request received');
@@ -22,7 +23,9 @@ export async function POST(req: Request) {
         lastName: true,
         email: true,
         phone: true,
-        address: true
+        address: true,
+        insuranceCompany: true,
+        claimNumber: true
       }
     });
 
@@ -39,26 +42,6 @@ export async function POST(req: Request) {
       email: lead.email
     });
 
-    // Check environment variables
-    const envVars = {
-      DOCUSEAL_URL: process.env.DOCUSEAL_URL,
-      DOCUSEAL_API_KEY: process.env.DOCUSEAL_API_KEY ? '[SET]' : '[NOT SET]',
-      DOCUSEAL_TEMPLATE_ID: process.env.DOCUSEAL_TEMPLATE_ID
-    };
-    console.log('🔧 Environment variables:', envVars);
-
-    if (!process.env.DOCUSEAL_URL || !process.env.DOCUSEAL_API_KEY || !process.env.DOCUSEAL_TEMPLATE_ID) {
-      console.error('❌ Missing environment variables');
-      return NextResponse.json({ 
-        error: 'DocuSeal configuration missing',
-        missing: {
-          url: !process.env.DOCUSEAL_URL,
-          apiKey: !process.env.DOCUSEAL_API_KEY,
-          templateId: !process.env.DOCUSEAL_TEMPLATE_ID
-        }
-      }, { status: 500 });
-    }
-
     // Create embedded submission for in-person signing
     const today = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
@@ -66,8 +49,10 @@ export async function POST(req: Request) {
       day: 'numeric'
     });
 
+    const generalContractTemplateId = templateId('generalContract');
+
     const requestBody = {
-      template_id: 2, // Use template 2 for in-person signing
+      template_id: generalContractTemplateId,
       send_email: false, // Key: Don't send email for in-person signing
       submitters: [{
         role: "First Party",
@@ -77,27 +62,25 @@ export async function POST(req: Request) {
         values: {
           "firstName": lead.firstName,
           "lastName": lead.lastName,
+          "fullName": `${lead.firstName} ${lead.lastName}`.trim(),
           "phone": lead.phone || '',
           "address": lead.address || '',
           "email": lead.email,
           "current_date": today,
+          "insuranceCompany": lead.insuranceCompany || '',
+          "claimNumber": lead.claimNumber || '',
         }
       }]
     };
 
     console.log('📤 Sending in-person signing request to DocuSeal:', {
-      url: `${process.env.DOCUSEAL_URL}/api/submissions`,
-      templateId: 2, // Updated to show template 2
+      templateId: generalContractTemplateId,
       signerEmail: lead.email,
       sendEmail: false
     });
 
-    const response = await fetch(`${process.env.DOCUSEAL_URL}/api/submissions`, {
+    const response = await docusealFetch('/submissions', {
       method: 'POST',
-      headers: {
-        'X-Auth-Token': process.env.DOCUSEAL_API_KEY,
-        'Content-Type': 'application/json'
-      },
       body: JSON.stringify(requestBody)
     });
 
@@ -113,8 +96,7 @@ export async function POST(req: Request) {
       
       return NextResponse.json({ 
         error: `DocuSeal API error: ${response.status} ${response.statusText}`,
-        details: errorText,
-        docusealUrl: process.env.DOCUSEAL_URL
+        details: errorText
       }, { status: 500 });
     }
 
@@ -163,13 +145,7 @@ export async function POST(req: Request) {
       console.log('🔄 No embed_src found, fetching submission details...');
       
       try {
-        const detailResponse = await fetch(`${process.env.DOCUSEAL_URL}/api/submissions/${submissionId}`, {
-          method: 'GET',
-          headers: {
-            'X-Auth-Token': process.env.DOCUSEAL_API_KEY,
-            'Content-Type': 'application/json'
-          }
-        });
+        const detailResponse = await docusealFetch(`/submissions/${submissionId}`, { method: 'GET' });
 
         if (detailResponse.ok) {
           const detailData = await detailResponse.json();
@@ -185,7 +161,7 @@ export async function POST(req: Request) {
     // If still no signing URL, try to construct it from submitter slug
     if (!signingUrl && submitterData?.slug) {
       const submitterSlug = submitterData.slug;
-      signingUrl = `${process.env.DOCUSEAL_URL}/s/${submitterSlug}`;
+      signingUrl = buildSigningUrl(submitterSlug);
       console.log('🔗 Constructed signing URL from slug:', signingUrl);
     }
 
@@ -194,13 +170,7 @@ export async function POST(req: Request) {
       console.log('🔄 Trying to list submitters for submission...');
       
       try {
-        const submittersResponse = await fetch(`${process.env.DOCUSEAL_URL}/api/submitters?submission_id=${submissionId}`, {
-          method: 'GET',
-          headers: {
-            'X-Auth-Token': process.env.DOCUSEAL_API_KEY,
-            'Content-Type': 'application/json'
-          }
-        });
+        const submittersResponse = await docusealFetch(`/submitters?submission_id=${submissionId}`, { method: 'GET' });
 
         if (submittersResponse.ok) {
           const submittersData = await submittersResponse.json();
@@ -208,7 +178,7 @@ export async function POST(req: Request) {
           
           const firstSubmitter = submittersData.data?.[0];
           if (firstSubmitter) {
-            signingUrl = firstSubmitter.embed_src || firstSubmitter.url || `${process.env.DOCUSEAL_URL}/s/${firstSubmitter.slug}`;
+            signingUrl = firstSubmitter.embed_src || firstSubmitter.url || buildSigningUrl(firstSubmitter.slug);
             console.log('🔗 Signing URL from submitters API:', signingUrl);
           }
         }

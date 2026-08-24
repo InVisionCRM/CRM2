@@ -1,606 +1,433 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Search, Filter, Download, Eye, RefreshCw, FileText, CheckCircle2, Clock, XCircle, AlertTriangle, ExternalLink, Save, Trash2 } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import {
+  AlertTriangle, Archive, CheckCircle2, Clock, Copy, Download,
+  Eye, FileText, Loader2, RefreshCw, Search, XCircle,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useToast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
-import Link from "next/link"
+
+/* ------------------------------------------------------------------ types */
 
 interface Submitter {
-  id: number
-  submission_id: number
-  uuid: string
   email: string
+  name: string | null
   slug: string
+  status: string
   sent_at: string | null
   opened_at: string | null
   completed_at: string | null
-  declined_at: string | null
-  created_at: string
-  updated_at: string
-  name: string
-  phone: string | null
-  status: string
-  role: string
-  metadata: Record<string, any>
-  preferences: Record<string, any>
-}
-
-interface Template {
-  id: number
-  name: string
-  external_id: string | null
-  folder_name: string
-  created_at: string
-  updated_at: string
-}
-
-interface CreatedByUser {
-  id: number
-  first_name: string
-  last_name: string
-  email: string
 }
 
 interface Submission {
   id: number
-  name: string | null
-  source: string
-  submitters_order: string
-  slug: string
   status: string
+  slug: string
   audit_log_url: string | null
   combined_document_url: string | null
-  expire_at: string | null
   completed_at: string | null
   created_at: string
-  updated_at: string
   archived_at: string | null
-  submitters: Submitter[]
-  template: Template
-  created_by_user: CreatedByUser
+  submitters?: Submitter[]
+  template?: { id: number; name: string; folder_name: string } | null
   displayStatus?: string
-  leadId?: number
 }
 
-interface SubmissionsResponse {
-  data: Submission[]
-  pagination: {
-    count: number
-    next: number | null
-    prev: number | null
-  }
+/**
+ * Only these four are honoured by DocuSeal's submission-level `?status=` filter.
+ * Submitter-level states (opened, sent, partially completed) return zero rows
+ * server-side, so they are never used as a server filter here.
+ */
+const STATUS_FILTERS = [
+  { value: "all", label: "All" },
+  { value: "pending", label: "Awaiting signature" },
+  { value: "completed", label: "Signed" },
+  { value: "declined", label: "Declined" },
+  { value: "expired", label: "Expired" },
+] as const
+
+const PAGE_SIZE = 25
+
+/* -------------------------------------------------------------- presentation */
+
+/** Single source of truth: icon, colour and label all derive from one value. */
+function statusStyle(submission: Submission) {
+  const raw = (submission.displayStatus || submission.status || "").toLowerCase()
+  if (raw.startsWith("complet") || raw === "signed")
+    return { label: "Signed", Icon: CheckCircle2, cls: "border-[#59FF00]/35 bg-[#59FF00]/10 text-[#59FF00]" }
+  if (raw.startsWith("declin"))
+    return { label: "Declined", Icon: XCircle, cls: "border-red-500/35 bg-red-500/10 text-red-400" }
+  if (raw.startsWith("expir"))
+    return { label: "Expired", Icon: AlertTriangle, cls: "border-orange-500/35 bg-orange-500/10 text-orange-400" }
+  if (raw.startsWith("partial"))
+    return { label: "Partially signed", Icon: Clock, cls: "border-sky-500/35 bg-sky-500/10 text-sky-300" }
+  if (raw.startsWith("open"))
+    return { label: "Opened", Icon: Eye, cls: "border-sky-500/35 bg-sky-500/10 text-sky-300" }
+  if (raw.startsWith("sent") || raw.startsWith("await") || raw.startsWith("pend"))
+    return { label: "Awaiting signature", Icon: Clock, cls: "border-amber-500/35 bg-amber-500/10 text-amber-300" }
+  return { label: submission.displayStatus || submission.status || "Unknown", Icon: FileText, cls: "border-white/10 bg-white/5 text-zinc-400" }
 }
 
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case 'completed':
-      return <CheckCircle2 className="h-4 w-4 text-green-500" />
-    case 'pending':
-    case 'sent':
-      return <Clock className="h-4 w-4 text-yellow-500" />
-    case 'declined':
-      return <XCircle className="h-4 w-4 text-red-500" />
-    case 'expired':
-      return <AlertTriangle className="h-4 w-4 text-orange-500" />
-    case 'opened':
-      return <ExternalLink className="h-4 w-4 text-blue-500" />
-    default:
-      return <FileText className="h-4 w-4 text-gray-500" />
-  }
+function formatDate(iso: string | null): string {
+  if (!iso) return "—"
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+  })
 }
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'completed':
-      return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
-    case 'pending':
-    case 'sent':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-800'
-    case 'declined':
-      return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
-    case 'expired':
-      return 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800'
-    case 'opened':
-      return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800'
-    default:
-      return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800'
-  }
+function signerLabel(s: Submission): string {
+  const list = s.submitters ?? []
+  if (list.length === 0) return "No signer"
+  return list.map((x) => x.name || x.email).join(", ")
 }
+
+/* -------------------------------------------------------------------- page */
 
 export default function SubmissionsPage() {
-  const [submissions, setSubmissions] = useState<Submission[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [pagination, setPagination] = useState<SubmissionsResponse['pagination'] | null>(null)
-  const [autoSavingContracts, setAutoSavingContracts] = useState<Set<number>>(new Set())
-  const [deletingId, setDeletingId] = useState<number | null>(null)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [showConfirm, setShowConfirm] = useState<number | null>(null)
-  const router = useRouter()
   const { toast } = useToast()
 
-  const fetchSubmissions = async (params: Record<string, string> = {}) => {
+  const [submissions, setSubmissions] = useState<Submission[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const [status, setStatus] = useState<string>("all")
+  const [search, setSearch] = useState("")
+  const [appliedSearch, setAppliedSearch] = useState("")
+
+  const [nextCursor, setNextCursor] = useState<number | null>(null)
+  const [confirmArchive, setConfirmArchive] = useState<Submission | null>(null)
+  const [archivingId, setArchivingId] = useState<number | null>(null)
+  const [busyId, setBusyId] = useState<number | null>(null)
+  const [reloadNonce, setReloadNonce] = useState(0)
+
+  const buildQuery = useCallback((cursor?: number) => {
+    const p = new URLSearchParams({ limit: String(PAGE_SIZE) })
+    if (status !== "all") p.set("status", status)
+    if (appliedSearch.trim()) p.set("q", appliedSearch.trim())
+    if (cursor) p.set("after", String(cursor))
+    return p.toString()
+  }, [status, appliedSearch])
+
+  /* Fetching is driven by state, never by a setTimeout after setState - that
+     pattern closed over the previous filter and ran every query one selection
+     behind. */
+  useEffect(() => {
+    let cancelled = false
     setLoading(true)
     setError(null)
-    
+    fetch(`/api/docuseal/submissions?${buildQuery()}`)
+      .then(async (res) => {
+        const body = await res.json()
+        if (!res.ok) throw new Error(body.details || body.error || `Request failed (${res.status})`)
+        return body
+      })
+      .then((body) => {
+        if (cancelled) return
+        setSubmissions(body.data ?? [])
+        setNextCursor(body.pagination?.next ?? null)
+      })
+      .catch((e) => !cancelled && setError(e instanceof Error ? e.message : "Failed to load submissions"))
+      .finally(() => !cancelled && setLoading(false))
+    return () => { cancelled = true }
+  }, [buildQuery, reloadNonce])
+
+  const loadMore = async () => {
+    if (!nextCursor) return
+    setLoadingMore(true)
     try {
-      const searchParams = new URLSearchParams()
-      
-      if (searchQuery) searchParams.append('q', searchQuery)
-      if (statusFilter !== 'all') searchParams.append('status', statusFilter)
-      
-      // Add any additional params
-      Object.entries(params).forEach(([key, value]) => {
-        searchParams.append(key, value)
-      })
-
-      const response = await fetch(`/api/docuseal/submissions?${searchParams.toString()}`)
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch submissions')
-      }
-
-      const data: SubmissionsResponse = await response.json()
-      setSubmissions(data.data || [])
-      setPagination(data.pagination || null)
-      
-    } catch (err) {
-      console.error('Error fetching submissions:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch submissions')
-      toast({
-        title: "Error",
-        description: "Failed to fetch submissions. Please try again.",
-        variant: "destructive",
-      })
+      const res = await fetch(`/api/docuseal/submissions?${buildQuery(nextCursor)}`)
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.details || body.error || "Failed to load more")
+      setSubmissions((prev) => [...prev, ...(body.data ?? [])])
+      setNextCursor(body.pagination?.next ?? null)
+    } catch (e) {
+      toast({ variant: "destructive", title: "Couldn't load more", description: e instanceof Error ? e.message : "" })
     } finally {
-      setLoading(false)
+      setLoadingMore(false)
     }
   }
 
-  useEffect(() => {
-    fetchSubmissions()
-  }, [])
-
-  const handleSearch = () => {
-    fetchSubmissions()
+  const refresh = () => {
+    setAppliedSearch(search)
+    setReloadNonce((n) => n + 1)
   }
 
-  const handleFilterChange = (value: string) => {
-    setStatusFilter(value)
-    // Auto-search when filter changes
-    setTimeout(() => fetchSubmissions(), 100)
-  }
-
-  const handleRefresh = () => {
-    fetchSubmissions()
-    toast({
-      title: "Refreshed",
-      description: "Submissions list has been refreshed.",
-    })
-  }
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A'
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
-
-  const openSubmissionDetails = async (submission: Submission) => {
-    console.log('Opening submission details:', {
-      id: submission.id,
-      status: submission.status,
-      combined_document_url: submission.combined_document_url,
-      audit_log_url: submission.audit_log_url
-    })
-
-    // For completed contracts, prioritize the signed document
-    if (submission.status === 'completed' && submission.combined_document_url) {
-      console.log('Opening completed contract:', submission.combined_document_url)
-      window.open(submission.combined_document_url, '_blank')
-      return
-    }
-
-    // Handle completed submissions without combined document - fetch from documents endpoint
-    if (submission.status === 'completed' && !submission.combined_document_url) {
-      console.log('Fetching documents for completed submission:', submission.id)
-      
-      try {
-        // First, get detailed submission info to see what's available
-        const detailsResponse = await fetch(`/api/docuseal/submissions/${submission.id}`)
-        if (detailsResponse.ok) {
-          const details = await detailsResponse.json()
-          console.log('Detailed submission info:', details)
-          
-          // Check if documents are embedded in the submission details
-          if (details.documents && details.documents.length > 0) {
-            console.log('Found documents in submission details:', details.documents)
-            const documentUrl = details.documents[0].url
-            console.log('Opening document from submission details:', documentUrl)
-            window.open(documentUrl, '_blank')
-            return
-          }
-        }
-        
-        // Fallback: Try the documents endpoint
-        const response = await fetch(`/api/docuseal/submissions/${submission.id}/documents`)
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch documents')
-        }
-        
-        const documents = await response.json()
-        console.log('Fetched documents from documents endpoint:', documents)
-        
-        if (documents && documents.length > 0) {
-          // Open the first document (usually the signed contract)
-          const documentUrl = documents[0].url
-          console.log('Opening signed document:', documentUrl)
-          window.open(documentUrl, '_blank')
-          return
-        } else {
-          throw new Error('No documents found in either endpoint')
-        }
-        
-      } catch (error) {
-        console.error('Error fetching documents:', error)
-        toast({
-          title: "Signed contract not available",
-          description: "Unable to retrieve the signed contract. The document may still be processing or there may be a configuration issue.",
-          variant: "destructive",
-        })
+  /** Completed submissions have a document; combined_document_url is often null
+      on Cloud, so the documents endpoint is the reliable source. */
+  const openDocument = async (s: Submission) => {
+    setBusyId(s.id)
+    try {
+      if (s.combined_document_url) {
+        window.open(s.combined_document_url, "_blank", "noopener")
         return
       }
+      const res = await fetch(`/api/docuseal/submissions/${s.id}/documents`)
+      const docs = await res.json()
+      if (!res.ok) throw new Error(docs.details || docs.error || "Could not fetch the document")
+      if (!Array.isArray(docs) || docs.length === 0) throw new Error("DocuSeal has no document for this submission yet")
+      window.open(docs[0].url, "_blank", "noopener")
+    } catch (e) {
+      toast({ variant: "destructive", title: "Contract unavailable", description: e instanceof Error ? e.message : "" })
+    } finally {
+      setBusyId(null)
     }
-    
-    // For pending/other statuses, show audit log if available
-    if (submission.audit_log_url) {
-      console.log('Opening audit log:', submission.audit_log_url)
-      window.open(submission.audit_log_url, '_blank')
+  }
+
+  const copySigningLink = async (s: Submission) => {
+    const slug = s.submitters?.[0]?.slug
+    if (!slug) {
+      toast({ variant: "destructive", title: "No signing link", description: "This submission has no signer." })
       return
     }
-    
-    // Handle cases where neither URL is available
-    const message = submission.status === 'completed' 
-      ? "Signed contract document is not available yet"
-      : "Audit log is not available yet"
-    
-    console.log('No document available:', message)
-    toast({
-      title: "Document not available",
-      description: message,
-      variant: "destructive",
-    })
+    await navigator.clipboard.writeText(`https://docuseal.com/s/${slug}`)
+    toast({ title: "Signing link copied" })
   }
 
-  const canViewSubmission = (submission: Submission) => {
-    // Can view if we have audit log, regardless of status
-    // For completed submissions, we show a message if no combined document
-    return submission.audit_log_url !== null
-  }
-
-  const getViewButtonLabel = (submission: Submission) => {
-    return submission.status === 'completed' ? 'View Contract' : 'View Details'
-  }
-
-  const handleAutoSaveContract = async (submission: Submission) => {
-    if (autoSavingContracts.has(submission.id)) return
-    
-    setAutoSavingContracts(prev => new Set(prev).add(submission.id))
-    
+  const archive = async (s: Submission) => {
+    setArchivingId(s.id)
     try {
-      const response = await fetch('/api/docuseal/auto-save-contracts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ submissionId: submission.id })
-      })
-      
-      const result = await response.json()
-      
-      if (response.ok) {
-        toast({
-          title: "✅ Contract Auto-Saved",
-          description: `Signed contract saved to lead successfully! Lead ID: ${result.leadId}`,
-        })
-      } else {
-        throw new Error(result.error || 'Failed to auto-save contract')
-      }
-    } catch (error) {
-      console.error('Error auto-saving contract:', error)
-      toast({
-        title: "❌ Auto-Save Failed",
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: "destructive",
-      })
+      const res = await fetch(`/api/docuseal/submissions/${s.id}/archive`, { method: "DELETE" })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.details || body.error || "Archive failed")
+      setSubmissions((prev) => prev.filter((x) => x.id !== s.id))
+      toast({ title: "Archived", description: "It's hidden here but still recoverable in DocuSeal." })
+      setConfirmArchive(null)
+    } catch (e) {
+      toast({ variant: "destructive", title: "Couldn't archive", description: e instanceof Error ? e.message : "" })
     } finally {
-      setAutoSavingContracts(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(submission.id)
-        return newSet
-      })
+      setArchivingId(null)
     }
   }
 
-  const handleDeleteSubmission = async (submissionId: number) => {
-    setDeletingId(submissionId)
-    setDeleteError(null)
-    try {
-      const res = await fetch(`/api/docuseal/submissions/${submissionId}/archive`, {
-        method: 'DELETE',
-      })
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Failed to delete submission')
-      }
-      setSubmissions(prev => prev.filter(s => s.id !== submissionId))
-      toast({
-        title: "Submission Archived",
-        description: `Submission ${submissionId} has been archived.`,
-      })
-    } catch (err: any) {
-      setDeleteError(err.message)
-      toast({
-        title: "Error",
-        description: err.message,
-        variant: "destructive",
-      })
-    } finally {
-      setDeletingId(null)
-      setShowConfirm(null)
-    }
-  }
-
-  if (error && !loading) {
-    return (
-      <div className="container mx-auto py-10">
-        <Card className="max-w-lg mx-auto border-destructive/50">
-          <CardHeader className="bg-destructive/10">
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-6 w-6" /> Error Loading Submissions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6 text-center">
-            <p className="text-muted-foreground mb-4">{error}</p>
-            <Button onClick={() => fetchSubmissions()}>Try Again</Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+  const counts = STATUS_FILTERS.slice(1).map((f) => ({
+    ...f,
+    n: submissions.filter((s) => statusStyle(s).label === (f.value === "pending" ? "Awaiting signature" : f.label)).length,
+  }))
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">DocuSeal Submissions</h1>
-          <p className="text-muted-foreground">
-            Manage and track all contract submissions
-          </p>
-        </div>
-        <Button onClick={handleRefresh} variant="outline" disabled={loading}>
-          <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
-          Refresh
-        </Button>
-      </div>
+    <div className="min-h-screen bg-[#0A0A0B] px-4 py-6 text-zinc-200 sm:px-6">
+      <div className="mx-auto max-w-4xl">
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name, email, or phone..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Select value={statusFilter} onValueChange={handleFilterChange}>
-                <SelectTrigger className="w-40">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending/Sent</SelectItem>
-                  <SelectItem value="opened">Opened</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="declined">Declined</SelectItem>
-                  <SelectItem value="expired">Expired</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={handleSearch} disabled={loading}>
-                Search
-              </Button>
-            </div>
+        <header className="mb-5">
+          <h1 className="text-2xl font-bold tracking-tight text-white">Contracts</h1>
+          <p className="mt-1 text-sm text-zinc-500">Every contract sent for signature.</p>
+        </header>
+
+        {/* search + refresh */}
+        <div className="mb-4 flex gap-2">
+          <div className="relative flex-1">
+            <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" />
+            <Input
+              aria-label="Search contracts by client name or email"
+              placeholder="Search by name or email"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") setAppliedSearch(search) }}
+              onBlur={() => setAppliedSearch(search)}
+              className="h-12 rounded-xl border-white/10 bg-white/[0.04] pl-9 text-base text-zinc-100 placeholder:text-zinc-600"
+            />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-        {['Completed', 'Pending', 'Sent', 'Opened', 'Partially completed', 'Declined', 'Expired'].map((displayStatus) => {
-          // Count all submissions with this displayStatus
-          const count = submissions.filter(s => (s.displayStatus || s.status) === displayStatus).length
-          return (
-            <Card key={displayStatus} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => {
-              setStatusFilter(displayStatus.toLowerCase())
-              setTimeout(() => fetchSubmissions(), 100)
-            }}>
-              <CardContent className="pt-6">
-                <div className="flex items-center space-x-2">
-                  {getStatusIcon(displayStatus.toLowerCase())}
-                  <div>
-                    <p className="text-2xl font-bold">{count}</p>
-                    <p className="text-sm text-muted-foreground capitalize">{displayStatus}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
-
-      {/* Submissions List */}
-      {loading ? (
-        <div className="space-y-4">
-          {[...Array(5)].map((_, i) => (
-            <Card key={i}>
-              <CardContent className="pt-6">
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-1/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                  <Skeleton className="h-4 w-1/3" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          <Button
+            onClick={refresh}
+            aria-label="Refresh"
+            className="h-12 w-12 shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-0 hover:bg-white/[0.08]"
+          >
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </Button>
         </div>
-      ) : submissions.length === 0 ? (
-        <Card>
-          <CardContent className="pt-6 text-center py-10">
-            <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No submissions found</h3>
-            <p className="text-muted-foreground">
-              {searchQuery || statusFilter !== 'all' 
-                ? 'Try adjusting your search criteria.' 
-                : 'No submissions have been created yet.'}
+
+        {/* status filter — every value here is one the API actually honours */}
+        <div className="mb-5 flex flex-wrap gap-2" role="group" aria-label="Filter by status">
+          {STATUS_FILTERS.map((f) => {
+            const active = status === f.value
+            const count = counts.find((c) => c.value === f.value)?.n
+            return (
+              <button
+                key={f.value}
+                onClick={() => setStatus(f.value)}
+                aria-pressed={active}
+                className={cn(
+                  "min-h-[44px] rounded-xl border px-3.5 text-sm font-medium transition-colors",
+                  active
+                    ? "border-[#59FF00]/40 bg-[#59FF00]/10 text-[#59FF00] shadow-[0_0_14px_rgba(89,255,0,.18)]"
+                    : "border-white/10 bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08] hover:text-zinc-200",
+                )}
+              >
+                {f.label}
+                {f.value !== "all" && count !== undefined && count > 0 && (
+                  <span className="ml-1.5 opacity-60">{count}</span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* error stays inline — the filters remain usable */}
+        {error && (
+          <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-red-300">Couldn&apos;t load contracts</p>
+              <p className="mt-0.5 break-words text-xs text-red-400/80">{error}</p>
+            </div>
+            <Button onClick={refresh} className="h-9 shrink-0 rounded-lg border border-red-500/30 bg-transparent px-3 text-xs text-red-300 hover:bg-red-500/10">
+              Retry
+            </Button>
+          </div>
+        )}
+
+        <div aria-live="polite" className="sr-only">
+          {loading ? "Loading contracts" : `${submissions.length} contracts shown`}
+        </div>
+
+        {/* list */}
+        {loading ? (
+          <div className="space-y-3">
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-[132px] rounded-2xl bg-white/[0.04]" />
+            ))}
+          </div>
+        ) : submissions.length === 0 && !error ? (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-14 text-center">
+            <FileText className="mx-auto mb-3 h-8 w-8 text-zinc-700" />
+            <p className="text-sm font-medium text-zinc-300">
+              {appliedSearch || status !== "all" ? "Nothing matches those filters" : "No contracts sent yet"}
             </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {submissions.map((submission) => (
-            <Card key={submission.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-semibold">
-                        {submission.leadId && submission.submitters && submission.submitters.length > 0 ? (
-                          <Link href={`/leads/${submission.leadId}/page`} className="underline text-blue-700 hover:text-blue-900 transition-colors">
-                            {submission.submitters[0].name || submission.submitters[0].email}
-                          </Link>
-                        ) : (
-                          submission.submitters && submission.submitters.length > 0
-                            ? (submission.submitters[0].name || submission.submitters[0].email)
-                            : "Unknown Submitter"
-                        )}
-                      </h3>
-                      <Badge className={cn("border", getStatusColor(submission.status))}>
-                        {getStatusIcon(submission.status)}
-                        <span className="ml-1 capitalize">
-                          {submission.displayStatus || submission.status}
-                        </span>
-                      </Badge>
-                    </div>
-                    
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <p>
-                        <span className="font-medium">Submitters:</span>{' '}
-                        {submission.submitters.map(s => s.name || s.email).join(', ')}
-                      </p>
-                      <p>
-                        <span className="font-medium">Created:</span>{' '}
-                        {formatDate(submission.created_at)}
-                      </p>
-                      {submission.completed_at && (
-                        <p>
-                          <span className="font-medium">Completed:</span>{' '}
-                          {formatDate(submission.completed_at)}
-                        </p>
-                      )}
-                      <p>
-                        <span className="font-medium">Template:</span>{' '}
-                        {submission.template.folder_name}
+            <p className="mt-1 text-xs text-zinc-600">
+              {appliedSearch || status !== "all"
+                ? "Try clearing the search or choosing All."
+                : "Send one from a lead's page and it'll show up here."}
+            </p>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {submissions.map((s) => {
+              const { label, Icon, cls } = statusStyle(s)
+              const isSigned = label === "Signed"
+              return (
+                <li key={s.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition-colors hover:border-white/[0.16]">
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-[15px] font-semibold text-white">{signerLabel(s)}</p>
+                      <p className="mt-0.5 truncate text-xs text-zinc-500">
+                        {s.template?.name ?? "Untitled contract"}
                       </p>
                     </div>
+                    <span className={cn("flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-medium", cls)}>
+                      <Icon aria-hidden className="h-3.5 w-3.5" />
+                      {label}
+                    </span>
                   </div>
-                  
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openSubmissionDetails(submission)}
-                      disabled={!canViewSubmission(submission)}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      {getViewButtonLabel(submission)}
-                    </Button>
-                    {submission.combined_document_url && (
+
+                  <dl className="mb-3 flex flex-wrap gap-x-5 gap-y-1 text-[11.5px] text-zinc-500">
+                    <div className="flex gap-1.5">
+                      <dt>Sent</dt>
+                      <dd className="text-zinc-400">{formatDate(s.submitters?.[0]?.sent_at ?? s.created_at)}</dd>
+                    </div>
+                    {s.completed_at && (
+                      <div className="flex gap-1.5">
+                        <dt>Signed</dt>
+                        <dd className="text-[#59FF00]/80">{formatDate(s.completed_at)}</dd>
+                      </div>
+                    )}
+                  </dl>
+
+                  <div className="flex flex-wrap gap-2">
+                    {isSigned && (
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(submission.combined_document_url!, '_blank')}
+                        onClick={() => openDocument(s)}
+                        disabled={busyId === s.id}
+                        className="min-h-[44px] flex-1 rounded-xl border border-[#59FF00]/30 bg-[#59FF00]/10 px-3 text-sm font-medium text-[#59FF00] hover:bg-[#59FF00]/20 sm:flex-none"
                       >
-                        <Download className="h-4 w-4 mr-1" />
-                        Download
+                        {busyId === s.id ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />}
+                        Signed PDF
+                      </Button>
+                    )}
+                    {!isSigned && (
+                      <Button
+                        onClick={() => copySigningLink(s)}
+                        className="min-h-[44px] flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-zinc-300 hover:bg-white/[0.08] sm:flex-none"
+                      >
+                        <Copy className="mr-1.5 h-3.5 w-3.5" />
+                        Signing link
+                      </Button>
+                    )}
+                    {s.audit_log_url && (
+                      <Button
+                        onClick={() => window.open(s.audit_log_url!, "_blank", "noopener")}
+                        className="min-h-[44px] rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-medium text-zinc-400 hover:bg-white/[0.08]"
+                      >
+                        Audit log
                       </Button>
                     )}
                     <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setShowConfirm(submission.id)}
-                      disabled={deletingId === submission.id}
+                      onClick={() => setConfirmArchive(s)}
+                      aria-label={`Archive contract for ${signerLabel(s)}`}
+                      className="min-h-[44px] rounded-xl border border-white/10 bg-transparent px-3 text-sm font-medium text-zinc-500 hover:bg-white/[0.06] hover:text-zinc-300"
                     >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      {deletingId === submission.id ? 'Deleting...' : 'Delete'}
+                      <Archive className="mr-1.5 h-3.5 w-3.5" />
+                      Archive
                     </Button>
                   </div>
-                  {showConfirm === submission.id && (
-                    <div className="mt-2 bg-red-50 border border-red-200 rounded p-3 flex flex-col gap-2">
-                      <span className="text-red-700 font-semibold">Are you sure you want to archive this submission?</span>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="destructive" onClick={() => handleDeleteSubmission(submission.id)} disabled={deletingId === submission.id}>
-                          Yes, Archive
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => setShowConfirm(null)} disabled={deletingId === submission.id}>
-                          Cancel
-                        </Button>
-                      </div>
-                      {deleteError && <span className="text-xs text-red-500">{deleteError}</span>}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                </li>
+              )
+            })}
+          </ul>
+        )}
 
-      {/* Pagination info */}
-      {pagination && (
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Showing {submissions.length} of {pagination.count} submissions
-            </p>
-          </CardContent>
-        </Card>
-      )}
+        {/* honest footer: no fabricated total */}
+        {!loading && submissions.length > 0 && (
+          <div className="mt-5 text-center">
+            {nextCursor ? (
+              <Button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="min-h-[48px] w-full rounded-xl border border-white/10 bg-white/[0.04] text-sm font-medium text-zinc-300 hover:bg-white/[0.08] sm:w-auto sm:px-8"
+              >
+                {loadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Load more
+              </Button>
+            ) : (
+              <p className="text-xs text-zinc-600">
+                {submissions.length} contract{submissions.length === 1 ? "" : "s"} — that&apos;s all of them
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <AlertDialog open={!!confirmArchive} onOpenChange={(o) => !o && setConfirmArchive(null)}>
+        <AlertDialogContent className="max-w-[340px] rounded-2xl border border-white/10 bg-[#141519] text-zinc-200">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Archive this contract?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              It disappears from this list but stays in DocuSeal, so you can bring it back.
+              Nothing is permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="min-h-[44px] rounded-xl border-white/10 bg-transparent text-zinc-300 hover:bg-white/5">
+              Keep it
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); if (confirmArchive) archive(confirmArchive) }}
+              disabled={archivingId !== null}
+              className="min-h-[44px] rounded-xl bg-white/10 text-zinc-100 hover:bg-white/20"
+            >
+              {archivingId !== null ? "Archiving…" : "Archive"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
-} 
+}

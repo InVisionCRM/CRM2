@@ -1,26 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { docusealFetch } from '@/lib/docuseal';
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
-  const { DOCUSEAL_URL, DOCUSEAL_API_KEY } = process.env;
-
-  if (!DOCUSEAL_URL || !DOCUSEAL_API_KEY) {
-    console.error('❌ Missing DocuSeal configuration', { DOCUSEAL_URL, DOCUSEAL_API_KEY });
-    return NextResponse.json({ error: 'DocuSeal configuration missing' }, { status: 500 });
-  }
+  const { id } = await params;
 
   try {
-    const apiUrl = `${DOCUSEAL_URL}/api/submissions/${id}`;
-    const dsRes = await fetch(apiUrl, {
-      method: 'DELETE',
-      headers: {
-        'X-Auth-Token': DOCUSEAL_API_KEY,
-        'Content-Type': 'application/json',
-      },
-    });
+    const dsRes = await docusealFetch(`/submissions/${id}`, { method: 'DELETE' });
 
     if (!dsRes.ok) {
       const errorText = await dsRes.text();
@@ -34,8 +22,9 @@ export async function DELETE(
       );
     }
 
-    const result = await dsRes.json();
-    return NextResponse.json(result);
+    // DocuSeal may answer an archive with an empty body.
+    const text = await dsRes.text();
+    return NextResponse.json(text ? JSON.parse(text) : { id, archived: true });
   } catch (err: any) {
     console.error('💥 Error archiving DocuSeal submission:', err);
     return NextResponse.json(

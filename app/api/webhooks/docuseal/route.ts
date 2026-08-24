@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { google } from 'googleapis';
 import { Readable } from 'stream';
+import { docusealFetch } from '@/lib/docuseal';
 
 interface DocuSealWebhookSubmission {
   event_type: 'submission.completed';
@@ -43,8 +44,8 @@ export async function POST(req: Request) {
 
     console.log('📋 Processing completed submission:', {
       id: payload.data.id,
-      submitters: payload.data.submitters.map(s => s.email),
-      template: payload.data.template.name
+      submitters: payload.data.submitters?.map(s => s.email) ?? [],
+      template: payload.data.template?.name ?? '(none)'
     });
 
     // Find lead by submitter email
@@ -138,10 +139,10 @@ async function saveSignedContractToLead(
   sharedDriveId: string
 ): Promise<string | null> {
   try {
-    const { GOOGLE_SA_EMAIL, GOOGLE_SA_PRIVATE_KEY, DOCUSEAL_URL, DOCUSEAL_API_KEY } = process.env;
-    
-    if (!GOOGLE_SA_EMAIL || !GOOGLE_SA_PRIVATE_KEY || !DOCUSEAL_URL || !DOCUSEAL_API_KEY) {
-      throw new Error('Missing configuration for contract download/upload');
+    const { GOOGLE_SA_EMAIL, GOOGLE_SA_PRIVATE_KEY } = process.env;
+
+    if (!GOOGLE_SA_EMAIL || !GOOGLE_SA_PRIVATE_KEY) {
+      throw new Error('Missing Google service account configuration for contract upload');
     }
 
     // First, try to get the signed document from DocuSeal
@@ -155,15 +156,7 @@ async function saveSignedContractToLead(
     } else {
       // Get detailed submission info to find documents (same approach as UI)
       console.log('📄 Fetching detailed submission info from DocuSeal API');
-      const detailsResponse = await fetch(
-        `${DOCUSEAL_URL}/api/submissions/${submission.id}`,
-        {
-          headers: {
-            'X-Auth-Token': DOCUSEAL_API_KEY,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      const detailsResponse = await docusealFetch(`/submissions/${submission.id}`);
 
       if (detailsResponse.ok) {
         const details = await detailsResponse.json();
@@ -177,15 +170,7 @@ async function saveSignedContractToLead(
           console.log('⚠️ No documents found in submission details, trying documents endpoint');
           
           // Fallback to documents endpoint
-          const documentsResponse = await fetch(
-            `${DOCUSEAL_URL}/api/submissions/${submission.id}/documents`,
-            {
-              headers: {
-                'X-Auth-Token': DOCUSEAL_API_KEY,
-                'Content-Type': 'application/json'
-              }
-            }
-          );
+          const documentsResponse = await docusealFetch(`/submissions/${submission.id}/documents`);
 
           if (documentsResponse.ok) {
             const documents = await documentsResponse.json();

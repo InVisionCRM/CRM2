@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { docusealFetch } from '@/lib/docuseal';
 
 export async function GET(
   req: Request,
@@ -9,33 +10,10 @@ export async function GET(
   try {
     const { id } = await params;
     
-    // Check environment variables
-    if (!process.env.DOCUSEAL_URL || !process.env.DOCUSEAL_API_KEY) {
-      console.error('❌ Missing DocuSeal environment variables');
-      return NextResponse.json({ 
-        error: 'DocuSeal configuration missing',
-        missing: {
-          url: !process.env.DOCUSEAL_URL,
-          apiKey: !process.env.DOCUSEAL_API_KEY,
-        }
-      }, { status: 500 });
-    }
-
-    const apiUrl = `${process.env.DOCUSEAL_URL}/api/submissions/${id}/documents`;
-    
-    console.log('📤 Fetching documents from DocuSeal:', {
-      url: apiUrl,
-      submissionId: id
-    });
+    console.log('📤 Fetching documents from DocuSeal:', { submissionId: id });
 
     // Fetch documents from DocuSeal API
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'X-Auth-Token': process.env.DOCUSEAL_API_KEY,
-        'Content-Type': 'application/json'
-      }
-    });
+    const response = await docusealFetch(`/submissions/${id}/documents`, { method: 'GET' });
 
     console.log('📨 DocuSeal documents response status:', response.status, response.statusText);
 
@@ -49,18 +27,21 @@ export async function GET(
       
       return NextResponse.json({ 
         error: `DocuSeal API error: ${response.status} ${response.statusText}`,
-        details: errorText,
-        docusealUrl: process.env.DOCUSEAL_URL
+        details: errorText
       }, { status: response.status });
     }
 
+    // DocuSeal Cloud returns { id, documents: [{name, url}] }; self-hosted returned
+    // a bare array. Normalise here so callers always get an array.
     const data = await response.json();
+    const documents = Array.isArray(data) ? data : (data.documents ?? []);
+
     console.log('✅ DocuSeal documents fetched successfully:', {
-      count: data.length || 0,
+      count: documents.length,
       submissionId: id
     });
-    
-    return NextResponse.json(data);
+
+    return NextResponse.json(documents);
 
   } catch (error) {
     console.error('💥 Error fetching DocuSeal documents:', {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { ContractSentDialog, type ContractSentResult } from "@/components/contracts/ContractSentDialog"
 import { useParams, useSearchParams, useRouter } from "next/navigation" // Use next/navigation for App Router
 import { LeadStatus } from "@prisma/client"
 import { Phone, Mail, CalendarPlus, MapPin, AlertTriangle, CheckCircle2, XIcon, FileText, FileArchive, Image, FileSignature, Copy, Loader2, NotebookPen, PenTool, CheckCircle, CalendarDays, Calendar, Palette, DollarSign, Hammer, ArrowRight, Paintbrush, ClipboardList, Save, ChevronDown, Upload, Eye, Trash2, ExternalLink, Ruler, AtSign } from "lucide-react" // Added ClipboardList icon
@@ -762,6 +763,7 @@ export default function LeadDetailPage() {
 
   // Contract and dialog state
   const [showLoadingDialog, setShowLoadingDialog] = useState(false);
+  const [contractSent, setContractSent] = useState<ContractSentResult | null>(null)
   const [isSendingContract, setIsSendingContract] = useState(false);
   const [isSigningInPerson, setIsSigningInPerson] = useState(false);
   const [showContractSaveDialog, setShowContractSaveDialog] = useState(false);
@@ -930,23 +932,18 @@ export default function LeadDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           leadId: lead.id,
-          templateId: 2 // Default to Scope of Work template
+          contractType: 'generalContract'
         })
       });
       
       if (response.ok) {
-        const data = await response.json();
-        
-        // Show success toast instead of confetti
-        toast({
-          title: "✅ Contract Sent Successfully!",
-          description: `Contract has been sent to ${data.email || lead.email}`,
-        });
-        
+        const result: ContractSentResult = await response.json();
+        setContractSent(result);
         mutate();
         setShowLoadingDialog(false);
       } else {
-        throw new Error('Failed to send contract');
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.details || body.error || 'Failed to send contract');
       }
     } catch (error) {
       toast({
@@ -1375,12 +1372,15 @@ export default function LeadDetailPage() {
           <LeadTemplateEmailer lead={lead} open={templatesDialogOpen} onOpenChange={handleCloseTemplatesDialog} />
         )}
 
+        {/* Contract sent confirmation */}
+        <ContractSentDialog result={contractSent} onClose={() => setContractSent(null)} />
+
         {/* Scope of Work Dialog */}
         {lead && (
-          <ScopeOfWorkDialog 
-            lead={lead} 
-            open={scopeOfWorkDialogOpen} 
-            onOpenChange={handleCloseScopeOfWorkDialog} 
+          <ScopeOfWorkDialog
+            lead={lead}
+            open={scopeOfWorkDialogOpen}
+            onOpenChange={handleCloseScopeOfWorkDialog}
           />
         )}
 

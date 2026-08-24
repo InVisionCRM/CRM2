@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { docusealFetch } from '@/lib/docuseal';
 
 export async function GET(
   req: Request,
@@ -9,33 +10,10 @@ export async function GET(
   try {
     const { id } = await params;
     
-    // Check environment variables
-    if (!process.env.DOCUSEAL_URL || !process.env.DOCUSEAL_API_KEY) {
-      console.error('❌ Missing DocuSeal environment variables');
-      return NextResponse.json({ 
-        error: 'DocuSeal configuration missing',
-        missing: {
-          url: !process.env.DOCUSEAL_URL,
-          apiKey: !process.env.DOCUSEAL_API_KEY,
-        }
-      }, { status: 500 });
-    }
-
-    const apiUrl = `${process.env.DOCUSEAL_URL}/api/submissions/${id}`;
-    
-    console.log('📤 Fetching submission details from DocuSeal:', {
-      url: apiUrl,
-      submissionId: id
-    });
+    console.log('📤 Fetching submission details from DocuSeal:', { submissionId: id });
 
     // Fetch submission details from DocuSeal API
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'X-Auth-Token': process.env.DOCUSEAL_API_KEY,
-        'Content-Type': 'application/json'
-      }
-    });
+    const response = await docusealFetch(`/submissions/${id}`, { method: 'GET' });
 
     console.log('📨 DocuSeal submission response status:', response.status, response.statusText);
 
@@ -49,8 +27,7 @@ export async function GET(
       
       return NextResponse.json({ 
         error: `DocuSeal API error: ${response.status} ${response.statusText}`,
-        details: errorText,
-        docusealUrl: process.env.DOCUSEAL_URL
+        details: errorText
       }, { status: response.status });
     }
 

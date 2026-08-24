@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { buildScopeOfWorkPayload } from '@/lib/scope-of-work-form'
 import ScopeOfWorkForm from '@/components/forms/ScopeOfWorkForm'
 import { getLeadById } from '@/lib/db/leads'
 import { notFound } from 'next/navigation'
@@ -23,48 +24,7 @@ export default function ScopeOfWorkPage({ searchParams }: ScopeOfWorkPageProps) 
     setErrorMessage('')
 
     try {
-      const formData = new FormData(event.currentTarget)
-      const data: Record<string, any> = {}
-
-      // Convert FormData to object, handling checkboxes properly
-      for (const [key, value] of formData.entries()) {
-        if (data[key] !== undefined) {
-          // If key already exists (checkbox), convert to array
-          if (Array.isArray(data[key])) {
-            data[key].push(value)
-          } else {
-            data[key] = [data[key], value]
-          }
-        } else {
-          data[key] = value
-        }
-      }
-
-      // Convert checkbox values to booleans
-      const checkboxFields = [
-        'ventilation_existing', 'ventilation_adding', 'scope_gutters_downspouts',
-        'scope_none_gutters', 'gutter_size_standard', 'gutter_size_oversized',
-        'gutter_guards_yes', 'gutter_guards_no', 'gutter_guards_warranty_yes',
-        'gutter_guards_warranty_no', 'shutters_detach_reset', 'shutters_replace',
-        'shutters_remove_discard', 'shutters_na', 'scope_facia', 'scope_soffit',
-        'scope_wraps', 'scope_none_facia_soffit_wrap', 'solar_owned', 'solar_leased',
-        'critter_cage_yes', 'critter_cage_no', 'critter_cage_unknown',
-        'satellite_keep', 'satellite_dispose', 'satellite_none',
-        'detached_structure_exists_yes', 'detached_structure_exists_no',
-        'detached_structure_work_yes', 'detached_structure_work_no',
-        'detached_structure_work_tbd', 'driveway_damage_yes', 'driveway_damage_no'
-      ]
-
-      checkboxFields.forEach(field => {
-        if (data[field] !== undefined) {
-          data[field] = data[field] === 'on' || data[field] === true
-        }
-      })
-
-      // Convert number fields
-      if (data.solar_panels_number) {
-        data.solar_panels_number = parseInt(data.solar_panels_number as string, 10)
-      }
+      const data = buildScopeOfWorkPayload(event.currentTarget, searchParams?.leadId)
 
       const response = await fetch('/api/docuseal/scope-of-work', {
         method: 'POST',

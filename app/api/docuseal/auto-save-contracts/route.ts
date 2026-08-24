@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { docusealFetch } from '@/lib/docuseal';
 
 export async function POST(req: Request) {
   console.log('🔵 Manual contract auto-save triggered');
@@ -6,25 +7,11 @@ export async function POST(req: Request) {
   try {
     const { submissionId, leadEmail } = await req.json();
     
-    if (!process.env.DOCUSEAL_URL || !process.env.DOCUSEAL_API_KEY) {
-      return NextResponse.json({ 
-        error: 'DocuSeal configuration missing' 
-      }, { status: 500 });
-    }
-
     let submissionsToProcess = [];
 
     if (submissionId) {
       // Handle single submission by ID (existing functionality)
-      const submissionResponse = await fetch(
-        `${process.env.DOCUSEAL_URL}/api/submissions/${submissionId}`,
-        {
-          headers: {
-            'X-Auth-Token': process.env.DOCUSEAL_API_KEY,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      const submissionResponse = await docusealFetch(`/submissions/${submissionId}`);
 
       if (!submissionResponse.ok) {
         throw new Error(`Failed to fetch submission: ${submissionResponse.statusText}`);
@@ -37,15 +24,7 @@ export async function POST(req: Request) {
       // Handle multiple submissions by lead email (new functionality)
       console.log('🔍 Fetching completed contracts for lead:', leadEmail);
       
-      const submissionsResponse = await fetch(
-        `${process.env.DOCUSEAL_URL}/api/submissions?limit=50`,
-        {
-          headers: {
-            'X-Auth-Token': process.env.DOCUSEAL_API_KEY,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      const submissionsResponse = await docusealFetch('/submissions?limit=50');
 
       if (!submissionsResponse.ok) {
         throw new Error(`Failed to fetch submissions: ${submissionsResponse.statusText}`);

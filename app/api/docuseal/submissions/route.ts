@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { docusealFetch } from '@/lib/docuseal';
 
 const statusMap: Record<string, string> = {
   awaiting: "Sent",
@@ -15,18 +16,6 @@ export async function GET(req: Request) {
   console.log('🔵 Fetching DocuSeal submissions');
   
   try {
-    // Check environment variables
-    if (!process.env.DOCUSEAL_URL || !process.env.DOCUSEAL_API_KEY) {
-      console.error('❌ Missing DocuSeal environment variables');
-      return NextResponse.json({ 
-        error: 'DocuSeal configuration missing',
-        missing: {
-          url: !process.env.DOCUSEAL_URL,
-          apiKey: !process.env.DOCUSEAL_API_KEY,
-        }
-      }, { status: 500 });
-    }
-
     // Parse URL parameters for filtering
     const url = new URL(req.url);
     const searchParams = new URLSearchParams();
@@ -39,27 +28,25 @@ export async function GET(req: Request) {
     const archived = url.searchParams.get('archived');
     const email = url.searchParams.get('email'); // Add email filtering
     
+    const after = url.searchParams.get('after');
+    const before = url.searchParams.get('before');
+    if (after) searchParams.append('after', after);
+    if (before) searchParams.append('before', before);
     if (status) searchParams.append('status', status);
     if (templateId) searchParams.append('template_id', templateId);
     if (q) searchParams.append('q', q);
     if (archived) searchParams.append('archived', archived);
     searchParams.append('limit', limit);
 
-    const apiUrl = `${process.env.DOCUSEAL_URL}/api/submissions${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
-    
+    const apiPath = `/submissions${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
+
     console.log('📤 Fetching from DocuSeal:', {
-      url: apiUrl,
+      path: apiPath,
       params: Object.fromEntries(searchParams)
     });
 
     // Fetch submissions from DocuSeal API
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'X-Auth-Token': process.env.DOCUSEAL_API_KEY,
-        'Content-Type': 'application/json'
-      }
-    });
+    const response = await docusealFetch(apiPath, { method: 'GET' });
 
     console.log('📨 DocuSeal response status:', response.status, response.statusText);
 
@@ -73,8 +60,7 @@ export async function GET(req: Request) {
       
       return NextResponse.json({ 
         error: `DocuSeal API error: ${response.status} ${response.statusText}`,
-        details: errorText,
-        docusealUrl: process.env.DOCUSEAL_URL
+        details: errorText
       }, { status: response.status });
     }
 
@@ -133,9 +119,8 @@ export async function GET(req: Request) {
     if (error instanceof TypeError && error.message.includes('fetch failed')) {
       return NextResponse.json({ 
         error: 'Failed to connect to DocuSeal API',
-        details: 'Connection refused. Please check DocuSeal URL and network connectivity.',
-        docusealUrl: process.env.DOCUSEAL_URL,
-        suggestion: 'Verify DocuSeal service is running and accessible'
+        details: 'Connection refused. Check DOCUSEAL_API_URL and network connectivity.',
+        suggestion: 'Verify the DocuSeal service is reachable'
       }, { status: 503 });
     }
 

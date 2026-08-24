@@ -588,17 +588,17 @@ export default function ScopeOfWorkForm({ prefilledData }: ScopeOfWorkFormProps 
               <div className="flex flex-wrap gap-4 mt-4">
                 <span className="text-gray-600 font-medium">Driveway Damage:</span>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="drivewayDamage" className="checkbox-touch" />
+                  <input type="checkbox" name="drivewayYes" className="checkbox-touch" />
                   Yes
                 </label>
                 <label className="flex items-center gap-2 text-gray-700">
-                  <input type="checkbox" name="miscDescription" className="checkbox-touch" />
+                  <input type="checkbox" name="drivewayNo" className="checkbox-touch" />
                   No
                 </label>
               </div>
-              <textarea name="miscDescription" placeholder="Detached Structure Description" className="textarea textarea-bordered w-full mt-4 text-gray-900 bg-white border-gray-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 rounded-md shadow-sm"></textarea>
-              <textarea name="drivewayDamage" placeholder="Driveway Damage Description" className="textarea textarea-bordered w-full mt-4 text-gray-900 bg-white border-gray-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 rounded-md shadow-sm"></textarea>
-              <textarea name="miscAdditionalNotes" placeholder="Landscaping Protection Notes" className="textarea textarea-bordered w-full mt-4 text-gray-900 bg-white border-gray-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 rounded-md shadow-sm"></textarea>
+              <textarea name="detachedDescription" placeholder="Detached Structure Description" className="textarea textarea-bordered w-full mt-4 text-gray-900 bg-white border-gray-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 rounded-md shadow-sm"></textarea>
+              <textarea name="drivewayDescription" placeholder="Driveway Damage Description" className="textarea textarea-bordered w-full mt-4 text-gray-900 bg-white border-gray-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 rounded-md shadow-sm"></textarea>
+              <textarea name="landscapingNotes" placeholder="Landscaping Protection Notes" className="textarea textarea-bordered w-full mt-4 text-gray-900 bg-white border-gray-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 rounded-md shadow-sm"></textarea>
             </div>
           </AccordionContent>
         </AccordionItem>

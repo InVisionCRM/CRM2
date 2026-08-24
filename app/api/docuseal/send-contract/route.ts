@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { docusealFetch, signatureRequestMessage, signingUrl, templateId, type TemplateKind } from '@/lib/docuseal'
 
 interface SendContractRequest {
   leadId: string
-  templateId?: number
+  contractType?: TemplateKind
   additionalData?: {
     insuranceCompany?: string
     claimNumber?: string
@@ -16,7 +17,8 @@ export async function POST(req: Request) {
 
   try {
     // 1. Parse request body
-    const { leadId, templateId, additionalData } = await req.json().catch(() => ({})) as SendContractRequest
+    const { leadId, contractType = 'generalContract', additionalData } =
+      (await req.json().catch(() => ({}))) as SendContractRequest
 
     if (!leadId) {
       console.error('❌ Missing leadId in request body')
@@ -48,22 +50,7 @@ export async function POST(req: Request) {
       )
     }
 
-    // 3. Validate DocuSeal env vars
-    const { DOCUSEAL_URL, DOCUSEAL_API_KEY } = process.env
-    if (!DOCUSEAL_URL || !DOCUSEAL_API_KEY) {
-      console.error('❌ Missing DocuSeal configuration', {
-        DOCUSEAL_URL: !!DOCUSEAL_URL,
-        DOCUSEAL_API_KEY: !!DOCUSEAL_API_KEY,
-      })
-      return NextResponse.json(
-        {
-          error: 'DocuSeal configuration missing',
-        },
-        { status: 500 },
-      )
-    }
-
-    // 4. Build DocuSeal request body
+    // 3. Build DocuSeal request body
     const today = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -71,21 +58,25 @@ export async function POST(req: Request) {
     })
 
     // Merge lead data with additional data
+    // additionalData is spread FIRST so caller-supplied keys can add fields but
+    // never overwrite verified lead data.
     const values = {
+      ...additionalData,
       firstName: lead.firstName,
       lastName: lead.lastName,
+      fullName: `${lead.firstName} ${lead.lastName}`.trim(),
       phone: lead.phone || '',
       address: lead.address || '',
       email: lead.email,
       current_date: today,
       insuranceCompany: lead.insuranceCompany || additionalData?.insuranceCompany || '',
       claimNumber: lead.claimNumber || additionalData?.claimNumber || '',
-      ...additionalData,
     }
 
     const docusealBody = {
-      template_id: templateId || parseInt(process.env.DOCUSEAL_TEMPLATE_ID || '1'), // Default to template ID 1 if not specified
+      template_id: templateId(contractType),
       send_email: true,
+      message: signatureRequestMessage(),
       submitters: [
         {
           role: 'First Party',
@@ -97,18 +88,14 @@ export async function POST(req: Request) {
     }
 
     console.log('📤 Sending submission to DocuSeal', {
-      url: `${DOCUSEAL_URL}/api/submissions`,
+      contractType,
       templateId: docusealBody.template_id,
       signerEmail: lead.email,
     })
 
-    // 5. Call DocuSeal API
-    const dsRes = await fetch(`${DOCUSEAL_URL}/api/submissions`, {
+    // 4. Call DocuSeal API
+    const dsRes = await docusealFetch('/submissions', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Auth-Token': DOCUSEAL_API_KEY,
-      },
       body: JSON.stringify(docusealBody),
     })
 
@@ -126,10 +113,44 @@ export async function POST(req: Request) {
       )
     }
 
-    const submission = await dsRes.json()
-    console.log('✅ DocuSeal submission created', { id: submission.id })
+    const created = await dsRes.json()
+    const submissionId = Array.isArray(created)
+      ? created[0]?.submission_id
+      : created.id
+    if (!submissionId) {
+      throw new Error('DocuSeal returned no submission id')
+    }
 
-    return NextResponse.json(submission)
+    // Read the submission back so the confirmation reports what DocuSeal
+    // actually did, not merely that our request was accepted. `sent_at` is
+    // populated only once the signature-request email has gone out.
+    const checkRes = await docusealFetch(`/submissions/${submissionId}`)
+    if (!checkRes.ok) {
+      throw new Error(`Could not confirm submission ${submissionId}: ${checkRes.status}`)
+    }
+    const submission = await checkRes.json()
+    const submitter = submission.submitters?.[0]
+    if (!submitter) {
+      throw new Error(`Submission ${submissionId} came back with no submitters`)
+    }
+
+    console.log('✅ DocuSeal submission created', {
+      id: submissionId,
+      sentAt: submitter.sent_at,
+    })
+
+    return NextResponse.json({
+      sent: Boolean(submitter.sent_at),
+      sentAt: submitter.sent_at ?? null,
+      submissionId,
+      templateName: submission.template?.name ?? 'Contract',
+      signingUrl: signingUrl(submitter.slug),
+      client: {
+        name: submitter.name ?? `${lead.firstName} ${lead.lastName}`.trim(),
+        email: submitter.email ?? lead.email,
+        phone: lead.phone ?? null,
+      },
+    })
   } catch (err) {
     console.error('💥 Unexpected error in /api/docuseal/send-contract', err)
     return NextResponse.json(
@@ -140,4 +161,4 @@ export async function POST(req: Request) {
       { status: 500 },
     )
   }
-} 
+}

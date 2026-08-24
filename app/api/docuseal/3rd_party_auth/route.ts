@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { docusealFetch, signatureRequestMessage, templateId } from '@/lib/docuseal';
 
 const ThirdPartyAuthSchema = z.object({
   firstName: z.string().min(1),
@@ -18,12 +19,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = ThirdPartyAuthSchema.parse(body);
 
-    const { DOCUSEAL_URL, DOCUSEAL_API_KEY } = process.env;
-    if (!DOCUSEAL_URL || !DOCUSEAL_API_KEY) {
-      console.error('❌ Missing DocuSeal configuration', { DOCUSEAL_URL, DOCUSEAL_API_KEY });
-      return NextResponse.json({ error: 'DocuSeal configuration missing' }, { status: 500 });
-    }
-
     const values = {
       firstName: data.firstName,
       lastName: data.lastName,
@@ -37,8 +32,9 @@ export async function POST(req: NextRequest) {
     };
 
     const docusealBody = {
-      template_id: 3,
+      template_id: templateId('thirdPartyAuth'),
       send_email: true,
+      message: signatureRequestMessage(),
       submitters: [
         {
           role: 'First Party',
@@ -50,18 +46,13 @@ export async function POST(req: NextRequest) {
     };
 
     console.log('📤 Sending 3rd Party Auth contract to DocuSeal', {
-      url: `${DOCUSEAL_URL}/api/submissions`,
       templateId: docusealBody.template_id,
       signerEmail: data.email,
       values,
     });
 
-    const dsRes = await fetch(`${DOCUSEAL_URL}/api/submissions`, {
+    const dsRes = await docusealFetch('/submissions', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Auth-Token': DOCUSEAL_API_KEY,
-      },
       body: JSON.stringify(docusealBody),
     });
 
