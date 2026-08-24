@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { confirmSubmission, docusealFetch } from '@/lib/docuseal'
+import { logActivity } from '@/lib/activity-log'
 
 /**
  * Approve a scope-of-work draft and mail it to the client.
@@ -54,6 +57,26 @@ export async function POST(
       submissionId,
       sentAt: confirmation.sentAt,
     })
+
+    // external_id was stamped with the leadId when the draft was created.
+    const leadId = submitter.external_id
+    if (leadId) {
+      const session = await getServerSession(authOptions).catch(() => null)
+      await logActivity({
+        type: 'CONTRACT_SENT',
+        title: `Scope of Work sent to ${confirmation.client.name}`,
+        leadId,
+        userId: (session as any)?.user?.id ?? null,
+        metadata: {
+          verb: 'SENT',
+          entity: 'contract',
+          changes: [
+            { field: 'document', label: 'Document', from: null, to: 'Scope of Work' },
+            { field: 'recipient', label: 'Sent to', from: null, to: confirmation.client.email },
+          ],
+        },
+      })
+    }
 
     return NextResponse.json(confirmation)
   } catch (err) {

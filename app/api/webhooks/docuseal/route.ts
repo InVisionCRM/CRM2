@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma';
 import { google } from 'googleapis';
 import { Readable } from 'stream';
 import { docusealFetch } from '@/lib/docuseal';
+import { logActivity } from '@/lib/activity-log';
 
 interface DocuSealWebhookSubmission {
   event_type: 'submission.completed';
@@ -65,6 +66,28 @@ export async function POST(req: Request) {
         googleDriveFolderId: true
       }
     });
+
+    if (lead) {
+      // The homeowner signed - there is no CRM user behind this event, so the
+      // signer's name is carried in metadata instead of userId.
+      const signer = payload.data.submitters?.[0]
+      const documentName = payload.data.template?.name ?? 'Contract'
+      await logActivity({
+        type: 'CONTRACT_SIGNED',
+        title: `${signer?.name || signer?.email || 'Client'} signed the ${documentName}`,
+        leadId: lead.id,
+        userId: null,
+        metadata: {
+          verb: 'SIGNED',
+          entity: 'contract',
+          actorName: signer?.name || signer?.email || 'Client',
+          changes: [
+            { field: 'document', label: 'Document', from: null, to: documentName },
+            { field: 'status', label: 'Status', from: 'Awaiting signature', to: 'Signed' },
+          ],
+        },
+      })
+    }
 
     if (!lead) {
       console.log('⚠️ No lead found for submitter emails:', submitterEmails);

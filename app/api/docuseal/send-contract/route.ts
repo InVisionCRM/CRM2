@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { logActivity } from '@/lib/activity-log'
 import { confirmSubmission, docusealFetch, signatureRequestMessage, templateId, type TemplateKind } from '@/lib/docuseal'
 
 interface SendContractRequest {
@@ -123,6 +126,22 @@ export async function POST(req: Request) {
     console.log('✅ DocuSeal submission created', {
       id: confirmation.submissionId,
       sentAt: confirmation.sentAt,
+    })
+
+    const session = await getServerSession(authOptions).catch(() => null)
+    await logActivity({
+      type: 'CONTRACT_SENT',
+      title: `${confirmation.templateName} sent to ${confirmation.client.name}`,
+      leadId,
+      userId: (session as any)?.user?.id ?? null,
+      metadata: {
+        verb: 'SENT',
+        entity: 'contract',
+        changes: [
+          { field: 'document', label: 'Document', from: null, to: confirmation.templateName },
+          { field: 'recipient', label: 'Sent to', from: null, to: confirmation.client.email },
+        ],
+      },
     })
 
     return NextResponse.json(confirmation)

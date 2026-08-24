@@ -170,13 +170,16 @@ model Activity {
   type        ActivityType
   title       String
   description String?
-  userId      String       @db.Uuid
+  /// { verb, entity, actorName, changes: [{ field, from, to }] } - see lib/activity-log.ts
+  metadata    Json?
+  /// Absent when the actor is not a CRM user, e.g. a homeowner signing a contract.
+  userId      String?      @db.Uuid
   leadId      String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   imageUrl    String?
   lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([leadId])
   @@index([userId])
@@ -464,6 +467,10 @@ enum AppointmentStatus {
 }
 
 enum ActivityType {
+  CONTRACT_SENT
+  CONTRACT_SIGNED
+  CONTRACT_DECLINED
+  LEAD_VIEWED
   LEAD_CREATED
   LEAD_UPDATED
   NOTE_ADDED
